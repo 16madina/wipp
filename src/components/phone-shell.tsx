@@ -31,6 +31,25 @@ function HapticFlash() {
   );
 }
 
+function StatusClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const label = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="status-strip" aria-hidden>
+      <span className="status-time">{label}</span>
+      <span className="status-icons">
+        <i className="status-signal" />
+        <i className="status-wifi" />
+        <i className="status-batt" />
+      </span>
+    </div>
+  );
+}
+
 export function PhoneShell({ children, intro }: { children: ReactNode; intro?: boolean }) {
   const theme = useWgoStore((s) => s.theme);
   const a11y = useWgoStore((s) => s.a11y) ?? defaultA11y;
@@ -56,6 +75,7 @@ export function PhoneShell({ children, intro }: { children: ReactNode; intro?: b
         data-reduce-motion={a11y.reduceMotion ? "1" : undefined}
       >
         <div className="island" />
+        {!intro ? <StatusClock /> : null}
         <div className="device-app">{children}</div>
         <HapticFlash />
         <div

@@ -248,10 +248,14 @@ function PushLayer({
   screen,
   index,
   exiting,
+  dragPx,
+  dragging,
 }: {
   screen: Screen;
   index: number;
   exiting: boolean;
+  dragPx?: number;
+  dragging?: boolean;
 }) {
   const [entered, setEntered] = useState(false);
   useEffect(() => {
@@ -259,21 +263,36 @@ function PushLayer({
     return () => window.cancelAnimationFrame(id);
   }, []);
 
+  const interactive = typeof dragPx === "number" && dragPx > 0;
+  const style =
+    interactive || dragging
+      ? {
+          transform: `translate3d(${dragPx ?? 0}px,0,0)`,
+          transition: dragging ? "none" : undefined,
+        }
+      : undefined;
+
   return (
     <div
       className={cn(
         "stack-layer",
-        entered && !exiting && "is-in",
-        exiting && "is-out",
+        entered && !exiting && !interactive && "is-in",
+        exiting && !interactive && "is-out",
+        dragging && "is-dragging",
       )}
+      style={style}
     >
       <ScreenView screen={screen} />
     </div>
   );
 }
 
+const EDGE_ZONE = 28;
+const POP_THRESHOLD = 88;
+
 function NativeStack() {
   const stack = useWgoStore((s) => s.stack);
+  const pop = useWgoStore((s) => s.pop);
   const top = stack.at(-1) ?? { name: "splash" as const };
   const showTabs = isTabScreen(top.name);
   const root = stack[0] ?? { name: "splash" as const };
@@ -282,29 +301,134 @@ function NativeStack() {
   const stackLen = stack.length;
   const [exitScreen, setExitScreen] = useState<Screen | null>(null);
   const prevPushed = useRef(livePushed);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    width: number;
+  } | null>(null);
+  const [dragPx, setDragPx] = useState(0);
+  const dragPxRef = useRef(0);
+  const [dragging, setDragging] = useState(false);
+
+  const setDrag = (px: number) => {
+    dragPxRef.current = px;
+    setDragPx(px);
+  };
 
   useEffect(() => {
     const current = stack.slice(1);
     const prev = prevPushed.current;
     if (current.length < prev.length) {
       setExitScreen(prev[prev.length - 1] ?? null);
+      setDrag(0);
+      setDragging(false);
       const t = window.setTimeout(() => {
         setExitScreen(null);
         prevPushed.current = current;
-      }, 320);
+      }, 380);
       return () => window.clearTimeout(t);
     }
     prevPushed.current = current;
     setExitScreen(null);
   }, [stack, stackLen]);
 
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+
+    const onStart = (e: TouchEvent) => {
+      if (livePushed.length === 0 || exitScreen) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const rect = el.getBoundingClientRect();
+      if (t.clientX - rect.left > EDGE_ZONE) return;
+      swipe.current = {
+        active: false,
+        startX: t.clientX,
+        startY: t.clientY,
+        width: rect.width,
+      };
+    };
+
+    const onMove = (e: TouchEvent) => {
+      const s = swipe.current;
+      if (!s) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - s.startX;
+      const dy = Math.abs(t.clientY - s.startY);
+      if (!s.active) {
+        if (dx < 10) return;
+        if (dy > dx * 0.7) {
+          swipe.current = null;
+          return;
+        }
+        s.active = true;
+        setDragging(true);
+      }
+      e.preventDefault();
+      setDrag(Math.max(0, Math.min(dx, s.width)));
+    };
+
+    const finish = (commit: boolean) => {
+      const s = swipe.current;
+      swipe.current = null;
+      if (!s?.active) {
+        setDragging(false);
+        setDrag(0);
+        return;
+      }
+      const shouldPop = commit && dragPxRef.current >= POP_THRESHOLD;
+      setDragging(false);
+      if (shouldPop) {
+        setDrag(s.width);
+        window.requestAnimationFrame(() => pop());
+      } else {
+        setDrag(0);
+      }
+    };
+
+    const onEnd = () => finish(true);
+    const onCancel = () => finish(false);
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onCancel);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onCancel);
+    };
+  }, [livePushed.length, exitScreen, pop]);
+
   const displayPushed = exitScreen ? [...livePushed, exitScreen] : livePushed;
   const pushedIn = livePushed.length > 0;
+  const topIndex = displayPushed.length - 1;
+  const dragProgress =
+    dragging || dragPx > 0
+      ? Math.min(1, dragPx / (stageRef.current?.clientWidth || 390))
+      : 0;
 
   return (
-    <div className="relative h-full min-h-0">
+    <div className="relative h-full min-h-0" ref={stageRef}>
       <div className="h-full overflow-hidden">
-        <div className={cn("stack-root", pushedIn && "is-pushed")}>
+        <div
+          className={cn("stack-root", pushedIn && "is-pushed")}
+          style={
+            pushedIn && dragProgress > 0
+              ? {
+                  transform: `translate3d(${-28 + 28 * dragProgress}%,0,0)`,
+                  opacity: 0.55 + 0.45 * dragProgress,
+                  transition: dragging ? "none" : undefined,
+                  pointerEvents: "none",
+                }
+              : undefined
+          }
+        >
           <ScreenView screen={root} />
         </div>
         {displayPushed.map((screen, i) => (
@@ -313,6 +437,8 @@ function NativeStack() {
             screen={screen}
             index={i}
             exiting={Boolean(exitScreen) && i === displayPushed.length - 1}
+            dragPx={i === topIndex && (dragging || dragPx > 0) ? dragPx : undefined}
+            dragging={i === topIndex && dragging}
           />
         ))}
       </div>
