@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GTokenRouteImport } from './routes/g.$token'
+import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const GTokenRoute = GTokenRouteImport.update({
   path: '/g/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWippSplatRoute = ApiWippSplatRouteImport.update({
+  id: '/api/wipp/$',
+  path: '/api/wipp/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/g/$token': typeof GTokenRoute
+  '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/g/$token': typeof GTokenRoute
+  '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/g/$token': typeof GTokenRoute
+  '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/g/$token'
+  fullPaths: '/' | '/g/$token' | '/api/wipp/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/g/$token'
-  id: '__root__' | '/' | '/g/$token'
+  to: '/' | '/g/$token' | '/api/wipp/$'
+  id: '__root__' | '/' | '/g/$token' | '/api/wipp/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GTokenRoute: typeof GTokenRoute
+  ApiWippSplatRoute: typeof ApiWippSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/wipp/$': {
+      id: '/api/wipp/$'
+      path: '/api/wipp/$'
+      fullPath: '/api/wipp/$'
+      preLoaderRoute: typeof ApiWippSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GTokenRoute: GTokenRoute,
+  ApiWippSplatRoute: ApiWippSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

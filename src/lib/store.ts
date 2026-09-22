@@ -136,6 +136,9 @@ function fresh() {
     nearby: 0 as NearbyMode,
     nearbyUntil: 0,
     pendingSignup: {} as Partial<MeProfile>,
+    serverConnected: false,
+    serverProfileId: undefined as string | undefined,
+    serverUsername: undefined as string | undefined,
     typing: {} as Record<string, boolean>,
     codes: seedCodes() as LiveCode[],
     oneTimeQrs: seedOneTimeQrs() as OneTimeQr[],
@@ -183,6 +186,8 @@ type WgoState = ReturnType<typeof fresh> & {
   acceptLegal: () => void;
   saveSignup: (data: Partial<MeProfile>) => void;
   completeSetup: (data: Partial<MeProfile>) => void;
+  syncServerInbox: () => Promise<void>;
+  openServerDm: (username: string) => Promise<void>;
   updateMe: (data: Partial<MeProfile>) => void;
   setTheme: (theme: ThemeMode) => void;
   setLanguage: (language: Lang) => void;
@@ -401,6 +406,55 @@ export const useWgoStore = create<WgoState>()(
           stack: [{ name: "chats" }],
         });
         void get().ensureCrypto();
+        void get().syncServerInbox();
+      },
+
+      completeSetup: (data) => {
+        set((st) => ({
+          onboarded: true,
+          me: { ...st.me, ...st.pendingSignup, ...data, id: "me", online: true },
+          stack: [{ name: "chats" }],
+        }));
+        void get().ensureCrypto();
+        void get().syncServerInbox();
+      },
+
+      syncServerInbox: async () => {
+        try {
+          const me = get().me;
+          const { bootstrapMessaging, mergeServerChatsIntoState } = await import(
+            "@/lib/messaging/sync"
+          );
+          const { profile, chats } = await bootstrapMessaging({
+            username: me.username || "deena",
+            displayName: me.displayName || `${me.firstName} ${me.lastName}`.trim() || "WIPP",
+          });
+          set((st) => ({
+            ...mergeServerChatsIntoState(st, chats, profile.id),
+            serverProfileId: profile.id,
+            serverUsername: profile.username,
+            serverConnected: true,
+          }));
+        } catch (err) {
+          console.warn("[wipp] server sync failed", err);
+          set({ serverConnected: false });
+        }
+      },
+
+      openServerDm: async (username: string) => {
+        const { startChatWithUsername, mergeServerChatsIntoState, toLocalChatId, syncChatMessages, mergeServerMessagesIntoState } =
+          await import("@/lib/messaging/sync");
+        const chat = await startChatWithUsername(username);
+        const profileId = get().serverProfileId;
+        set((st) => mergeServerChatsIntoState(st, [chat], profileId));
+        const localId = toLocalChatId(chat.id);
+        const synced = await syncChatMessages(localId);
+        if (synced && "messages" in synced) {
+          set((st) =>
+            mergeServerMessagesIntoState(st, chat.id, synced.messages, synced.meServerId),
+          );
+        }
+        get().push({ name: "conversation", chatId: localId });
       },
 
       acceptLegal: () =>
@@ -414,15 +468,6 @@ export const useWgoStore = create<WgoState>()(
           pendingSignup: { ...st.pendingSignup, ...data },
           stack: [...st.stack, { name: "otp" }],
         })),
-
-      completeSetup: (data) => {
-        set((st) => ({
-          onboarded: true,
-          me: { ...st.me, ...st.pendingSignup, ...data, id: "me", online: true },
-          stack: [{ name: "chats" }],
-        }));
-        void get().ensureCrypto();
-      },
 
       updateMe: (data) => set((st) => ({ me: { ...st.me, ...data } })),
       setTheme: (theme) => set({ theme }),
@@ -620,11 +665,37 @@ export const useWgoStore = create<WgoState>()(
         void get().sealMessage(chatId, message.id);
         pumpReceipt(set, get, chatId, message.id);
 
+        // Dual-write text messages to the messaging server for srv: chats
+        if (message.type === "text" && message.text) {
+          void (async () => {
+            try {
+              const { isServerChatId, sendViaServer, syncChatMessages, mergeServerMessagesIntoState } =
+                await import("@/lib/messaging/sync");
+              if (!isServerChatId(chatId)) return;
+              await sendViaServer(chatId, message.text!, message.id);
+              const synced = await syncChatMessages(chatId);
+              if (synced && "messages" in synced) {
+                set((st) =>
+                  mergeServerMessagesIntoState(
+                    st,
+                    chatId.replace(/^srv:/, ""),
+                    synced.messages,
+                    synced.meServerId,
+                  ),
+                );
+              }
+            } catch (err) {
+              console.warn("[wipp] server send failed", err);
+            }
+          })();
+        }
+
         const chat = get().chats.find((c) => c.id === chatId);
         const other = chat?.participantIds.find((id) => id !== "me");
         if (!chat || chat.type !== "dm" || !other || get().blockedIds.includes(other)) {
           return;
         }
+        if (chatId.startsWith("srv:")) return;
         const shop = chat.shopId
           ? get().shops.find((s) => s.id === chat.shopId)
           : undefined;
@@ -753,7 +824,7 @@ export const useWgoStore = create<WgoState>()(
           },
         })),
 
-      markRead: (chatId) =>
+      markRead: (chatId) => {
         set((st) => ({
           chats: st.chats.map((c) => (c.id === chatId ? { ...c, unread: 0 } : c)),
           messages: st.privacy.readReceipts !== false
@@ -764,7 +835,29 @@ export const useWgoStore = create<WgoState>()(
                 ),
               }
             : st.messages,
-        })),
+        }));
+        if (chatId.startsWith("srv:")) {
+          void (async () => {
+            try {
+              const { syncChatMessages, mergeServerMessagesIntoState, toServerChatId } =
+                await import("@/lib/messaging/sync");
+              const synced = await syncChatMessages(chatId);
+              if (synced && "messages" in synced) {
+                set((st) =>
+                  mergeServerMessagesIntoState(
+                    st,
+                    toServerChatId(chatId),
+                    synced.messages,
+                    synced.meServerId,
+                  ),
+                );
+              }
+            } catch {
+              /* offline ok */
+            }
+          })();
+        }
+      },
 
       toggleMute: (chatId) =>
         set((st) => ({

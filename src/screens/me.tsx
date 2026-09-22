@@ -55,8 +55,15 @@ export function MeScreen() {
   const chats = useWgoStore((s) => s.chats);
   const listings = useWgoStore((s) => s.listings);
   const lifestyle = useWgoStore((s) => s.lifestyle);
+  const serverConnected = useWgoStore((s) => s.serverConnected);
+  const serverUsername = useWgoStore((s) => s.serverUsername);
+  const syncServerInbox = useWgoStore((s) => s.syncServerInbox);
+  const openServerDm = useWgoStore((s) => s.openServerDm);
   const [pick, setPick] = useState(false);
   const [hint, setHint] = useState(false);
+  const [serverBusy, setServerBusy] = useState(false);
+  const [serverErr, setServerErr] = useState("");
+  const [peerUser, setPeerUser] = useState("lea");
 
   useEffect(() => {
     if (!hint) return;
@@ -197,6 +204,66 @@ export function MeScreen() {
                 {t("share")}
               </button>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-surface p-3.5 ring-1 ring-hair">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "size-2.5 rounded-full",
+                  serverConnected ? "bg-emerald-400" : "bg-danger",
+                )}
+              />
+              <p className="text-[13px] font-semibold">Serveur messagerie</p>
+              <span className="ml-auto text-[11px] text-muted">
+                {serverConnected ? `@${serverUsername ?? "…"}` : "hors ligne"}
+              </span>
+            </div>
+            <p className="mt-1.5 text-[12px] leading-snug text-muted">
+              Comptes @username réels + chats 1:1 synchronisés. Mot de passe démo&nbsp;:
+              <span className="text-fg"> wipp-demo</span>
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={serverBusy}
+                className="press h-10 flex-1 rounded-full bg-accent text-[12px] font-semibold text-accent-fg disabled:opacity-50"
+                onClick={() => {
+                  setServerBusy(true);
+                  setServerErr("");
+                  void syncServerInbox()
+                    .catch((e: Error) => setServerErr(e.message))
+                    .finally(() => setServerBusy(false));
+                }}
+              >
+                {serverBusy ? "…" : "Connecter"}
+              </button>
+              <input
+                value={peerUser}
+                onChange={(e) => setPeerUser(e.target.value.replace(/^@/, ""))}
+                placeholder="@lea"
+                className="h-10 w-[38%] rounded-full bg-surface-2 px-3 text-[12px] outline-none ring-1 ring-hair"
+              />
+              <button
+                type="button"
+                disabled={serverBusy || !peerUser.trim()}
+                className="press h-10 rounded-full bg-navy px-3 text-[12px] font-semibold text-paper disabled:opacity-50"
+                onClick={() => {
+                  setServerBusy(true);
+                  setServerErr("");
+                  void openServerDm(peerUser.trim())
+                    .catch((e: Error) => setServerErr(e.message))
+                    .finally(() => setServerBusy(false));
+                }}
+              >
+                Écrire
+              </button>
+            </div>
+            {serverErr ? (
+              <p className="mt-2 text-[11px] text-danger">{serverErr}</p>
+            ) : (
+              <p className="mt-2 text-[11px] text-muted">Essaye @lea ou @samira</p>
+            )}
           </div>
         </div>
 
