@@ -11,6 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectRouteImport } from './routes/connect'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SiteRouteImport } from './routes/site'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as GTokenRouteImport } from './routes/g.$token'
 import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
 
@@ -22,6 +26,26 @@ const IndexRoute = IndexRouteImport.update({
 const ConnectRoute = ConnectRouteImport.update({
   id: '/connect',
   path: '/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteRoute = SiteRouteImport.update({
+  id: '/site',
+  path: '/site',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GTokenRoute = GTokenRouteImport.update({
@@ -38,12 +62,20 @@ const ApiWippSplatRoute = ApiWippSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/connect': typeof ConnectRoute
+  '/privacy': typeof PrivacyRoute
+  '/site': typeof SiteRoute
+  '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/g/$token': typeof GTokenRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/connect': typeof ConnectRoute
+  '/privacy': typeof PrivacyRoute
+  '/site': typeof SiteRoute
+  '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/g/$token': typeof GTokenRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
@@ -51,20 +83,53 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/connect': typeof ConnectRoute
+  '/privacy': typeof PrivacyRoute
+  '/site': typeof SiteRoute
+  '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/g/$token': typeof GTokenRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/connect' | '/g/$token' | '/api/wipp/$'
+  fullPaths:
+    | '/'
+    | '/connect'
+    | '/privacy'
+    | '/site'
+    | '/support'
+    | '/terms'
+    | '/g/$token'
+    | '/api/wipp/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/connect' | '/g/$token' | '/api/wipp/$'
-  id: '__root__' | '/' | '/connect' | '/g/$token' | '/api/wipp/$'
+  to:
+    | '/'
+    | '/connect'
+    | '/privacy'
+    | '/site'
+    | '/support'
+    | '/terms'
+    | '/g/$token'
+    | '/api/wipp/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/connect'
+    | '/privacy'
+    | '/site'
+    | '/support'
+    | '/terms'
+    | '/g/$token'
+    | '/api/wipp/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConnectRoute: typeof ConnectRoute
+  PrivacyRoute: typeof PrivacyRoute
+  SiteRoute: typeof SiteRoute
+  SupportRoute: typeof SupportRoute
+  TermsRoute: typeof TermsRoute
   GTokenRoute: typeof GTokenRoute
   ApiWippSplatRoute: typeof ApiWippSplatRoute
 }
@@ -83,6 +148,34 @@ declare module '@tanstack/react-router' {
       path: '/connect'
       fullPath: '/connect'
       preLoaderRoute: typeof ConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site': {
+      id: '/site'
+      path: '/site'
+      fullPath: '/site'
+      preLoaderRoute: typeof SiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$token': {
@@ -105,6 +198,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConnectRoute: ConnectRoute,
+  PrivacyRoute: PrivacyRoute,
+  SiteRoute: SiteRoute,
+  SupportRoute: SupportRoute,
+  TermsRoute: TermsRoute,
   GTokenRoute: GTokenRoute,
   ApiWippSplatRoute: ApiWippSplatRoute,
 }

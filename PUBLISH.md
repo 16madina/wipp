@@ -14,6 +14,17 @@ Tu n’as **pas** besoin d’apprendre Vercel. Tu me dis **« publie »**, je la
 
 `DATABASE_URL` (Supabase) est déjà dans l’environnement local.
 
+## Domaine public (toi)
+
+1. Tu choisis et achètes le domaine (ex. `wipp.me`)
+2. Tu me l’envoies
+3. Je branche DNS → Vercel
+4. Les URLs stores deviennent :
+   - `https://TON-DOMAINE/privacy`
+   - `https://TON-DOMAINE/terms`
+   - `https://TON-DOMAINE/support`
+   - `https://TON-DOMAINE/site`
+
 ## Ensuite — chaque modification
 
 1. Tu me dis la modif  

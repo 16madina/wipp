@@ -142,6 +142,13 @@ function ConnectPage() {
           <p className="connect-meta">
             Backend cloud : <code>{SUPABASE_URL.replace("https://", "")}</code>
           </p>
+          <p className="connect-meta">
+            <Link to="/privacy">Confidentialité</Link>
+            {" · "}
+            <Link to="/terms">Conditions</Link>
+            {" · "}
+            <Link to="/support">Support</Link>
+          </p>
         </aside>
       </main>
     </div>

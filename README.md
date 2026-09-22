@@ -32,6 +32,20 @@ Voir **[PUBLISH.md](./PUBLISH.md)** — tu dis « publie », l’agent déploie 
 npm run publish -- -m "ma modification"
 ```
 
+## Site public (stores)
+
+Pages déjà prêtes — à brancher sur ton domaine dès que tu l’as acheté :
+
+| URL | Usage store |
+|-----|-------------|
+| `/site` | Présentation produit |
+| `/privacy` | Politique de confidentialité (Apple / Google) |
+| `/terms` | Conditions d’utilisation |
+| `/support` | URL Support |
+| `/connect` | Liaison web ↔ app |
+
+En local : [http://127.0.0.1:3847/privacy](http://127.0.0.1:3847/privacy) etc.
+
 ## Supabase
 
 Projet `sdaulxbcksusojcbsucr` — schéma messagerie + pairing appliqué.  
@@ -41,8 +55,8 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
 
 ## Suite
 
-1. **Tokens one-shot** Vercel + Expo (voir PUBLISH.md)
-2. **Firebase Phone Auth** (SMS OTP) — décidé, à brancher
-3. Médias + push
-4. Appels LiveKit
-5. Remplir les écrans Expo restants + stores
+1. **Acheter le domaine** → m’envoyer le nom → DNS + publish
+2. **Tokens** Vercel + Expo (voir PUBLISH.md)
+3. **Admin panel** (notifications, contenus) sur le domaine
+4. Firebase Phone Auth (SMS OTP)
+5. Médias + push + LiveKit
