@@ -16,14 +16,35 @@ import {
   sendMessage,
 } from "./server";
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-    },
+const CORS_HEADERS: Record<string, string> = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "authorization, content-type",
+  "access-control-max-age": "86400",
+};
+
+function withCors(response: Response) {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    headers.set(key, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   });
+}
+
+function json(data: unknown, status = 200) {
+  return withCors(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    }),
+  );
 }
 
 function errorResponse(err: unknown) {
@@ -32,6 +53,11 @@ function errorResponse(err: unknown) {
   }
   console.error("[wipp-api]", err);
   return json({ error: "internal", message: "Erreur serveur." }, 500);
+}
+
+/** Preflight for mobile / cross-origin web clients. */
+export function handleWippOptions() {
+  return withCors(new Response(null, { status: 204 }));
 }
 
 function bearer(request: Request) {
@@ -56,9 +82,13 @@ async function readBody<T>(request: Request): Promise<T> {
 
 export async function handleWippApi(request: Request): Promise<Response> {
   try {
+    const method = request.method.toUpperCase();
+    if (method === "OPTIONS") {
+      return handleWippOptions();
+    }
+
     await ensureMessagingReady();
     const parts = pathParts(request);
-    const method = request.method.toUpperCase();
     const [a, b, c] = parts;
 
     if (method === "GET" && a === "health") {

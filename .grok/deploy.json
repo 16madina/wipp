@@ -1,0 +1,9 @@
+{
+  "apiUrl": "",
+  "vercelProjectName": "wipp",
+  "expoOwner": "",
+  "expoSlug": "wipp",
+  "easProjectId": "",
+  "bundleId": "com.wipp.app",
+  "notes": "Rempli automatiquement par scripts/publish-wipp.mjs après le 1er deploy."
+}

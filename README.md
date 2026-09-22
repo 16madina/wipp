@@ -24,6 +24,14 @@ npx expo start --web --port 3848
 - API utilisée : `http://127.0.0.1:3847` (`EXPO_PUBLIC_WIPP_API_URL` pour override)
 - **Bundle ID (iOS + Android)** : `com.wipp.app`
 
+## Publier (comme Lovable)
+
+Voir **[PUBLISH.md](./PUBLISH.md)** — tu dis « publie », l’agent déploie API + OTA.
+
+```bash
+npm run publish -- -m "ma modification"
+```
+
 ## Supabase
 
 Projet `sdaulxbcksusojcbsucr` — schéma messagerie + pairing appliqué.  
@@ -33,7 +41,8 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
 
 ## Suite
 
-1. **Firebase Phone Auth** (SMS OTP) — décidé, à brancher
-2. Médias + push
-3. Appels LiveKit
-4. Remplir les écrans Expo restants + stores
+1. **Tokens one-shot** Vercel + Expo (voir PUBLISH.md)
+2. **Firebase Phone Auth** (SMS OTP) — décidé, à brancher
+3. Médias + push
+4. Appels LiveKit
+5. Remplir les écrans Expo restants + stores
