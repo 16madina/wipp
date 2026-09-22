@@ -65,6 +65,32 @@ export function mergeAppEnv(appEnv, processEnv) {
   return { ...appEnv, ...processEnv };
 }
 
+/** Load `.env` key=value pairs (no export). Existing process env wins. */
+export function readDotEnv(root) {
+  try {
+    const text = readFileSync(join(root, ".env"), "utf8");
+    const env = {};
+    for (const line of text.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq <= 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      env[key] = value;
+    }
+    return env;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Translate a child's `exit` `(code, signal)` into this process's exit status.
  *
@@ -110,7 +136,10 @@ function main(argv) {
     console.error("usage: node scripts/with-app-env.mjs <command> [args…]");
     process.exit(2);
   }
-  const env = mergeAppEnv(readAppEnv(projectRoot()), process.env);
+  const env = mergeAppEnv(
+    { ...readDotEnv(projectRoot()), ...readAppEnv(projectRoot()) },
+    process.env,
+  );
   const child = spawn(command, args, { stdio: "inherit", env });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
