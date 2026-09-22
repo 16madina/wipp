@@ -1,0 +1,109 @@
+{
+  "gotoMs": 1681,
+  "convoOpenMs": 434,
+  "exploreOpenMs": 836,
+  "paints": {
+    "ttfb": 11,
+    "dcl": 184,
+    "load": 1211,
+    "paint": {
+      "first-paint": 196,
+      "first-contentful-paint": 196
+    }
+  },
+  "net": {
+    "reqs": 9,
+    "mb": 0.61,
+    "byKB": {
+      "text/html": 0,
+      "text/javascript": 0,
+      "video/mp4": 625,
+      "application/javascript": 0,
+      "text/css": 0,
+      "image/jpeg": 0
+    }
+  },
+  "afterLoad": {
+    "heap": 3.88,
+    "perf": {
+      "nodes": 188,
+      "listeners": 180,
+      "layoutCount": 4,
+      "recStyle": 3,
+      "layoutDurMs": 36.6,
+      "recStyleMs": 8.7,
+      "scriptMs": 55.1,
+      "taskMs": 190.4,
+      "jsHeapMB": 3.88
+    },
+    "net": {
+      "bytes": 639824,
+      "reqs": 8,
+      "by": {
+        "text/html": 0,
+        "text/javascript": 0,
+        "video/mp4": 639824,
+        "application/javascript": 0,
+        "text/css": 0,
+        "image/jpeg": 0
+      }
+    },
+    "gotoMs": 1681
+  },
+  "chats": {
+    "heap": 5.28,
+    "perf": {
+      "nodes": 571,
+      "listeners": 280,
+      "layoutCount": 7,
+      "recStyle": 27,
+      "layoutDurMs": 46.1,
+      "recStyleMs": 18.4,
+      "scriptMs": 94.4,
+      "taskMs": 298.4,
+      "jsHeapMB": 5.28
+    },
+    "snippet": "18:55\nVotre story\nSamira\nJulien\nMaya\nAlex\nNoah\nDemandes\n2\nTous\nPersonnel\nBoutiqu"
+  },
+  "convo": {
+    "heap": 5.91,
+    "perf": {
+      "nodes": 716,
+      "listeners": 398,
+      "layoutCount": 8,
+      "recStyle": 35,
+      "layoutDurMs": 58.2,
+      "recStyleMs": 25.9,
+      "scriptMs": 136.5,
+      "taskMs": 420.4,
+      "jsHeapMB": 5.91
+    },
+    "snippet": "18:55\nVotre story\nSamira\nJulien\nMaya\nAlex\nNoah\nDemandes\n2\nTous\nPersonnel\nBoutiques\nGroupes\nAlex\n18:50\nVers 18h, ça te va ?\nFamille Diallo\n18:36\nDimanche on mang",
+    "openMs": 434
+  },
+  "explore": {
+    "heap": 5.58,
+    "perf": {
+      "nodes": 1137,
+      "listeners": 620,
+      "layoutCount": 14,
+      "recStyle": 53,
+      "layoutDurMs": 88.6,
+      "recStyleMs": 30.3,
+      "scriptMs": 193.6,
+      "taskMs": 590.6,
+      "jsHeapMB": 5.58
+    },
+    "snippet": "18:55\nExplorer\n\nWipp, c’est pour écrire. Ici, vous découvrez ce qui existe autour de vous.\n\nPetites annonces\nAcheter, vendre, trouver.\nServices\nTout ce qui est utile autour de vous",
+    "openMs": 836
+  },
+  "persist": {
+    "kb": 31.4,
+    "keys": [
+      {
+        "k": "wgo-store-v14",
+        "kb": 31.3
+      }
+    ]
+  }
+}

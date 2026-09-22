@@ -1,0 +1,424 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewport": "390x844 @2x",
+  "gotoMs": 222,
+  "interactions": {
+    "tapIntro": 123,
+    "tapDemo": 69,
+    "tapChat": 129,
+    "typeSend": {
+      "ok": false
+    },
+    "exploreMs": 2521,
+    "meMs": 260
+  },
+  "fps": {
+    "intro": {
+      "frames": 56,
+      "avgFps": 62.2,
+      "droppedOver20ms": 0,
+      "maxFrameMs": 16.8
+    },
+    "chatsScroll": {
+      "frames": 55,
+      "avgFps": 60.7,
+      "droppedOver20ms": 0,
+      "maxFrameMs": 16.8,
+      "scrollTop": 345
+    },
+    "explore": {
+      "frames": 38,
+      "avgFps": 47.1,
+      "droppedOver20ms": 5,
+      "maxFrameMs": 99.9
+    }
+  },
+  "snapshots": {
+    "cold": {
+      "label": "cold",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 0,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {},
+      "lcp": null,
+      "resources": {
+        "count": 4,
+        "transferKB": 10,
+        "decodedKB": 58,
+        "byType": {
+          "link": 2,
+          "other": 1,
+          "script": 1
+        },
+        "js": 2,
+        "jsKB": 0,
+        "images": 0,
+        "imgKB": 0,
+        "media": []
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": {
+        "paused": true,
+        "muted": false,
+        "t": 0,
+        "ready": 4
+      },
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 32,
+      "text": ""
+    },
+    "intro": {
+      "label": "intro",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 0,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 6,
+        "transferKB": 694,
+        "decodedKB": 752,
+        "byType": {
+          "link": 2,
+          "other": 1,
+          "script": 1,
+          "video": 2
+        },
+        "js": 2,
+        "jsKB": 0,
+        "images": 1,
+        "imgKB": 59,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": {
+        "paused": true,
+        "muted": false,
+        "t": 0,
+        "ready": 4
+      },
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 32,
+      "text": ""
+    },
+    "afterIntro": {
+      "label": "after-intro",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 1262,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 8,
+        "transferKB": 876,
+        "decodedKB": 1503,
+        "byType": {
+          "link": 2,
+          "other": 3,
+          "script": 1,
+          "video": 2
+        },
+        "js": 4,
+        "jsKB": 182,
+        "images": 1,
+        "imgKB": 59,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": null,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 56,
+      "text": "18:54 Ouvrir la démo Parlez. Partagez. Connectez-vous. Messagerie privée, appel"
+    },
+    "chats": {
+      "label": "chats",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 1262,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 8,
+        "transferKB": 876,
+        "decodedKB": 1503,
+        "byType": {
+          "link": 2,
+          "other": 3,
+          "script": 1,
+          "video": 2
+        },
+        "js": 4,
+        "jsKB": 182,
+        "images": 1,
+        "imgKB": 59,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": null,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 320,
+      "text": "18:54 Votre story Samira Julien Maya Alex Noah Demandes 2 Tous Personnel Boutiqu"
+    },
+    "convo": {
+      "label": "conversation",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 1262,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 8,
+        "transferKB": 876,
+        "decodedKB": 1503,
+        "byType": {
+          "link": 2,
+          "other": 3,
+          "script": 1,
+          "video": 2
+        },
+        "js": 4,
+        "jsKB": 182,
+        "images": 1,
+        "imgKB": 59,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": null,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 317,
+      "text": "18:54 Votre story Samira Julien Maya Alex Noah Demandes 2 Tous Personnel Boutiqu"
+    },
+    "afterSend": {
+      "label": "after-send",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 1262,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 8,
+        "transferKB": 876,
+        "decodedKB": 1503,
+        "byType": {
+          "link": 2,
+          "other": 3,
+          "script": 1,
+          "video": 2
+        },
+        "js": 4,
+        "jsKB": 182,
+        "images": 1,
+        "imgKB": 59,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": null,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 317,
+      "text": "18:54 Votre story Samira Julien Maya Alex Noah Demandes 2 Tous Personnel Boutiqu"
+    },
+    "explore": {
+      "label": "explore",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 1262,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 11,
+        "transferKB": 2061,
+        "decodedKB": 2730,
+        "byType": {
+          "link": 2,
+          "other": 3,
+          "script": 1,
+          "video": 2,
+          "img": 3
+        },
+        "js": 4,
+        "jsKB": 182,
+        "images": 4,
+        "imgKB": 1244,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": null,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 317,
+      "text": "18:54 Votre story Samira Julien Maya Alex Noah Demandes 2 Tous Personnel Boutiqu"
+    },
+    "me": {
+      "label": "me",
+      "nav": {
+        "ttfb": 14,
+        "dcl": 215,
+        "load": 1262,
+        "domInteractive": 215,
+        "transferKB": 3
+      },
+      "paints": {
+        "first-paint": 224,
+        "first-contentful-paint": 224
+      },
+      "lcp": null,
+      "resources": {
+        "count": 14,
+        "transferKB": 3328,
+        "decodedKB": 4039,
+        "byType": {
+          "link": 2,
+          "other": 3,
+          "script": 1,
+          "video": 2,
+          "img": 6
+        },
+        "js": 4,
+        "jsKB": 182,
+        "images": 7,
+        "imgKB": 2511,
+        "media": [
+          {
+            "name": "wipp-boot.mp4",
+            "ms": 189,
+            "kb": 625
+          }
+        ]
+      },
+      "memory": {
+        "usedMB": 9.5,
+        "totalMB": 9.5,
+        "limitMB": 2088.5
+      },
+      "video": null,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longestTask": 0,
+      "nodes": 369,
+      "text": "18:54 Votre story Samira Julien Maya Alex Noah Demandes 2 Tous Personnel Boutiqu"
+    }
+  }
+}

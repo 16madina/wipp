@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WIPP · Supprimer mon compte</title>
+    <meta
+      name="description"
+      content="Demande de suppression de compte WIPP — Apple App Store et Google Play."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --navy: #0b1220;
+        --ink: #02081e;
+        --paper: #f4efe4;
+        --muted: #9aa3b5;
+        --accent: #ffd84d;
+        --danger: #ff6b6b;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--ink);
+        color: var(--paper);
+        line-height: 1.5;
+      }
+      main {
+        max-width: 440px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+      .mark {
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        font-size: 13px;
+        color: var(--accent);
+      }
+      h1 { font-size: 28px; line-height: 1.15; margin: 16px 0 8px; }
+      p { color: var(--muted); }
+      label { display: block; margin-top: 18px; font-size: 13px; color: var(--muted); }
+      input {
+        margin-top: 8px;
+        width: 100%;
+        height: 48px;
+        border: 0;
+        border-radius: 10px;
+        padding: 0 14px;
+        background: var(--navy);
+        color: var(--paper);
+        font-size: 16px;
+      }
+      input:focus { outline: 2px solid var(--accent); }
+      button {
+        margin-top: 24px;
+        width: 100%;
+        height: 48px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--danger);
+        color: #1a0b0b;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .lang {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 28px;
+      }
+      .lang button {
+        margin: 0;
+        width: auto;
+        height: 32px;
+        padding: 0 12px;
+        background: var(--navy);
+        color: var(--paper);
+        font-weight: 600;
+        font-size: 12px;
+      }
+      .lang button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--navy);
+      }
+      .ok { display: none; }
+      body.is-done form, body.is-done .intro { display: none; }
+      body.is-done .ok { display: block; }
+      a { color: var(--accent); }
+      .err { color: var(--danger); font-size: 13px; min-height: 1.2em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="lang">
+        <button type="button" id="fr" aria-pressed="true">FR</button>
+        <button type="button" id="en" aria-pressed="false">EN</button>
+      </div>
+      <div class="mark">WIPP</div>
+      <h1 id="title">Supprimer mon compte</h1>
+      <p class="intro" id="intro">
+        Apple et Google exigent un moyen de supprimer le compte hors de l’app.
+        Dans WIPP : Moi → Compte → Supprimer mon compte. Ici, envoie une demande
+        avec le courriel ou le numéro du compte. Suppression sous 30 jours.
+        Contact : <a href="mailto:lazoneclient@gmail.com">lazoneclient@gmail.com</a>.
+      </p>
+      <form id="form" autocomplete="on">
+        <label id="labContact">Courriel ou numéro
+          <input id="contact" type="text" required placeholder="toi@email.com ou +1…" />
+        </label>
+        <label id="labWord">Tape SUPPRIMER pour confirmer
+          <input id="word" type="text" required autocomplete="off" />
+        </label>
+        <p class="err" id="err"></p>
+        <button type="submit" id="cta">Supprimer définitivement</button>
+      </form>
+      <div class="ok">
+        <p id="ok">
+          Demande reçue. Ton compte WIPP sera supprimé sous 30 jours. Tu peux
+          aussi le faire tout de suite dans l’app.
+        </p>
+      </div>
+    </main>
+    <script>
+      const copy = {
+        fr: {
+          title: "Supprimer mon compte",
+          intro:
+            "Apple et Google exigent un moyen de supprimer le compte hors de l’app. Dans WIPP : Moi → Compte → Supprimer mon compte. Ici, envoie une demande avec le courriel ou le numéro du compte. Suppression sous 30 jours. Contact : lazoneclient@gmail.com.",
+          labContact: "Courriel ou numéro",
+          labWord: "Tape SUPPRIMER pour confirmer",
+          cta: "Supprimer définitivement",
+          need: "SUPPRIMER",
+          err: "Le mot ne correspond pas.",
+          ok: "Demande reçue. Ton compte WIPP sera supprimé sous 30 jours. Tu peux aussi le faire tout de suite dans l’app.",
+        },
+        en: {
+          title: "Delete my account",
+          intro:
+            "Apple and Google require a way to delete the account outside the app. In WIPP: Me → Account → Delete my account. Here, send a request with the account email or phone. Deletion within 30 days. Contact: lazoneclient@gmail.com.",
+          labContact: "Email or phone",
+          labWord: "Type DELETE to confirm",
+          cta: "Delete permanently",
+          need: "DELETE",
+          err: "The word doesn’t match.",
+          ok: "Request received. Your WIPP account will be deleted within 30 days. You can also do it immediately in the app.",
+        },
+      };
+      let lang = "fr";
+      function apply() {
+        const t = copy[lang];
+        document.documentElement.lang = lang;
+        document.getElementById("title").textContent = t.title;
+        document.getElementById("intro").textContent = t.intro;
+        document.getElementById("labContact").childNodes[0].textContent = t.labContact;
+        document.getElementById("labWord").childNodes[0].textContent = t.labWord;
+        document.getElementById("cta").textContent = t.cta;
+        document.getElementById("ok").textContent = t.ok;
+        document.getElementById("err").textContent = "";
+        document.getElementById("fr").setAttribute("aria-pressed", String(lang === "fr"));
+        document.getElementById("en").setAttribute("aria-pressed", String(lang === "en"));
+      }
+      document.getElementById("fr").onclick = () => {
+        lang = "fr";
+        apply();
+      };
+      document.getElementById("en").onclick = () => {
+        lang = "en";
+        apply();
+      };
+      document.getElementById("form").onsubmit = (e) => {
+        e.preventDefault();
+        const t = copy[lang];
+        const word = document.getElementById("word").value.trim().toUpperCase();
+        if (word !== t.need) {
+          document.getElementById("err").textContent = t.err;
+          return;
+        }
+        document.body.classList.add("is-done");
+      };
+    </script>
+  </body>
+</html>

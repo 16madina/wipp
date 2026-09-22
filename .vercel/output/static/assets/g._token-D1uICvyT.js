@@ -1,0 +1,1 @@
+import{t as e}from"./react-CYZGgWHb.js";import{t}from"./index-My0beUTX.js";import{t as n}from"./boot-yj0a4yac.js";var r=e();function i(){let{token:e}=t.useParams();return(0,r.jsx)(n,{pendingGroupToken:e})}export{i as component};

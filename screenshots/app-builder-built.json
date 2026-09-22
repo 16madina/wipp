@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Wipp",
+      "hasCanvas": false,
+      "bodyTextLen": 19,
+      "bodyTextHash": "786472bfaad4b4f637d3f67902011d7f0c5558bfce7f83c5369c0608bfb0218d",
+      "bodyTextPrefix": "Toucher pour le son",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Wipp",
+      "hasCanvas": false,
+      "bodyTextLen": 19,
+      "bodyTextHash": "786472bfaad4b4f637d3f67902011d7f0c5558bfce7f83c5369c0608bfb0218d",
+      "bodyTextPrefix": "Toucher pour le son",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
