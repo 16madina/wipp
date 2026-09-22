@@ -1,52 +1,39 @@
 # WIPP
 
-Application de messagerie sociale (style WhatsApp) — connexion par `@username` et QR, jamais un numéro de téléphone.
+Messagerie sociale par `@username` / QR — app + site de connexion, backend prêt pour Supabase.
 
-Base récupérée depuis [github.com/16madina/wipp](https://github.com/16madina/wipp), avec une couche « feeling natif » web et un **socle messagerie serveur**.
-
-## Lancer en local
+## Lancer
 
 ```bash
 npm install
-npm run dev
-```
-
-Par défaut le script écoute sur le port `8080`. Pour un autre port :
-
-```bash
 node scripts/with-app-env.mjs ./node_modules/.bin/vite dev --host 0.0.0.0 --port 3847
 ```
 
-Ouvre ensuite `http://127.0.0.1:3847`.
+- App : [http://127.0.0.1:3847](http://127.0.0.1:3847)
+- Site de connexion : [http://127.0.0.1:3847/connect](http://127.0.0.1:3847/connect)
 
-## Socle messagerie (`/api/wipp`)
+## Supabase
 
-Postgres via PGLite en local (ou `DATABASE_URL` en prod). Comptes `@username`, sessions, chats 1:1, messages.
+Projet : `sdaulxbcksusojcbsucr` (`https://sdaulxbcksusojcbsucr.supabase.co`)
 
-Utilisateurs démo seedés (mot de passe `wipp-demo`) : `@deena`, `@lea`, `@samira`.
+Schéma déjà appliqué : `wipp_profiles`, `wipp_sessions`, `wipp_chats`, `wipp_messages`, `wipp_link_codes`, `wipp_devices`.
 
-| Méthode | Route | Auth |
-|--------|--------|------|
-| GET | `/api/wipp/health` | non |
-| POST | `/api/wipp/register` | non — `{ username, password, displayName }` |
-| POST | `/api/wipp/login` | non — `{ username, password }` |
-| GET | `/api/wipp/me` | Bearer |
-| GET | `/api/wipp/users/search?q=` | Bearer |
-| GET/POST | `/api/wipp/chats` | Bearer — POST `{ peerUsername }` |
-| GET/POST | `/api/wipp/chats/:id/messages` | Bearer — POST `{ body, clientId? }` |
+Pour que l’app utilise **Supabase** (et plus seulement PGLite local), définis :
 
-Dans l’app : onglet **Moi** → carte « Serveur messagerie » → Connecter / Écrire `@lea`.
+```bash
+export DATABASE_URL="postgresql://postgres.[REF]:[MOT_DE_PASSE]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+```
 
-## Stack
+(Dashboard Supabase → Project Settings → Database → Connection string URI.)
 
-- React 19 + Vite 8 + TanStack Router / Start
-- Tailwind CSS 4
-- Zustand (UI) + API messagerie serveur
-- Better Auth / PGlite (auth Grok optionnelle, désactivée)
+Comptes démo : `@deena` / `@lea` / `@samira` — mot de passe `wipp-demo`.
 
-## Suite prévue
+## Pairing web ↔ téléphone
 
-1. Pairing multi-appareil (site web ↔ app)
-2. Médias + push
-3. Appels LiveKit
-4. Expo (React Native) Android + iOS
+1. Ouvre `/connect` sur un ordinateur (code + QR).
+2. Dans l’app → **Moi** → Connecter le serveur → entre le code → **Lier**.
+3. Le site reçoit la session du même compte.
+
+## API
+
+Préfixe `/api/wipp` — health, register, login, chats, messages, `link/create`, `link/status`, `link/claim`, devices.
