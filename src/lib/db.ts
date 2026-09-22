@@ -94,9 +94,9 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
     const pool = new Pool({
-      connectionString: databaseUrl,
+      connectionString: databaseUrl!,
       // Supabase / managed Postgres expect TLS on the pooler and direct hosts.
-      ssl: /supabase\.co|neon\.tech/i.test(databaseUrl)
+      ssl: /supabase\.co|neon\.tech/i.test(databaseUrl!)
         ? { rejectUnauthorized: false }
         : undefined,
     });
