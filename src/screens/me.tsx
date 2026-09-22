@@ -233,12 +233,20 @@ export function MeScreen() {
                 onClick={() => {
                   setServerBusy(true);
                   setServerErr("");
+                  setLinkOk("");
                   void syncServerInbox()
+                    .then(() => {
+                      const name =
+                        useWgoStore.getState().serverUsername ||
+                        useWgoStore.getState().me.username ||
+                        "compte";
+                      setLinkOk(`Serveur connecté — @${name}`);
+                    })
                     .catch((e: Error) => setServerErr(e.message))
                     .finally(() => setServerBusy(false));
                 }}
               >
-                {serverBusy ? "…" : "Connecter"}
+                {serverBusy ? "…" : serverConnected ? "Actualiser" : "Connecter"}
               </button>
               <input
                 value={peerUser}
@@ -253,7 +261,9 @@ export function MeScreen() {
                 onClick={() => {
                   setServerBusy(true);
                   setServerErr("");
+                  setLinkOk("");
                   void openServerDm(peerUser.trim())
+                    .then(() => setLinkOk(`Conversation ouverte avec @${peerUser.trim()}`))
                     .catch((e: Error) => setServerErr(e.message))
                     .finally(() => setServerBusy(false));
                 }}
@@ -263,6 +273,8 @@ export function MeScreen() {
             </div>
             {serverErr ? (
               <p className="mt-2 text-[11px] text-danger">{serverErr}</p>
+            ) : linkOk ? (
+              <p className="mt-2 text-[11px] text-emerald-400">{linkOk}</p>
             ) : (
               <p className="mt-2 text-[11px] text-muted">Essaye @lea ou @samira</p>
             )}
@@ -305,7 +317,6 @@ export function MeScreen() {
                   Lier
                 </button>
               </div>
-              {linkOk ? <p className="mt-2 text-[11px] text-emerald-400">{linkOk}</p> : null}
             </div>
           </div>
         </div>
