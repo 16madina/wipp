@@ -2,6 +2,16 @@
 
 App native Android / iOS — premier socle branché sur l’API messagerie WIPP + Supabase.
 
+## Identifiants stores
+
+| Plateforme | Champ | Valeur |
+|---|---|---|
+| **iOS** | Bundle ID | `com.wipp.app` |
+| **Android** | Application ID / package | `com.wipp.app` |
+| Deep link | URL scheme | `wipp://` |
+
+À saisir tel quel dans App Store Connect et Google Play Console.
+
 ## Prérequis
 
 Le backend web doit tourner (API `/api/wipp`) :
@@ -28,6 +38,7 @@ Variable optionnelle : `EXPO_PUBLIC_WIPP_API_URL` (défaut `http://127.0.0.1:384
 - Session démo `@deena` / `wipp-demo`
 - Liste de chats serveur + conversation + envoi de messages
 - Thème WIPP (navy / or)
+- Bundle ID `com.wipp.app` (iOS + Android)
 
 ## Suite
 
@@ -35,3 +46,4 @@ Variable optionnelle : `EXPO_PUBLIC_WIPP_API_URL` (défaut `http://127.0.0.1:384
 - Médias / push
 - Appels LiveKit
 - Remplacer les écrans placeholder
+- Builds EAS (`eas build --platform ios|android`)

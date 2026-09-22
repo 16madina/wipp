@@ -22,6 +22,7 @@ npx expo start --web --port 3848
 
 - Aperçu : [http://127.0.0.1:3848](http://127.0.0.1:3848)
 - API utilisée : `http://127.0.0.1:3847` (`EXPO_PUBLIC_WIPP_API_URL` pour override)
+- **Bundle ID (iOS + Android)** : `com.wipp.app`
 
 ## Supabase
 
