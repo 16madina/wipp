@@ -1,39 +1,38 @@
 # WIPP
 
-Messagerie sociale par `@username` / QR — app + site de connexion, backend prêt pour Supabase.
+Messagerie sociale par `@username` / QR — app web + site de connexion + **Expo natif**.
 
-## Lancer
+## Lancer (web)
 
 ```bash
 npm install
 node scripts/with-app-env.mjs ./node_modules/.bin/vite dev --host 0.0.0.0 --port 3847
 ```
 
-- App : [http://127.0.0.1:3847](http://127.0.0.1:3847)
+- App web : [http://127.0.0.1:3847](http://127.0.0.1:3847)
 - Site de connexion : [http://127.0.0.1:3847/connect](http://127.0.0.1:3847/connect)
+
+## Lancer (Expo natif)
+
+```bash
+cd mobile
+npm install
+npx expo start --web --port 3848
+```
+
+- Aperçu : [http://127.0.0.1:3848](http://127.0.0.1:3848)
+- API utilisée : `http://127.0.0.1:3847` (`EXPO_PUBLIC_WIPP_API_URL` pour override)
 
 ## Supabase
 
-Projet : `sdaulxbcksusojcbsucr` (`https://sdaulxbcksusojcbsucr.supabase.co`)
+Projet `sdaulxbcksusojcbsucr` — schéma messagerie + pairing appliqué.  
+`DATABASE_URL` dans `.env` (non versionné).
 
-Schéma déjà appliqué : `wipp_profiles`, `wipp_sessions`, `wipp_chats`, `wipp_messages`, `wipp_link_codes`, `wipp_devices`.
+Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
 
-Pour que l’app utilise **Supabase** (et plus seulement PGLite local), définis :
+## Suite
 
-```bash
-export DATABASE_URL="postgresql://postgres.[REF]:[MOT_DE_PASSE]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
-```
-
-(Dashboard Supabase → Project Settings → Database → Connection string URI.)
-
-Comptes démo : `@deena` / `@lea` / `@samira` — mot de passe `wipp-demo`.
-
-## Pairing web ↔ téléphone
-
-1. Ouvre `/connect` sur un ordinateur (code + QR).
-2. Dans l’app → **Moi** → Connecter le serveur → entre le code → **Lier**.
-3. Le site reçoit la session du même compte.
-
-## API
-
-Préfixe `/api/wipp` — health, register, login, chats, messages, `link/create`, `link/status`, `link/claim`, devices.
+1. **Firebase Phone Auth** (SMS OTP) — décidé, à brancher
+2. Médias + push
+3. Appels LiveKit
+4. Remplir les écrans Expo restants + stores
