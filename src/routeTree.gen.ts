@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as GTokenRouteImport } from './routes/g.$token'
 import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GTokenRoute = GTokenRouteImport.update({
@@ -31,30 +37,34 @@ const ApiWippSplatRoute = ApiWippSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/connect': typeof ConnectRoute
   '/g/$token': typeof GTokenRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/connect': typeof ConnectRoute
   '/g/$token': typeof GTokenRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/connect': typeof ConnectRoute
   '/g/$token': typeof GTokenRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/g/$token' | '/api/wipp/$'
+  fullPaths: '/' | '/connect' | '/g/$token' | '/api/wipp/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/g/$token' | '/api/wipp/$'
-  id: '__root__' | '/' | '/g/$token' | '/api/wipp/$'
+  to: '/' | '/connect' | '/g/$token' | '/api/wipp/$'
+  id: '__root__' | '/' | '/connect' | '/g/$token' | '/api/wipp/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConnectRoute: typeof ConnectRoute
   GTokenRoute: typeof GTokenRoute
   ApiWippSplatRoute: typeof ApiWippSplatRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$token': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConnectRoute: ConnectRoute,
   GTokenRoute: GTokenRoute,
   ApiWippSplatRoute: ApiWippSplatRoute,
 }

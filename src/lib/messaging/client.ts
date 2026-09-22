@@ -130,6 +130,35 @@ export async function postServerMessage(chatId: string, body: string, clientId: 
   return data.message;
 }
 
+export async function createWebLinkCode(origin?: string) {
+  return api<{
+    code: string;
+    token: string;
+    expiresAt: number;
+    status: string;
+    qrUrl: string;
+  }>("/link/create", {
+    method: "POST",
+    auth: false,
+    body: JSON.stringify({ origin: origin ?? window.location.origin }),
+  });
+}
+
+export async function pollWebLinkStatus(token: string) {
+  return api<{
+    status: "pending" | "claimed" | "expired";
+    profile?: WippProfile;
+    session?: WippSessionPayload;
+  }>(`/link/status?token=${encodeURIComponent(token)}`, { auth: false });
+}
+
+export async function claimWebLinkCode(code: string) {
+  return api<{ ok: boolean; code: string; profile: WippProfile }>("/link/claim", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
 /** Ensure a server session exists for the current local profile (demo password). */
 export async function ensureServerSession(opts: {
   username: string;

@@ -1,8 +1,12 @@
 import {
   WippHttpError,
+  claimLinkCode,
+  createLinkCode,
   ensureMessagingReady,
+  getLinkStatus,
   getOrCreateDm,
   listChats,
+  listDevices,
   listMessages,
   loginProfile,
   logoutSession,
@@ -11,7 +15,6 @@ import {
   searchProfiles,
   sendMessage,
 } from "./server";
-// WippHttpError used by readBody + errorResponse
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -124,6 +127,41 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const body = await readBody<{ peerUsername?: string }>(request);
       const chat = await getOrCreateDm(me.id, body.peerUsername ?? "");
       return json({ chat }, 201);
+    }
+
+    if (method === "POST" && a === "link" && b === "create") {
+      let origin =
+        request.headers.get("origin") || new URL(request.url).origin;
+      try {
+        const body = await readBody<{ origin?: string }>(request);
+        if (body.origin) origin = body.origin;
+      } catch {
+        /* empty body ok */
+      }
+      const link = await createLinkCode({
+        userAgent: request.headers.get("user-agent") ?? undefined,
+        origin,
+      });
+      return json(link, 201);
+    }
+
+    if (method === "GET" && a === "link" && b === "status") {
+      const token = new URL(request.url).searchParams.get("token") ?? "";
+      const status = await getLinkStatus(token);
+      return json(status);
+    }
+
+    if (method === "POST" && a === "link" && b === "claim") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ code?: string }>(request);
+      const result = await claimLinkCode(me.id, body.code ?? "");
+      return json(result);
+    }
+
+    if (method === "GET" && a === "devices") {
+      const me = await resolveSession(bearer(request));
+      const devices = await listDevices(me.id);
+      return json({ devices });
     }
 
     return json({ error: "not_found", message: "Route API inconnue." }, 404);

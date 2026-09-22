@@ -64,6 +64,8 @@ export function MeScreen() {
   const [serverBusy, setServerBusy] = useState(false);
   const [serverErr, setServerErr] = useState("");
   const [peerUser, setPeerUser] = useState("lea");
+  const [linkCode, setLinkCode] = useState("");
+  const [linkOk, setLinkOk] = useState("");
 
   useEffect(() => {
     if (!hint) return;
@@ -264,6 +266,47 @@ export function MeScreen() {
             ) : (
               <p className="mt-2 text-[11px] text-muted">Essaye @lea ou @samira</p>
             )}
+            <div className="mt-3 border-t border-hair pt-3">
+              <p className="text-[12px] font-medium">Lier le site web</p>
+              <p className="mt-0.5 text-[11px] text-muted">
+                Ouvre <a className="text-accent underline" href="/connect" target="_blank" rel="noreferrer">/connect</a> sur
+                un ordi, puis entre le code ici.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={linkCode}
+                  onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+                  placeholder="ABCD-EFGH"
+                  className="h-10 flex-1 rounded-full bg-surface-2 px-3 text-[12px] tracking-widest outline-none ring-1 ring-hair"
+                />
+                <button
+                  type="button"
+                  disabled={serverBusy || linkCode.replace(/[^A-Z0-9]/g, "").length < 8}
+                  className="press h-10 rounded-full bg-accent px-3 text-[12px] font-semibold text-accent-fg disabled:opacity-50"
+                  onClick={() => {
+                    setServerBusy(true);
+                    setServerErr("");
+                    setLinkOk("");
+                    void (async () => {
+                      try {
+                        await syncServerInbox();
+                        const { claimWebLinkCode } = await import("@/lib/messaging/client");
+                        const res = await claimWebLinkCode(linkCode.replace(/[^A-Z0-9]/g, ""));
+                        setLinkOk(`Web lié à @${res.profile.username}`);
+                        setLinkCode("");
+                      } catch (e) {
+                        setServerErr(e instanceof Error ? e.message : "Échec du lien");
+                      } finally {
+                        setServerBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  Lier
+                </button>
+              </div>
+              {linkOk ? <p className="mt-2 text-[11px] text-emerald-400">{linkOk}</p> : null}
+            </div>
           </div>
         </div>
 

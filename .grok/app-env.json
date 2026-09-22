@@ -1,5 +1,7 @@
 {
   "VITE_AUTH_ENABLED": "false",
+  "VITE_SUPABASE_URL": "https://sdaulxbcksusojcbsucr.supabase.co",
+  "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkYXVseGJja3N1c29qY2JzdWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMDc3NzIsImV4cCI6MjEwNTY4Mzc3Mn0.DvTB8RM3IU5qr_gWqQK3P9FlRz66t7zPyWpqOoDA5rg",
   "deploy": {
     "database": true
   }
