@@ -32,6 +32,14 @@ npx expo start                     # QR pour Expo Go (téléphone)
 
 Variable optionnelle : `EXPO_PUBLIC_WIPP_API_URL` (défaut `http://127.0.0.1:3847`).
 
+## Publier (OTA sans rebuild store)
+
+À la racine du repo (après tokens one-shot — voir `../PUBLISH.md`) :
+
+```bash
+npm run publish -- -m "description"
+```
+
 ## Inclus dans cette passe
 
 - Onglets : Chats, Appels, WIPP (connect), Explorer, Moi
@@ -39,6 +47,7 @@ Variable optionnelle : `EXPO_PUBLIC_WIPP_API_URL` (défaut `http://127.0.0.1:384
 - Liste de chats serveur + conversation + envoi de messages
 - Thème WIPP (navy / or)
 - Bundle ID `com.wipp.app` (iOS + Android)
+- EAS Update prêt (canal `production`)
 
 ## Suite
 
@@ -46,4 +55,4 @@ Variable optionnelle : `EXPO_PUBLIC_WIPP_API_URL` (défaut `http://127.0.0.1:384
 - Médias / push
 - Appels LiveKit
 - Remplacer les écrans placeholder
-- Builds EAS (`eas build --platform ios|android`)
+- Premier build store EAS (`eas build --platform ios|android`)
