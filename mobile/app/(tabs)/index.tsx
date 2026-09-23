@@ -11,8 +11,9 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import {
-  ensureDemoSession,
+  ensureSession,
   fetchChats,
+  getStoredProfile,
   type WippChat,
   type WippProfile,
 } from '@/lib/api';
@@ -29,7 +30,11 @@ export default function ChatsScreen() {
   const load = useCallback(async () => {
     setError('');
     try {
-      const me = await ensureDemoSession();
+      const me = await ensureSession();
+      if (!me) {
+        router.replace('/login');
+        return;
+      }
       setProfile(me);
       const list = await fetchChats();
       setChats(list);
@@ -38,7 +43,7 @@ export default function ChatsScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {

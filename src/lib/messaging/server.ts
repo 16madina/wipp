@@ -171,6 +171,73 @@ export async function logoutSession(token: string | null | undefined) {
   await sql`delete from wipp_sessions where token = ${token}`;
 }
 
+function usernameFromPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const tail = (digits.slice(-10) || digits || randomBytes(4).toString("hex")).toLowerCase();
+  return `u${tail}`.slice(0, 24);
+}
+
+/**
+ * After Firebase Phone Auth succeeds on device, exchange ID token for a Wipp session.
+ * Supabase stays the DB; Firebase is SMS-only.
+ */
+export async function loginWithFirebaseIdToken(idToken: string): Promise<WippSessionPayload> {
+  await ensureMessagingReady();
+  const { verifyFirebaseIdToken } = await import("@/lib/firebase/verify-id-token");
+  let claims;
+  try {
+    claims = await verifyFirebaseIdToken(idToken);
+  } catch {
+    throw new WippHttpError(401, "invalid_firebase_token", "Jeton Firebase invalide.");
+  }
+  if (!claims.phone) {
+    throw new WippHttpError(400, "phone_required", "Le jeton Firebase ne contient pas de numéro.");
+  }
+  const sql = await getSql();
+  const byUid = await sql<ProfileRow>`
+    select id, username, display_name, avatar_url, bio, created_at::text
+    from wipp_profiles where firebase_uid = ${claims.uid} limit 1
+  `;
+  if (byUid[0]) {
+    return createSession(byUid[0].id);
+  }
+  const byPhone = await sql<ProfileRow>`
+    select id, username, display_name, avatar_url, bio, created_at::text
+    from wipp_profiles where phone_e164 = ${claims.phone} limit 1
+  `;
+  if (byPhone[0]) {
+    await sql`
+      update wipp_profiles
+      set firebase_uid = ${claims.uid}, phone_e164 = ${claims.phone}
+      where id = ${byPhone[0].id}
+    `;
+    return createSession(byPhone[0].id);
+  }
+
+  let username = usernameFromPhone(claims.phone);
+  for (let i = 0; i < 5; i++) {
+    const clash = await sql`select id from wipp_profiles where lower(username) = ${username} limit 1`;
+    if (!clash.length) break;
+    username = `u${randomBytes(5).toString("hex")}`.slice(0, 24);
+  }
+  const id = uid("u");
+  // Random password placeholder — account is phone-auth only; password login disabled unless set later.
+  const placeholder = hashPassword(randomBytes(24).toString("hex"));
+  await sql`
+    insert into wipp_profiles (id, username, display_name, password_hash, bio, firebase_uid, phone_e164)
+    values (
+      ${id},
+      ${username},
+      ${"Wipp"},
+      ${placeholder},
+      ${""},
+      ${claims.uid},
+      ${claims.phone}
+    )
+  `;
+  return createSession(id);
+}
+
 /**
  * Permanent account deletion (Play / App Store data-deletion requirement).
  * Cascades sessions, devices, link codes, memberships and messages via FK.

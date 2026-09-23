@@ -41,6 +41,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: '#070a0f' },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[id]" options={{ title: 'Conversation' }} />
       </Stack>
     </>

@@ -11,7 +11,8 @@ function readDeploy() {
 
 const deploy = readDeploy();
 const easProjectId = process.env.EAS_PROJECT_ID || deploy.easProjectId || null;
-const apiUrl = process.env.EXPO_PUBLIC_WIPP_API_URL || "http://127.0.0.1:3847";
+const apiUrl =
+  process.env.EXPO_PUBLIC_WIPP_API_URL || deploy.apiUrl || "https://wippapp.com";
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {
@@ -38,10 +39,12 @@ module.exports = {
     supportsTablet: true,
     bundleIdentifier: "com.wipp.app",
     buildNumber: "1",
+    googleServicesFile: "./GoogleService-Info.plist",
   },
   android: {
     package: "com.wipp.app",
     versionCode: 1,
+    googleServicesFile: "./google-services.json",
     adaptiveIcon: {
       backgroundColor: "#0B1220",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -58,6 +61,17 @@ module.exports = {
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "expo-dev-client",
+    "@react-native-firebase/app",
+    "@react-native-firebase/auth",
+    [
+      "expo-build-properties",
+      {
+        ios: {
+          useFrameworks: "static",
+        },
+      },
+    ],
     [
       "expo-splash-screen",
       {
@@ -73,6 +87,7 @@ module.exports = {
   },
   extra: {
     wippApiUrl: apiUrl,
+    firebaseProjectId: "wipp-61124",
     eas: {
       projectId: easProjectId,
     },

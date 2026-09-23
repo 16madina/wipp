@@ -88,6 +88,13 @@ async function persistSession(session: { token: string; profile: WippProfile } |
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(session.profile));
 }
 
+export async function persistSessionFromServer(session: {
+  token: string;
+  profile: WippProfile;
+}) {
+  await persistSession(session);
+}
+
 export async function login(username: string, password: string) {
   const session = await api<{ token: string; profile: WippProfile }>('/login', {
     method: 'POST',
@@ -96,6 +103,22 @@ export async function login(username: string, password: string) {
   });
   await persistSession(session);
   return session.profile;
+}
+
+export async function ensureSession() {
+  const existing = await getStoredProfile();
+  if (!existing) return null;
+  try {
+    const me = await api<{ profile: WippProfile }>('/me');
+    await persistSession({
+      token: (await AsyncStorage.getItem(TOKEN_KEY))!,
+      profile: me.profile,
+    });
+    return me.profile;
+  } catch {
+    await persistSession(null);
+    return null;
+  }
 }
 
 export async function ensureDemoSession() {

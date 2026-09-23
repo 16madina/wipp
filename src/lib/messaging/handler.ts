@@ -10,6 +10,7 @@ import {
   listDevices,
   listMessages,
   loginProfile,
+  loginWithFirebaseIdToken,
   logoutSession,
   registerProfile,
   resolveSession,
@@ -112,6 +113,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
         username: body.username ?? "",
         password: body.password ?? "",
       });
+      return json(session);
+    }
+
+    if (method === "POST" && a === "auth" && b === "firebase") {
+      const body = await readBody<{ idToken?: string }>(request);
+      const session = await loginWithFirebaseIdToken(body.idToken ?? "");
       return json(session);
     }
 
