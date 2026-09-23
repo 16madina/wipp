@@ -41,13 +41,13 @@ export function SurpriseHub({
 
       <div className="relative z-10 no-scrollbar flex-1 overflow-y-auto px-4 pb-8">
         <div className="mt-1 overflow-hidden rounded-[22px] bg-[#0a0c12] ring-1 ring-[#ffd84d]/55 shadow-[0_0_28px_rgb(255_216_77/0.12)]">
-          <div className="relative aspect-[16/11] overflow-hidden">
+          <div className="relative aspect-[1.72] overflow-hidden">
             <img
               src="/fx/surprise/hero-scratch.jpg"
               alt=""
               draggable={false}
               decoding="async"
-              className="absolute inset-0 h-full w-full object-cover object-center"
+              className="absolute inset-0 h-full w-full object-cover object-[center_40%]"
             />
           </div>
           <div className="px-4 pb-4 pt-3">
