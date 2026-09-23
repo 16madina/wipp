@@ -1118,7 +1118,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           onScratch={() => {
             setSurprise(false);
             setScratchText("");
-            setScratchDesign("gold");
+            setScratchDesign("love");
             setScratchTry(0);
             setScratchConfirm(false);
             setDraftFx(null);
@@ -1127,7 +1127,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           onScratchCard={() => {
             setSurprise(false);
             setScratchText("");
-            setScratchDesign("gold");
+            setScratchDesign("love");
             setScratchTry(0);
             setScratchConfirm(false);
             setDraftFx(null);

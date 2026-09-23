@@ -20,6 +20,14 @@ const DESIGNS: { id: ScratchDesign; glyph: string; labelKey: "themeGold" | "them
   { id: "secret", glyph: "🌙", labelKey: "themeSecret" },
 ];
 
+/** Premium lifestyle previews (photo 1 style). Falls back to love art. */
+const PREVIEW_BY_DESIGN: Partial<Record<ScratchDesign, string>> = {
+  love: "/fx/surprise/card-love.jpg",
+  gold: "/fx/surprise/card-love.jpg",
+  heart: "/fx/surprise/card-love.jpg",
+  duo: "/fx/surprise/card-love.jpg",
+};
+
 const MAX = 200;
 
 export function SurpriseCompose({
@@ -162,8 +170,28 @@ export function SurpriseCompose({
           </label>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[22px] bg-[#0a0c12] ring-1 ring-white/10">
+        <div className="mt-3 overflow-hidden rounded-[22px] bg-[#0a0c12] ring-1 ring-[#ffd84d]/25">
           {live ? (
+            <div className="relative">
+              <img
+                src={PREVIEW_BY_DESIGN[design] ?? PREVIEW_BY_DESIGN.love}
+                alt=""
+                draggable={false}
+                decoding="async"
+                className="w-full object-cover"
+              />
+              {text.trim() ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <p
+                    className="max-w-[46%] -translate-y-[2%] rotate-[-4deg] text-center font-serif text-[15px] font-bold italic leading-snug text-[#1a1208]"
+                    style={{ textShadow: "0 1px 0 rgb(255 255 255 / 0.25)" }}
+                  >
+                    {text.trim().slice(0, 80)}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
             <div className="flex flex-col items-center px-4 py-5">
               <ScratchCard
                 key={`${previewKey}-${design}`}
@@ -182,14 +210,6 @@ export function SurpriseCompose({
                 {t("scratchReset")}
               </button>
             </div>
-          ) : (
-            <img
-              src="/fx/surprise/compose-preview.jpg"
-              alt=""
-              draggable={false}
-              decoding="async"
-              className="w-full object-cover"
-            />
           )}
         </div>
       </div>
