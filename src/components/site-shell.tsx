@@ -6,6 +6,7 @@ const LINKS = [
   { to: "/" as const, label: "App" },
   { to: "/connect" as const, label: "Connexion" },
   { to: "/privacy" as const, label: "Confidentialité" },
+  { to: "/delete-account" as const, label: "Supprimer mon compte" },
   { to: "/terms" as const, label: "Conditions" },
   { to: "/support" as const, label: "Support" },
 ];

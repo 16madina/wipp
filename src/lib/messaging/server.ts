@@ -171,6 +171,32 @@ export async function logoutSession(token: string | null | undefined) {
   await sql`delete from wipp_sessions where token = ${token}`;
 }
 
+/**
+ * Permanent account deletion (Play / App Store data-deletion requirement).
+ * Cascades sessions, devices, link codes, memberships and messages via FK.
+ */
+export async function deleteAccount(input: {
+  username: string;
+  password: string;
+}): Promise<{ ok: true; username: string }> {
+  await ensureMessagingReady();
+  const username = normalizeUsername(input.username);
+  const sql = await getSql();
+  const rows = await sql<ProfileRow>`
+    select id, username, display_name, avatar_url, bio, created_at::text, password_hash
+    from wipp_profiles where lower(username) = ${username} limit 1
+  `;
+  const row = rows[0];
+  if (!row?.password_hash || !verifyPassword(input.password, row.password_hash)) {
+    throw new WippHttpError(401, "bad_credentials", "Identifiants incorrects.");
+  }
+  // Null-out message senders that would block if FKs were RESTRICT (ours are CASCADE).
+  await sql`delete from wipp_devices where profile_id = ${row.id}`;
+  await sql`delete from wipp_sessions where profile_id = ${row.id}`;
+  await sql`delete from wipp_profiles where id = ${row.id}`;
+  return { ok: true, username: row.username };
+}
+
 async function getProfileById(id: string): Promise<WippProfile | null> {
   const sql = await getSql();
   const rows = await sql<ProfileRow>`

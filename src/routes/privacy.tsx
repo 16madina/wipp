@@ -79,7 +79,9 @@ function PrivacyPage() {
         <h2>6. Tes droits</h2>
         <p>
           Selon la loi applicable (ex. RGPD) : accès, rectification, suppression, limitation,
-          opposition, portabilité. Contact : voir la page Support.
+          opposition, portabilité. Pour supprimer ton compte :{" "}
+          <a href="https://wippapp.com/delete-account">https://wippapp.com/delete-account</a> ou{" "}
+          <a href="mailto:support@wippapp.com">support@wippapp.com</a>.
         </p>
 
         <h2>7. Mineurs</h2>

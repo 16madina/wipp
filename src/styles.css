@@ -1114,3 +1114,43 @@
   .site-rise,
   .site-app-hero-glow { animation: none !important; }
 }
+
+/* —— Delete account form (Play Store) —— */
+.delete-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 18px 0 8px;
+  max-width: 420px;
+}
+.delete-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #f7f9fc;
+  font-size: 13px;
+  font-weight: 650;
+}
+.delete-form input {
+  border: 0;
+  border-radius: 14px;
+  background: #0b1220;
+  color: #f7f9fc;
+  padding: 12px 14px;
+  font-size: 15px;
+  box-shadow: inset 0 0 0 1px #ffffff22;
+}
+.delete-form input:focus {
+  outline: 2px solid #ffd84d88;
+  outline-offset: 1px;
+}
+.delete-form .connect-cta {
+  border: 0;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+}
+.delete-form .connect-cta:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}

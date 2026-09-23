@@ -2,6 +2,7 @@ import {
   WippHttpError,
   claimLinkCode,
   createLinkCode,
+  deleteAccount,
   ensureMessagingReady,
   getLinkStatus,
   getOrCreateDm,
@@ -117,6 +118,15 @@ export async function handleWippApi(request: Request): Promise<Response> {
     if (method === "POST" && a === "logout") {
       await logoutSession(bearer(request));
       return json({ ok: true });
+    }
+
+    if (method === "POST" && a === "account" && b === "delete") {
+      const body = await readBody<{ username?: string; password?: string }>(request);
+      const result = await deleteAccount({
+        username: body.username ?? "",
+        password: body.password ?? "",
+      });
+      return json(result);
     }
 
     if (method === "GET" && a === "me") {
