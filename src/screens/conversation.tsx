@@ -37,6 +37,7 @@ import { NightFx, nightLabel, nightSrc } from "@/components/fx-night";
 import { DayFx, dayLabel, daySrc } from "@/components/fx-day";
 
 import { BirthdayFx, artSrc, birthdayLabel } from "@/components/fx-birthday";
+import { SurpriseHub } from "@/components/surprise-hub";
 
 function sceneSrc(id: string) {
   if (id.startsWith("love_")) return amourSrc(id);
@@ -1111,90 +1112,26 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         </button>
       </Sheet>
       {surprise ? (
-        <div className="absolute inset-0 z-40 flex flex-col bg-[#070b14]">
-          <StatusBar />
-          <Header
-            title={<span className="font-bold">🎁 {t("surpriseStudio")}</span>}
-            subtitle={t("surpriseStudioSub")}
-            onBack={() => setSurprise(false)}
-          />
-          <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-8">
-            <button
-              type="button"
-              className="press mt-2 w-full rounded-3xl bg-[#10182a] p-3 text-left ring-1 ring-[#ffd84d]"
-              onClick={() => {
-                setSurprise(false);
-                setScratchText("");
-                setScratchDesign("gold");
-                setScratchTry(0);
-                setScratchConfirm(false);
-                setDraftFx(null);
-                setScratchOpen(true);
-              }}
-            >
-              <div className="relative h-40 overflow-hidden rounded-2xl bg-[#070b14]">
-                <span className="foil-shine pointer-events-none absolute inset-0" />
-                <span className="absolute left-1/2 top-8 -translate-x-1/2 -rotate-12 rounded-full bg-[#f0d56a] px-6 py-3 text-center font-serif text-[15px] font-bold italic leading-tight text-[#1a1408] shadow-[0_0_24px_rgb(255_216_77/0.45)]">
-                  {t("scratchTease")}
-                </span>
-                <span className="scratch-finger pointer-events-none absolute" />
-                <span className="absolute right-3 top-3 rounded-full bg-[#ffd84d] px-2 py-0.5 text-[10px] font-bold text-[#0b1220]">
-                  {t("scratchReady")}
-                </span>
-              </div>
-              <p className="mt-3 px-1 text-[17px] font-bold">{t("scratchName")}</p>
-              <p className="mt-0.5 px-1 text-[13px] leading-snug text-muted">{t("scratchLead")}</p>
-              <span className="mt-3 flex h-11 items-center justify-center rounded-full bg-[#ffd84d] text-[15px] font-bold text-[#0b1220]">
-                {t("scratchCreate")}
-              </span>
-            </button>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {(
-                [
-                  { name: t("giftName"), hint: t("giftShort"), scene: "gift" },
-                  { name: t("lockName"), hint: t("lockShort"), scene: "lock" },
-                  { name: t("confettiName"), hint: t("confettiShort"), scene: "confetti" },
-                  { name: t("timerName"), hint: t("timerShort"), scene: "timer" },
-                ] as const
-              ).map((item) => (
-                <div key={item.scene} className="relative overflow-hidden rounded-2xl bg-[#10182a] p-3 text-center ring-1 ring-white/10">
-                  <span className="absolute right-2 top-2 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-[#ffd84d]">
-                    {t("surpriseSoon")}
-                  </span>
-                  <div className="relative mx-auto mt-3 h-14 w-14">
-                    {item.scene === "gift" ? (
-                      <div className="soon-gift absolute inset-1 rounded-lg bg-[#ffd84d]">
-                        <span className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 bg-[#0b1220]" />
-                        <span className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 bg-[#0b1220]" />
-                      </div>
-                    ) : null}
-                    {item.scene === "lock" ? (
-                      <div className="soon-lock absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="h-4 w-6 rounded-t-full border-2 border-[#ffd84d] border-b-0" />
-                        <span className="h-6 w-8 rounded-md bg-[#ffd84d]" />
-                      </div>
-                    ) : null}
-                    {item.scene === "confetti" ? (
-                      <span className="absolute inset-0">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <i key={i} className="soon-bit absolute size-1.5 rounded-sm bg-[#ffd84d]" style={{ left: `${10 + i * 16}%`, animationDelay: `${i * 0.15}s` }} />
-                        ))}
-                      </span>
-                    ) : null}
-                    {item.scene === "timer" ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="h-4 w-6 rounded-b-full border border-[#ffd84d]" />
-                        <span className="soon-sand h-3 w-1 bg-[#ffd84d]" />
-                        <span className="h-4 w-6 rounded-t-full border border-[#ffd84d]" />
-                      </div>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-[13px] font-bold">{item.name.replace("Message ", "")}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <SurpriseHub
+          onBack={() => setSurprise(false)}
+          onScratch={() => {
+            setSurprise(false);
+            setScratchText("");
+            setScratchDesign("gold");
+            setScratchTry(0);
+            setScratchConfirm(false);
+            setDraftFx(null);
+            setScratchOpen(true);
+          }}
+          onCategory={(id) => {
+            setSurprise(false);
+            setFxOpen(id);
+          }}
+          onSeeAll={() => {
+            setSurprise(false);
+            setFxOpen("cats");
+          }}
+        />
       ) : null}
       {scratchOpen ? (
         <div className="absolute inset-0 z-50 flex flex-col bg-[#070b14]">
