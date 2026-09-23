@@ -1,11 +1,18 @@
 import {
   WippHttpError,
+  adminBlockUser,
+  adminListFlags,
+  adminListRecentMessages,
+  adminListUsers,
+  adminStats,
+  adminUnblockUser,
   claimLinkCode,
   createLinkCode,
   deleteAccount,
   ensureMessagingReady,
   getLinkStatus,
   getOrCreateDm,
+  linkAdminPhone,
   listChats,
   listDevices,
   listMessages,
@@ -109,9 +116,10 @@ export async function handleWippApi(request: Request): Promise<Response> {
     }
 
     if (method === "POST" && a === "login") {
-      const body = await readBody<{ username?: string; password?: string }>(request);
+      const body = await readBody<{ username?: string; phone?: string; password?: string }>(request);
       const session = await loginProfile({
-        username: body.username ?? "",
+        username: body.username,
+        phone: body.phone,
         password: body.password ?? "",
       });
       return json(session);
@@ -147,6 +155,51 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const body = await readBody<{ publicJwk?: JsonWebKey }>(request);
       const profile = await publishE2ePublicKey(me.id, body.publicJwk);
       return json({ profile });
+    }
+
+    if (method === "PUT" && a === "me" && b === "admin-phone") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ phone?: string }>(request);
+      const profile = await linkAdminPhone(me.id, body.phone ?? "");
+      return json({ profile });
+    }
+
+    if (method === "GET" && a === "admin" && b === "stats") {
+      const me = await resolveSession(bearer(request));
+      const stats = await adminStats(me.id);
+      return json({ stats });
+    }
+
+    if (method === "GET" && a === "admin" && b === "users") {
+      const me = await resolveSession(bearer(request));
+      const users = await adminListUsers(me.id);
+      return json({ users });
+    }
+
+    if (method === "GET" && a === "admin" && b === "messages") {
+      const me = await resolveSession(bearer(request));
+      const messages = await adminListRecentMessages(me.id);
+      return json({ messages });
+    }
+
+    if (method === "GET" && a === "admin" && b === "flags") {
+      const me = await resolveSession(bearer(request));
+      const flags = await adminListFlags(me.id);
+      return json({ flags });
+    }
+
+    if (method === "POST" && a === "admin" && b === "block") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string; reason?: string }>(request);
+      const result = await adminBlockUser(me.id, body.username ?? "", body.reason ?? "");
+      return json(result);
+    }
+
+    if (method === "POST" && a === "admin" && b === "unblock") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string }>(request);
+      const result = await adminUnblockUser(me.id, body.username ?? "");
+      return json(result);
     }
 
     if (method === "GET" && a === "users" && b === "search") {

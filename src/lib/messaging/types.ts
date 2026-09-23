@@ -7,6 +7,29 @@ export type WippProfile = {
   createdAt?: string;
   /** ECDH P-256 public JWK for DM E2E (null until the client publishes it). */
   e2ePublicJwk?: JsonWebKey | null;
+  /** user | admin */
+  role?: "user" | "admin";
+  phoneE164?: string | null;
+  isAdmin?: boolean;
+};
+
+export type WippAdminStats = {
+  users: number;
+  chats: number;
+  messages: number;
+  blocks: number;
+  openFlags: number;
+  admins: number;
+};
+
+export type WippAdminUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  phoneE164?: string | null;
+  role: string;
+  createdAt: string;
+  blockedByAdmin: boolean;
 };
 
 export type WippChatSummary = {

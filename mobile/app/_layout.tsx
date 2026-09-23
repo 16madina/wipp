@@ -43,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="admin" options={{ title: 'Admin' }} />
         <Stack.Screen name="chat/[id]" options={{ title: 'Conversation' }} />
       </Stack>
     </>

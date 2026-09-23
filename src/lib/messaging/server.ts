@@ -4,7 +4,14 @@
  */
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { ensureDbReady, getSql } from "@/lib/db";
-import type { WippChatSummary, WippMessage, WippProfile, WippSessionPayload } from "./types";
+import type {
+  WippAdminStats,
+  WippAdminUser,
+  WippChatSummary,
+  WippMessage,
+  WippProfile,
+  WippSessionPayload,
+} from "./types";
 
 const SESSION_DAYS = 365;
 const DEMO_PASSWORD = "wipp-demo";
@@ -57,9 +64,12 @@ type ProfileRow = {
   created_at: string;
   password_hash?: string;
   e2e_public_jwk?: JsonWebKey | null;
+  role?: string;
+  phone_e164?: string | null;
 };
 
 function mapProfile(row: ProfileRow): WippProfile {
+  const role = row.role === "admin" ? "admin" : "user";
   return {
     id: row.id,
     username: row.username,
@@ -68,7 +78,18 @@ function mapProfile(row: ProfileRow): WippProfile {
     bio: row.bio,
     createdAt: row.created_at,
     e2ePublicJwk: row.e2e_public_jwk ?? null,
+    role,
+    phoneE164: row.phone_e164 ?? null,
+    isAdmin: role === "admin",
   };
+}
+
+function normalizePhone(raw: string) {
+  const cleaned = raw.trim().replace(/[\s().-]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("00")) return `+${cleaned.slice(2)}`;
+  if (cleaned.startsWith("+")) return cleaned;
+  return `+${cleaned}`;
 }
 
 function isPublicJwk(value: unknown): value is JsonWebKey {
@@ -127,6 +148,29 @@ async function seedDemoUsers() {
 export async function ensureMessagingReady() {
   await ensureDbReady();
   await seedDemoUsers();
+  await ensureAdminAccount();
+}
+
+async function ensureAdminAccount() {
+  const sql = await getSql();
+  // Promote @admin if present
+  await sql`update wipp_profiles set role = 'admin' where lower(username) = 'admin'`;
+  const rows = await sql<{ id: string }>`
+    select id from wipp_profiles where lower(username) = 'admin' limit 1
+  `;
+  if (rows[0]) return;
+  // Create admin shell if missing (password must be set via register or link)
+  await sql`
+    insert into wipp_profiles (id, username, display_name, password_hash, bio, role)
+    values (
+      ${uid("u")},
+      'admin',
+      'Admin Wipp',
+      ${hashPassword(process.env.WIPP_ADMIN_PASSWORD || "WippAdmin!change-me")},
+      'Compte administrateur',
+      'admin'
+    )
+  `;
 }
 
 export async function registerProfile(input: {
@@ -155,21 +199,207 @@ export async function registerProfile(input: {
 }
 
 export async function loginProfile(input: {
-  username: string;
+  username?: string;
+  phone?: string;
   password: string;
 }): Promise<WippSessionPayload> {
   await ensureMessagingReady();
-  const username = normalizeUsername(input.username);
   const sql = await getSql();
-  const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text, password_hash
-    from wipp_profiles where lower(username) = ${username} limit 1
-  `;
-  const row = rows[0];
-  if (!row?.password_hash || !verifyPassword(input.password, row.password_hash)) {
+  const password = input.password ?? "";
+  if (!password) throw new WippHttpError(400, "bad_credentials", "Mot de passe requis.");
+
+  const phone = input.phone ? normalizePhone(input.phone) : "";
+  let row: ProfileRow | undefined;
+
+  if (phone && /^\+[1-9]\d{7,14}$/.test(phone)) {
+    const rows = await sql<ProfileRow>`
+      select id, username, display_name, avatar_url, bio, created_at::text, password_hash,
+             e2e_public_jwk, role, phone_e164
+      from wipp_profiles where phone_e164 = ${phone} limit 1
+    `;
+    row = rows[0];
+  } else {
+    const username = normalizeUsername(input.username ?? "");
+    if (!username) throw new WippHttpError(400, "bad_credentials", "Téléphone ou @username requis.");
+    const rows = await sql<ProfileRow>`
+      select id, username, display_name, avatar_url, bio, created_at::text, password_hash,
+             e2e_public_jwk, role, phone_e164
+      from wipp_profiles where lower(username) = ${username} limit 1
+    `;
+    row = rows[0];
+  }
+
+  if (!row?.password_hash || !verifyPassword(password, row.password_hash)) {
     throw new WippHttpError(401, "bad_credentials", "Identifiants incorrects.");
   }
   return createSession(row.id);
+}
+
+/** Admin lie son numéro pour se connecter ensuite avec téléphone + mot de passe. */
+export async function linkAdminPhone(meId: string, phoneRaw: string): Promise<WippProfile> {
+  await ensureMessagingReady();
+  const me = await getProfileById(meId);
+  if (!me?.isAdmin) throw new WippHttpError(403, "forbidden", "Réservé à l’admin.");
+  const phone = normalizePhone(phoneRaw);
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+    throw new WippHttpError(400, "invalid_phone", "Numéro invalide (ex. +225…).");
+  }
+  const sql = await getSql();
+  const clash = await sql<{ id: string }>`
+    select id from wipp_profiles where phone_e164 = ${phone} and id <> ${meId} limit 1
+  `;
+  if (clash[0]) throw new WippHttpError(409, "phone_taken", "Ce numéro est déjà lié à un autre compte.");
+  await sql`update wipp_profiles set phone_e164 = ${phone} where id = ${meId}`;
+  const profile = await getProfileById(meId);
+  if (!profile) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+  return profile;
+}
+
+async function assertAdmin(meId: string) {
+  const me = await getProfileById(meId);
+  if (!me?.isAdmin) throw new WippHttpError(403, "forbidden", "Réservé à l’admin.");
+  return me;
+}
+
+export async function adminStats(meId: string): Promise<WippAdminStats> {
+  await assertAdmin(meId);
+  const sql = await getSql();
+  const [users] = await sql<{ c: number }>`select count(*)::int as c from wipp_profiles`;
+  const [chats] = await sql<{ c: number }>`select count(*)::int as c from wipp_chats`;
+  const [messages] = await sql<{ c: number }>`select count(*)::int as c from wipp_messages`;
+  const [blocks] = await sql<{ c: number }>`select count(*)::int as c from wipp_blocks`;
+  const [flags] = await sql<{ c: number }>`
+    select count(*)::int as c from wipp_moderation_flags where status = 'open'
+  `;
+  const [admins] = await sql<{ c: number }>`
+    select count(*)::int as c from wipp_profiles where role = 'admin'
+  `;
+  return {
+    users: users?.c ?? 0,
+    chats: chats?.c ?? 0,
+    messages: messages?.c ?? 0,
+    blocks: blocks?.c ?? 0,
+    openFlags: flags?.c ?? 0,
+    admins: admins?.c ?? 0,
+  };
+}
+
+export async function adminListUsers(meId: string): Promise<WippAdminUser[]> {
+  await assertAdmin(meId);
+  const sql = await getSql();
+  const rows = await sql<{
+    id: string;
+    username: string;
+    display_name: string;
+    phone_e164: string | null;
+    role: string;
+    created_at: string;
+    blocked: boolean;
+  }>`
+    select p.id, p.username, p.display_name, p.phone_e164, p.role, p.created_at::text,
+      exists(
+        select 1 from wipp_blocks b
+        where b.blocker_id = ${meId} and b.blocked_id = p.id
+      ) as blocked
+    from wipp_profiles p
+    order by p.created_at desc
+    limit 100
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    username: r.username,
+    displayName: r.display_name,
+    phoneE164: r.phone_e164,
+    role: r.role || "user",
+    createdAt: r.created_at,
+    blockedByAdmin: Boolean(r.blocked),
+  }));
+}
+
+export async function adminListRecentMessages(meId: string) {
+  await assertAdmin(meId);
+  const sql = await getSql();
+  const rows = await sql<{
+    id: string;
+    chat_id: string;
+    sender_id: string;
+    body: string;
+    created_at: string;
+    username: string;
+  }>`
+    select m.id, m.chat_id, m.sender_id, m.body, m.created_at::text, p.username
+    from wipp_messages m
+    join wipp_profiles p on p.id = m.sender_id
+    order by m.created_at desc
+    limit 50
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    chatId: r.chat_id,
+    senderId: r.sender_id,
+    username: r.username,
+    preview: messagePreview(r.body),
+    createdAt: Date.parse(r.created_at),
+  }));
+}
+
+export async function adminListFlags(meId: string) {
+  await assertAdmin(meId);
+  const sql = await getSql();
+  const rows = await sql<{
+    id: string;
+    target_type: string;
+    target_id: string;
+    reason: string;
+    status: string;
+    created_at: string;
+  }>`
+    select id, target_type, target_id, reason, status, created_at::text
+    from wipp_moderation_flags
+    order by created_at desc
+    limit 50
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    targetType: r.target_type,
+    targetId: r.target_id,
+    reason: r.reason,
+    status: r.status,
+    createdAt: Date.parse(r.created_at),
+  }));
+}
+
+export async function adminBlockUser(meId: string, targetUsername: string, reason = "") {
+  await assertAdmin(meId);
+  const sql = await getSql();
+  const username = normalizeUsername(targetUsername);
+  const targets = await sql<{ id: string }>`
+    select id from wipp_profiles where lower(username) = ${username} limit 1
+  `;
+  const target = targets[0];
+  if (!target) throw new WippHttpError(404, "user_not_found", `@${username} introuvable.`);
+  if (target.id === meId) throw new WippHttpError(400, "self_block", "Impossible de te bloquer.");
+  const id = uid("blk");
+  await sql`
+    insert into wipp_blocks (id, blocker_id, blocked_id, reason)
+    values (${id}, ${meId}, ${target.id}, ${reason})
+    on conflict (blocker_id, blocked_id) do update set reason = excluded.reason
+  `;
+  return { ok: true, blockedId: target.id, username };
+}
+
+export async function adminUnblockUser(meId: string, targetUsername: string) {
+  await assertAdmin(meId);
+  const sql = await getSql();
+  const username = normalizeUsername(targetUsername);
+  await sql`
+    delete from wipp_blocks b
+    using wipp_profiles p
+    where b.blocker_id = ${meId}
+      and b.blocked_id = p.id
+      and lower(p.username) = ${username}
+  `;
+  return { ok: true };
 }
 
 async function createSession(profileId: string): Promise<WippSessionPayload> {
@@ -311,7 +541,8 @@ export async function deleteAccount(input: {
 async function getProfileById(id: string): Promise<WippProfile | null> {
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text, e2e_public_jwk
+    select id, username, display_name, avatar_url, bio, created_at::text,
+           e2e_public_jwk, role, phone_e164
     from wipp_profiles where id = ${id} limit 1
   `;
   return rows[0] ? mapProfile(rows[0]) : null;

@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import {
   clearSession,
@@ -14,6 +13,9 @@ export type WippProfile = {
   avatarUrl?: string | null;
   bio?: string;
   e2ePublicJwk?: JsonWebKey | null;
+  role?: 'user' | 'admin';
+  phoneE164?: string | null;
+  isAdmin?: boolean;
 };
 
 export type WippChat = {
@@ -120,6 +122,97 @@ export async function login(username: string, password: string) {
     body: JSON.stringify({ username, password }),
   });
   return afterAuth(session);
+}
+
+/** Connexion admin : numéro E.164 + mot de passe. */
+export async function loginWithPhone(phone: string, password: string) {
+  const session = await api<{ token: string; profile: WippProfile }>('/login', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ phone, password }),
+  });
+  return afterAuth(session);
+}
+
+export async function linkAdminPhone(phone: string) {
+  const data = await api<{ profile: WippProfile }>('/me/admin-phone', {
+    method: 'PUT',
+    body: JSON.stringify({ phone }),
+  });
+  const token = await getStoredToken();
+  if (token) await persistSession({ token, profile: data.profile });
+  return data.profile;
+}
+
+export async function fetchAdminStats() {
+  const data = await api<{
+    stats: {
+      users: number;
+      chats: number;
+      messages: number;
+      blocks: number;
+      openFlags: number;
+      admins: number;
+    };
+  }>('/admin/stats');
+  return data.stats;
+}
+
+export async function fetchAdminUsers() {
+  const data = await api<{
+    users: Array<{
+      id: string;
+      username: string;
+      displayName: string;
+      phoneE164?: string | null;
+      role: string;
+      createdAt: string;
+      blockedByAdmin: boolean;
+    }>;
+  }>('/admin/users');
+  return data.users;
+}
+
+export async function fetchAdminMessages() {
+  const data = await api<{
+    messages: Array<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      username: string;
+      preview: string;
+      createdAt: number;
+    }>;
+  }>('/admin/messages');
+  return data.messages;
+}
+
+export async function fetchAdminFlags() {
+  const data = await api<{
+    flags: Array<{
+      id: string;
+      targetType: string;
+      targetId: string;
+      reason: string;
+      status: string;
+      createdAt: number;
+    }>;
+  }>('/admin/flags');
+  return data.flags;
+}
+
+export async function adminBlock(username: string, reason = '') {
+  return api<{ ok: boolean }>('/admin/block', {
+    method: 'POST',
+    body: JSON.stringify({ username, reason }),
+  });
+}
+
+export async function adminUnblock(username: string) {
+  return api<{ ok: boolean }>('/admin/unblock', {
+    method: 'POST',
+    body: JSON.stringify({ username }),
+  });
 }
 
 /** Restaure la session au boot — comme WhatsApp. Retourne null si absente/expirée. */

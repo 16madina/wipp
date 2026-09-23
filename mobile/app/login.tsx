@@ -17,11 +17,12 @@ import {
   sendPhoneCode,
   type PhoneConfirmation,
 } from '@/lib/firebase-phone';
-import { ensureDemoSession, login, register } from '@/lib/api';
+import { ensureDemoSession, login, loginWithPhone, register } from '@/lib/api';
 
 /**
- * Connexion SMS (Firebase) + compte @username.
- * Une fois connecté, la session reste sur l’appareil (SecureStore).
+ * Admin : numéro + mot de passe → panneau admin.
+ * Utilisateurs : SMS Firebase (code).
+ * Session persistante après connexion.
  */
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,10 +31,29 @@ export default function LoginScreen() {
   const [confirmation, setConfirmation] = useState<PhoneConfirmation | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState<'phone' | 'password' | 'register'>('password');
+  const [mode, setMode] = useState<'admin' | 'sms' | 'register'>('admin');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+
+  async function onAdminLogin() {
+    setError('');
+    setBusy(true);
+    try {
+      // Téléphone + MDP si ça ressemble à un numéro, sinon @username + MDP (1re fois)
+      const looksPhone = /^\+?\d[\d\s.-]{6,}$/.test(phone.trim());
+      if (looksPhone) {
+        await loginWithPhone(phone.trim(), password);
+      } else {
+        await login(phone.trim().replace(/^@/, '') || 'admin', password);
+      }
+      router.replace('/(tabs)');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Connexion impossible');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onSendCode() {
     setError('');
@@ -65,19 +85,6 @@ export default function LoginScreen() {
     }
   }
 
-  async function onPasswordLogin() {
-    setError('');
-    setBusy(true);
-    try {
-      await login(username.trim().replace(/^@/, ''), password);
-      router.replace('/(tabs)');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Connexion impossible');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function onRegister() {
     setError('');
     setBusy(true);
@@ -96,19 +103,6 @@ export default function LoginScreen() {
     }
   }
 
-  async function onDemo() {
-    setBusy(true);
-    setError('');
-    try {
-      await ensureDemoSession();
-      router.replace('/(tabs)');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Démo indisponible');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <KeyboardAvoidingView
       style={styles.root}
@@ -117,15 +111,21 @@ export default function LoginScreen() {
       <Text style={styles.brand}>wipp</Text>
       <Text style={styles.tag}>Connecte ta vie.</Text>
       <Text style={styles.sub}>
-        Une fois connecté, tu restes connecté sur cet appareil — comme WhatsApp.
+        Admin : ton numéro + mot de passe. Ensuite tu restes connecté sur cet appareil.
       </Text>
 
       <View style={styles.tabs}>
         <Pressable
-          style={[styles.tab, mode === 'password' && styles.tabOn]}
-          onPress={() => setMode('password')}
+          style={[styles.tab, mode === 'admin' && styles.tabOn]}
+          onPress={() => setMode('admin')}
         >
-          <Text style={styles.tabTxt}>Connexion</Text>
+          <Text style={styles.tabTxt}>Admin</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, mode === 'sms' && styles.tabOn]}
+          onPress={() => setMode('sms')}
+        >
+          <Text style={styles.tabTxt}>SMS</Text>
         </Pressable>
         <Pressable
           style={[styles.tab, mode === 'register' && styles.tabOn]}
@@ -133,22 +133,47 @@ export default function LoginScreen() {
         >
           <Text style={styles.tabTxt}>Créer</Text>
         </Pressable>
-        <Pressable
-          style={[styles.tab, mode === 'phone' && styles.tabOn]}
-          onPress={() => setMode('phone')}
-        >
-          <Text style={styles.tabTxt}>SMS</Text>
-        </Pressable>
       </View>
 
-      {mode === 'phone' ? (
+      {mode === 'admin' ? (
+        <>
+          <Text style={styles.hint}>
+            Numéro lié à l’admin (ou @admin la 1re fois) + mot de passe
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={phone}
+            onChangeText={setPhone}
+            autoCapitalize="none"
+            keyboardType="phone-pad"
+            placeholder="+225… ou @admin"
+            placeholderTextColor="#8b93a7"
+          />
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Mot de passe"
+            placeholderTextColor="#8b93a7"
+          />
+          <Pressable style={styles.cta} disabled={busy} onPress={() => void onAdminLogin()}>
+            {busy ? (
+              <ActivityIndicator color="#0B1220" />
+            ) : (
+              <Text style={styles.ctaTxt}>Ouvrir mon compte admin</Text>
+            )}
+          </Pressable>
+        </>
+      ) : null}
+
+      {mode === 'sms' ? (
         <>
           <TextInput
             style={styles.input}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
-            autoComplete="tel"
             placeholder="+225…"
             placeholderTextColor="#8b93a7"
             editable={!confirmation}
@@ -175,23 +200,22 @@ export default function LoginScreen() {
             )}
           </Pressable>
         </>
-      ) : (
+      ) : null}
+
+      {mode === 'register' ? (
         <>
-          {mode === 'register' ? (
-            <TextInput
-              style={styles.input}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Nom affiché"
-              placeholderTextColor="#8b93a7"
-            />
-          ) : null}
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Nom affiché"
+            placeholderTextColor="#8b93a7"
+          />
           <TextInput
             style={styles.input}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
-            autoCorrect={false}
             placeholder="@username"
             placeholderTextColor="#8b93a7"
           />
@@ -203,25 +227,34 @@ export default function LoginScreen() {
             placeholder="Mot de passe (6+)"
             placeholderTextColor="#8b93a7"
           />
-          <Pressable
-            style={styles.cta}
-            disabled={busy}
-            onPress={() => void (mode === 'register' ? onRegister() : onPasswordLogin())}
-          >
+          <Pressable style={styles.cta} disabled={busy} onPress={() => void onRegister()}>
             {busy ? (
               <ActivityIndicator color="#0B1220" />
             ) : (
-              <Text style={styles.ctaTxt}>
-                {mode === 'register' ? 'Créer mon compte' : 'Se connecter'}
-              </Text>
+              <Text style={styles.ctaTxt}>Créer mon compte</Text>
             )}
           </Pressable>
         </>
-      )}
+      ) : null}
 
       {error ? <Text style={styles.err}>{error}</Text> : null}
 
-      <Pressable onPress={() => void onDemo()} style={styles.linkBtn}>
+      <Pressable
+        onPress={() =>
+          void (async () => {
+            setBusy(true);
+            try {
+              await ensureDemoSession();
+              router.replace('/(tabs)');
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Démo indisponible');
+            } finally {
+              setBusy(false);
+            }
+          })()
+        }
+        style={styles.linkBtn}
+      >
         <Text style={styles.link}>Continuer en démo (test)</Text>
       </Pressable>
     </KeyboardAvoidingView>
@@ -242,11 +275,12 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
   },
   tag: { color: '#f7f9fc', fontSize: 26, fontWeight: '700', marginTop: 8 },
-  sub: { color: '#8b93a7', marginTop: 8, marginBottom: 28, lineHeight: 20 },
+  sub: { color: '#8b93a7', marginTop: 8, marginBottom: 20, lineHeight: 20 },
+  hint: { color: '#8b93a7', fontSize: 12, marginBottom: 8 },
   tabs: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   tab: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 999,
     backgroundColor: '#121722',
   },
