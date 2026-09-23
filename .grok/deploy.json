@@ -9,7 +9,8 @@
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
   "androidBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/e5fb15bd-254e-485e-9780-33549b87309a",
-  "notes": "Android preview en cours. iOS: fix SPM dynamic + relance simulator.",
+  "notes": "Android APK preview OK. iOS simulator en cours (fix SPM dynamic).",
   "iosBuildNote": "preview-simulator apr\u00e8s fix useFrameworks dynamic (SPM Firebase)",
-  "iosSimulatorBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/999ee7a3-4719-47d6-9f5e-5644a1839908"
+  "iosSimulatorBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/999ee7a3-4719-47d6-9f5e-5644a1839908",
+  "androidApkUrl": "https://expo.dev/artifacts/eas/dc7kw1pQ7nw3Fc-sA4PASwYj58n63hXUoqXvivEtduc.apk"
 }
