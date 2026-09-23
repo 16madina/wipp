@@ -1,5 +1,15 @@
-import { useEffect, useRef } from "react";
-import { Cake, ChevronRight, Heart, HeartCrack, Moon, Plane, Play, Smile, Sun, TreePine, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Cake,
+  Grid2X2,
+  Heart,
+  Moon,
+  PartyPopper,
+  Play,
+  Search,
+  Sun,
+  X,
+} from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { useT, useWgoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -256,216 +266,220 @@ export function EffectStudio({
 }) {
   const t = useT();
   const lang = useWgoStore((s) => s.language);
+  const initial =
+    screen === "anniv" ? "anniv"
+    : screen === "night" ? "night"
+    : screen === "day" ? "day"
+    : "amour";
+  const [cat, setCat] = useState<"amour" | "anniv" | "day" | "night" | "fetes" | "autres">(initial);
+  const [q, setQ] = useState("");
+  const scroller = useRef<HTMLDivElement>(null);
+
+  // keep API callbacks available for callers that still switch screens
+  void onAmour;
+  void onAnniv;
+  void onNight;
+  void onDay;
+  void onBack;
+
+  useEffect(() => {
+    setCat(initial);
+  }, [initial]);
+
   const cats = [
-    { id: "amour", icon: Heart, label: t("fxAmour"), tint: "text-[#ff4d8d]", ready: true },
-    { id: "anniv", icon: Cake, label: lang === "fr" ? "Anniversaire" : "Birthday", tint: "text-[#c084fc]", ready: true },
-    { id: "night", icon: Moon, label: lang === "fr" ? "Bonne nuit" : "Good night", tint: "text-[#7dd3fc]", ready: true },
-    { id: "day", icon: Sun, label: lang === "fr" ? "Bonne journée" : "Good day", tint: "text-[#fbbf24]", ready: true },
-    { id: "fete", icon: TreePine, label: lang === "fr" ? "Fêtes" : "Holidays", tint: "text-[#4ade80]", ready: false },
-    { id: "soutien", icon: HeartCrack, label: lang === "fr" ? "Soutien" : "Support", tint: "text-[#93c5fd]", ready: false },
-    { id: "amitie", icon: Users, label: lang === "fr" ? "Amitié" : "Friendship", tint: "text-[#c4b5fd]", ready: false },
-    { id: "humour", icon: Smile, label: "Humour", tint: "text-[#fbbf24]", ready: false },
-    { id: "voyage", icon: Plane, label: lang === "fr" ? "Voyage" : "Travel", tint: "text-[#38bdf8]", ready: false },
+    { id: "amour" as const, icon: Heart, label: t("fxAmour"), emoji: "❤️", sub: t("catAmourSub"), ready: true },
+    { id: "anniv" as const, icon: Cake, label: lang === "fr" ? "Anniversaire" : "Birthday", emoji: "🎂", sub: t("catAnnivSub"), ready: true },
+    { id: "day" as const, icon: Sun, label: lang === "fr" ? "Bonne journée" : "Good day", emoji: "☀️", sub: t("catDaySub"), ready: true },
+    { id: "night" as const, icon: Moon, label: lang === "fr" ? "Bonne nuit" : "Good night", emoji: "🌙", sub: t("catNightSub"), ready: true },
+    { id: "fetes" as const, icon: PartyPopper, label: t("catFetes"), emoji: "🎉", sub: t("catFetesSub"), ready: false },
+    { id: "autres" as const, icon: Grid2X2, label: t("fxOthers"), emoji: "✨", sub: t("fxOthersSub"), ready: false },
   ];
+
+  const query = q.trim().toLowerCase();
+
+  const sections = useMemo(() => {
+    const all = [
+      {
+        id: "amour" as const,
+        title: `${t("fxAmour")} ❤️`,
+        sub: t("catAmourSub"),
+        items: AMOUR.map((a) => ({
+          id: a.id,
+          label: lang === "fr" ? a.fr : a.en,
+          thumb: <Thumb id={a.id} />,
+        })),
+      },
+      {
+        id: "anniv" as const,
+        title: `${lang === "fr" ? "Anniversaire" : "Birthday"} 🎂`,
+        sub: t("catAnnivSub"),
+        items: BIRTHDAY.map((a) => ({
+          id: a.id,
+          label: lang === "fr" ? a.fr : a.en,
+          thumb: <BirthdayThumb id={a.id as BirthdayId} />,
+        })),
+      },
+      {
+        id: "day" as const,
+        title: `${lang === "fr" ? "Bonne journée" : "Good day"} ☀️`,
+        sub: t("catDaySub"),
+        items: DAY.map((a) => ({
+          id: a.id,
+          label: lang === "fr" ? a.fr : a.en,
+          thumb: <DayThumb id={a.id as DayId} />,
+        })),
+      },
+      {
+        id: "night" as const,
+        title: `${lang === "fr" ? "Bonne nuit" : "Good night"} 🌙`,
+        sub: t("catNightSub"),
+        items: NIGHT.map((a) => ({
+          id: a.id,
+          label: lang === "fr" ? a.fr : a.en,
+          thumb: <NightThumb id={a.id as NightId} />,
+        })),
+      },
+    ];
+    return all
+      .map((sec) => ({
+        ...sec,
+        items: query
+          ? sec.items.filter((it) => it.label.toLowerCase().includes(query) || it.id.toLowerCase().includes(query))
+          : sec.items,
+      }))
+      .filter((sec) => (query ? sec.items.length > 0 : true));
+  }, [lang, query, t]);
+
+  const visible = query ? sections : sections.filter((s) => s.id === cat);
 
   return (
     <div className="absolute inset-0 z-[55]">
-      <button type="button" className="absolute inset-0 bg-black/50" aria-label={t("back")} onClick={onClose} />
-      <aside className={cn("fx-drawer absolute inset-y-0 right-0 flex flex-col bg-[#070b14] shadow-[-8px_0_32px_rgb(0_0_0/0.45)]", screen === "cats" ? "w-[86%] max-w-[340px]" : "w-full")}>
-        <div className="flex items-center gap-2 px-3 pb-2 pt-4">
-          <button type="button" className="flex size-10 items-center justify-center" onClick={screen === "cats" ? onClose : onBack} aria-label={t("back")}>
-            <ChevronRight className="size-5 rotate-180" />
+      <button type="button" className="absolute inset-0 bg-black/55" aria-label={t("back")} onClick={onClose} />
+      <aside className="fx-drawer absolute inset-y-0 right-0 flex w-full max-w-[420px] flex-col bg-[#070b14] shadow-[-12px_0_40px_rgb(0_0_0/0.5)]">
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-white/15" />
+        <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3">
+          <div className="min-w-0">
+            <p className="text-[20px] font-bold text-white">{t("fxAddTitle")}</p>
+            <p className="mt-0.5 text-[12px] text-white/55">{t("fxAddHint")}</p>
+          </div>
+          <button
+            type="button"
+            className="press flex size-9 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10"
+            aria-label={t("cancel")}
+            onClick={onClose}
+          >
+            <X className="size-4 text-white/80" />
           </button>
-          <div>
-            <p className="text-[16px] font-bold">{screen === "amour" ? t("fxAmour") : screen === "anniv" ? (lang === "fr" ? "Anniversaire" : "Birthday") : screen === "night" ? (lang === "fr" ? "Bonne nuit" : "Good night") : screen === "day" ? (lang === "fr" ? "Bonne journée" : "Good day") : t("fxTitle")}</p>
-            <p className="text-[12px] text-muted">{screen === "cats" ? t("fxHint") : screen === "day" ? (lang === "fr" ? "12 animations. Aucun texte." : "12 animations. No text.") : screen === "night" ? (lang === "fr" ? "11 animations. Aucun texte." : "11 animations. No text.") : lang === "fr" ? "10 animations. Aucun texte." : "10 animations. No text."}</p>
-          </div>
         </div>
-        {screen === "cats" ? (
-          <div className="no-scrollbar flex-1 overflow-y-auto px-3 pb-6">
-            {cats.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={cn(
-                  "mb-2 flex h-14 w-full items-center gap-3 rounded-2xl bg-[#10182a] px-3 text-left ring-1 ring-white/10",
-                  c.ready && "ring-[#ff4d8d]",
-                  !c.ready && "opacity-70",
-                )}
-                onClick={() => {
-                  if (!c.ready) return;
-                  if (c.id === "anniv") onAnniv();
-                  else if (c.id === "night") onNight();
-                  else if (c.id === "day") onDay();
-                  else onAmour();
-                }}
-              >
-                <c.icon className={cn("size-5", c.tint)} />
-                <span className="flex-1 text-[15px] font-semibold">{c.label}</span>
-                {c.ready ? <ChevronRight className="size-4 text-muted" /> : <span className="text-[11px] text-muted">{t("fxSoon")}</span>}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="no-scrollbar grid flex-1 grid-cols-2 content-start gap-2 overflow-y-auto px-3 pb-6">
-            {screen === "anniv"
-              ? BIRTHDAY.map((a, i) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className={cn("relative h-36 overflow-hidden rounded-2xl bg-black text-left ring-1", selected === a.id ? "ring-[#ffd84d]" : "ring-white/10")}
-                    onClick={() => onPick(a.id)}
-                  >
-                    <span className="absolute left-2 top-2 z-10 flex size-6 items-center justify-center rounded-full bg-black/50 text-[11px] font-bold">{i + 1}</span>
-                    <BirthdayThumb id={a.id as BirthdayId} />
-                    <span className="absolute inset-x-2 bottom-10 z-10 text-[12px] font-semibold">{lang === "fr" ? a.fr : a.en}</span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className="absolute bottom-2 right-2 z-10 flex size-8 items-center justify-center rounded-full bg-black/60"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPreview(a.id);
-                      }}
-                    >
-                      <Play className="size-3.5 fill-white text-white" />
-                    </span>
-                    {onAr ? (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="absolute bottom-2 left-2 z-10 flex h-8 items-center rounded-full bg-[#ffd84d] px-2 text-[11px] font-bold text-[#0b1220]"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAr(a.id);
-                        }}
-                      >
-                        RA
-                      </span>
-                    ) : null}
-                  </button>
-                ))
-              : screen === "night"
-                ? NIGHT.map((a, i) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={cn("relative h-36 overflow-hidden rounded-2xl bg-[#070b18] text-left ring-1", selected === a.id ? "ring-[#7dd3fc]" : "ring-white/10")}
-                      onClick={() => onPick(a.id)}
-                    >
-                      <span className="absolute left-2 top-2 z-10 flex size-6 items-center justify-center rounded-full bg-black/50 text-[11px] font-bold">{i + 1}</span>
-                      <NightThumb id={a.id as NightId} />
-                      <span className="absolute inset-x-2 bottom-10 z-10 text-[12px] font-semibold">{lang === "fr" ? a.fr : a.en}</span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="absolute bottom-2 right-2 z-10 flex size-8 items-center justify-center rounded-full bg-black/60"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPreview(a.id);
-                        }}
-                      >
-                        <Play className="size-3.5 fill-white text-white" />
-                      </span>
-                      {onAr ? (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          className="absolute bottom-2 left-2 z-10 flex h-8 items-center rounded-full bg-[#ffd84d] px-2 text-[11px] font-bold text-[#0b1220]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAr(a.id);
-                          }}
-                        >
-                          RA
-                        </span>
-                      ) : null}
-                    </button>
-                  ))
-              : screen === "day"
-                ? DAY.map((a, i) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={cn("relative h-36 overflow-hidden rounded-2xl bg-[#141006] text-left ring-1", selected === a.id ? "ring-[#ffd84d]" : "ring-white/10")}
-                      onClick={() => onPick(a.id)}
-                    >
-                      <span className="absolute left-2 top-2 z-10 flex size-6 items-center justify-center rounded-full bg-black/50 text-[11px] font-bold">{i + 1}</span>
-                      <DayThumb id={a.id as DayId} />
-                      <span className="absolute inset-x-2 bottom-10 z-10 text-[12px] font-semibold">{lang === "fr" ? a.fr : a.en}</span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="absolute bottom-2 right-2 z-10 flex size-8 items-center justify-center rounded-full bg-black/60"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPreview(a.id);
-                        }}
-                      >
-                        <Play className="size-3.5 fill-white text-white" />
-                      </span>
-                      {onAr ? (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          className="absolute bottom-2 left-2 z-10 flex h-8 items-center rounded-full bg-[#ffd84d] px-2 text-[11px] font-bold text-[#0b1220]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAr(a.id);
-                          }}
-                        >
-                          RA
-                        </span>
-                      ) : null}
-                    </button>
-                  ))
-              : AMOUR.map((a, i) => (
-              <button
-                key={a.id}
-                type="button"
-                className={cn(
-                  "relative h-36 overflow-hidden rounded-2xl bg-[#140810] text-left ring-1",
-                  selected === a.id ? "ring-[#ff4d8d]" : "ring-white/10",
-                )}
-                onClick={() => onPick(a.id)}
-              >
-                <span className="absolute left-2 top-2 z-10 flex size-6 items-center justify-center rounded-full bg-black/50 text-[11px] font-bold">{i + 1}</span>
-                <Thumb id={a.id} />
-                <span className="absolute inset-x-2 bottom-10 text-[12px] font-semibold">{lang === "fr" ? a.fr : a.en}</span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="absolute bottom-2 right-2 z-10 flex size-8 items-center justify-center rounded-full bg-black/60"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPreview(a.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.stopPropagation();
-                      onPreview(a.id);
-                    }
+
+        <div className="px-4 pb-3">
+          <label className="flex h-11 items-center gap-2 rounded-2xl bg-[#10182a] px-3 ring-1 ring-white/10">
+            <Search className="size-4 shrink-0 text-white/40" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("fxSearch")}
+              className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/35"
+            />
+          </label>
+        </div>
+
+        <div className="flex min-h-0 flex-1">
+          <nav className="no-scrollbar flex w-[84px] shrink-0 flex-col gap-2 overflow-y-auto px-2 pb-6">
+            {cats.map((c) => {
+              const on = cat === c.id && !query;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={!c.ready}
+                  className={cn(
+                    "press relative flex flex-col items-center gap-1 rounded-2xl px-1 py-2.5 text-center",
+                    on && "bg-[#15120a] ring-1 ring-[#ffd84d] shadow-[0_0_18px_rgb(255_216_77/0.22)]",
+                    !on && c.ready && "bg-transparent",
+                    !c.ready && "opacity-45",
+                  )}
+                  onClick={() => {
+                    if (!c.ready) return;
+                    setQ("");
+                    setCat(c.id);
+                    scroller.current?.scrollTo({ top: 0 });
                   }}
                 >
-                  <Play className="size-3.5 fill-white text-white" />
-                </span>
-                {onAr ? (
                   <span
-                    role="button"
-                    tabIndex={0}
-                    className="absolute bottom-2 left-2 z-10 flex h-8 items-center rounded-full bg-[#ffd84d] px-2 text-[11px] font-bold text-[#0b1220]"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAr(a.id);
-                    }}
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-full",
+                      on ? "bg-[#ffd84d]/15 text-[#ffd84d]" : "bg-white/5 text-white/70",
+                    )}
                   >
-                    RA
+                    <c.icon className="size-4" strokeWidth={2.2} />
                   </span>
-                ) : null}
-              </button>
-            ))}
+                  <span className={cn("text-[10px] font-semibold leading-tight", on ? "text-[#ffd84d]" : "text-white/65")}>
+                    {c.label}
+                  </span>
+                  {!c.ready ? (
+                    <span className="text-[8px] font-bold uppercase tracking-wide text-[#ffd84d]/80">{t("fxSoon")}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div ref={scroller} className="no-scrollbar min-w-0 flex-1 overflow-y-auto px-3 pb-8">
+            {visible.length === 0 ? (
+              <p className="mt-8 text-center text-[13px] text-white/45">{t("fxNoResults")}</p>
+            ) : (
+              visible.map((sec) => (
+                <section key={sec.id} className="mb-6">
+                  <h2 className="text-[17px] font-bold text-white">{sec.title}</h2>
+                  <p className="mb-3 text-[12px] text-white/50">{sec.sub}</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {sec.items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={cn(
+                          "group relative aspect-square overflow-hidden rounded-2xl bg-[#0c1018] text-left ring-1",
+                          selected === item.id ? "ring-[#ffd84d]" : "ring-white/10",
+                        )}
+                        onClick={() => onPick(item.id)}
+                      >
+                        <span className="absolute inset-0">{item.thumb}</span>
+                        <span className="absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-black/80 via-black/35 to-transparent px-2 pb-2 pt-8">
+                          <span className="block truncate text-[11px] font-semibold text-white">{item.label}</span>
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="absolute bottom-2 right-2 z-[2] flex size-8 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/15"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPreview(item.id);
+                          }}
+                        >
+                          <Play className="size-3.5 fill-white text-white" />
+                        </span>
+                        {onAr ? (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            className="absolute left-2 top-2 z-[2] flex h-7 items-center rounded-full bg-[#ffd84d] px-2 text-[10px] font-bold text-[#0b1220]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAr(item.id);
+                            }}
+                          >
+                            RA
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))
+            )}
           </div>
-        )}
+        </div>
       </aside>
     </div>
   );
