@@ -52,8 +52,8 @@ const privacyFr: LegalDocument = {
     {
       title: "4. Chiffrement de bout en bout — et ses limites",
       paragraphs: [
-        "Les conversations privées prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages.",
-        "Le E2EE ne couvre pas : profils publics, Stories publiques, annonces, Boutiques, événements, listes de membres de groupe, métadonnées techniques, ni un contenu que vous copiez, transférez ou capturez.",
+        "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages. Les groupes et médias suivront.",
+        "Le E2EE ne couvre pas encore : groupes, médias, profils publics, Stories publiques, annonces, Boutiques, événements, listes de membres, métadonnées techniques, ni un contenu que vous copiez, transférez ou capturez.",
         "Une capture d’écran, un enregistrement d’écran, un mini-lecteur système (PiP) ou un appareil compromis peut révéler un contenu autrement chiffré. Les messages éphémères disparaissent de WIPP selon le délai choisi; ils ne empêchent pas un destinataire de les photographier.",
         "Si vous signalez un message, les éléments nécessaires à l’examen peuvent être transmis à WIPP.",
       ],
@@ -264,8 +264,8 @@ const privacyEn: LegalDocument = {
     {
       title: "4. End-to-end encryption — and its limits",
       paragraphs: [
-        "Private chats covered by WIPP’s E2EE are encrypted. WIPP does not keep private keys in a way that lets it read those messages.",
-        "E2EE does not cover public profiles, public Stories, listings, shops, events, group member lists, technical metadata, or content you copy, forward or screenshot.",
+        "Private DMs covered by WIPP’s E2EE are encrypted. WIPP does not keep private keys in a way that lets it read those messages. Groups and media come next.",
+        "E2EE does not yet cover groups, media, public profiles, public Stories, listings, shops, events, group member lists, technical metadata, or content you copy, forward or screenshot.",
         "A screenshot, screen recording, system picture-in-picture tile or a compromised device can reveal otherwise encrypted content. Disappearing messages leave WIPP after the delay you set; they do not stop someone from photographing them.",
         "If you report a message, the pieces needed to review it may be sent to WIPP.",
       ],

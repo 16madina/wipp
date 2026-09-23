@@ -14,14 +14,25 @@ import { useLocalSearchParams, useNavigation } from 'expo-router';
 import Colors from '@/constants/Colors';
 import {
   ensureDemoSession,
+  fetchChats,
   fetchMessages,
   getStoredProfile,
   sendMessage,
   type WippMessage,
   type WippProfile,
 } from '@/lib/api';
+import {
+  decryptDmBody,
+  encryptDmBody,
+  ensureE2eReady,
+} from '@/lib/e2e';
+import type { KeyBundle } from '@/lib/e2e-crypto';
 
 const c = Colors.dark;
+
+type DisplayMessage = WippMessage & {
+  displayText: string;
+};
 
 export default function ChatScreen() {
   const { id, title, username } = useLocalSearchParams<{
@@ -31,10 +42,13 @@ export default function ChatScreen() {
   }>();
   const navigation = useNavigation();
   const [me, setMe] = useState<WippProfile | null>(null);
-  const [messages, setMessages] = useState<WippMessage[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [identity, setIdentity] = useState<KeyBundle | null>(null);
+  const [peerPub, setPeerPub] = useState<JsonWebKey | null>(null);
+  const [e2eHint, setE2eHint] = useState('');
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -42,14 +56,45 @@ export default function ChatScreen() {
     });
   }, [navigation, title, username]);
 
+  const decodeList = useCallback(
+    async (list: WippMessage[], idBundle: KeyBundle, chatId: string) => {
+      const out: DisplayMessage[] = [];
+      for (const m of list) {
+        const dec = await decryptDmBody(idBundle, chatId, m.body);
+        if ('failed' in dec && dec.failed) {
+          out.push({ ...m, displayText: '🔒 Impossible de déchiffrer', encFailed: true, encrypted: true });
+        } else if (dec.encrypted) {
+          out.push({
+            ...m,
+            text: dec.text,
+            displayText: dec.text ?? '🔒 Message chiffré',
+            encrypted: true,
+          });
+        } else {
+          out.push({ ...m, text: dec.text, displayText: dec.text, encrypted: false });
+        }
+      }
+      return out;
+    },
+    [],
+  );
+
   const load = useCallback(async () => {
     if (!id) return;
     await ensureDemoSession();
-    setMe(await getStoredProfile());
+    const profile = await getStoredProfile();
+    setMe(profile);
+    const idBundle = await ensureE2eReady();
+    setIdentity(idBundle);
+    const chats = await fetchChats();
+    const chat = chats.find((c) => c.id === id);
+    const pub = chat?.peer.e2ePublicJwk ?? null;
+    setPeerPub(pub);
+    setE2eHint(pub ? 'DM chiffré de bout en bout' : 'En attente de la clé E2E du contact');
     const list = await fetchMessages(id);
-    setMessages(list);
+    setMessages(await decodeList(list, idBundle, id));
     setLoading(false);
-  }, [id]);
+  }, [decodeList, id]);
 
   useLayoutEffect(() => {
     void load().catch(() => setLoading(false));
@@ -57,13 +102,22 @@ export default function ChatScreen() {
 
   async function onSend() {
     const body = text.trim();
-    if (!body || !id || sending) return;
+    if (!body || !id || sending || !identity) return;
     setSending(true);
     setText('');
     try {
       const clientId = `m_${Date.now()}`;
-      const msg = await sendMessage(id, body, clientId);
-      setMessages((prev) => [...prev.filter((m) => m.id !== msg.id), msg]);
+      const wire =
+        peerPub != null
+          ? await encryptDmBody(identity, peerPub, id, body)
+          : body;
+      const msg = await sendMessage(id, wire, clientId);
+      const [display] = await decodeList([msg], identity, id);
+      // Show our plaintext immediately even if envelope round-trips
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== msg.id),
+        { ...display, displayText: body, text: body, encrypted: peerPub != null },
+      ]);
     } catch {
       setText(body);
     } finally {
@@ -84,6 +138,7 @@ export default function ChatScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}>
+      {e2eHint ? <Text style={styles.e2e}>{e2eHint}</Text> : null}
       <FlatList
         data={messages}
         keyExtractor={(m) => m.id}
@@ -92,7 +147,9 @@ export default function ChatScreen() {
           const mine = me && item.senderId === me.id;
           return (
             <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-              <Text style={[styles.bubbleText, mine && { color: c.accentFg }]}>{item.body}</Text>
+              <Text style={[styles.bubbleText, mine && { color: c.accentFg }]}>
+                {item.displayText}
+              </Text>
             </View>
           );
         }}
@@ -117,6 +174,13 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: c.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  e2e: {
+    textAlign: 'center',
+    color: c.textMuted,
+    fontSize: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
   bubble: {
     maxWidth: '78%',
     borderRadius: 18,

@@ -56,6 +56,7 @@ type ProfileRow = {
   bio: string;
   created_at: string;
   password_hash?: string;
+  e2e_public_jwk?: JsonWebKey | null;
 };
 
 function mapProfile(row: ProfileRow): WippProfile {
@@ -66,7 +67,43 @@ function mapProfile(row: ProfileRow): WippProfile {
     avatarUrl: row.avatar_url,
     bio: row.bio,
     createdAt: row.created_at,
+    e2ePublicJwk: row.e2e_public_jwk ?? null,
   };
+}
+
+function isPublicJwk(value: unknown): value is JsonWebKey {
+  if (!value || typeof value !== "object") return false;
+  const j = value as JsonWebKey;
+  return j.kty === "EC" && j.crv === "P-256" && typeof j.x === "string" && typeof j.y === "string" && !j.d;
+}
+
+export async function publishE2ePublicKey(meId: string, publicJwk: unknown): Promise<WippProfile> {
+  await ensureMessagingReady();
+  if (!isPublicJwk(publicJwk)) {
+    throw new WippHttpError(400, "bad_e2e_key", "Clé publique E2E invalide (EC P-256 sans d).");
+  }
+  const sql = await getSql();
+  await sql`
+    update wipp_profiles
+    set e2e_public_jwk = ${JSON.stringify(publicJwk)}::jsonb
+    where id = ${meId}
+  `;
+  const profile = await getProfileById(meId);
+  if (!profile) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+  return profile;
+}
+
+function messagePreview(body: string) {
+  const t = body.trim();
+  if (t.startsWith("{")) {
+    try {
+      const o = JSON.parse(t) as { e2e?: boolean };
+      if (o?.e2e === true) return "🔒 Message chiffré";
+    } catch {
+      /* plain */
+    }
+  }
+  return body.slice(0, 140);
 }
 
 async function seedDemoUsers() {
@@ -267,7 +304,7 @@ export async function deleteAccount(input: {
 async function getProfileById(id: string): Promise<WippProfile | null> {
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text
+    select id, username, display_name, avatar_url, bio, created_at::text, e2e_public_jwk
     from wipp_profiles where id = ${id} limit 1
   `;
   return rows[0] ? mapProfile(rows[0]) : null;
@@ -279,7 +316,7 @@ export async function searchProfiles(q: string, meId: string): Promise<WippProfi
   if (needle.length < 1) return [];
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text
+    select id, username, display_name, avatar_url, bio, created_at::text, e2e_public_jwk
     from wipp_profiles
     where id <> ${meId}
       and (lower(username) like ${`%${needle}%`} or lower(display_name) like ${`%${needle}%`})
@@ -294,7 +331,7 @@ export async function getOrCreateDm(meId: string, peerUsername: string): Promise
   const username = normalizeUsername(peerUsername);
   const sql = await getSql();
   const peers = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text
+    select id, username, display_name, avatar_url, bio, created_at::text, e2e_public_jwk
     from wipp_profiles where lower(username) = ${username} limit 1
   `;
   const peer = peers[0];
@@ -336,7 +373,7 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
   const out: WippChatSummary[] = [];
   for (const m of memberships) {
     const peers = await sql<ProfileRow>`
-      select p.id, p.username, p.display_name, p.avatar_url, p.bio, p.created_at::text
+      select p.id, p.username, p.display_name, p.avatar_url, p.bio, p.created_at::text, p.e2e_public_jwk
       from wipp_chat_members cm
       join wipp_profiles p on p.id = cm.profile_id
       where cm.chat_id = ${m.chat_id} and cm.profile_id <> ${meId}
@@ -352,7 +389,7 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
     out.push({
       id: m.chat_id,
       peer: mapProfile(peer),
-      preview: last[0]?.body ?? "",
+      preview: last[0] ? messagePreview(last[0].body) : "",
       lastAt: last[0] ? Date.parse(last[0].created_at) : Date.now(),
       unread: 0,
     });

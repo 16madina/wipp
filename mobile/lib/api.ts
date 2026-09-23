@@ -7,6 +7,7 @@ export type WippProfile = {
   displayName: string;
   avatarUrl?: string | null;
   bio?: string;
+  e2ePublicJwk?: JsonWebKey | null;
 };
 
 export type WippChat = {
@@ -22,6 +23,10 @@ export type WippMessage = {
   chatId: string;
   senderId: string;
   body: string;
+  /** Decrypted plaintext when E2E succeeds (client-only). */
+  text?: string | null;
+  encrypted?: boolean;
+  encFailed?: boolean;
   clientId?: string | null;
   createdAt: number;
 };
@@ -102,6 +107,12 @@ export async function login(username: string, password: string) {
     body: JSON.stringify({ username, password }),
   });
   await persistSession(session);
+  try {
+    const { ensureE2eReady } = await import('./e2e');
+    await ensureE2eReady();
+  } catch {
+    /* crypto optional until chat opens */
+  }
   return session.profile;
 }
 

@@ -12,6 +12,7 @@ import {
   loginProfile,
   loginWithFirebaseIdToken,
   logoutSession,
+  publishE2ePublicKey,
   registerProfile,
   resolveSession,
   searchProfiles,
@@ -20,7 +21,7 @@ import {
 
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
   "access-control-allow-headers": "authorization, content-type",
   "access-control-max-age": "86400",
 };
@@ -138,6 +139,13 @@ export async function handleWippApi(request: Request): Promise<Response> {
 
     if (method === "GET" && a === "me") {
       const profile = await resolveSession(bearer(request));
+      return json({ profile });
+    }
+
+    if (method === "PUT" && a === "me" && b === "e2e-key") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ publicJwk?: JsonWebKey }>(request);
+      const profile = await publishE2ePublicKey(me.id, body.publicJwk);
       return json({ profile });
     }
 

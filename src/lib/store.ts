@@ -155,6 +155,8 @@ function fresh() {
     locateStatus: "idle" as "idle" | "locating" | "done" | "denied",
     identity: null as KeyBundle | null,
     deviceKeys: {} as Record<string, KeyBundle>,
+    /** Real peer public JWKs for srv: DMs (keyed by srvuser:<id> and raw profile id). */
+    peerPublicKeys: {} as Record<string, JsonWebKey>,
     myFingerprint: "",
     verifiedIds: [] as string[],
     showCiphertext: false,
@@ -317,6 +319,17 @@ async function aesFor(get: () => WgoState, chatId: string) {
   if (chat.type === "group") return deriveGroupKey(st.identity, chatId);
   const peerId = chat.participantIds.find((id) => id !== "me");
   if (!peerId) return null;
+
+  // Real DM E2E for server chats: use published peer public key only.
+  if (chatId.startsWith("srv:")) {
+    const peerPub =
+      st.peerPublicKeys[peerId] ||
+      (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice("srvuser:".length)] : undefined);
+    if (!peerPub) return null;
+    return deriveChatKey(st.identity, peerPub, chatId.replace(/^srv:/, ""));
+  }
+
+  // Local demo chats: deviceKeys is at-rest seal only (not true multi-device E2E).
   let peer = st.deviceKeys[peerId];
   if (!peer) {
     peer = await generateBundle();
@@ -324,7 +337,7 @@ async function aesFor(get: () => WgoState, chatId: string) {
       deviceKeys: { ...useWgoStore.getState().deviceKeys, [peerId]: peer },
     });
   }
-  return deriveChatKey(st.identity, peer, chatId);
+  return deriveChatKey(st.identity, peer.publicJwk, chatId);
 }
 
 function pumpReceipt(
@@ -442,8 +455,15 @@ export const useWgoStore = create<WgoState>()(
       },
 
       openServerDm: async (username: string) => {
-        const { startChatWithUsername, mergeServerChatsIntoState, toLocalChatId, syncChatMessages, mergeServerMessagesIntoState } =
-          await import("@/lib/messaging/sync");
+        const {
+          startChatWithUsername,
+          mergeServerChatsIntoState,
+          toLocalChatId,
+          syncChatMessages,
+          mergeServerMessagesIntoState,
+          decryptMergedMessages,
+        } = await import("@/lib/messaging/sync");
+        await get().ensureCrypto();
         const chat = await startChatWithUsername(username);
         const profileId = get().serverProfileId;
         set((st) => mergeServerChatsIntoState(st, [chat], profileId));
@@ -453,6 +473,8 @@ export const useWgoStore = create<WgoState>()(
           set((st) =>
             mergeServerMessagesIntoState(st, chat.id, synced.messages, synced.meServerId),
           );
+          const dec = await decryptMergedMessages(get(), localId, get().identity);
+          if (Object.keys(dec).length) set(() => dec);
         }
         get().push({ name: "conversation", chatId: localId });
       },
@@ -505,6 +527,15 @@ export const useWgoStore = create<WgoState>()(
         if (chat.type === "group") return groupSafety(st.identity.publicJwk, chatId);
         const peerId = chat.participantIds.find((id) => id !== "me");
         if (!peerId) return "";
+        if (chatId.startsWith("srv:")) {
+          const peerPub =
+            st.peerPublicKeys[peerId] ||
+            (peerId.startsWith("srvuser:")
+              ? st.peerPublicKeys[peerId.slice("srvuser:".length)]
+              : undefined);
+          if (!peerPub) return "";
+          return safetyNumber(st.identity.publicJwk, peerPub);
+        }
         let peer = st.deviceKeys[peerId];
         if (!peer) {
           peer = await generateBundle();
@@ -568,10 +599,6 @@ export const useWgoStore = create<WgoState>()(
       },
 
       ensureCrypto: async () => {
-        if (typeof crypto === "undefined" || !crypto.subtle) {
-          set({ cryptoReady: true });
-          return;
-        }
         let identity = get().identity;
         const deviceKeys = { ...get().deviceKeys };
         let changed = false;
@@ -579,7 +606,9 @@ export const useWgoStore = create<WgoState>()(
           identity = await generateBundle();
           changed = true;
         }
+        // Local demo peers only — never invent keys for srvuser: (real E2E uses peerPublicKeys).
         for (const id of Object.keys(get().users)) {
+          if (id.startsWith("srvuser:")) continue;
           if (!deviceKeys[id]) {
             deviceKeys[id] = await generateBundle();
             changed = true;
@@ -590,6 +619,15 @@ export const useWgoStore = create<WgoState>()(
             ? get().myFingerprint
             : await fingerprintOf(identity.publicJwk);
         set({ identity, deviceKeys, myFingerprint, cryptoReady: true });
+
+        // Publish public key so peers can encrypt DMs to us.
+        try {
+          const { publishIdentityPublicKey } = await import("@/lib/messaging/sync");
+          await publishIdentityPublicKey(identity);
+        } catch (err) {
+          console.warn("[wipp] e2e key publish skipped", err);
+        }
+
         const st = get();
         for (const [chatId, list] of Object.entries(st.messages)) {
           for (const m of list) {
@@ -611,6 +649,12 @@ export const useWgoStore = create<WgoState>()(
           verifiedIds: [],
           keyRotatedAt: Date.now(),
         });
+        try {
+          const { publishIdentityPublicKey } = await import("@/lib/messaging/sync");
+          await publishIdentityPublicKey(identity);
+        } catch (err) {
+          console.warn("[wipp] e2e key publish after rotate skipped", err);
+        }
         await get().unlockAll();
       },
 
@@ -665,24 +709,42 @@ export const useWgoStore = create<WgoState>()(
         void get().sealMessage(chatId, message.id);
         pumpReceipt(set, get, chatId, message.id);
 
-        // Dual-write text messages to the messaging server for srv: chats
+        // Dual-write text messages to the messaging server for srv: chats (E2E when peer key known)
         if (message.type === "text" && message.text) {
           void (async () => {
             try {
-              const { isServerChatId, sendViaServer, syncChatMessages, mergeServerMessagesIntoState } =
-                await import("@/lib/messaging/sync");
+              const {
+                isServerChatId,
+                sendViaServer,
+                syncChatMessages,
+                mergeServerMessagesIntoState,
+                decryptMergedMessages,
+              } = await import("@/lib/messaging/sync");
               if (!isServerChatId(chatId)) return;
-              await sendViaServer(chatId, message.text!, message.id);
+              const st = get();
+              const peerId = st.chats.find((c) => c.id === chatId)?.participantIds.find((id) => id !== "me");
+              const peerPub = peerId
+                ? st.peerPublicKeys[peerId] ||
+                  (peerId.startsWith("srvuser:")
+                    ? st.peerPublicKeys[peerId.slice("srvuser:".length)]
+                    : undefined)
+                : undefined;
+              await sendViaServer(chatId, message.text!, message.id, {
+                identity: st.identity,
+                peerPublicJwk: peerPub ?? null,
+              });
               const synced = await syncChatMessages(chatId);
               if (synced && "messages" in synced) {
-                set((st) =>
+                set((s) =>
                   mergeServerMessagesIntoState(
-                    st,
+                    s,
                     chatId.replace(/^srv:/, ""),
                     synced.messages,
                     synced.meServerId,
                   ),
                 );
+                const dec = await decryptMergedMessages(get(), chatId, get().identity);
+                if (Object.keys(dec).length) set(() => dec);
               }
             } catch (err) {
               console.warn("[wipp] server send failed", err);
@@ -2011,6 +2073,7 @@ export const useWgoStore = create<WgoState>()(
         lifestyle: s.lifestyle,
         identity: s.identity,
         deviceKeys: s.deviceKeys,
+        peerPublicKeys: s.peerPublicKeys ?? {},
         myFingerprint: s.myFingerprint,
         verifiedIds: s.verifiedIds,
         showCiphertext: s.showCiphertext,

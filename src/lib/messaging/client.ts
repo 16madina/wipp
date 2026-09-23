@@ -98,6 +98,15 @@ export async function fetchMe() {
   return data.profile;
 }
 
+export async function publishMyE2eKey(publicJwk: JsonWebKey) {
+  const data = await api<{ profile: WippProfile }>("/me/e2e-key", {
+    method: "PUT",
+    body: JSON.stringify({ publicJwk }),
+  });
+  persistSession({ token: getStoredToken()!, profile: data.profile });
+  return data.profile;
+}
+
 export async function searchUsers(q: string) {
   const data = await api<{ users: WippProfile[] }>(`/users/search?q=${encodeURIComponent(q)}`);
   return data.users;

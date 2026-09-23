@@ -6,6 +6,7 @@ export const Route = createFileRoute("/api/wipp/$")({
     handlers: {
       GET: ({ request }) => handleWippApi(request),
       POST: ({ request }) => handleWippApi(request),
+      PUT: ({ request }) => handleWippApi(request),
       OPTIONS: () => handleWippOptions(),
     },
   },

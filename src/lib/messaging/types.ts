@@ -5,6 +5,8 @@ export type WippProfile = {
   avatarUrl?: string | null;
   bio?: string;
   createdAt?: string;
+  /** ECDH P-256 public JWK for DM E2E (null until the client publishes it). */
+  e2ePublicJwk?: JsonWebKey | null;
 };
 
 export type WippChatSummary = {
