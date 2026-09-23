@@ -1,0 +1,24 @@
+# Repo-root .easignore — EAS monorepo upload includes the whole git root
+node_modules/
+mobile/node_modules/
+.git/
+.vercel/
+.tanstack/
+.grok/
+artifacts/
+screenshots/
+attachments/
+public/
+src/
+server/
+scripts/
+migrations/
+.cursor/
+*.mp4
+*.mov
+.env
+.env.*
+package-lock.json
+**/dist/
+**/.expo/
+**/*.log

@@ -10,5 +10,6 @@
   "supportEmail": "support@wippapp.com",
   "androidBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/e5fb15bd-254e-485e-9780-33549b87309a",
   "notes": "Android preview en cours. iOS: fix SPM dynamic + relance simulator.",
-  "iosBuildNote": "preview-simulator apr\u00e8s fix useFrameworks dynamic (SPM Firebase)"
+  "iosBuildNote": "preview-simulator apr\u00e8s fix useFrameworks dynamic (SPM Firebase)",
+  "iosSimulatorBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/999ee7a3-4719-47d6-9f5e-5644a1839908"
 }
