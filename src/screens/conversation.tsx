@@ -38,6 +38,7 @@ import { DayFx, dayLabel, daySrc } from "@/components/fx-day";
 
 import { BirthdayFx, artSrc, birthdayLabel } from "@/components/fx-birthday";
 import { SurpriseHub } from "@/components/surprise-hub";
+import { SurpriseCompose } from "@/components/surprise-compose";
 
 function sceneSrc(id: string) {
   if (id.startsWith("love_")) return amourSrc(id);
@@ -1123,126 +1124,49 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             setDraftFx(null);
             setScratchOpen(true);
           }}
+          onScratchCard={() => {
+            setSurprise(false);
+            setScratchText("");
+            setScratchDesign("gold");
+            setScratchTry(0);
+            setScratchConfirm(false);
+            setDraftFx(null);
+            setScratchOpen(true);
+          }}
         />
       ) : null}
       {scratchOpen ? (
-        <div className="absolute inset-0 z-50 flex flex-col bg-[#070b14]">
-          <StatusBar />
-          <Header title={<span>{t("scratchName")} ✨</span>} onBack={() => { setScratchOpen(false); setDraftFx(null); }} />
-          <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
-            <p className="mb-2 text-[15px] font-medium">{t("scratchAsk")}</p>
-            <textarea
-              value={scratchText}
-              maxLength={300}
-              rows={3}
-              placeholder={t("scratchPlaceholder")}
-              className="w-full resize-none rounded-2xl bg-[#10182a] px-4 py-3 text-[16px] outline-none ring-1 ring-[#ffd84d]/40"
-              onChange={(e) => setScratchText(e.target.value.slice(0, 300))}
-            />
-            <p className="mb-2 text-right text-[11px] tabular-nums text-muted">{scratchText.length}/300</p>
-            <button
-              type="button"
-              className="mb-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#ffd84d] px-3 text-[14px] font-bold text-[#0b1220]"
-              onClick={() => setFxOpen("cats")}
-            >
-              <Sparkles className="size-4" />
-              <span className="truncate">{draftFx ? (draftFx.startsWith("birthday_") ? birthdayLabel(draftFx, lang) : draftFx.startsWith("night_") ? nightLabel(draftFx, lang) : draftFx.startsWith("day_") ? dayLabel(draftFx, lang) : amourLabel(draftFx, lang)) : t("fxAdd")}</span>
-              {draftFx ? (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="ml-1 text-[16px] leading-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDraftFx(null);
-                  }}
-                >
-                  ×
-                </span>
-              ) : null}
-            </button>
-            {draftFx ? (
-              <button
-                type="button"
-                className="mb-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#10182a] text-[14px] font-bold text-[#ffd84d] ring-1 ring-[#ffd84d]"
-                onClick={() => setFxPlay(draftFx)}
-              >
-                ▶︎ {lang === "fr" ? "Aperçu de la réception" : "Preview how they receive it"}
-              </button>
-            ) : null}
-            {isPoster(draftFx) ? (
-              <button
-                type="button"
-                className="mb-4 flex h-11 w-full items-center justify-center rounded-full bg-[#ffd84d] text-[14px] font-bold text-[#0b1220]"
-                onClick={() => {
-                  void prepareAr().then(() => setArSrc(sceneSrc(draftFx)));
-                }}
-              >
-                {lang === "fr" ? "Voir en réalité augmentée" : "View in augmented reality"}
-              </button>
-            ) : null}
-            <p className="mb-2 text-[13px] font-semibold">{t("chooseCard")}</p>
-            <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto">
-              {(
-                [
-                  ["gold", "🖤", t("themeGold")],
-                  ["love", "❤️", t("themeLove")],
-                  ["birthday", "🎂", t("themeBirthday")],
-                  ["fun", "😂", t("themeFun")],
-                  ["secret", "🌙", t("themeSecret")],
-                ] as const
-              ).map(([id, glyph, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={cn(
-                  "flex w-[72px] shrink-0 flex-col items-center rounded-2xl py-2 ring-1",
-                  scratchDesign === id ? "bg-[#ffd84d] text-[#0b1220] ring-[#ffd84d]" : "bg-[#10182a] ring-white/10",
-                )}
-                  onClick={() => {
-                    setScratchDesign(id);
-                    setScratchTry((n) => n + 1);
-                  }}
-                >
-                  <span className="block text-[16px]">{glyph}</span>
-                  <span className="block text-[12px] font-semibold">{label}</span>
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-center">
-              <ScratchCard
-                key={scratchTry}
-                text={scratchText || "···"}
-                design={scratchDesign}
-                wait={t("scratchBrush")}
-                hint={t("scratchRub")}
-                found={t("scratchFound")}
-                replayLabel={t("scratchReplay")}
-              />
-            </div>
-            <p className="mt-3 text-center text-[12px] text-muted">{t("scratchTry")}</p>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                className="press h-12 flex-1 rounded-full bg-[#10182a] text-[14px] font-bold ring-1 ring-white/15"
-                onClick={() => setScratchTry((n) => n + 1)}
-              >
-                {t("scratchReset")}
-              </button>
-              <button
-                type="button"
-                disabled={!scratchText.trim()}
-                className="press h-12 flex-[1.3] rounded-full bg-[#ffd84d] text-[14px] font-bold text-[#0b1220] disabled:opacity-40"
-                onClick={() => {
-                  if (!scratchText.trim()) return;
-                  setScratchConfirm(true);
-                }}
-              >
-                {t("scratchSend")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <SurpriseCompose
+          text={scratchText}
+          design={scratchDesign}
+          animationLabel={
+            draftFx
+              ? draftFx.startsWith("birthday_")
+                ? birthdayLabel(draftFx, lang)
+                : draftFx.startsWith("night_")
+                  ? nightLabel(draftFx, lang)
+                  : draftFx.startsWith("day_")
+                    ? dayLabel(draftFx, lang)
+                    : amourLabel(draftFx, lang)
+              : null
+          }
+          onBack={() => {
+            setScratchOpen(false);
+            setDraftFx(null);
+            setSurprise(true);
+          }}
+          onText={setScratchText}
+          onDesign={(d) => {
+            setScratchDesign(d);
+            setScratchTry((n) => n + 1);
+          }}
+          onAnimation={() => setFxOpen("cats")}
+          onClearAnimation={() => setDraftFx(null)}
+          onSend={() => {
+            if (!scratchText.trim()) return;
+            setScratchConfirm(true);
+          }}
+        />
       ) : null}
       {arSrc ? <ArView src={arSrc} onClose={() => setArSrc(null)} /> : null}
       {fxPlay?.startsWith("birthday_") ? <BirthdayFx id={fxPlay} onDone={() => setFxPlay(null)} /> : null}

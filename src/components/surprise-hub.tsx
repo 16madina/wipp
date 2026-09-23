@@ -1,22 +1,27 @@
 import { ChevronRight, Wand2 } from "lucide-react";
 import { useT } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 type SoonId = "carte" | "timer" | "confettis" | "cadeau";
 
 export function SurpriseHub({
   onBack,
   onScratch,
+  onScratchCard,
 }: {
   onBack: () => void;
   onScratch: () => void;
+  /** Same create flow as Message à gratter (Carte à gratter entry). */
+  onScratchCard?: () => void;
 }) {
   const t = useT();
+  const openCompose = onScratchCard ?? onScratch;
 
-  const soon: { id: SoonId; title: string; img: string }[] = [
-    { id: "carte", title: t("scratchCardTitle"), img: "/fx/surprise/carte.jpg" },
-    { id: "timer", title: t("catTimer"), img: "/fx/surprise/timer.jpg" },
-    { id: "confettis", title: t("catConfetti"), img: "/fx/surprise/confetti.jpg" },
-    { id: "cadeau", title: t("catGiftShort"), img: "/fx/surprise/cadeau.jpg" },
+  const soon: { id: SoonId; title: string; img: string; ready: boolean }[] = [
+    { id: "carte", title: t("scratchCardTitle"), img: "/fx/surprise/carte.jpg", ready: true },
+    { id: "timer", title: t("catTimer"), img: "/fx/surprise/timer.jpg", ready: false },
+    { id: "confettis", title: t("catConfetti"), img: "/fx/surprise/confetti.jpg", ready: false },
+    { id: "cadeau", title: t("catGiftShort"), img: "/fx/surprise/cadeau.jpg", ready: false },
   ];
 
   return (
@@ -65,22 +70,44 @@ export function SurpriseHub({
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          {soon.map((item) => (
-            <div
-              key={item.id}
-              role="img"
-              aria-label={`${item.title} — ${t("surpriseSoon")}`}
-              className="relative aspect-[0.95] overflow-hidden rounded-[20px] ring-1 ring-white/10"
-            >
-              <img
-                src={item.img}
-                alt=""
-                draggable={false}
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            </div>
-          ))}
+          {soon.map((item) =>
+            item.ready ? (
+              <button
+                key={item.id}
+                type="button"
+                className="press relative aspect-[0.95] overflow-hidden rounded-[20px] ring-1 ring-white/10"
+                aria-label={item.title}
+                onClick={openCompose}
+              >
+                <img
+                  src={item.img}
+                  alt=""
+                  draggable={false}
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                {/* Cover the baked "Bientôt" so this entry looks available */}
+                <span className="absolute right-2 top-2 rounded-full bg-[#ffd84d] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0b1220]">
+                  {t("scratchReady")}
+                </span>
+              </button>
+            ) : (
+              <div
+                key={item.id}
+                role="img"
+                aria-label={`${item.title} — ${t("surpriseSoon")}`}
+                className={cn("relative aspect-[0.95] overflow-hidden rounded-[20px] ring-1 ring-white/10")}
+              >
+                <img
+                  src={item.img}
+                  alt=""
+                  draggable={false}
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              </div>
+            ),
+          )}
         </div>
       </div>
     </div>
