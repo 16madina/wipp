@@ -1,0 +1,17 @@
+# Keep EAS uploads small
+node_modules/
+.expo/
+dist/
+web-build/
+.git/
+../.git/
+../node_modules/
+../.vercel/
+../.tanstack/
+../artifacts/
+../screenshots/
+../attachments/
+**/*.mp4
+**/*.mov
+../public/stickers/**
+eas-build-archive.tar.gz

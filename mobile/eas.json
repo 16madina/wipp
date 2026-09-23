@@ -31,9 +31,6 @@
       "env": {
         "EXPO_PUBLIC_WIPP_API_URL": "https://wippapp.com"
       },
-      "ios": {
-        "resourceClass": "m-medium"
-      },
       "android": {
         "buildType": "app-bundle"
       }
@@ -41,23 +38,10 @@
   },
   "submit": {
     "production": {
-      "ios": {
-        "ascAppId": null,
-        "appleId": null,
-        "appleTeamId": null
-      },
       "android": {
         "track": "internal",
         "releaseStatus": "draft"
       }
-    }
-  },
-  "update": {
-    "production": {
-      "channel": "production"
-    },
-    "preview": {
-      "channel": "preview"
     }
   }
 }

@@ -13,7 +13,6 @@ import Colors from '@/constants/Colors';
 import {
   ensureSession,
   fetchChats,
-  getStoredProfile,
   type WippChat,
   type WippProfile,
 } from '@/lib/api';

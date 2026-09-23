@@ -3,10 +3,11 @@
   "apiUrl": "https://wippapp.com",
   "vercelUrl": "https://workspace-phi-pied.vercel.app",
   "vercelProjectName": "workspace",
-  "expoOwner": "",
+  "expoOwner": "missdee",
   "expoSlug": "wipp",
-  "easProjectId": "",
+  "easProjectId": "ea523c90-fa59-41f1-af9e-fde9a68b360e",
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
-  "notes": "LIVE: wippapp.com + www attachés au projet Vercel workspace. DNS A 76.76.21.21 + CNAME www OK. VERCEL_TOKEN fourni en session (ne pas committer)."
+  "androidBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/e5fb15bd-254e-485e-9780-33549b87309a",
+  "notes": "EAS Android preview build lancé. LiveKit après tests téléphone."
 }

@@ -10,7 +10,10 @@ function readDeploy() {
 }
 
 const deploy = readDeploy();
-const easProjectId = process.env.EAS_PROJECT_ID || deploy.easProjectId || null;
+const easProjectId =
+  process.env.EAS_PROJECT_ID ||
+  deploy.easProjectId ||
+  "ea523c90-fa59-41f1-af9e-fde9a68b360e";
 const apiUrl =
   process.env.EXPO_PUBLIC_WIPP_API_URL || deploy.apiUrl || "https://wippapp.com";
 
@@ -88,9 +91,13 @@ module.exports = {
   extra: {
     wippApiUrl: apiUrl,
     firebaseProjectId: "wipp-61124",
-    eas: {
-      projectId: easProjectId,
-    },
+    ...(easProjectId
+      ? {
+          eas: {
+            projectId: easProjectId,
+          },
+        }
+      : {}),
   },
   ...(deploy.expoOwner ? { owner: deploy.expoOwner } : {}),
 };
