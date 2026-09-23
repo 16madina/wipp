@@ -540,6 +540,16 @@
   animation: none !important;
   opacity: 1;
 }
+
+.onb-head-minimal {
+  pointer-events: none;
+  min-height: 52px;
+  padding-top: 36px;
+}
+.onb-head-minimal .onb-skip {
+  pointer-events: auto;
+}
+
 .share-orb {
   display: flex;
   align-items: center;
