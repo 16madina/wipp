@@ -9,5 +9,6 @@
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
   "androidBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/e5fb15bd-254e-485e-9780-33549b87309a",
-  "notes": "EAS Android preview build lancé. LiveKit après tests téléphone."
+  "notes": "Android preview en cours. iOS: fix SPM dynamic + relance simulator.",
+  "iosBuildNote": "preview-simulator apr\u00e8s fix useFrameworks dynamic (SPM Firebase)"
 }

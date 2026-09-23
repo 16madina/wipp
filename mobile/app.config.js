@@ -43,6 +43,9 @@ module.exports = {
     bundleIdentifier: "com.wipp.app",
     buildNumber: "1",
     googleServicesFile: "./GoogleService-Info.plist",
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     package: "com.wipp.app",
@@ -71,7 +74,8 @@ module.exports = {
       "expo-build-properties",
       {
         ios: {
-          useFrameworks: "static",
+          // RN Firebase v26 résout firebase-ios-sdk via SPM → linkage dynamique requis
+          useFrameworks: "dynamic",
         },
       },
     ],

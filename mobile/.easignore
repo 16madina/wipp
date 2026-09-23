@@ -1,17 +1,26 @@
-# Keep EAS uploads small
+# Keep EAS uploads small (project root = mobile/)
 node_modules/
 .expo/
 dist/
 web-build/
-.git/
-../.git/
+ios/
+android/
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.tar.gz
+
+# Parent monorepo junk (if path walks up)
 ../node_modules/
+../.git/
 ../.vercel/
 ../.tanstack/
 ../artifacts/
 ../screenshots/
 ../attachments/
+../public/
+../src/
+../server/
 **/*.mp4
 **/*.mov
-../public/stickers/**
-eas-build-archive.tar.gz

@@ -25,6 +25,10 @@ Apps : `com.wipp.app` (Android + iOS)
 
 → Firebase = SMS seulement · Supabase = base de données
 
+## iOS / CocoaPods
+RN Firebase v26 utilise **Swift Package Manager** pour firebase-ios-sdk →
+`expo-build-properties` doit avoir `ios.useFrameworks: "dynamic"` (pas `static`).
+
 ## Build requis
 Phone Auth **ne marche pas dans Expo Go**. Il faut un **development build** ou un build store :
 
