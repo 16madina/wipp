@@ -13,7 +13,7 @@ import {
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import Colors from '@/constants/Colors';
 import {
-  ensureDemoSession,
+  ensureSession,
   fetchChats,
   fetchMessages,
   getStoredProfile,
@@ -81,9 +81,13 @@ export default function ChatScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    await ensureDemoSession();
+    await ensureSession();
     const profile = await getStoredProfile();
     setMe(profile);
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
     const idBundle = await ensureE2eReady();
     setIdentity(idBundle);
     const chats = await fetchChats();

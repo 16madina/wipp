@@ -17,11 +17,11 @@ import {
   sendPhoneCode,
   type PhoneConfirmation,
 } from '@/lib/firebase-phone';
-import { ensureDemoSession, login } from '@/lib/api';
+import { ensureDemoSession, login, register } from '@/lib/api';
 
 /**
- * Connexion SMS (Firebase) + secours compte démo / Play review (mot de passe).
- * Phone Auth nécessite un development build / store build — pas Expo Go.
+ * Connexion SMS (Firebase) + compte @username.
+ * Une fois connecté, la session reste sur l’appareil (SecureStore).
  */
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,9 +30,10 @@ export default function LoginScreen() {
   const [confirmation, setConfirmation] = useState<PhoneConfirmation | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState<'phone' | 'password'>('phone');
-  const [username, setUsername] = useState('lazone');
+  const [mode, setMode] = useState<'phone' | 'password' | 'register'>('password');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   async function onSendCode() {
     setError('');
@@ -77,6 +78,24 @@ export default function LoginScreen() {
     }
   }
 
+  async function onRegister() {
+    setError('');
+    setBusy(true);
+    try {
+      const u = username.trim().replace(/^@/, '');
+      await register({
+        username: u,
+        password,
+        displayName: displayName.trim() || u,
+      });
+      router.replace('/(tabs)');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Inscription impossible');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onDemo() {
     setBusy(true);
     setError('');
@@ -98,22 +117,27 @@ export default function LoginScreen() {
       <Text style={styles.brand}>wipp</Text>
       <Text style={styles.tag}>Connecte ta vie.</Text>
       <Text style={styles.sub}>
-        Connexion par SMS (Firebase) — ton numéro reste privé. Revue stores : onglet Compte
-        (@lazone) ou numéro de test Firebase.
+        Une fois connecté, tu restes connecté sur cet appareil — comme WhatsApp.
       </Text>
 
       <View style={styles.tabs}>
+        <Pressable
+          style={[styles.tab, mode === 'password' && styles.tabOn]}
+          onPress={() => setMode('password')}
+        >
+          <Text style={styles.tabTxt}>Connexion</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, mode === 'register' && styles.tabOn]}
+          onPress={() => setMode('register')}
+        >
+          <Text style={styles.tabTxt}>Créer</Text>
+        </Pressable>
         <Pressable
           style={[styles.tab, mode === 'phone' && styles.tabOn]}
           onPress={() => setMode('phone')}
         >
           <Text style={styles.tabTxt}>SMS</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.tab, mode === 'password' && styles.tabOn]}
-          onPress={() => setMode('password')}
-        >
-          <Text style={styles.tabTxt}>Compte</Text>
         </Pressable>
       </View>
 
@@ -153,11 +177,21 @@ export default function LoginScreen() {
         </>
       ) : (
         <>
+          {mode === 'register' ? (
+            <TextInput
+              style={styles.input}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="Nom affiché"
+              placeholderTextColor="#8b93a7"
+            />
+          ) : null}
           <TextInput
             style={styles.input}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
+            autoCorrect={false}
             placeholder="@username"
             placeholderTextColor="#8b93a7"
           />
@@ -166,14 +200,20 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholder="Mot de passe"
+            placeholder="Mot de passe (6+)"
             placeholderTextColor="#8b93a7"
           />
-          <Pressable style={styles.cta} disabled={busy} onPress={() => void onPasswordLogin()}>
+          <Pressable
+            style={styles.cta}
+            disabled={busy}
+            onPress={() => void (mode === 'register' ? onRegister() : onPasswordLogin())}
+          >
             {busy ? (
               <ActivityIndicator color="#0B1220" />
             ) : (
-              <Text style={styles.ctaTxt}>Se connecter</Text>
+              <Text style={styles.ctaTxt}>
+                {mode === 'register' ? 'Créer mon compte' : 'Se connecter'}
+              </Text>
             )}
           </Pressable>
         </>
@@ -182,7 +222,7 @@ export default function LoginScreen() {
       {error ? <Text style={styles.err}>{error}</Text> : null}
 
       <Pressable onPress={() => void onDemo()} style={styles.linkBtn}>
-        <Text style={styles.link}>Continuer en démo</Text>
+        <Text style={styles.link}>Continuer en démo (test)</Text>
       </Pressable>
     </KeyboardAvoidingView>
   );

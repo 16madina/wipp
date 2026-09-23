@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -40,6 +40,7 @@ export default function RootLayout() {
           headerTitleStyle: { color: '#f9fafb' },
           contentStyle: { backgroundColor: '#070a0f' },
         }}>
+        <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[id]" options={{ title: 'Conversation' }} />

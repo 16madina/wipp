@@ -6,7 +6,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 import { ensureDbReady, getSql } from "@/lib/db";
 import type { WippChatSummary, WippMessage, WippProfile, WippSessionPayload } from "./types";
 
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 365;
 const DEMO_PASSWORD = "wipp-demo";
 
 function uid(prefix: string) {
@@ -196,6 +196,13 @@ export async function resolveSession(token: string | null | undefined): Promise<
   `;
   const profileId = rows[0]?.profile_id;
   if (!profileId) throw new WippHttpError(401, "unauthorized", "Session expirée.");
+  // Sliding expiry — rester connecté tant qu’on ouvre l’app (style WhatsApp).
+  const expires = new Date(Date.now() + SESSION_DAYS * 86400_000).toISOString();
+  await sql`
+    update wipp_sessions
+    set expires_at = ${expires}::timestamptz
+    where token = ${token}
+  `;
   const profile = await getProfileById(profileId);
   if (!profile) throw new WippHttpError(401, "unauthorized", "Session invalide.");
   return profile;

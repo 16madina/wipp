@@ -9,13 +9,13 @@ import {
   type KeyBundle,
 } from './e2e-crypto';
 import { apiBase } from './api';
+import { getStoredToken } from './session';
 
 const IDENTITY_KEY = 'wipp-e2e-identity-v1';
 
 async function authHeaders() {
-  const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-  const token = await AsyncStorage.getItem('wipp-server-token');
   const headers: Record<string, string> = { 'content-type': 'application/json' };
+  const token = await getStoredToken();
   if (token) headers.authorization = `Bearer ${token}`;
   return headers;
 }

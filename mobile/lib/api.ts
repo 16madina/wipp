@@ -1,5 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import {
+  clearSession,
+  getStoredProfile as readProfile,
+  getStoredToken,
+  persistSession,
+} from './session';
 
 export type WippProfile = {
   id: string;
@@ -23,7 +29,6 @@ export type WippMessage = {
   chatId: string;
   senderId: string;
   body: string;
-  /** Decrypted plaintext when E2E succeeds (client-only). */
   text?: string | null;
   encrypted?: boolean;
   encFailed?: boolean;
@@ -31,11 +36,7 @@ export type WippMessage = {
   createdAt: number;
 };
 
-const TOKEN_KEY = 'wipp-server-token';
-const PROFILE_KEY = 'wipp-server-profile';
-
 function defaultApiBase() {
-  // Same machine as the Vite API during cloud/dev. Override with EXPO_PUBLIC_WIPP_API_URL.
   const extra = Constants.expoConfig?.extra as { wippApiUrl?: string } | undefined;
   return (
     process.env.EXPO_PUBLIC_WIPP_API_URL ||
@@ -57,7 +58,7 @@ async function api<T>(
     headers.set('content-type', 'application/json');
   }
   if (init.auth !== false) {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await getStoredToken();
     if (token) headers.set('authorization', `Bearer ${token}`);
   }
   const res = await fetch(`${apiBase()}/api/wipp/${path.replace(/^\//, '')}`, {
@@ -69,28 +70,16 @@ async function api<T>(
     message?: string;
   };
   if (!res.ok) {
+    if (res.status === 401 && init.auth !== false) {
+      await clearSession();
+    }
     throw new Error(data.message || data.error || `HTTP ${res.status}`);
   }
   return data;
 }
 
 export async function getStoredProfile(): Promise<WippProfile | null> {
-  const raw = await AsyncStorage.getItem(PROFILE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as WippProfile;
-  } catch {
-    return null;
-  }
-}
-
-async function persistSession(session: { token: string; profile: WippProfile } | null) {
-  if (!session) {
-    await AsyncStorage.multiRemove([TOKEN_KEY, PROFILE_KEY]);
-    return;
-  }
-  await AsyncStorage.setItem(TOKEN_KEY, session.token);
-  await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(session.profile));
+  return readProfile();
 }
 
 export async function persistSessionFromServer(session: {
@@ -100,12 +89,7 @@ export async function persistSessionFromServer(session: {
   await persistSession(session);
 }
 
-export async function login(username: string, password: string) {
-  const session = await api<{ token: string; profile: WippProfile }>('/login', {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify({ username, password }),
-  });
+async function afterAuth(session: { token: string; profile: WippProfile }) {
   await persistSession(session);
   try {
     const { ensureE2eReady } = await import('./e2e');
@@ -116,41 +100,66 @@ export async function login(username: string, password: string) {
   return session.profile;
 }
 
-export async function ensureSession() {
-  const existing = await getStoredProfile();
-  if (!existing) return null;
+export async function register(input: {
+  username: string;
+  password: string;
+  displayName: string;
+}) {
+  const session = await api<{ token: string; profile: WippProfile }>('/register', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify(input),
+  });
+  return afterAuth(session);
+}
+
+export async function login(username: string, password: string) {
+  const session = await api<{ token: string; profile: WippProfile }>('/login', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ username, password }),
+  });
+  return afterAuth(session);
+}
+
+/** Restaure la session au boot — comme WhatsApp. Retourne null si absente/expirée. */
+export async function restoreSession(): Promise<WippProfile | null> {
+  const token = await getStoredToken();
+  if (!token) return null;
   try {
     const me = await api<{ profile: WippProfile }>('/me');
-    await persistSession({
-      token: (await AsyncStorage.getItem(TOKEN_KEY))!,
-      profile: me.profile,
-    });
+    await persistSession({ token, profile: me.profile });
+    try {
+      const { ensureE2eReady } = await import('./e2e');
+      await ensureE2eReady();
+    } catch {
+      /* ok */
+    }
     return me.profile;
   } catch {
-    await persistSession(null);
+    await clearSession();
     return null;
   }
 }
 
-export async function ensureDemoSession() {
-  const existing = await getStoredProfile();
-  if (existing) {
-    try {
-      const me = await api<{ profile: WippProfile }>('/me');
-      await persistSession({
-        token: (await AsyncStorage.getItem(TOKEN_KEY))!,
-        profile: me.profile,
-      });
-      return me.profile;
-    } catch {
-      await persistSession(null);
-    }
-  }
+export async function ensureSession() {
+  return restoreSession();
+}
+
+export async function logout() {
   try {
-    return await login('deena', 'wipp-demo');
+    await api('/logout', { method: 'POST' });
   } catch {
-    return login('deena', 'wipp-demo');
+    /* still clear local */
   }
+  await clearSession();
+}
+
+/** @deprecated Ne plus auto-connecter en démo — garde pour outils de test explicites. */
+export async function ensureDemoSession() {
+  const existing = await restoreSession();
+  if (existing) return existing;
+  return login('deena', 'wipp-demo');
 }
 
 export async function fetchChats() {
