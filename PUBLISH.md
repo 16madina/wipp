@@ -4,7 +4,7 @@ Tu n’as **pas** besoin d’apprendre Vercel. Tu me dis **« publie »**, je la
 
 ## Domaine
 
-**https://wippapp.com** — DNS : voir **[DNS.md](./DNS.md)**
+**https://wippapp.com** — **EN LIGNE**
 
 URLs stores :
 - https://wippapp.com/privacy

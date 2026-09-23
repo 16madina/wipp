@@ -1,11 +1,12 @@
 {
   "domain": "wippapp.com",
   "apiUrl": "https://wippapp.com",
-  "vercelProjectName": "wipp",
+  "vercelUrl": "https://workspace-phi-pied.vercel.app",
+  "vercelProjectName": "workspace",
   "expoOwner": "",
   "expoSlug": "wipp",
   "easProjectId": "",
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
-  "notes": "DNS: A @ a encore les IPs parking GoDaddy (15.197 / 3.33) en plus de 76.76.21.21 — à supprimer. www CNAME OK. En attente VERCEL_TOKEN pour publish + attacher le domaine."
+  "notes": "LIVE: wippapp.com + www attachés au projet Vercel workspace. DNS A 76.76.21.21 + CNAME www OK. VERCEL_TOKEN fourni en session (ne pas committer)."
 }
