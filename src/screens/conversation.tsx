@@ -1123,14 +1123,6 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             setDraftFx(null);
             setScratchOpen(true);
           }}
-          onCategory={(id) => {
-            setSurprise(false);
-            setFxOpen(id);
-          }}
-          onSeeAll={() => {
-            setSurprise(false);
-            setFxOpen("cats");
-          }}
         />
       ) : null}
       {scratchOpen ? (
