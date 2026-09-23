@@ -89,6 +89,7 @@ export function isChatSealed(chat: Chat, now = Date.now()) {
 function previewOf(message: Message, lang: Lang = "fr") {
   if (message.viewOnce) return lang === "fr" ? "Vue unique" : "View once";
   if (message.encFailed) return lang === "fr" ? "Message chiffré" : "Encrypted message";
+  if (message.type === "scratch") return lang === "fr" ? "Surprise ✨" : "Surprise ✨";
   if (message.type === "voice") return `Vocal · ${formatDur(message.duration ?? 0)}`;
   if (message.type === "image") return "Photo";
   if (message.type === "video") return lang === "fr" ? "Vidéo" : "Video";
@@ -201,6 +202,7 @@ type WgoState = ReturnType<typeof fresh> & {
   setNearby: (mode: NearbyMode) => void;
   sendMessage: (chatId: string, data: Partial<Message> & { text?: string }) => void;
   retryMessage: (chatId: string, messageId: string) => void;
+  markScratch: (chatId: string, messageId: string) => void;
   addReaction: (chatId: string, messageId: string, emoji: string) => void;
   deleteMessage: (chatId: string, messageId: string) => void;
   translateMessage: (chatId: string, messageId: string) => void;
@@ -675,6 +677,9 @@ export const useWgoStore = create<WgoState>()(
           videoUrl: data.videoUrl,
           viewOnce: data.viewOnce || undefined,
           stickerId: data.stickerId,
+          scratchDesign: data.scratchDesign,
+          effectId: data.effectId,
+          revealedAt: data.revealedAt,
           listingId: data.listingId,
           shopId: data.shopId ?? existingChat?.shopId,
           replyTo: data.replyTo,
@@ -838,6 +843,16 @@ export const useWgoStore = create<WgoState>()(
         }));
         pumpReceipt(set, get, chatId, messageId);
       },
+
+      markScratch: (chatId, messageId) =>
+        set((st) => ({
+          messages: {
+            ...st.messages,
+            [chatId]: (st.messages[chatId] ?? []).map((m) =>
+              m.id === messageId && !m.revealedAt ? { ...m, revealedAt: Date.now() } : m,
+            ),
+          },
+        })),
 
       addReaction: (chatId, messageId, emoji) =>
         set((st) => ({

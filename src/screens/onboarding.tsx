@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Shield,
+  User,
+  Users,
+  Zap,
+} from "lucide-react";
 import type { I18nKey } from "@/lib/i18n";
 import { announce, haptic, reducedMotion } from "@/lib/haptics";
 import { useT, useWgoStore } from "@/lib/store";
@@ -18,6 +28,8 @@ const ONB = [
   { kind: "privacy" as const, title: "onb2Title", accent: "onb2Accent", body: "onb2Body" },
   { kind: "together" as const, title: "onb4Title", accent: "onb4Accent", body: "onb4Body" },
 ] as const;
+
+type TFn = (key: I18nKey) => string;
 
 function HeroImg({
   kind,
@@ -43,11 +55,7 @@ function HeroImg({
   );
 }
 
-/**
- * Hero art already includes brand, scripts, pills and cards.
- * Only keep light motion overlays here — never re-render the same copy in HTML.
- */
-function SceneTap() {
+function SceneTap({ t }: { t: TFn }) {
   return (
     <div className="onb-scene" data-kind="tap">
       <HeroImg kind="tap" split="l" />
@@ -60,11 +68,37 @@ function SceneTap() {
         <i />
         <i />
       </div>
+      <p className="onb-script is-tl">{t("onbTapLeft")}</p>
+      <p className="onb-script is-tr">{t("onbTapRight")}</p>
+      <div className="onb-pills">
+        <span className="onb-pill d1">
+          <Zap className="size-4" strokeWidth={2.4} />
+          {t("onbFast")}
+        </span>
+        <span className="onb-pill d2">
+          <Shield className="size-4" strokeWidth={2.4} />
+          {t("onbSimple")}
+        </span>
+        <span className="onb-pill d3">
+          <Users className="size-4" strokeWidth={2.4} />
+          {t("onbNoNumber")}
+        </span>
+      </div>
+      <div className="onb-connected">
+        <Check className="size-3.5" strokeWidth={3} />
+        {t("onbConnected")}
+      </div>
     </div>
   );
 }
 
-function SceneGlobe() {
+function SceneGlobe({ t }: { t: TFn }) {
+  const cities: { key: I18nKey; cls: string }[] = [
+    { key: "onbCityMtl", cls: "is-mtl" },
+    { key: "onbCityAbj", cls: "is-abj" },
+    { key: "onbCityPar", cls: "is-par" },
+    { key: "onbCityNyc", cls: "is-nyc" },
+  ];
   return (
     <div className="onb-scene" data-kind="globe">
       <HeroImg kind="globe" className="onb-globe-spin" />
@@ -77,33 +111,101 @@ function SceneGlobe() {
       <i className="onb-travel a" />
       <i className="onb-travel b" />
       <i className="onb-travel c" />
+      {cities.map((c) => (
+        <span key={c.cls} className={cn("onb-city", c.cls)}>
+          <span className="onb-city-dot" />
+          <MapPin className="size-3" strokeWidth={2.6} />
+          {t(c.key)}
+        </span>
+      ))}
       <div className="onb-pin-drop" aria-hidden>
         <b />
         <b />
         <b />
       </div>
+      <p className="onb-script is-tl">{t("onbWherever")}</p>
+      <p className="onb-script is-br">{t("onbWorldChat")}</p>
+      <span className="onb-note">{t("onbNewMeetings")}</span>
     </div>
   );
 }
 
-function ScenePrivacy() {
+function ScenePrivacy({ t }: { t: TFn }) {
   return (
     <div className="onb-scene" data-kind="privacy">
       <HeroImg kind="privacy" className="onb-phone-tilt" />
       <div className="onb-scan" aria-hidden />
       <div className="onb-shield-glow" aria-hidden />
+      <div className="onb-pcards">
+        <div className="onb-pcard d1">
+          <span className="onb-pcard-ico">
+            <User className="size-4" strokeWidth={2.3} />
+          </span>
+          <span>
+            <b>{t("onbCardUser")}</b>
+            <small>{t("onbCardUserHint")}</small>
+          </span>
+        </div>
+        <div className="onb-pcard d2">
+          <span className="onb-pcard-ico">
+            <Phone className="size-4" strokeWidth={2.3} />
+          </span>
+          <span>
+            <b>{t("onbCardPhone")}</b>
+            <small>{t("onbCardPhoneHint")}</small>
+          </span>
+        </div>
+        <div className="onb-pcard d3">
+          <span className="onb-pcard-ico">
+            <MapPin className="size-4" strokeWidth={2.3} />
+          </span>
+          <span>
+            <b>{t("onbCardPlace")}</b>
+            <small>{t("onbCardPlaceHint")}</small>
+          </span>
+        </div>
+      </div>
+      <p className="onb-script is-tl">{t("onbYourId")}</p>
+      <p className="onb-script is-br">{t("onbPrivacyFirst")}</p>
     </div>
   );
 }
 
-function SceneTogether() {
+function SceneTogether({ t }: { t: TFn }) {
   return (
     <div className="onb-scene" data-kind="together">
       <HeroImg kind="together" split="l" />
       <HeroImg kind="together" split="r" />
       <div className="onb-link" aria-hidden />
       <div className="onb-pulse" aria-hidden />
-      <span className="onb-msg" aria-hidden />
+      <div className="onb-toast">
+        <span className="onb-toast-check">
+          <Check className="size-3.5" strokeWidth={3} />
+        </span>
+        <span>
+          <b>{t("onbConnOk")}</b>
+          <small>{t("onbConnOkHint")}</small>
+        </span>
+      </div>
+      <div className="onb-features">
+        <span className="onb-feat d1">
+          <Zap className="size-5" strokeWidth={2.2} />
+          {t("onbOneTap")}
+        </span>
+        <span className="onb-feat d2">
+          <Users className="size-5" strokeWidth={2.2} />
+          {t("onbExchange")}
+        </span>
+        <span className="onb-feat d3">
+          <MessageCircle className="size-5" strokeWidth={2.2} />
+          {t("onbStartChat")}
+        </span>
+      </div>
+      <span className="onb-msg" aria-hidden>
+        <MessageCircle className="size-4" strokeWidth={2.4} />
+      </span>
+      <p className="onb-script is-tl">{t("onbRealMeet")}</p>
+      <p className="onb-script is-tr">{t("onbJustWipp")}</p>
     </div>
   );
 }
@@ -162,15 +264,14 @@ export function OnboardingScreen() {
     >
       <div className="onb-stage">
         <div key={page} className="onb-stage-in" data-dir={dir === 1 ? "next" : "prev"}>
-          {slide.kind === "tap" ? <SceneTap /> : null}
-          {slide.kind === "globe" ? <SceneGlobe /> : null}
-          {slide.kind === "privacy" ? <ScenePrivacy /> : null}
-          {slide.kind === "together" ? <SceneTogether /> : null}
+          {slide.kind === "tap" ? <SceneTap t={t} /> : null}
+          {slide.kind === "globe" ? <SceneGlobe t={t} /> : null}
+          {slide.kind === "privacy" ? <ScenePrivacy t={t} /> : null}
+          {slide.kind === "together" ? <SceneTogether t={t} /> : null}
         </div>
       </div>
 
-      {/* Skip only — brand/tagline already live inside hero art */}
-      <header className="onb-head onb-head-minimal">
+      <header className="onb-head">
         <button
           type="button"
           className="onb-skip"
@@ -179,33 +280,42 @@ export function OnboardingScreen() {
         >
           {t("skip")}
         </button>
+        <img
+          src="/brand/wipp-wordmark.webp"
+          alt="Wipp"
+          className="onb-logo"
+          draggable={false}
+        />
+        <p className="onb-brand">{t("onbBrand")}</p>
       </header>
 
       <footer className="onb-foot" onPointerDown={(e) => e.stopPropagation()}>
         <div key={`copy-${page}`} className="onb-copy" aria-live="polite">
           <h1>
-            {t(slide.title as I18nKey)}{" "}
-            <span>{t(slide.accent as I18nKey)}</span>
+            {t(slide.title)}{" "}
+            <span>{t(slide.accent)}</span>
           </h1>
-          <p>{t(slide.body as I18nKey)}</p>
+          <p>{t(slide.body)}</p>
         </div>
-        <div className="onb-dots" role="tablist" aria-label={t("start")}>
+
+        <div className="onb-dots">
           {ONB.map((_, i) => (
             <button
               key={i}
               type="button"
-              role="tab"
-              aria-selected={i === page}
+              aria-label={`${i + 1} / ${ONB.length}`}
+              aria-current={i === page ? "true" : undefined}
               onClick={() => goTo(i)}
             >
-              <span className={i === page ? "is-on" : undefined} />
+              <span className={cn(i === page && "is-on")} />
             </button>
           ))}
         </div>
+
         <div className="onb-actions">
           <button
             type="button"
-            className="onb-back"
+            className="onb-back press"
             disabled={page === 0}
             onClick={() => goTo(page - 1)}
           >
@@ -213,14 +323,11 @@ export function OnboardingScreen() {
           </button>
           <button
             type="button"
-            className="onb-next"
-            onClick={() => {
-              if (last) finish();
-              else goTo(page + 1);
-            }}
+            className="onb-next press"
+            onClick={() => (last ? finish() : goTo(page + 1))}
           >
             {last ? t("start") : t("next")}
-            <ArrowRight className="size-4" />
+            <ArrowRight className="size-4" strokeWidth={2.4} />
           </button>
         </div>
       </footer>

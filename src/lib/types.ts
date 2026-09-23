@@ -10,12 +10,15 @@ export type A11yPrefs = {
   largeTouch: boolean;
   largeText: boolean;
   reduceMotion: boolean;
+  /** Short sticker sounds. Off also when reduce-motion is on. */
+  stickerSound: boolean;
 };
 export const defaultA11y: A11yPrefs = {
   haptics: true,
   largeTouch: false,
   largeText: false,
   reduceMotion: false,
+  stickerSound: true,
 };
 export type NearbyMode = 0 | 5 | 15;
 export type Discoverability = "everyone" | "contacts" | "nobody";
@@ -250,7 +253,7 @@ export type Message = {
   id: string;
   chatId: string;
   fromId: string;
-  type: "text" | "voice" | "image" | "video" | "listing" | "shop" | "system" | "sticker";
+  type: "text" | "voice" | "image" | "video" | "listing" | "shop" | "system" | "sticker" | "scratch";
   text?: string;
   createdAt: number;
   status: "sending" | "sent" | "delivered" | "read" | "failed";
@@ -261,6 +264,10 @@ export type Message = {
   viewOnce?: boolean;
   viewed?: boolean;
   stickerId?: string;
+  /** Foil design for a scratch surprise. The secret itself stays in `text`. */
+  scratchDesign?: "gold" | "love" | "birthday" | "fun" | "secret" | "heart" | "spark" | "crown" | "duo";
+  revealedAt?: number;
+  effectId?: string;
   listingId?: string;
   shopId?: string;
   replyTo?: string;

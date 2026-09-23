@@ -29,6 +29,7 @@ import {
   User,
   UserPlus,
   Vibrate,
+  Volume2,
 } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { SmartImg } from "@/components/smart-img";
@@ -952,13 +953,14 @@ export function AccessibilityScreen() {
   const rows: {
     key: keyof A11yPrefs;
     icon: typeof Vibrate;
-    label: "haptics" | "largeTouch" | "largeText" | "reduceMotion";
-    hint: "hapticsHint" | "largeTouchHint" | "largeTextHint" | "reduceMotionHint";
+    label: "haptics" | "largeTouch" | "largeText" | "reduceMotion" | "stickerSound";
+    hint: "hapticsHint" | "largeTouchHint" | "largeTextHint" | "reduceMotionHint" | "stickerSoundHint";
   }[] = [
     { key: "haptics", icon: Vibrate, label: "haptics", hint: "hapticsHint" },
     { key: "largeTouch", icon: Hand, label: "largeTouch", hint: "largeTouchHint" },
     { key: "largeText", icon: Type, label: "largeText", hint: "largeTextHint" },
     { key: "reduceMotion", icon: Sparkles, label: "reduceMotion", hint: "reduceMotionHint" },
+    { key: "stickerSound", icon: Volume2, label: "stickerSound", hint: "stickerSoundHint" },
   ];
 
   return (

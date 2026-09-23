@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { emojiFromStickerId, isEmojiSticker } from "@/lib/emoji";
+import { playStickerCue } from "@/lib/sticker-fx";
 import { STICKER_PLAY_S, stickerById, type StickerId } from "@/lib/stickers";
+import { useWgoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 function keyGreen(data: ImageData) {
@@ -179,18 +181,106 @@ function StickerClip({
   );
 }
 
+const playedMoments = new Set<string>();
+
+function CastSticker({
+  row,
+  size,
+  className,
+  onLongPress,
+  onceKey,
+}: {
+  row: NonNullable<ReturnType<typeof stickerById>>;
+  size: number;
+  className?: string;
+  onLongPress?: () => void;
+  onceKey?: string;
+}) {
+  const reduce = useWgoStore((s) => s.a11y.reduceMotion);
+  const [play, setPlay] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
+  const seen = useRef(false);
+
+  function go(fromTap: boolean) {
+    setPlay((n) => n + 1);
+    if (reduce || size < 110) return;
+    if (row.moment && onceKey && !fromTap) {
+      if (playedMoments.has(onceKey)) return;
+      playedMoments.add(onceKey);
+    }
+    playStickerCue(row, true);
+  }
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el || reduce) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting || seen.current) return;
+        seen.current = true;
+        go(false);
+      },
+      { threshold: 0.55 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [row.id, reduce, onceKey]);
+
+  const replay = size >= 110;
+
+  return (
+    <div
+      ref={box}
+      role={replay ? "button" : undefined}
+      tabIndex={replay ? 0 : undefined}
+      aria-label={row.labelFr}
+      className={cn("relative shrink-0", replay ? "cursor-pointer" : "pointer-events-none", className)}
+      style={{ width: size, height: size }}
+      onClick={
+        replay
+          ? (e) => {
+              e.stopPropagation();
+              go(true);
+            }
+          : undefined
+      }
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          go(true);
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onLongPress?.();
+      }}
+    >
+      <img
+        key={play}
+        src={row.src}
+        alt=""
+        draggable={false}
+        className={cn("size-full object-contain", !reduce && play > 0 && `cast-go cast-${row.motion}`)}
+        style={{ width: size, height: size }}
+      />
+    </div>
+  );
+}
+
 export function WippSticker({
   id,
   size = 72,
   className,
   animated = false,
   onLongPress,
+  onceKey,
 }: {
   id: StickerId;
   size?: number;
   className?: string;
   animated?: boolean;
   onLongPress?: () => void;
+  onceKey?: string;
 }) {
   const row = stickerById(id);
   if (isEmojiSticker(id)) {
@@ -220,7 +310,10 @@ export function WippSticker({
     );
   }
   if (!row) return null;
-  if (animated && "anim" in row && row.anim) {
+  if (row.motion) {
+    return <CastSticker row={row} size={size} className={className} onLongPress={onLongPress} onceKey={onceKey} />;
+  }
+  if (animated && row.anim) {
     return (
       <StickerClip
         src={row.anim}

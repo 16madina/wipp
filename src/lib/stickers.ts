@@ -2,12 +2,18 @@ import { emojiFromStickerId, isEmojiSticker } from "./emoji";
 
 type StickerDef = {
   id: string;
-  pack: "elle" | "lui" | "fun" | "fun2";
+  pack: "elle" | "lui" | "fun" | "fun2" | "sig" | "moji" | "scene";
   src: string;
-  anim: string;
+  anim?: string;
   loopSoft?: boolean;
   labelFr: string;
   labelEn: string;
+  motion?: string;
+  fx?: "hearts" | "confetti" | "disco" | "shake" | "flame" | "flash" | "heartwave" | "rays" | "notes" | "crown" | "steam" | "ring";
+  sound?: "whoosh" | "mwah" | "laugh" | "dundun" | "bling" | "alarm" | "beat" | "jingle" | "hiss" | "party" | "clap" | "bonk" | "zip" | "ching" | "pop" | "crystal" | "boss" | "charge" | "notes" | "ding" | "arcade" | "tada" | "siren" | "clack" | "heart" | "film" | "ting";
+  bubble?: "flame" | "glow" | "shake" | "crown";
+  /** Full-screen moment. Plays once on arrival, again on tap. */
+  moment?: "bravo" | "alert" | "love" | "wipp";
 };
 
 const ELLE: StickerDef[] = [
@@ -94,14 +100,116 @@ const FUN2: StickerDef[] = [
   { id: "fun2-je-ne-sais-pas", pack: "fun2", src: "/stickers/fun2/je-ne-sais-pas.webp", anim: "/stickers/fun2/je-ne-sais-pas.mp4?v=1", labelFr: "Je ne sais pas !", labelEn: "I don’t know!" },
 ];
 
+const SIG: StickerDef[] = [
+  { id: "sig-jarrive", pack: "sig", src: "/stickers/sig/sig-jarrive.png", motion: "arrive", sound: "whoosh", labelFr: "J’arrive !", labelEn: "On my way!" },
+  { id: "sig-coucou", pack: "sig", src: "/stickers/sig/sig-coucou.png", motion: "coucou", labelFr: "Coucou !", labelEn: "Hey!" },
+  { id: "sig-tes-la", pack: "sig", src: "/stickers/sig/sig-tes-la.png", motion: "peek", labelFr: "T’es là ?", labelEn: "You there?" },
+  { id: "sig-bonne-idee", pack: "sig", src: "/stickers/sig/sig-bonne-idee.png", motion: "idea", labelFr: "Bonne idée !", labelEn: "Good idea!" },
+  { id: "sig-cafe", pack: "sig", src: "/stickers/sig/sig-cafe.png", motion: "cafe", labelFr: "Café ?", labelEn: "Coffee?" },
+  { id: "sig-bisous", pack: "sig", src: "/stickers/sig/sig-bisous.png", motion: "bisous", fx: "hearts", sound: "mwah", labelFr: "Bisous !", labelEn: "Kisses!" },
+  { id: "sig-mdrrr", pack: "sig", src: "/stickers/sig/sig-mdrrr.png", motion: "mdr", fx: "shake", sound: "laugh", labelFr: "MDRRR", labelEn: "LOL" },
+  { id: "sig-tu-mens", pack: "sig", src: "/stickers/sig/sig-tu-mens.png", motion: "mens", sound: "dundun", labelFr: "Tu mens !", labelEn: "You’re lying!" },
+  { id: "sig-waaah", pack: "sig", src: "/stickers/sig/sig-waaah.png", motion: "waah", labelFr: "Waaah !", labelEn: "Whoa!" },
+  { id: "sig-valide", pack: "sig", src: "/stickers/sig/sig-valide.png", motion: "valide", fx: "confetti", sound: "bling", labelFr: "C’est validé !", labelEn: "Approved!" },
+  { id: "sig-on-se-capte", pack: "sig", src: "/stickers/sig/sig-on-se-capte.png", motion: "capte", labelFr: "On se capte !", labelEn: "Catch you!" },
+  { id: "sig-self-care", pack: "sig", src: "/stickers/sig/sig-self-care.png", motion: "care", labelFr: "Self care", labelEn: "Self care" },
+  { id: "sig-je-regarde", pack: "sig", src: "/stickers/sig/sig-je-regarde.png", motion: "eyes", labelFr: "Je te regarde…", labelEn: "I’m watching…" },
+  { id: "sig-en-route", pack: "sig", src: "/stickers/sig/sig-en-route.png", motion: "route", labelFr: "En route !", labelEn: "On the way!" },
+  { id: "sig-bonne-nuit", pack: "sig", src: "/stickers/sig/sig-bonne-nuit.png", motion: "nuit", labelFr: "Bonne nuit", labelEn: "Good night" },
+  { id: "sig-debout", pack: "sig", src: "/stickers/sig/sig-debout.png", motion: "debout", sound: "alarm", labelFr: "Debout !", labelEn: "Wake up!" },
+  { id: "sig-on-regarde", pack: "sig", src: "/stickers/sig/sig-on-regarde.png", motion: "popcorn", labelFr: "On regarde ?", labelEn: "Wanna watch?" },
+  { id: "sig-laisse-tomber", pack: "sig", src: "/stickers/sig/sig-laisse-tomber.png", motion: "crack", labelFr: "Laisse tomber…", labelEn: "Never mind…" },
+  { id: "sig-hmm", pack: "sig", src: "/stickers/sig/sig-hmm.png", motion: "hmm", labelFr: "Hmm…", labelEn: "Hmm…" },
+  { id: "sig-shopping", pack: "sig", src: "/stickers/sig/sig-shopping.png", motion: "shop", labelFr: "Shopping ?", labelEn: "Shopping?" },
+  { id: "sig-voyage", pack: "sig", src: "/stickers/sig/sig-voyage.png", motion: "voyage", labelFr: "Voyage ?", labelEn: "Trip?" },
+  { id: "sig-ma-vibe", pack: "sig", src: "/stickers/sig/sig-ma-vibe.png", motion: "vibe", sound: "beat", labelFr: "Ma vibe", labelEn: "My vibe" },
+  { id: "sig-motive", pack: "sig", src: "/stickers/sig/sig-motive.png", motion: "motive", labelFr: "Motivé(e) !", labelEn: "Motivated!" },
+  { id: "sig-appelle", pack: "sig", src: "/stickers/sig/sig-appelle.png", motion: "call", labelFr: "Appelle-moi !", labelEn: "Call me!" },
+  { id: "sig-faim", pack: "sig", src: "/stickers/sig/sig-faim.png", motion: "faim", labelFr: "J’ai faim !", labelEn: "I’m hungry!" },
+  { id: "sig-ca-paye", pack: "sig", src: "/stickers/sig/sig-ca-paye.png", motion: "paye", labelFr: "Ça paye !", labelEn: "It pays!" },
+  { id: "sig-chill", pack: "sig", src: "/stickers/sig/sig-chill.png", motion: "chill", labelFr: "Chill…", labelEn: "Chill…" },
+  { id: "sig-toujours", pack: "sig", src: "/stickers/sig/sig-toujours.png", motion: "toujours", labelFr: "Toujours là !", labelEn: "Still here!" },
+  { id: "sig-ca-wipp", pack: "sig", src: "/stickers/sig/sig-ca-wipp.png", motion: "disco", fx: "disco", sound: "jingle", moment: "wipp", labelFr: "Ça WIPP !", labelEn: "That’s WIPP!" },
+  { id: "sig-raconte", pack: "sig", src: "/stickers/sig/sig-raconte.png", motion: "raconte", labelFr: "Raconte !", labelEn: "Tell me!" },
+];
+
+const MOJI: StickerDef[] = [
+  { id: "moji-01", pack: "moji", src: "/stickers/moji/moji-01.png", motion: "laugh", fx: "shake", sound: "laugh", bubble: "shake", labelFr: "Fou rire", labelEn: "Laughing" },
+  { id: "moji-02", pack: "moji", src: "/stickers/moji/moji-02.png", motion: "love", labelFr: "Amoureux", labelEn: "In love" },
+  { id: "moji-03", pack: "moji", src: "/stickers/moji/moji-03.png", motion: "kiss", fx: "hearts", sound: "mwah", labelFr: "Bisou", labelEn: "Kiss" },
+  { id: "moji-04", pack: "moji", src: "/stickers/moji/moji-04.png", motion: "cool", sound: "bling", labelFr: "Cool", labelEn: "Cool" },
+  { id: "moji-05", pack: "moji", src: "/stickers/moji/moji-05.png", motion: "hug", bubble: "glow", labelFr: "Cœur WIPP", labelEn: "WIPP heart" },
+  { id: "moji-06", pack: "moji", src: "/stickers/moji/moji-06.png", motion: "cry", labelFr: "Gros chagrin", labelEn: "Big tears" },
+  { id: "moji-07", pack: "moji", src: "/stickers/moji/moji-07.png", motion: "rage", sound: "hiss", labelFr: "Furieux", labelEn: "Furious" },
+  { id: "moji-08", pack: "moji", src: "/stickers/moji/moji-08.png", motion: "shock", labelFr: "Choqué", labelEn: "Shocked" },
+  { id: "moji-09", pack: "moji", src: "/stickers/moji/moji-09.png", motion: "judge", labelFr: "Je te juge", labelEn: "Judging" },
+  { id: "moji-10", pack: "moji", src: "/stickers/moji/moji-10.png", motion: "hmm", labelFr: "Hmm…", labelEn: "Hmm…" },
+  { id: "moji-11", pack: "moji", src: "/stickers/moji/moji-11.png", motion: "sleep", labelFr: "Dodo", labelEn: "Sleepy" },
+  { id: "moji-12", pack: "moji", src: "/stickers/moji/moji-12.png", motion: "party", fx: "confetti", sound: "party", labelFr: "Fête", labelEn: "Party" },
+  { id: "moji-13", pack: "moji", src: "/stickers/moji/moji-13.png", motion: "hands", labelFr: "Amour", labelEn: "Love" },
+  { id: "moji-14", pack: "moji", src: "/stickers/moji/moji-14.png", motion: "yes", labelFr: "Validé", labelEn: "Yes" },
+  { id: "moji-15", pack: "moji", src: "/stickers/moji/moji-15.png", motion: "nope", labelFr: "Nope", labelEn: "Nope" },
+  { id: "moji-16", pack: "moji", src: "/stickers/moji/moji-16.png", motion: "clap", sound: "clap", labelFr: "Bravo", labelEn: "Clap" },
+  { id: "moji-17", pack: "moji", src: "/stickers/moji/moji-17.png", motion: "pray", labelFr: "Merci", labelEn: "Please" },
+  { id: "moji-18", pack: "moji", src: "/stickers/moji/moji-18.png", motion: "palm", sound: "bonk", labelFr: "Facepalm", labelEn: "Facepalm" },
+  { id: "moji-19", pack: "moji", src: "/stickers/moji/moji-19.png", motion: "crown", labelFr: "King", labelEn: "King" },
+  { id: "moji-20", pack: "moji", src: "/stickers/moji/moji-20.png", motion: "fire", fx: "flame", bubble: "flame", labelFr: "C’est chaud", labelEn: "On fire" },
+  { id: "moji-21", pack: "moji", src: "/stickers/moji/moji-21.png", motion: "plead", labelFr: "Please", labelEn: "Please" },
+  { id: "moji-22", pack: "moji", src: "/stickers/moji/moji-22.png", motion: "silly", labelFr: "Foufou", labelEn: "Silly" },
+  { id: "moji-23", pack: "moji", src: "/stickers/moji/moji-23.png", motion: "zip", sound: "zip", labelFr: "Secret", labelEn: "Secret" },
+  { id: "moji-24", pack: "moji", src: "/stickers/moji/moji-24.png", motion: "side", labelFr: "Pas convaincu", labelEn: "Unconvinced" },
+  { id: "moji-25", pack: "moji", src: "/stickers/moji/moji-25.png", motion: "sip", labelFr: "Chill", labelEn: "Chill" },
+  { id: "moji-26", pack: "moji", src: "/stickers/moji/moji-26.png", motion: "money", sound: "ching", labelFr: "Money", labelEn: "Money" },
+  { id: "moji-27", pack: "moji", src: "/stickers/moji/moji-27.png", motion: "boom", fx: "flash", sound: "pop", labelFr: "Mind blown", labelEn: "Mind blown" },
+  { id: "moji-28", pack: "moji", src: "/stickers/moji/moji-28.png", motion: "wlove", fx: "heartwave", bubble: "glow", labelFr: "WIPP Love", labelEn: "WIPP love" },
+  { id: "moji-29", pack: "moji", src: "/stickers/moji/moji-29.png", motion: "run", sound: "whoosh", labelFr: "J’arrive", labelEn: "On my way" },
+  { id: "moji-30", pack: "moji", src: "/stickers/moji/moji-30.png", motion: "peace", labelFr: "Peace", labelEn: "Peace" },
+];
+
+const SCENE: StickerDef[] = [
+  { id: "scene-01", pack: "scene", src: "/stickers/scene/scene-01.png", motion: "sc-parfait", fx: "ring", sound: "crystal", labelFr: "Parfait !", labelEn: "Perfect!" },
+  { id: "scene-02", pack: "scene", src: "/stickers/scene/scene-02.png", motion: "sc-boss", fx: "crown", sound: "boss", bubble: "crown", labelFr: "T’es un boss !", labelEn: "You’re the boss!" },
+  { id: "scene-03", pack: "scene", src: "/stickers/scene/scene-03.png", motion: "sc-mood", labelFr: "Mood…", labelEn: "Mood…" },
+  { id: "scene-04", pack: "scene", src: "/stickers/scene/scene-04.png", motion: "sc-merci", fx: "hearts", labelFr: "Merci !", labelEn: "Thanks!" },
+  { id: "scene-05", pack: "scene", src: "/stickers/scene/scene-05.png", motion: "sc-charge", sound: "charge", labelFr: "Je recharge", labelEn: "Recharging" },
+  { id: "scene-06", pack: "scene", src: "/stickers/scene/scene-06.png", motion: "sc-aie", fx: "shake", sound: "laugh", labelFr: "Aïe aïe aïe !", labelEn: "Ouch ouch ouch!" },
+  { id: "scene-07", pack: "scene", src: "/stickers/scene/scene-07.png", motion: "sc-shrug", labelFr: "Pas mon problème !", labelEn: "Not my problem!" },
+  { id: "scene-08", pack: "scene", src: "/stickers/scene/scene-08.png", motion: "sc-sun", fx: "rays", sound: "notes", labelFr: "Bonne journée !", labelEn: "Good day!" },
+  { id: "scene-09", pack: "scene", src: "/stickers/scene/scene-09.png", motion: "sc-kiss", fx: "hearts", sound: "mwah", labelFr: "Gros bisous !", labelEn: "Big kisses!" },
+  { id: "scene-10", pack: "scene", src: "/stickers/scene/scene-10.png", motion: "sc-sleep", labelFr: "Dors bien !", labelEn: "Sleep well!" },
+  { id: "scene-11", pack: "scene", src: "/stickers/scene/scene-11.png", motion: "sc-music", fx: "notes", sound: "beat", labelFr: "Bonne musique !", labelEn: "Good music!" },
+  { id: "scene-12", pack: "scene", src: "/stickers/scene/scene-12.png", motion: "sc-rose", labelFr: "Pour toi !", labelEn: "For you!" },
+  { id: "scene-13", pack: "scene", src: "/stickers/scene/scene-13.png", motion: "sc-bravo", sound: "clap", moment: "bravo", labelFr: "Bravo !", labelEn: "Bravo!" },
+  { id: "scene-14", pack: "scene", src: "/stickers/scene/scene-14.png", motion: "sc-hot", fx: "steam", sound: "hiss", labelFr: "C’est chaud là !", labelEn: "It’s hot in here!" },
+  { id: "scene-15", pack: "scene", src: "/stickers/scene/scene-15.png", motion: "sc-learn", sound: "ding", labelFr: "On apprend toujours !", labelEn: "Always learning!" },
+  { id: "scene-16", pack: "scene", src: "/stickers/scene/scene-16.png", motion: "sc-adore", sound: "pop", moment: "love", labelFr: "J’adore !", labelEn: "I love it!" },
+  { id: "scene-17", pack: "scene", src: "/stickers/scene/scene-17.png", motion: "sc-go", sound: "whoosh", labelFr: "Allons-y !", labelEn: "Let’s go!" },
+  { id: "scene-18", pack: "scene", src: "/stickers/scene/scene-18.png", motion: "sc-nope", sound: "bonk", bubble: "shake", labelFr: "Nope !", labelEn: "Nope!" },
+  { id: "scene-19", pack: "scene", src: "/stickers/scene/scene-19.png", motion: "sc-later", labelFr: "À plus tard !", labelEn: "See you later!" },
+  { id: "scene-20", pack: "scene", src: "/stickers/scene/scene-20.png", motion: "sc-play", sound: "arcade", labelFr: "On joue ?", labelEn: "Wanna play?" },
+  { id: "scene-21", pack: "scene", src: "/stickers/scene/scene-21.png", motion: "sc-fly", labelFr: "On va loin !", labelEn: "We’re going far!" },
+  { id: "scene-22", pack: "scene", src: "/stickers/scene/scene-22.png", motion: "sc-plane", labelFr: "See you soon !", labelEn: "See you soon!" },
+  { id: "scene-23", pack: "scene", src: "/stickers/scene/scene-23.png", motion: "sc-target", fx: "ring", sound: "ding", labelFr: "Objectif !", labelEn: "On target!" },
+  { id: "scene-24", pack: "scene", src: "/stickers/scene/scene-24.png", motion: "sc-bot", labelFr: "Toujours à ton service !", labelEn: "At your service!" },
+  { id: "scene-25", pack: "scene", src: "/stickers/scene/scene-25.png", motion: "sc-food", sound: "tada", labelFr: "Bon appétit !", labelEn: "Enjoy!" },
+  { id: "scene-26", pack: "scene", src: "/stickers/scene/scene-26.png", motion: "sc-alert", sound: "siren", moment: "alert", labelFr: "Alerte WIPP !", labelEn: "WIPP alert!" },
+  { id: "scene-27", pack: "scene", src: "/stickers/scene/scene-27.png", motion: "sc-lock", sound: "clack", labelFr: "C’est confidentiel !", labelEn: "Confidential!" },
+  { id: "scene-28", pack: "scene", src: "/stickers/scene/scene-28.png", motion: "sc-heal", sound: "heart", bubble: "glow", labelFr: "Ça va aller !", labelEn: "It’ll be okay!" },
+  { id: "scene-29", pack: "scene", src: "/stickers/scene/scene-29.png", motion: "sc-film", sound: "film", labelFr: "C’est une histoire de ouf !", labelEn: "What a story!" },
+  { id: "scene-30", pack: "scene", src: "/stickers/scene/scene-30.png", motion: "sc-care", fx: "heartwave", sound: "ting", labelFr: "Prends soin de toi !", labelEn: "Take care!" },
+];
+
 export const STICKER_PACKS = {
   elle: { id: "elle" as const, labelFr: "Elle", labelEn: "Her", stickers: ELLE },
   lui: { id: "lui" as const, labelFr: "Lui", labelEn: "Him", stickers: LUI },
   fun: { id: "fun" as const, labelFr: "Fun", labelEn: "Fun", stickers: FUN },
   fun2: { id: "fun2" as const, labelFr: "#2", labelEn: "#2", stickers: FUN2 },
+  sig: { id: "sig" as const, labelFr: "WIPP", labelEn: "WIPP", stickers: SIG },
+  moji: { id: "moji" as const, labelFr: "Emoji", labelEn: "Emoji", stickers: MOJI },
+  scene: { id: "scene" as const, labelFr: "Scènes", labelEn: "Scenes", stickers: SCENE },
 };
 
-export const WIPP_STICKERS = [...ELLE, ...LUI, ...FUN, ...FUN2];
+export const WIPP_STICKERS = [...ELLE, ...LUI, ...FUN, ...FUN2, ...SIG, ...MOJI, ...SCENE];
 
 export type StickerId = string;
 export type StickerPackId = keyof typeof STICKER_PACKS;
