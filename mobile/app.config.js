@@ -11,8 +11,9 @@ function readDeploy() {
 
 const deploy = readDeploy();
 const easProjectId = process.env.EAS_PROJECT_ID || deploy.easProjectId || null;
-const apiUrl =
-  process.env.EXPO_PUBLIC_WIPP_API_URL || deploy.apiUrl || "http://127.0.0.1:3847";
+const apiUrl = process.env.EXPO_PUBLIC_WIPP_API_URL || "http://127.0.0.1:3847";
+const productionApiUrl = deploy.apiUrl || "https://wippapp.com";
+void productionApiUrl; // reference for publish / future builds
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {

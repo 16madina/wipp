@@ -1,9 +1,11 @@
 {
-  "apiUrl": "",
+  "domain": "wippapp.com",
+  "apiUrl": "https://wippapp.com",
   "vercelProjectName": "wipp",
   "expoOwner": "",
   "expoSlug": "wipp",
   "easProjectId": "",
   "bundleId": "com.wipp.app",
-  "notes": "Rempli automatiquement par scripts/publish-wipp.mjs après le 1er deploy."
+  "supportEmail": "support@wippapp.com",
+  "notes": "Domaine GoDaddy (ns57/ns58.domaincontrol.com). Brancher DNS → Vercel après VERCEL_TOKEN + 1er publish."
 }

@@ -34,17 +34,17 @@ npm run publish -- -m "ma modification"
 
 ## Site public (stores)
 
-Pages déjà prêtes — à brancher sur ton domaine dès que tu l’as acheté :
+**Domaine :** [wippapp.com](https://wippapp.com) — voir **[DNS.md](./DNS.md)** pour le branchement.
 
 | URL | Usage store |
 |-----|-------------|
-| `/site` | Présentation produit |
-| `/privacy` | Politique de confidentialité (Apple / Google) |
-| `/terms` | Conditions d’utilisation |
-| `/support` | URL Support |
-| `/connect` | Liaison web ↔ app |
+| https://wippapp.com/site | Présentation produit |
+| https://wippapp.com/privacy | Politique de confidentialité |
+| https://wippapp.com/terms | Conditions d’utilisation |
+| https://wippapp.com/support | Support |
+| https://wippapp.com/connect | Liaison web ↔ app |
 
-En local : [http://127.0.0.1:3847/privacy](http://127.0.0.1:3847/privacy) etc.
+Email : `support@wippapp.com`
 
 ## Supabase
 
@@ -55,8 +55,8 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
 
 ## Suite
 
-1. **Acheter le domaine** → m’envoyer le nom → DNS + publish
-2. **Tokens** Vercel + Expo (voir PUBLISH.md)
-3. **Admin panel** (notifications, contenus) sur le domaine
+1. **DNS + VERCEL_TOKEN** → mettre `wippapp.com` en ligne (voir DNS.md)
+2. **EXPO_TOKEN** pour OTA
+3. **Admin panel** sur wippapp.com
 4. Firebase Phone Auth (SMS OTP)
 5. Médias + push + LiveKit

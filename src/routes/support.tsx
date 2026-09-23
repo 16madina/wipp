@@ -49,16 +49,14 @@ function SupportPage() {
 
         <h2>Nous écrire</h2>
         <p>
-          Dès que ton domaine public est connecté, l’adresse support sera affichée ici (ex.{" "}
-          <code>support@ton-domaine</code>). En attendant, contacte l’équipe via Cursor / le canal
-          projet.
+          Email : <a href="mailto:support@wippapp.com">support@wippapp.com</a>
         </p>
 
         <div className="site-store-box">
           <h2>Pour les stores</h2>
           <p>
-            URL Support à coller dans App Store Connect et Google Play :{" "}
-            <code>/support</code> sur ton domaine.
+            URL Support App Store / Play :{" "}
+            <a href="https://wippapp.com/support">https://wippapp.com/support</a>
           </p>
         </div>
       </article>

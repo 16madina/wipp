@@ -58,18 +58,18 @@ function SiteLandingPage() {
         <h2>Pour App Store & Play Store</h2>
         <ul>
           <li>
-            Confidentialité : <code>/privacy</code>
+            Confidentialité :{" "}
+            <a href="https://wippapp.com/privacy">https://wippapp.com/privacy</a>
           </li>
           <li>
-            Conditions : <code>/terms</code>
+            Conditions : <a href="https://wippapp.com/terms">https://wippapp.com/terms</a>
           </li>
           <li>
-            Support : <code>/support</code>
+            Support : <a href="https://wippapp.com/support">https://wippapp.com/support</a>
           </li>
         </ul>
         <p>
-          Dès que ton domaine est branché (ex. <strong>wipp.me</strong>), ces URLs deviennent{" "}
-          <code>https://ton-domaine/privacy</code>, etc.
+          Domaine officiel : <strong>wippapp.com</strong>
         </p>
       </section>
     </SiteShell>

@@ -14,18 +14,18 @@ Tu n’as **pas** besoin d’apprendre Vercel. Tu me dis **« publie »**, je la
 
 `DATABASE_URL` (Supabase) est déjà dans l’environnement local.
 
-## Domaine public (toi)
+## Domaine public
 
-1. Tu choisis et achètes le domaine (ex. `wipp.me`)
-2. Tu me l’envoies
-3. Je branche DNS → Vercel
-4. Les URLs stores deviennent :
-   - `https://TON-DOMAINE/privacy`
-   - `https://TON-DOMAINE/terms`
-   - `https://TON-DOMAINE/support`
-   - `https://TON-DOMAINE/site`
+**wippapp.com** (GoDaddy) — détails DNS : **[DNS.md](./DNS.md)**
 
-## Ensuite — chaque modification
+URLs stores :
+- https://wippapp.com/privacy
+- https://wippapp.com/terms
+- https://wippapp.com/support
+- https://wippapp.com/site
+
+### 1. Token Vercel (one-shot)
+https://vercel.com/account/tokens → crée un token → envoie-le-moi (`VERCEL_TOKEN`).
 
 1. Tu me dis la modif  
 2. Tu dis **« publie »**  

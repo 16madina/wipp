@@ -90,8 +90,8 @@ function PrivacyPage() {
 
         <h2>8. Contact</h2>
         <p>
-          Pour toute question vie privée : utilise la page{" "}
-          <a href="/support">Support</a> ou l’adresse indiquée une fois le domaine public branché.
+          Vie privée : <a href="mailto:support@wippapp.com">support@wippapp.com</a> ou la page{" "}
+          <a href="/support">Support</a>.
         </p>
       </article>
     </SiteShell>

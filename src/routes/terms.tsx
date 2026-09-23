@@ -85,7 +85,8 @@ function TermsPage() {
 
         <h2>9. Contact</h2>
         <p>
-          Questions : page <a href="/support">Support</a>.
+          Questions : <a href="mailto:support@wippapp.com">support@wippapp.com</a> · page{" "}
+          <a href="/support">Support</a>.
         </p>
       </article>
     </SiteShell>
