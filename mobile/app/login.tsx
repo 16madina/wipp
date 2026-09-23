@@ -97,7 +97,10 @@ export default function LoginScreen() {
     >
       <Text style={styles.brand}>wipp</Text>
       <Text style={styles.tag}>Connecte ta vie.</Text>
-      <Text style={styles.sub}>Connexion par SMS (Firebase) — ton numéro reste privé.</Text>
+      <Text style={styles.sub}>
+        Connexion par SMS (Firebase) — ton numéro reste privé. Revue stores : onglet Compte
+        (@lazone) ou numéro de test Firebase.
+      </Text>
 
       <View style={styles.tabs}>
         <Pressable
