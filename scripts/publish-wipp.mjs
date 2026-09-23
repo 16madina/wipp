@@ -166,15 +166,51 @@ async function publishApi(deploy, env) {
   );
 
   const urls = [...out.matchAll(/https:\/\/[a-z0-9.-]+\.vercel\.app/gi)].map((m) => m[0]);
-  const apiUrl = (urls[urls.length - 1] || deploy.apiUrl || "").replace(/\/$/, "");
-  if (!apiUrl) {
-    throw new Error("Impossible de lire l’URL Vercel dans la sortie du deploy.");
+  const vercelUrl = (urls[urls.length - 1] || "").replace(/\/$/, "");
+  const domain = (deploy.domain || "wippapp.com").replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+  // Attach custom domain (idempotent-ish).
+  try {
+    await run(
+      "npx",
+      [
+        "--yes",
+        "vercel@59",
+        "domains",
+        "add",
+        domain,
+        "--token",
+        env.VERCEL_TOKEN,
+      ],
+      { env },
+    );
+  } catch (err) {
+    console.warn(`[publish] domaine ${domain} :`, err?.message || err);
+  }
+  try {
+    await run(
+      "npx",
+      [
+        "--yes",
+        "vercel@59",
+        "domains",
+        "add",
+        `www.${domain}`,
+        "--token",
+        env.VERCEL_TOKEN,
+      ],
+      { env },
+    );
+  } catch {
+    /* www may already exist */
   }
 
-  deploy.apiUrl = apiUrl;
+  deploy.apiUrl = `https://${domain}`;
+  if (vercelUrl) deploy.vercelUrl = vercelUrl;
   saveDeploy(deploy);
   console.log(`\n✅ API live : ${deploy.apiUrl}`);
   console.log(`   Health   : ${deploy.apiUrl}/api/wipp/health`);
+  if (vercelUrl) console.log(`   Vercel   : ${vercelUrl}`);
   return deploy;
 }
 
