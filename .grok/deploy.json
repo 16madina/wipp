@@ -7,5 +7,5 @@
   "easProjectId": "",
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
-  "notes": "Domaine GoDaddy (ns57/ns58.domaincontrol.com). Brancher DNS → Vercel après VERCEL_TOKEN + 1er publish."
+  "notes": "DNS: A @ a encore les IPs parking GoDaddy (15.197 / 3.33) en plus de 76.76.21.21 — à supprimer. www CNAME OK. En attente VERCEL_TOKEN pour publish + attacher le domaine."
 }
