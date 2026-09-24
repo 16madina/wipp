@@ -10,6 +10,12 @@ import {
   WIPP_TOUCH_CODE_LENGTH,
   WIPP_TOUCH_SERVICE_UUID,
 } from "@/lib/messaging/touch";
+import {
+  getDetectStatus,
+  reportTouchDetect,
+  reportTouchShock,
+} from "@/lib/messaging/touch-bump";
+import { getTouchBumpConfig } from "@/lib/messaging/touch-config";
 import { TOUCH_RL, touchRateLimit } from "@/lib/messaging/touch-rate-limit";
 import { liveKitPublicConfig } from "@/lib/livekit/config";
 import { mintCallToken } from "@/lib/livekit/token";
@@ -135,6 +141,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
           serviceUuid: WIPP_TOUCH_SERVICE_UUID,
           codeLength: WIPP_TOUCH_CODE_LENGTH,
           codeEntropyBits: WIPP_TOUCH_CODE_ENTROPY_BITS,
+          bump: await getTouchBumpConfig(),
         },
       });
     }
@@ -187,7 +194,20 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(result);
     }
 
-    if (method === "POST" && a === "touch" && b === "share") {
+    if (method === "POST" && a === "touch" && b === "share" && c && d === "shock") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ shockedAt?: number }>(request);
+      const result = await reportTouchShock(me.id, c, body.shockedAt ?? Date.now());
+      return json(result);
+    }
+
+    if (method === "POST" && a === "touch" && b === "share" && c && d === "cancel") {
+      const me = await resolveSession(bearer(request));
+      const invite = await cancelTouchShare(me.id, c);
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "touch" && b === "share" && !c) {
       const me = await resolveSession(bearer(request));
       const rl = touchRateLimit(`touch:create:${me.id}`, TOUCH_RL.create.limit, TOUCH_RL.create.windowMs);
       if (!rl.ok) {
@@ -197,19 +217,51 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite }, 201);
     }
 
-    if (method === "GET" && a === "touch" && b === "share" && c) {
+    if (method === "GET" && a === "touch" && b === "share" && c && !d) {
       const me = await resolveSession(bearer(request));
       const invite = await getTouchShare(me.id, c);
       return json({ invite });
     }
 
-    if (method === "POST" && a === "touch" && b === "share" && c && d === "cancel") {
+    if (method === "POST" && a === "touch" && b === "detect" && !c) {
       const me = await resolveSession(bearer(request));
-      const invite = await cancelTouchShare(me.id, c);
-      return json({ invite });
+      const rl = touchRateLimit(`touch:detect:${me.id}`, TOUCH_RL.resolve.limit, TOUCH_RL.resolve.windowMs);
+      if (!rl.ok) {
+        throw new WippHttpError(429, "rate_limited", `Trop de tentatives. Réessaie dans ${rl.retryAfterSec}s.`);
+      }
+      const body = await readBody<{
+        code?: string;
+        rssiSamples?: number[];
+        detectedAt?: number;
+        shockAt?: number | null;
+        platform?: string;
+        foreground?: boolean;
+        channel?: "ble" | "nfc" | "manual" | "qr";
+      }>(request);
+      if (!body.code?.trim()) throw new WippHttpError(400, "bad_request", "code requis");
+      const result = await reportTouchDetect({
+        code: body.code,
+        profileId: me.id,
+        rssiSamples: body.rssiSamples || [],
+        detectedAt: body.detectedAt ?? Date.now(),
+        shockAt: body.shockAt,
+        platform: body.platform,
+        foreground: body.foreground,
+        channel: body.channel,
+      });
+      return json(result);
     }
 
-    /** Public peek for /t/CODE landing — no profile PII. */
+    if (method === "GET" && a === "touch" && b === "detect" && c && d === "status") {
+      const me = await resolveSession(bearer(request));
+      const result = await getDetectStatus(me.id, c);
+      return json(result);
+    }
+
+    if (method === "GET" && a === "touch" && b === "config") {
+      return json({ bump: await getTouchBumpConfig() });
+    }
+
     if (method === "GET" && a === "touch" && b === "peek" && c) {
       const ip =
         request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -226,13 +278,14 @@ export async function handleWippApi(request: Request): Promise<Response> {
     if (method === "GET" && a === "touch" && b === "code" && c) {
       const me = await resolveSession(bearer(request));
       const url = new URL(request.url);
-      const manual = url.searchParams.get("source") === "manual";
+      const source = url.searchParams.get("source") || "ble";
+      const manual = source === "manual" || source === "qr" || source === "nfc";
       const cfg = manual ? TOUCH_RL.manual : TOUCH_RL.resolve;
       const rl = touchRateLimit(`touch:resolve:${me.id}`, cfg.limit, cfg.windowMs);
       if (!rl.ok) {
         throw new WippHttpError(429, "rate_limited", `Trop de tentatives. Réessaie dans ${rl.retryAfterSec}s.`);
       }
-      const invite = await resolveTouchCode(me.id, c);
+      const invite = await resolveTouchCode(me.id, c, { source });
       return json({ invite });
     }
 

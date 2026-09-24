@@ -66,10 +66,9 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
    - **Rebuild EAS natif** requis pour CallKit (iOS) / ConnectionService (Android) — le JS OTA ne suffit pas  
    - Comptes démo serveur : `@deena` / `@lea` / `@samira` (mdp `wipp-demo`)
 8. **WIPP Touch** — invitation éphémère unique pour BLE + QR + code  
-   - Code : **8** caractères, alphabet 32 (sans I/O/0/1) → **40 bits** ; TTL 90 s ; rate limit create/resolve/accept/manual  
-   - `POST /touch/share` · `GET /touch/code/:code` · `GET /touch/peek/:code` (public, sans PII)  
-   - Deep link : `https://wippapp.com/t/CODE` (Universal Links / App Links + page store)  
-   - Module natif `wipp-touch-native` : iOS `CBPeripheralManager`, Android `addServiceUuid`  
-   - RSSI configurable + mode calibration (`EXPO_PUBLIC_WIPP_TOUCH_CALIBRATION=1`)  
-   - NFC : **non implémenté** (étude `docs/WIPP_TOUCH_NFC.md`)  
-   - **Rebuild EAS** requis · matrice : `docs/WIPP_TOUCH_TEST_MATRIX.md`
+   - Code : **8** car. / alphabet 32 → **40 bits** ; TTL 90 s ; rate limits  
+   - **Bump** : choc accéléromètre A + arbitrage RSSI serveur (config `wipp_touch_config`)  
+   - BLE asymétrique : iOS GATT char · Android service data · A keep-awake FG  
+   - NFC **Android→iPhone** HCE Type4 NDEF `/t/CODE` (session only)  
+   - Deep link `https://wippapp.com/t/CODE` · matrices : `docs/WIPP_TOUCH_DETECT_MATRIX.md`  
+   - **Rebuild EAS** requis

@@ -1,21 +1,22 @@
 /**
  * Passive WIPP Touch receiver — BLE scan without opening Touch UI.
- * One notification per invite, only after proximity gate.
+ * Sends detect (RSSI samples) to server; only the bump-arbitration winner gets a notif.
  */
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
-import { acceptTouchCode, rejectTouchCode, resolveTouchCode } from "./touch-api";
-import { startTouchScan, stopTouchScan } from "./touch-ble";
+import { AppState, Platform } from "react-native";
 import {
-  clearTouchProximityState,
-  enableTouchCalibration,
-  markTouchNotified,
-  setTouchRssiThreshold,
-} from "./touch-proximity";
+  acceptTouchCode,
+  getTouchDetectStatus,
+  rejectTouchCode,
+  reportTouchDetect,
+} from "./touch-api";
+import { startTouchScan, stopTouchScan, type ScanHit } from "./touch-ble";
+import { startTouchShockListen, stopTouchShockListen } from "./touch-shock";
 import { getStoredToken } from "./session";
 
-const handled = new Set<string>();
+const pending = new Map<string, { samples: number[]; detectedAt: number; notified?: boolean }>();
+const pollTimers = new Map<string, ReturnType<typeof setInterval>>();
 
 async function ensureChannel() {
   if (Platform.OS === "android") {
@@ -61,47 +62,106 @@ export async function registerTouchNotificationCategories() {
   ]);
 }
 
-async function onProximityHit(code: string) {
-  if (handled.has(code)) return;
+async function pollWinner(code: string) {
+  if (pollTimers.has(code)) return;
+  const t = setInterval(() => {
+    void (async () => {
+      try {
+        const st = await getTouchDetectStatus(code);
+        if (st.state === "winner" && st.invite && !pending.get(code)?.notified) {
+          const p = pending.get(code) || { samples: [], detectedAt: Date.now() };
+          p.notified = true;
+          pending.set(code, p);
+          clearInterval(t);
+          pollTimers.delete(code);
+          await presentTouchInviteNotification({
+            code: st.invite.code,
+            fromName: st.invite.sender.firstName || st.invite.sender.displayName,
+          });
+        } else if (st.state === "rejected" || st.state === "ambiguous") {
+          clearInterval(t);
+          pollTimers.delete(code);
+        }
+      } catch {
+        /* keep polling briefly */
+      }
+    })();
+  }, 1200);
+  pollTimers.set(code, t);
+  // stop after 90s
+  setTimeout(() => {
+    clearInterval(t);
+    pollTimers.delete(code);
+  }, 90_000);
+}
+
+async function onScanHit(hit: ScanHit, shockAt?: number) {
   const token = await getStoredToken();
   if (!token) return;
-  // Mark early to guarantee at most one notif even if resolve is slow.
-  handled.add(code);
-  markTouchNotified(code);
+  const prev = pending.get(hit.code);
+  const samples = [...(prev?.samples || []), ...hit.rssiSamples].slice(-16);
+  pending.set(hit.code, { samples, detectedAt: hit.detectedAt, notified: prev?.notified });
+  if (prev?.notified) return;
+
   try {
-    const { invite } = await resolveTouchCode(code);
-    await presentTouchInviteNotification({
-      code: invite.code,
-      fromName: invite.sender.firstName || invite.sender.displayName,
+    const res = await reportTouchDetect({
+      code: hit.code,
+      rssiSamples: samples,
+      detectedAt: hit.detectedAt,
+      shockAt: shockAt ?? null,
+      platform: hit.platform,
+      foreground: hit.foreground,
+      channel: "ble",
     });
-  } catch {
-    // expired / self / rate-limited — allow a later different code
-    handled.delete(code);
+    if (res.state === "winner" && res.invite) {
+      const p = pending.get(hit.code)!;
+      p.notified = true;
+      await presentTouchInviteNotification({
+        code: res.invite.code,
+        fromName: res.invite.sender.firstName || res.invite.sender.displayName,
+      });
+    } else if (res.state === "waiting_shock" || res.state === "queued") {
+      void pollWinner(hit.code);
+    }
+  } catch (err) {
+    console.warn("[wipp-touch] detect", err);
   }
 }
 
-/** Start passive BLE listen (call after login). No Touch screen. */
+/** Start passive BLE listen (call after login). No Touch screen required on B. */
 export async function startTouchReceiver(): Promise<{ ok: boolean; reason?: string }> {
   const token = await getStoredToken();
   if (!token) return { ok: false, reason: "not_logged_in" };
-  const extra = Constants.expoConfig?.extra as
-    | { wippTouchRssiThreshold?: number; wippTouchCalibration?: boolean }
-    | undefined;
-  if (typeof extra?.wippTouchRssiThreshold === "number") {
-    setTouchRssiThreshold(extra.wippTouchRssiThreshold);
-  }
-  if (extra?.wippTouchCalibration || process.env.EXPO_PUBLIC_WIPP_TOUCH_CALIBRATION === "1") {
-    enableTouchCalibration(true);
-  }
   await registerTouchNotificationCategories();
-  clearTouchProximityState();
+
+  // Bonus: if B is foreground, also listen for own shock to strengthen match
+  if (AppState.currentState === "active") {
+    void startTouchShockListen((at) => {
+      for (const [code, p] of pending) {
+        if (p.notified) continue;
+        void reportTouchDetect({
+          code,
+          rssiSamples: p.samples,
+          detectedAt: p.detectedAt,
+          shockAt: at,
+          platform: Platform.OS,
+          foreground: true,
+          channel: "ble",
+        }).catch(() => undefined);
+      }
+    });
+  }
+
   return startTouchScan((hit) => {
-    void onProximityHit(hit.code);
+    void onScanHit(hit);
   });
 }
 
 export function stopTouchReceiver() {
   stopTouchScan();
+  stopTouchShockListen();
+  for (const t of pollTimers.values()) clearInterval(t);
+  pollTimers.clear();
 }
 
 export function bindTouchNotificationResponses() {
@@ -125,3 +185,5 @@ export function bindTouchNotificationResponses() {
     })();
   });
 }
+
+void Constants;

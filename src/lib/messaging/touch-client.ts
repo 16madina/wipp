@@ -10,6 +10,10 @@ export type TouchInvite = {
   expiresAt: number;
   serviceUuid: string;
   qrPayload: string;
+  arbitration?: string;
+  shockAt?: number | null;
+  matchedProfileId?: string | null;
+  message?: string | null;
   sender: {
     id: string;
     username: string;
@@ -54,9 +58,32 @@ export async function cancelTouchShare(id: string) {
   });
 }
 
-export async function resolveTouchCode(code: string, opts?: { manual?: boolean }) {
-  const q = opts?.manual ? "?source=manual" : "";
+export async function resolveTouchCode(code: string, opts?: { manual?: boolean; source?: string }) {
+  const source = opts?.source || (opts?.manual ? "manual" : "ble");
+  const q = `?source=${encodeURIComponent(source)}`;
   return api<{ invite: TouchInvite }>(`/touch/code/${encodeURIComponent(code)}${q}`);
+}
+
+export async function reportTouchShock(inviteId: string, shockedAt = Date.now()) {
+  return api<{ invite?: TouchInvite; arbitration?: string; message?: string }>(
+    `/touch/share/${encodeURIComponent(inviteId)}/shock`,
+    { method: "POST", body: JSON.stringify({ shockedAt }) },
+  );
+}
+
+export async function reportTouchDetect(body: {
+  code: string;
+  rssiSamples: number[];
+  detectedAt: number;
+  shockAt?: number | null;
+  platform?: string;
+  foreground?: boolean;
+  channel?: string;
+}) {
+  return api<{ state: string; invite?: TouchInvite; message?: string }>("/touch/detect", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function acceptTouchCode(code: string) {

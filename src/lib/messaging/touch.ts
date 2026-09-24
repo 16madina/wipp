@@ -44,6 +44,10 @@ export type TouchInviteDto = {
   serviceUuid: string;
   /** Deep link / QR payload — same invite as BLE code */
   qrPayload: string;
+  arbitration?: string;
+  shockAt?: number | null;
+  matchedProfileId?: string | null;
+  message?: string | null;
   sender: {
     id: string;
     username: string;
@@ -95,7 +99,7 @@ function qrFor(code: string) {
   return `https://wippapp.com/t/${code}`;
 }
 
-async function loadInvite(idOrCode: string): Promise<TouchInviteDto | null> {
+export async function loadInviteRow(idOrCode: string): Promise<TouchInviteDto | null> {
   const sql = await getSql();
   await expireStale(sql);
   const key = idOrCode.trim().toUpperCase();
@@ -107,8 +111,12 @@ async function loadInvite(idOrCode: string): Promise<TouchInviteDto | null> {
     expires_at: string;
     sender_id: string;
     receiver_id: string | null;
+    shock_at: string | null;
+    arbitration: string | null;
+    matched_profile_id: string | null;
   }>`
-    select id, code, status, created_at::text, expires_at::text, sender_id, receiver_id
+    select id, code, status, created_at::text, expires_at::text, sender_id, receiver_id,
+           shock_at::text, arbitration, matched_profile_id
     from wipp_touch_invites
     where id = ${idOrCode} or upper(code) = ${key}
     limit 1
@@ -118,6 +126,7 @@ async function loadInvite(idOrCode: string): Promise<TouchInviteDto | null> {
   const sender = await profileBrief(row.sender_id);
   if (!sender) return null;
   const receiver = row.receiver_id ? await profileBrief(row.receiver_id) : null;
+  const arbitration = row.arbitration || "waiting_shock";
   return {
     id: row.id,
     code: row.code,
@@ -126,9 +135,17 @@ async function loadInvite(idOrCode: string): Promise<TouchInviteDto | null> {
     expiresAt: Date.parse(row.expires_at),
     serviceUuid: WIPP_TOUCH_SERVICE_UUID,
     qrPayload: qrFor(row.code),
+    arbitration,
+    shockAt: row.shock_at ? Date.parse(row.shock_at) : null,
+    matchedProfileId: row.matched_profile_id,
+    message: arbitration === "ambiguous" ? "Recollez les téléphones." : null,
     sender,
     receiver,
   };
+}
+
+async function loadInvite(idOrCode: string): Promise<TouchInviteDto | null> {
+  return loadInviteRow(idOrCode);
 }
 
 /** Sender starts sharing — cancels prior active invites from same sender. */
@@ -206,8 +223,15 @@ export async function peekTouchCodePublic(code: string): Promise<{
   return { valid: true, status: "active", expiresAt: dto.expiresAt };
 }
 
-/** Peek invite by short code (for BLE / QR / typed code). Auth required. */
-export async function resolveTouchCode(meId: string, code: string): Promise<TouchInviteDto> {
+/** Peek invite by short code (for BLE / QR / typed code). Auth required.
+ * BLE automatic path should use reportTouchDetect + arbitration instead.
+ * source=manual|qr|nfc bypasses bump and returns invite immediately.
+ */
+export async function resolveTouchCode(
+  meId: string,
+  code: string,
+  opts?: { source?: string },
+): Promise<TouchInviteDto> {
   await ensureMessagingReady();
   const dto = await loadInvite(code);
   if (!dto) throw new WippHttpError(404, "not_found", "Code WIPP introuvable ou expiré.");
@@ -220,13 +244,46 @@ export async function resolveTouchCode(meId: string, code: string): Promise<Touc
   if (dto.status !== "active") {
     throw new WippHttpError(409, "not_active", `Invitation ${dto.status}.`);
   }
+  const source = opts?.source || "ble";
+  const bypass = source === "manual" || source === "qr" || source === "nfc";
+  if (!bypass) {
+    // BLE resolve without going through detect/arbitration: only winner after match
+    if (dto.arbitration === "matched" && dto.matchedProfileId === meId) {
+      return dto;
+    }
+    if (dto.arbitration === "matched") {
+      throw new WippHttpError(409, "not_selected", "Un autre appareil a été sélectionné.");
+    }
+    if (dto.arbitration === "ambiguous") {
+      throw new WippHttpError(409, "ambiguous", "Recollez les téléphones.");
+    }
+    throw new WippHttpError(
+      409,
+      "waiting_arbitration",
+      "En attente du collage (choc) et de l’arbitrage.",
+    );
+  }
   return dto;
 }
 
 export async function acceptTouchCode(meId: string, code: string): Promise<TouchInviteDto> {
   await ensureMessagingReady();
   const sql = await getSql();
-  const dto = await resolveTouchCode(meId, code);
+  const dto = await loadInvite(code);
+  if (!dto) throw new WippHttpError(404, "not_found", "Code WIPP introuvable ou expiré.");
+  if (dto.status === "expired" || Date.now() > dto.expiresAt) {
+    throw new WippHttpError(410, "expired", "Ce partage a expiré.");
+  }
+  if (dto.sender.id === meId) {
+    throw new WippHttpError(400, "self", "C’est ton propre partage.");
+  }
+  if (dto.status !== "active") {
+    throw new WippHttpError(409, "not_active", `Invitation ${dto.status}.`);
+  }
+  // If bump matched someone else, block
+  if (dto.arbitration === "matched" && dto.matchedProfileId && dto.matchedProfileId !== meId) {
+    throw new WippHttpError(409, "not_selected", "Un autre appareil a été sélectionné.");
+  }
   const updated = await sql`
     update wipp_touch_invites
     set status = 'accepted', receiver_id = ${meId}, resolved_at = now()
@@ -236,7 +293,6 @@ export async function acceptTouchCode(meId: string, code: string): Promise<Touch
   if (!updated[0]) {
     throw new WippHttpError(409, "taken", "Invitation déjà utilisée ou expirée.");
   }
-  // Also open/ensure a server DM between sender and receiver
   try {
     const { getOrCreateDm } = await import("@/lib/messaging/server");
     const sender = await profileBrief(dto.sender.id);
@@ -250,7 +306,14 @@ export async function acceptTouchCode(meId: string, code: string): Promise<Touch
 export async function rejectTouchCode(meId: string, code: string): Promise<TouchInviteDto> {
   await ensureMessagingReady();
   const sql = await getSql();
-  const dto = await resolveTouchCode(meId, code);
+  const dto = await loadInvite(code);
+  if (!dto) throw new WippHttpError(404, "not_found", "Code WIPP introuvable ou expiré.");
+  if (dto.sender.id === meId) {
+    throw new WippHttpError(400, "self", "C’est ton propre partage.");
+  }
+  if (dto.status !== "active") {
+    throw new WippHttpError(409, "not_active", `Invitation ${dto.status}.`);
+  }
   await sql`
     update wipp_touch_invites
     set status = 'rejected', receiver_id = ${meId}, resolved_at = now()

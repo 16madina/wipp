@@ -15,10 +15,10 @@ import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * Android WIPP Touch advertiser.
- * Primary ADV: Service UUID (required for B's filtered scan).
- * Scan response: manufacturer data = ephemeral ASCII code.
- * NFC HCE not implemented (see docs/WIPP_TOUCH_NFC.md).
+ * Android WIPP Touch:
+ * - BLE ADV: Service UUID (scan filter)
+ * - Scan response: Service Data = ephemeral ASCII code (asymmetric vs iOS GATT)
+ * - NFC HCE Type4 NDEF URI only while share session active
  */
 class WippTouchNativeModule : Module() {
   private var advertiser: BluetoothLeAdvertiser? = null
@@ -52,6 +52,7 @@ class WippTouchNativeModule : Module() {
         return@AsyncFunction mapOf("ok" to false, "reason" to "invalid_uuid")
       }
 
+      // ADV packet: Service UUID only (31-byte budget with 128-bit UUID).
       val advData = AdvertiseData.Builder()
         .setIncludeDeviceName(false)
         .setIncludeTxPowerLevel(false)
@@ -59,9 +60,10 @@ class WippTouchNativeModule : Module() {
         .build()
 
       val payload = cleaned.toByteArray(Charsets.US_ASCII)
+      // Scan response: service data associated with WIPP UUID (token).
       val scanResponse = AdvertiseData.Builder()
         .setIncludeDeviceName(false)
-        .addManufacturerData(0xFFFF, payload)
+        .addServiceData(parcel, payload)
         .build()
 
       val settings = AdvertiseSettings.Builder()
@@ -79,7 +81,7 @@ class WippTouchNativeModule : Module() {
                 mapOf(
                   "ok" to true,
                   "includesServiceUuid" to true,
-                  "includesManufacturerData" to true,
+                  "includesServiceData" to true,
                   "serviceUuid" to serviceUuid,
                 ),
               )
@@ -119,6 +121,19 @@ class WippTouchNativeModule : Module() {
       stopInternal()
     }
 
+    AsyncFunction("startNfcShare") { uri: String ->
+      val cleaned = uri.trim()
+      if (!cleaned.startsWith("https://wippapp.com/t/")) {
+        return@AsyncFunction mapOf("ok" to false, "reason" to "invalid_uri")
+      }
+      WippNfcHceService.setActiveUri(cleaned)
+      mapOf("ok" to true, "nfcHce" to true, "uri" to cleaned)
+    }
+
+    AsyncFunction("stopNfcShare") {
+      WippNfcHceService.clear()
+    }
+
     Function("canAdvertise") {
       val ctx = appContext.reactContext ?: return@Function false
       val adapter = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
@@ -129,9 +144,9 @@ class WippTouchNativeModule : Module() {
       mapOf(
         "bleAdvertise" to true,
         "bleAdvertiseServiceUuid" to true,
-        "bleAdvertiseManufacturerData" to true,
-        "nfcHce" to false,
-        "nfcNote" to "HCE NDEF not implemented — see docs/WIPP_TOUCH_NFC.md",
+        "bleAdvertiseServiceData" to true,
+        "nfcHce" to true,
+        "nfcNote" to "Type4 NDEF HCE active only during share session; Android→iPhone Background Tag Reading.",
       )
     }
   }

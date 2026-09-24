@@ -25,7 +25,7 @@ export default function TouchInviteDeepLink() {
     let cancelled = false;
     void (async () => {
       try {
-        const { invite } = await resolveTouchCode(code);
+        const { invite } = await resolveTouchCode(code, { source: "nfc" });
         if (cancelled) return;
         setFromName(invite.sender.firstName || invite.sender.displayName);
         setPhase("ready");

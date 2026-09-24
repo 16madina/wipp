@@ -41,6 +41,14 @@ public class WippTouchNativeModule: Module {
       }
     }
 
+    AsyncFunction("startNfcShare") { (_: String) -> [String: Any] in
+      ["ok": false, "reason": "nfc_hce_android_only"]
+    }
+
+    AsyncFunction("stopNfcShare") { () in
+      // no-op iOS
+    }
+
     Function("canAdvertise") { () -> Bool in
       true
     }
@@ -50,8 +58,9 @@ public class WippTouchNativeModule: Module {
         "bleAdvertise": true,
         "bleAdvertiseServiceUuid": true,
         "bleAdvertiseLocalName": true,
+        "bleGattTokenCharacteristic": true,
         "nfcHce": false,
-        "nfcNote": "iOS Core NFC is reader-only; no HCE. NFC not used for Touch emit.",
+        "nfcNote": "iOS Core NFC is reader-only; Android HCE→iPhone Background Tag Reading for /t/CODE.",
       ]
     }
   }

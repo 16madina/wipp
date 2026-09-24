@@ -91,6 +91,7 @@ function withWippTouchNative(config) {
       "android.permission.BLUETOOTH_CONNECT",
       "android.permission.BLUETOOTH",
       "android.permission.BLUETOOTH_ADMIN",
+      "android.permission.NFC",
     ]) {
       if (!names.has(name)) {
         manifest.manifest["uses-permission"].push({ $: { "android:name": name } });

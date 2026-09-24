@@ -4,6 +4,7 @@ export type AdvertiseResult = {
   includesServiceUuid?: boolean;
   includesLocalName?: boolean;
   includesManufacturerData?: boolean;
+  includesServiceData?: boolean;
   serviceUuid?: string;
   message?: string;
   errorCode?: number;
@@ -14,6 +15,7 @@ export type PlatformCapabilities = {
   bleAdvertiseServiceUuid?: boolean;
   bleAdvertiseLocalName?: boolean;
   bleAdvertiseManufacturerData?: boolean;
+  bleAdvertiseServiceData?: boolean;
   nfcHce: boolean;
   nfcNote?: string;
 };
@@ -21,6 +23,8 @@ export type PlatformCapabilities = {
 type NativeShape = {
   startAdvertise: (serviceUuid: string, codeUuid: string, code: string) => Promise<AdvertiseResult>;
   stopAdvertise: () => Promise<void>;
+  startNfcShare: (uri: string) => Promise<{ ok: boolean; reason?: string }>;
+  stopNfcShare: () => Promise<void>;
   canAdvertise: () => boolean;
   platformCapabilities: () => PlatformCapabilities;
 };
@@ -68,6 +72,20 @@ export async function nativeStartAdvertise(
 export async function nativeStopAdvertise(): Promise<void> {
   try {
     await getNative()?.stopAdvertise();
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function nativeStartNfcShare(uri: string): Promise<{ ok: boolean; reason?: string }> {
+  const n = getNative();
+  if (!n?.startNfcShare) return { ok: false, reason: "nfc_unavailable" };
+  return n.startNfcShare(uri);
+}
+
+export async function nativeStopNfcShare(): Promise<void> {
+  try {
+    await getNative()?.stopNfcShare?.();
   } catch {
     /* ignore */
   }

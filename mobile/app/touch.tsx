@@ -6,12 +6,14 @@ import {
   Text,
   View,
 } from "react-native";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/Colors";
 import {
   cancelTouchShare,
   createTouchShare,
   getTouchShareStatus,
+  reportTouchShock,
   type TouchInvite,
 } from "@/lib/touch-api";
 import {
@@ -20,9 +22,11 @@ import {
   startTouchAdvertise,
   stopTouchAdvertise,
 } from "@/lib/touch-ble";
+import { configureTouchShock, startTouchShockListen, stopTouchShockListen } from "@/lib/touch-shock";
 
 const c = Colors.dark;
-const SEARCH_MS = 12_000;
+const SEARCH_MS = 90_000; // align with invite TTL — QR fallback still after no match
+const KEEP_TAG = "wipp-touch-share";
 
 export default function TouchShareScreen() {
   const router = useRouter();
@@ -32,11 +36,14 @@ export default function TouchShareScreen() {
   const [busy, setBusy] = useState(false);
   const inviteId = useRef<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const shocked = useRef(false);
 
   useEffect(() => {
     return () => {
       timers.current.forEach(clearTimeout);
       void stopTouchAdvertise();
+      stopTouchShockListen();
+      void deactivateKeepAwake(KEEP_TAG);
       if (inviteId.current) void cancelTouchShare(inviteId.current).catch(() => undefined);
     };
   }, []);
@@ -49,7 +56,10 @@ export default function TouchShareScreen() {
     setBusy(true);
     setHint(null);
     setPhase("sharing");
+    shocked.current = false;
     try {
+      await activateKeepAwakeAsync(KEEP_TAG);
+
       const perms = await ensureBlePermissions();
       if (!perms.ok) {
         if (perms.reason === "bluetooth_off") {
@@ -66,33 +76,56 @@ export default function TouchShareScreen() {
       setInvite(next);
 
       if (!canAdvertiseBle()) {
-        setHint("Rebuild natif EAS requis pour diffuser en BLE — le code / QR (même invitation) reste disponibles.");
+        setHint("Rebuild natif EAS requis pour diffuser en BLE — le code / QR (même invitation) restent disponibles.");
       } else {
         const adv = await startTouchAdvertise(next.code);
         if (!adv.ok) {
           if (adv.reason === "bluetooth_off") setHint("Active le Bluetooth pour utiliser WIPP Touch.");
-          else if (adv.reason === "bluetooth_permission") setHint("Autorise le Bluetooth pour WIPP Touch.");
-          else if (adv.reason === "service_uuid_missing_in_adv") {
-            setHint("L’annonce BLE n’inclut pas le service WIPP — fallback code / QR.");
-          } else if (adv.reason === "advertise_failed") {
+          else if (adv.reason === "advertise_failed") {
             setHint("Émission BLE impossible — le code / QR restent valides pour cette invitation.");
           }
-        } else if (!adv.includesServiceUuid) {
-          setHint("Annonce BLE sans Service UUID détecté — vérifie le build natif.");
         }
       }
+
+      configureTouchShock({ gThreshold: 2.2, maxDurationMs: 120 });
+      await startTouchShockListen((at) => {
+        if (shocked.current || !inviteId.current) return;
+        shocked.current = true;
+        void (async () => {
+          try {
+            const r = await reportTouchShock(inviteId.current!, at);
+            setInvite(r.invite || next);
+            if (r.arbitration === "ambiguous") {
+              setHint(r.message || "Recollez les téléphones.");
+              shocked.current = false; // allow another bump
+            } else if (r.arbitration === "no_match") {
+              setHint("Aucun téléphone assez proche — recollez ou utilise le code.");
+              shocked.current = false;
+            }
+          } catch (e) {
+            shocked.current = false;
+            console.warn("[wipp-touch] shock report", e);
+          }
+        })();
+      });
 
       const poll = async () => {
         try {
           const { invite: cur } = await getTouchShareStatus(next.id);
           setInvite(cur);
+          if (cur.arbitration === "ambiguous") {
+            setHint(cur.message || "Recollez les téléphones.");
+          }
           if (cur.status === "accepted") {
             await stopTouchAdvertise();
+            stopTouchShockListen();
+            void deactivateKeepAwake(KEEP_TAG);
             setPhase("connected");
             return;
           }
           if (cur.status === "rejected" || cur.status === "expired" || cur.status === "cancelled") {
             await stopTouchAdvertise();
+            stopTouchShockListen();
             setPhase("fallback");
             return;
           }
@@ -117,7 +150,7 @@ export default function TouchShareScreen() {
     <View style={styles.root}>
       <Text style={styles.title}>WIPP Touch</Text>
       <Text style={styles.body}>
-        Partage ton WIPP — rapproche ton téléphone. L’autre n’a pas besoin d’ouvrir Touch.
+        Partage ton WIPP — colle les téléphones. L’autre n’a pas besoin d’ouvrir Touch.
       </Text>
 
       {phase === "ready" ? (
@@ -130,7 +163,7 @@ export default function TouchShareScreen() {
         <View style={styles.card}>
           <ActivityIndicator color={c.accent} />
           <Text style={styles.cardTitle}>Recherche…</Text>
-          <Text style={styles.meta}>Rapproche ton téléphone</Text>
+          <Text style={styles.meta}>Colle les téléphones (choc)</Text>
           {invite?.code ? <Text style={styles.code}>{invite.code}</Text> : null}
         </View>
       ) : null}
@@ -159,6 +192,8 @@ export default function TouchShareScreen() {
       <Pressable
         onPress={() => {
           void stopTouchAdvertise();
+          stopTouchShockListen();
+          void deactivateKeepAwake(KEEP_TAG);
           router.back();
         }}
       >

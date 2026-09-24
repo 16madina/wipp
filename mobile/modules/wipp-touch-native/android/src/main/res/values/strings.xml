@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="wipp_nfc_desc">WIPP Touch NFC</string>
+  <string name="wipp_nfc_aid">WIPP NDEF</string>
+</resources>
