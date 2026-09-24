@@ -88,6 +88,24 @@ export const SURPRISE_CARD_CATALOG: SurpriseCardDef[] = [
     scratch_material: "gold",
     scratch_color: "#e7c56a",
   },
+  {
+    card_id: "wipp_vip",
+    card_name: "WIPP VIP",
+    card_name_en: "WIPP VIP",
+    asset_url: "/fx/surprise/cards/wipp-vip.jpg",
+    scratch_zone: { x: 32, y: 28, w: 54, h: 40 },
+    scratch_material: "gold",
+    scratch_color: "#e7c56a",
+  },
+  {
+    card_id: "wipp_prestige",
+    card_name: "WIPP Prestige",
+    card_name_en: "WIPP Prestige",
+    asset_url: "/fx/surprise/cards/wipp-prestige.jpg",
+    scratch_zone: { x: 32, y: 25, w: 53, h: 45 },
+    scratch_material: "gold",
+    scratch_color: "#e7c56a",
+  },
 ];
 
 export function surpriseCardById(id: string | null | undefined) {
