@@ -1,6 +1,14 @@
 import { liveKitPublicConfig } from "@/lib/livekit/config";
 import { mintCallToken } from "@/lib/livekit/token";
 import {
+  answerCallInvite,
+  createCallInvite,
+  getOutgoingCallStatus,
+  hangupCallInvite,
+  listIncomingCalls,
+  registerPushToken,
+} from "@/lib/messaging/calls";
+import {
   WippHttpError,
   adminBlockUser,
   adminListFlags,
@@ -147,6 +155,80 @@ export async function handleWippApi(request: Request): Promise<Response> {
         video: Boolean(body.video),
       });
       return json(token);
+    }
+
+    if (method === "POST" && a === "devices" && b === "push") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ token?: string; platform?: string; kind?: string }>(request);
+      const result = await registerPushToken({
+        profileId: me.id,
+        token: body.token ?? "",
+        platform: body.platform,
+        kind: body.kind,
+      });
+      return json(result);
+    }
+
+    if (method === "POST" && a === "calls" && b === "invite") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{
+        peerUsername?: string;
+        peerId?: string;
+        kind?: "audio" | "video";
+      }>(request);
+      const invite = await createCallInvite({
+        callerId: me.id,
+        peerUsername: body.peerUsername,
+        peerId: body.peerId,
+        kind: body.kind,
+      });
+      return json({ invite }, 201);
+    }
+
+    if (method === "GET" && a === "calls" && b === "incoming") {
+      const me = await resolveSession(bearer(request));
+      const invites = await listIncomingCalls(me.id);
+      return json({ invites });
+    }
+
+    if (method === "GET" && a === "calls" && b && c === "status") {
+      const me = await resolveSession(bearer(request));
+      const invite = await getOutgoingCallStatus(me.id, b);
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "calls" && b && c === "answer") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ accept?: boolean }>(request);
+      const invite = await answerCallInvite({
+        meId: me.id,
+        callId: b,
+        accept: body.accept !== false,
+      });
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "calls" && b && c === "hangup") {
+      const me = await resolveSession(bearer(request));
+      const invite = await hangupCallInvite({ meId: me.id, callId: b });
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "calls" && b && !c) {
+      // POST /calls/:id with { action: accept|reject|hangup }
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ action?: string; accept?: boolean }>(request);
+      const action = body.action || (body.accept === false ? "reject" : body.accept ? "accept" : "hangup");
+      if (action === "accept" || action === "reject") {
+        const invite = await answerCallInvite({
+          meId: me.id,
+          callId: b,
+          accept: action === "accept",
+        });
+        return json({ invite });
+      }
+      const invite = await hangupCallInvite({ meId: me.id, callId: b });
+      return json({ invite });
     }
 
     if (method === "POST" && a === "register") {

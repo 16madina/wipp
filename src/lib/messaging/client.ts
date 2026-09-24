@@ -200,3 +200,59 @@ export async function ensureServerSession(opts: {
     }
   }
 }
+
+export type CallInvite = {
+  id: string;
+  kind: "audio" | "video";
+  roomName: string;
+  status: string;
+  createdAt: number;
+  expiresAt: number;
+  caller: { id: string; username: string; displayName: string; avatarUrl?: string | null };
+  callee: { id: string; username: string; displayName: string; avatarUrl?: string | null };
+};
+
+export async function registerDevicePush(input: {
+  token: string;
+  platform?: string;
+  kind?: string;
+}) {
+  return api<{ ok: boolean }>("/devices/push", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function inviteCall(input: {
+  peerUsername?: string;
+  peerId?: string;
+  kind: "audio" | "video";
+}) {
+  return api<{ invite: CallInvite }>("/calls/invite", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function fetchIncomingCalls() {
+  return api<{ invites: CallInvite[] }>("/calls/incoming");
+}
+
+export async function fetchCallStatus(callId: string) {
+  return api<{ invite: CallInvite }>(`/calls/${encodeURIComponent(callId)}/status`);
+}
+
+export async function answerCall(callId: string, accept: boolean) {
+  return api<{ invite: CallInvite }>(`/calls/${encodeURIComponent(callId)}/answer`, {
+    method: "POST",
+    body: JSON.stringify({ accept }),
+  });
+}
+
+export async function hangupCall(callId: string) {
+  return api<{ invite: CallInvite }>(`/calls/${encodeURIComponent(callId)}/hangup`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+

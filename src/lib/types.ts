@@ -317,6 +317,10 @@ export type LiveCall = {
   startedAt: number;
   /** Not written to the call log when the call ends. */
   ephemeral?: boolean;
+  /** Server invite id when signaling is available. */
+  callId?: string;
+  roomName?: string;
+  peerUsername?: string;
 };
 
 export type Listing = {

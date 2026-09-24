@@ -397,8 +397,74 @@ export function ActiveCallScreen({
 
 export function CallLayer() {
   const live = useWgoStore((s) => s.liveCall);
+  const startCall = useWgoStore((s) => s.startCall);
+  const serverConnected = useWgoStore((s) => s.serverConnected);
+
+  // Poll server for incoming call invites (push wake + in-app ring).
+  useEffect(() => {
+    if (!serverConnected) return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const { fetchIncomingCalls, getStoredToken } = await import("@/lib/messaging/client");
+        if (!getStoredToken()) return;
+        const { invites } = await fetchIncomingCalls();
+        if (cancelled || !invites.length) return;
+        const top = invites[0]!;
+        const cur = useWgoStore.getState().liveCall;
+        if (cur?.callId === top.id) return;
+        if (cur) return; // already in a call
+        // Map caller username → local user id when possible
+        const users = useWgoStore.getState().users;
+        const local =
+          Object.values(users).find((u) => u.username === top.caller.username) ||
+          Object.values(users).find((u) => u.id === top.caller.id);
+        const userId = local?.id || top.caller.username;
+        if (!useWgoStore.getState().users[userId]) {
+          useWgoStore.setState((st) => ({
+            users: {
+              ...st.users,
+              [userId]: {
+                id: userId,
+                firstName: top.caller.displayName.split(" ")[0] || top.caller.username,
+                lastName: top.caller.displayName.split(" ").slice(1).join(" ") || "",
+                displayName: top.caller.displayName,
+                username: top.caller.username,
+                bio: "",
+                avatar: top.caller.avatarUrl || "/avatars/deena.jpg",
+                online: true,
+                city: "",
+                connected: true,
+              },
+            },
+          }));
+        }
+        startCall(userId, top.kind, "in");
+        const after = useWgoStore.getState().liveCall;
+        if (after) {
+          useWgoStore.setState({
+            liveCall: {
+              ...after,
+              callId: top.id,
+              roomName: top.roomName,
+              peerUsername: top.caller.username,
+            },
+          });
+        }
+      } catch {
+        /* offline / unauth */
+      }
+    };
+    void tick();
+    const id = window.setInterval(tick, 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [serverConnected, startCall]);
+
   if (!live) return null;
-  return <CallSession key={live.userId} />;
+  return <CallSession key={live.callId || live.userId} />;
 }
 
 function CallSession() {
@@ -460,12 +526,48 @@ function CallSession() {
 
   useEffect(() => {
     if (phase !== "ring") return;
+    // Server invite: wait for callee accept (polled below). Local demo: auto-connect.
+    if (live?.callId && live.dir === "out") return;
     const id = window.setTimeout(() => {
       setPhase("live");
       setT0(Date.now());
     }, 2200);
     return () => window.clearTimeout(id);
-  }, [phase]);
+  }, [phase, live?.callId, live?.dir]);
+
+  // Outgoing: watch invite status (accepted / rejected / cancelled)
+  useEffect(() => {
+    if (!live?.callId || live.dir !== "out") return;
+    if (phase !== "ring" && phase !== "live") return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const { fetchCallStatus } = await import("@/lib/messaging/client");
+        const { invite } = await fetchCallStatus(live.callId!);
+        if (cancelled) return;
+        if (invite.status === "accepted" && phase === "ring") {
+          setPhase("live");
+          setT0(Date.now());
+        }
+        if (invite.status === "rejected" || invite.status === "cancelled" || invite.status === "missed") {
+          if (hangingRef.current) return;
+          hangingRef.current = true;
+          streamRef.current?.getTracks().forEach((tr) => tr.stop());
+          streamRef.current = null;
+          void lkRef.current.disconnect();
+          setPhase("ended");
+          window.setTimeout(() => endCall(0), 500);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    const id = window.setInterval(tick, 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [live?.callId, live?.dir, phase, endCall]);
 
   useEffect(() => {
     if (phase !== "live") return;
@@ -568,10 +670,11 @@ function CallSession() {
     void (async () => {
       setLkStatus("connecting");
       const token = await fetchCallToken({
-        peerId: live.userId,
+        peerId: live.peerUsername || live.userId,
         kind: mode,
         identity: me.username || me.id || "me",
         displayName: me.displayName,
+        roomName: live.roomName,
       });
       if (cancelled) return;
       if (token.mode !== "livekit") {
@@ -798,6 +901,11 @@ function CallSession() {
   function accept() {
     setPhase("live");
     setT0(Date.now());
+    if (live?.callId) {
+      void import("@/lib/messaging/client")
+        .then(({ answerCall }) => answerCall(live.callId!, true))
+        .catch(() => undefined);
+    }
   }
 
   function onSwipeStart(clientY: number) {

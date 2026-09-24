@@ -45,12 +45,22 @@ module.exports = {
     googleServicesFile: "./GoogleService-Info.plist",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      UIBackgroundModes: ["audio", "voip", "remote-notification", "fetch"],
     },
   },
   android: {
     package: "com.wipp.app",
     versionCode: 1,
     googleServicesFile: "./google-services.json",
+    permissions: [
+      "RECEIVE_BOOT_COMPLETED",
+      "VIBRATE",
+      "POST_NOTIFICATIONS",
+      "USE_FULL_SCREEN_INTENT",
+      "FOREGROUND_SERVICE",
+      "FOREGROUND_SERVICE_PHONE_CALL",
+      "MANAGE_OWN_CALLS",
+    ],
     adaptiveIcon: {
       backgroundColor: "#0B1220",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -68,14 +78,28 @@ module.exports = {
     "expo-router",
     "expo-secure-store",
     "expo-dev-client",
+    [
+      "expo-notifications",
+      {
+        sounds: [],
+        mode: "production",
+      },
+    ],
     "@react-native-firebase/app",
     "@react-native-firebase/auth",
+    "./plugins/withWippCallkeep.js",
     [
       "expo-build-properties",
       {
         ios: {
           // RN Firebase v26 résout firebase-ios-sdk via SPM → linkage dynamique requis
           useFrameworks: "dynamic",
+        },
+        android: {
+          permissions: [
+            "android.permission.POST_NOTIFICATIONS",
+            "android.permission.USE_FULL_SCREEN_INTENT",
+          ],
         },
       },
     ],

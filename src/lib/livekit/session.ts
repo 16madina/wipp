@@ -175,11 +175,14 @@ export async function fetchCallToken(input: {
   kind: "audio" | "video";
   identity: string;
   displayName?: string;
+  roomName?: string;
 }): Promise<
   | { mode: "livekit"; url: string; token: string; roomName: string }
   | { mode: "local"; reason?: string }
 > {
-  const roomName = `wipp-${[input.identity, input.peerId].sort().join("-")}`.slice(0, 64);
+  const roomName =
+    input.roomName ||
+    `wipp-${[input.identity, input.peerId].sort().join("-")}`.slice(0, 64);
   try {
     const res = await fetch("/api/wipp/calls/token", {
       method: "POST",

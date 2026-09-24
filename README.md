@@ -59,9 +59,9 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
 2. **EXPO_TOKEN** pour OTA
 3. **Admin panel** sur wippapp.com
 4. Firebase Phone Auth (SMS OTP)
-5. Médias + push
-6. **LiveKit** — appels A/V : poser dans `.env` :
-   - `LIVEKIT_URL` (ex. `wss://xxx.livekit.cloud`)
-   - `LIVEKIT_API_KEY`
-   - `LIVEKIT_API_SECRET`  
-   Sans ces variables, les appels restent en **aperçu local** (cam/micro appareil). Token : `POST /api/wipp/calls/token`.
+5. Médias + push messages
+6. **LiveKit** — déjà branché (`LIVEKIT_*` dans `.env`)
+7. **Appels hors app** — signal `POST /api/wipp/calls/invite` + push Expo + CallKit/ConnectionService  
+   - Push token : `POST /api/wipp/devices/push`  
+   - **Rebuild EAS natif** requis pour CallKit (iOS) / ConnectionService (Android) — le JS OTA ne suffit pas  
+   - Comptes démo serveur : `@deena` / `@lea` / `@samira` (mdp `wipp-demo`)

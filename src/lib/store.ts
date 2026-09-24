@@ -1115,9 +1115,41 @@ export const useWgoStore = create<WgoState>()(
               c.participantIds.includes(userId) &&
               c.participantIds.includes("me"),
           );
+        const peer = get().users[userId];
+        const peerUsername = peer?.username;
         set({
-          liveCall: { userId, kind, dir, pip: false, startedAt: Date.now(), ephemeral },
+          liveCall: {
+            userId,
+            kind,
+            dir,
+            pip: false,
+            startedAt: Date.now(),
+            ephemeral,
+            peerUsername,
+          },
         });
+        // Outgoing: create server invite + push when session exists
+        if (dir === "out" && peerUsername) {
+          void (async () => {
+            try {
+              const { inviteCall } = await import("@/lib/messaging/client");
+              const { invite } = await inviteCall({ peerUsername, kind });
+              const cur = get().liveCall;
+              if (cur?.userId === userId) {
+                set({
+                  liveCall: {
+                    ...cur,
+                    callId: invite.id,
+                    roomName: invite.roomName,
+                    peerUsername: invite.callee.username,
+                  },
+                });
+              }
+            } catch (err) {
+              console.warn("[wipp] call invite skipped", err);
+            }
+          })();
+        }
       },
 
       minimizeCall: () =>
@@ -1129,6 +1161,11 @@ export const useWgoStore = create<WgoState>()(
       endCall: (duration) => {
         const live = get().liveCall;
         if (!live) return;
+        if (live.callId) {
+          void import("@/lib/messaging/client")
+            .then(({ hangupCall }) => hangupCall(live.callId!))
+            .catch(() => undefined);
+        }
         const incoming = live.dir === "in";
         const missed = incoming && duration < 1.5;
         const entry = {
