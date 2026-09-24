@@ -106,6 +106,24 @@ export const SURPRISE_CARD_CATALOG: SurpriseCardDef[] = [
     scratch_material: "gold",
     scratch_color: "#e7c56a",
   },
+  {
+    card_id: "wipp_mood",
+    card_name: "WIPP Mood",
+    card_name_en: "WIPP Mood",
+    asset_url: "/fx/surprise/cards/wipp-mood.jpg",
+    scratch_zone: { x: 34, y: 24, w: 52, h: 48 },
+    scratch_material: "gold",
+    scratch_color: "#e7c56a",
+  },
+  {
+    card_id: "wipp_crew",
+    card_name: "WIPP Crew",
+    card_name_en: "WIPP Crew",
+    asset_url: "/fx/surprise/cards/wipp-crew.jpg",
+    scratch_zone: { x: 34, y: 24, w: 52, h: 48 },
+    scratch_material: "gold",
+    scratch_color: "#e7c56a",
+  },
 ];
 
 export function surpriseCardById(id: string | null | undefined) {
