@@ -30,16 +30,16 @@ export function dayLabel(id: string, lang: "fr" | "en") {
 }
 
 const HERO: Record<string, number> = {
-  day_sun: 54,
-  day_coffee: 52,
-  day_sunflowers: 54,
-  day_hummingbird: 54,
-  day_sunrise: 50,
-  day_alarm: 52,
-  day_orange: 54,
-  day_flower_arch: 50,
-  day_cloud_heart: 56,
-  day_bird: 52,
+  day_sun: 46,
+  day_coffee: 44,
+  day_sunflowers: 46,
+  day_hummingbird: 46,
+  day_sunrise: 42,
+  day_alarm: 44,
+  day_orange: 46,
+  day_flower_arch: 42,
+  day_cloud_heart: 48,
+  day_bird: 44,
 };
 
 const FLIES = [

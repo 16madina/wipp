@@ -59,15 +59,15 @@ const SHOOTS_IMG = [
 ];
 
 const HERO: Record<string, number> = {
-  night_moon: 36,
-  night_sleeping_bear: 42,
-  night_star_cloud: 38,
-  night_lantern: 30,
-  night_window: 40,
-  night_star_jar: 32,
-  night_sleepy_cloud: 40,
-  night_star_balloons: 36,
-  night_galaxy: 44,
+  night_moon: 30,
+  night_sleeping_bear: 36,
+  night_star_cloud: 32,
+  night_lantern: 26,
+  night_window: 34,
+  night_star_jar: 28,
+  night_sleepy_cloud: 34,
+  night_star_balloons: 30,
+  night_galaxy: 38,
 };
 
 export function NightFx({ id, onDone }: { id: string; onDone: () => void }) {

@@ -1382,8 +1382,8 @@
   position: absolute;
   left: 50%;
   top: 46%;
-  width: min(92vw, 560px);
-  height: min(92vw, 560px);
+  width: min(78vw, 440px);
+  height: min(78vw, 440px);
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, rgb(255 216 77 / 0.42) 0%, rgb(255 180 60 / 0.12) 42%, transparent 70%);
   opacity: 0;
@@ -1398,25 +1398,28 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(86vw, 520px);
+  width: min(72vw, 400px);
+  max-height: min(68vh, 520px);
   z-index: 2;
   animation: bd-cake-move 4s cubic-bezier(0.16, 0.84, 0.32, 1) forwards;
 }
 .bd-cake-img {
   display: block;
   width: 100%;
+  max-height: min(68vh, 520px);
   height: auto;
+  object-fit: contain;
 }
 @keyframes bd-cake-move {
-  0% { transform: translate(-50%, calc(-50% + 58vh)) scale(0.7); opacity: 1; }
-  8% { transform: translate(-50%, -50%) scale(1.04); opacity: 1; }
-  12% { transform: translate(-50%, -50%) scale(1); }
-  27% { transform: translate(-50%, calc(-50% - 6px)) scale(1); }
-  36% { transform: translate(-50%, -50%) scale(1); }
-  55% { transform: translate(-50%, -50%) scale(1.025); }
-  73% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  90% { transform: translate(-50%, calc(-50% + 16px)) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, calc(-50% + 28px)) scale(0.98); opacity: 0; }
+  0% { transform: translate(-50%, calc(-50% + 58vh)) scale(0.62); opacity: 1; }
+  8% { transform: translate(-50%, -50%) scale(0.92); opacity: 1; }
+  12% { transform: translate(-50%, -50%) scale(0.88); }
+  27% { transform: translate(-50%, calc(-50% - 6px)) scale(0.88); }
+  36% { transform: translate(-50%, -50%) scale(0.88); }
+  55% { transform: translate(-50%, -50%) scale(0.9); }
+  73% { transform: translate(-50%, -50%) scale(0.88); opacity: 1; }
+  90% { transform: translate(-50%, calc(-50% + 16px)) scale(0.88); opacity: 1; }
+  100% { transform: translate(-50%, calc(-50% + 28px)) scale(0.86); opacity: 0; }
 }
 .bd-wick {
   position: absolute;
@@ -1477,8 +1480,8 @@
   position: absolute;
   left: 50%;
   top: 46%;
-  width: min(80vw, 540px);
-  height: min(80vw, 540px);
+  width: min(68vw, 420px);
+  height: min(68vw, 420px);
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, rgb(120 160 255 / 0.28), transparent 68%);
   opacity: 0;
@@ -1514,9 +1517,9 @@
   100% { transform: translate(-40vw, 42vh) rotate(var(--rot, 24deg)); opacity: 0; }
 }
 .bd-cake-stage.nt-fit {
-  width: min(80vw, calc(100vw - 64px));
-  height: min(72vh, calc(100dvh - 96px));
-  max-width: min(80vw, calc(100vw - 64px));
+  width: min(68vw, calc(100vw - 72px));
+  height: min(62vh, calc(100dvh - 120px));
+  max-width: min(68vw, calc(100vw - 72px));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1603,7 +1606,7 @@
   left: 50%;
   top: 44%;
   height: auto;
-  max-width: 45vw;
+  max-width: 38vw;
   object-fit: contain;
   z-index: 2;
   animation: nt-hero-in 5s ease-in-out forwards;
@@ -1781,8 +1784,8 @@
   position: absolute;
   left: 50%;
   top: 42%;
-  width: min(70vw, 420px);
-  height: min(70vw, 420px);
+  width: min(60vw, 360px);
+  height: min(60vw, 360px);
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, rgb(255 196 60 / 0.35), transparent 68%);
   animation: bd-cake-halo 4.5s ease-in-out forwards;
@@ -1796,7 +1799,7 @@
 .dy-hero {
   left: 50%;
   top: 44%;
-  max-width: 45vw;
+  max-width: 38vw;
   animation: dy-in 4.5s ease-in-out forwards;
 }
 .dy-go-day_sun { animation-name: dy-sun; }

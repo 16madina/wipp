@@ -63,34 +63,69 @@ function foilColors(material: ScratchDesign) {
   if (material === "birthday") return ["#8a6420", "#f0d56a", "#c9842a"] as const;
   if (material === "fun") return ["#7a5b00", "#c99212", "#ffd84d"] as const;
   if (material === "secret") return ["#121418", "#8d939c", "#2a2e36"] as const;
-  return ["#6e5420", "#d7b45a", "#a68534"] as const;
+  // Match the brushed gold leaf on WIPP card assets
+  return ["#b8923a", "#e8c968", "#9a7428"] as const;
 }
 
-/** Opaque foil covering the whole scratch zone — finger reveals the message underneath. */
+/** Irregular gold-leaf blob — looks impregnated into the card, not a sticker. */
 function paintFoil(ctx: CanvasRenderingContext2D, w: number, h: number, material: ScratchDesign, hint: string) {
   const base = foilColors(material);
+  ctx.clearRect(0, 0, w, h);
+
+  // Organic brushstroke path (feathered lottery-card latex)
+  const cx = w * 0.5;
+  const cy = h * 0.5;
+  const rx = w * 0.46;
+  const ry = h * 0.4;
+  ctx.beginPath();
+  const steps = 48;
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    const jag = 0.86 + 0.14 * Math.sin(a * 5.3 + 0.4) * Math.cos(a * 3.1);
+    const x = cx + Math.cos(a) * rx * jag;
+    const y = cy + Math.sin(a) * ry * (0.9 + 0.1 * Math.sin(a * 4.2));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+
   const g = ctx.createLinearGradient(0, 0, w, h);
   g.addColorStop(0, base[0]);
-  g.addColorStop(0.45, base[1]);
+  g.addColorStop(0.4, base[1]);
+  g.addColorStop(0.7, base[0]);
   g.addColorStop(1, base[2]);
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < 420; i++) {
+  ctx.fill();
+
+  // Metallic grain / latex noise inside the blob only
+  ctx.save();
+  ctx.clip();
+  for (let i = 0; i < 900; i++) {
     const n = Math.random();
-    ctx.fillStyle = n > 0.5 ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.18)";
-    ctx.fillRect(Math.random() * w, Math.random() * h, 1.4, 1.4);
+    ctx.fillStyle =
+      n > 0.66 ? "rgba(255,255,255,0.22)" : n > 0.33 ? "rgba(255,220,120,0.14)" : "rgba(60,40,10,0.2)";
+    ctx.fillRect(Math.random() * w, Math.random() * h, 1.1 + Math.random(), 1.1 + Math.random());
   }
-  // Soft edge so it sits on the gold brushstroke
-  ctx.strokeStyle = "rgba(0,0,0,0.12)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.ellipse(w * 0.5, h * 0.5, w * 0.48, h * 0.42, -0.06, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fillStyle = material === "secret" ? "#d5d8de" : "#1a1408";
-  ctx.font = `600 ${Math.max(12, Math.min(15, w * 0.08))}px system-ui, sans-serif`;
+  // Soft brushed streaks
+  for (let i = 0; i < 18; i++) {
+    ctx.strokeStyle = i % 2 ? "rgba(255,240,180,0.12)" : "rgba(80,55,15,0.1)";
+    ctx.lineWidth = 1 + Math.random() * 2;
+    ctx.beginPath();
+    const y0 = h * (0.15 + Math.random() * 0.7);
+    ctx.moveTo(w * 0.08, y0);
+    ctx.quadraticCurveTo(w * 0.5, y0 + (Math.random() - 0.5) * 14, w * 0.92, y0 + (Math.random() - 0.5) * 10);
+    ctx.stroke();
+  }
+  // Embossed hint — like printed into the latex
+  ctx.fillStyle = "rgba(26, 20, 8, 0.55)";
+  ctx.font = `600 ${Math.max(11, Math.min(14, w * 0.075))}px system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(255,255,255,0.25)";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 1;
   ctx.fillText(hint, w / 2, h / 2);
+  ctx.restore();
 }
 
 /**
@@ -121,15 +156,14 @@ export function SurpriseCardView({
   const done = useRef(Boolean(revealed));
   const lastSound = useRef(0);
   const lastHaptic = useRef(0);
+  const foilPixels = useRef(0);
   const [open, setOpen] = useState(revealed);
   const [fading, setFading] = useState(false);
-  const [hintOn, setHintOn] = useState(!revealed && interactive);
 
   useEffect(() => {
     done.current = Boolean(revealed);
     setOpen(revealed);
     setFading(false);
-    setHintOn(!revealed && interactive);
     last.current = null;
   }, [resetKey, card.card_id, revealed, interactive]);
 
@@ -153,6 +187,13 @@ export function SurpriseCardView({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       paintFoil(ctx, w, h, card.scratch_material, hint);
+      // Count opaque latex pixels so clear-ratio ignores transparent edges
+      const sample = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let opaque = 0;
+      for (let i = 3; i < sample.length; i += 16) {
+        if (sample[i] > 20) opaque++;
+      }
+      foilPixels.current = opaque;
     };
     paint();
     return () => {
@@ -178,7 +219,6 @@ export function SurpriseCardView({
   function finish() {
     if (done.current) return;
     done.current = true;
-    setHintOn(false);
     setFading(true);
     haptic("success");
     ting();
@@ -190,14 +230,14 @@ export function SurpriseCardView({
   }
 
   function cleared(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
+    const total = foilPixels.current;
+    if (!total) return 0;
     const sample = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let clear = 0;
-    let total = 0;
-    for (let i = 3; i < sample.length; i += 12) {
-      total++;
-      if (sample[i] < 28) clear++;
+    let left = 0;
+    for (let i = 3; i < sample.length; i += 16) {
+      if (sample[i] > 20) left++;
     }
-    return total ? clear / total : 0;
+    return Math.max(0, 1 - left / total);
   }
 
   function scratch(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -207,7 +247,6 @@ export function SurpriseCardView({
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d", { willReadFrequently: true });
     if (!canvas || !ctx) return;
-    setHintOn(false);
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -255,9 +294,9 @@ export function SurpriseCardView({
         className="pointer-events-none block h-auto w-full object-contain"
       />
 
-      {/* Layers 2–4 — message under foil → interactive foil → “Gratte…” */}
+      {/* Layers 2–4 — message under impregnated latex foil */}
       <div
-        className="absolute overflow-hidden rounded-[40%]"
+        className="absolute overflow-visible"
         style={{
           left: `${z.x}%`,
           top: `${z.y}%`,
@@ -299,10 +338,6 @@ export function SurpriseCardView({
               last.current = null;
             }}
           />
-        ) : null}
-
-        {hintOn && interactive ? (
-          <span className="scratch-finger pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2" aria-hidden />
         ) : null}
       </div>
     </div>
