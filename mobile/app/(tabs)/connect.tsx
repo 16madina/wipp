@@ -40,7 +40,7 @@ export default function ConnectScreen() {
     try {
       await ensureDemoSession();
       const code = touchCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      await resolveTouchCode(code);
+      await resolveTouchCode(code, { manual: true });
       const { invite } = await acceptTouchCode(code);
       setTouchMsg(`Connecté avec ${invite.sender.displayName}`);
       setTouchCode('');

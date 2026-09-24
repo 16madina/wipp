@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -67,18 +66,19 @@ export default function TouchShareScreen() {
       setInvite(next);
 
       if (!canAdvertiseBle()) {
-        setHint(
-          Platform.OS === "ios"
-            ? "Sur iOS, le partage BLE (émission) arrive avec le rebuild périphérique — utilise le code / QR (même invitation)."
-            : "Bluetooth natif indisponible — utilise le code ci-dessous (même invitation).",
-        );
+        setHint("Rebuild natif EAS requis pour diffuser en BLE — le code / QR (même invitation) reste disponibles.");
       } else {
         const adv = await startTouchAdvertise(next.code);
         if (!adv.ok) {
           if (adv.reason === "bluetooth_off") setHint("Active le Bluetooth pour utiliser WIPP Touch.");
-          else if (adv.reason === "advertise_failed") {
-            setHint("Émission BLE impossible — le code / QR reste valides pour cette invitation.");
+          else if (adv.reason === "bluetooth_permission") setHint("Autorise le Bluetooth pour WIPP Touch.");
+          else if (adv.reason === "service_uuid_missing_in_adv") {
+            setHint("L’annonce BLE n’inclut pas le service WIPP — fallback code / QR.");
+          } else if (adv.reason === "advertise_failed") {
+            setHint("Émission BLE impossible — le code / QR restent valides pour cette invitation.");
           }
+        } else if (!adv.includesServiceUuid) {
+          setHint("Annonce BLE sans Service UUID détecté — vérifie le build natif.");
         }
       }
 

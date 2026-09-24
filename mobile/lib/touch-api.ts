@@ -50,8 +50,9 @@ export async function cancelTouchShare(id: string) {
   });
 }
 
-export async function resolveTouchCode(code: string) {
-  return authFetch<{ invite: TouchInvite }>(`/touch/code/${encodeURIComponent(code)}`);
+export async function resolveTouchCode(code: string, opts?: { manual?: boolean }) {
+  const q = opts?.manual ? "?source=manual" : "";
+  return authFetch<{ invite: TouchInvite }>(`/touch/code/${encodeURIComponent(code)}${q}`);
 }
 
 export async function acceptTouchCode(code: string) {

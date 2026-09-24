@@ -43,17 +43,26 @@ module.exports = {
     bundleIdentifier: "com.wipp.app",
     buildNumber: "1",
     googleServicesFile: "./GoogleService-Info.plist",
+    associatedDomains: ["applinks:wippapp.com"],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSBluetoothAlwaysUsageDescription:
         "WIPP Touch utilise le Bluetooth pour partager ton WIPP à proximité, sans numéro.",
       NSBluetoothPeripheralUsageDescription:
         "WIPP Touch utilise le Bluetooth pour partager ton WIPP à proximité.",
+      /**
+       * Background modes kept (justified):
+       * - audio: LiveKit / CallKeep call audio
+       * - voip: CallKit / PushKit incoming calls
+       * - remote-notification: Expo push (calls + Touch Accept/Refuse)
+       * - bluetooth-central: B scans WIPP Touch in background
+       * - bluetooth-peripheral: A advertises WIPP Touch (CBPeripheralManager)
+       * Removed: fetch (unused)
+       */
       UIBackgroundModes: [
         "audio",
         "voip",
         "remote-notification",
-        "fetch",
         "bluetooth-central",
         "bluetooth-peripheral",
       ],
@@ -63,6 +72,7 @@ module.exports = {
     package: "com.wipp.app",
     versionCode: 1,
     googleServicesFile: "./google-services.json",
+    // Location intentionally omitted here — plugin adds maxSdkVersion=30 only.
     permissions: [
       "RECEIVE_BOOT_COMPLETED",
       "VIBRATE",
@@ -74,11 +84,22 @@ module.exports = {
       "MANAGE_OWN_CALLS",
       "BLUETOOTH",
       "BLUETOOTH_ADMIN",
-      "BLUETOOTH_SCAN",
       "BLUETOOTH_ADVERTISE",
       "BLUETOOTH_CONNECT",
-      "ACCESS_FINE_LOCATION",
-      "ACCESS_COARSE_LOCATION",
+    ],
+    intentFilters: [
+      {
+        action: "VIEW",
+        autoVerify: true,
+        data: [
+          {
+            scheme: "https",
+            host: "wippapp.com",
+            pathPrefix: "/t/",
+          },
+        ],
+        category: ["BROWSABLE", "DEFAULT"],
+      },
     ],
     adaptiveIcon: {
       backgroundColor: "#0B1220",
@@ -107,6 +128,7 @@ module.exports = {
     "@react-native-firebase/app",
     "@react-native-firebase/auth",
     "./plugins/withWippCallkeep.js",
+    "./plugins/withWippTouchNative.js",
     [
       "react-native-ble-plx",
       {
@@ -114,23 +136,21 @@ module.exports = {
         modes: ["peripheral", "central"],
         bluetoothAlwaysPermission:
           "WIPP Touch utilise le Bluetooth pour partager ton WIPP à proximité, sans numéro.",
+        neverForLocation: true,
       },
     ],
     [
       "expo-build-properties",
       {
         ios: {
-          // RN Firebase v26 résout firebase-ios-sdk via SPM → linkage dynamique requis
           useFrameworks: "dynamic",
         },
         android: {
           permissions: [
             "android.permission.POST_NOTIFICATIONS",
             "android.permission.USE_FULL_SCREEN_INTENT",
-            "android.permission.BLUETOOTH_SCAN",
             "android.permission.BLUETOOTH_ADVERTISE",
             "android.permission.BLUETOOTH_CONNECT",
-            "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
           ],
         },
@@ -152,6 +172,8 @@ module.exports = {
   extra: {
     wippApiUrl: apiUrl,
     firebaseProjectId: "wipp-61124",
+    /** Default RSSI gate — calibrate on devices (see touch-proximity). */
+    wippTouchRssiThreshold: -52,
     ...(easProjectId
       ? {
           eas: {

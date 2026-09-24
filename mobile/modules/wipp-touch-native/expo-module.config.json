@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["WippTouchNativeModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.wipptouchnative.WippTouchNativeModule"]
+  }
+}

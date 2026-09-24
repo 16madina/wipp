@@ -9,14 +9,26 @@ import { WippHttpError, ensureMessagingReady } from "@/lib/messaging/server";
 /** Fixed BLE service UUID (hex only). Same on iOS + Android. */
 export const WIPP_TOUCH_SERVICE_UUID = "6eeff345-1111-4a2b-9c3d-aabbccddeeff";
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/**
+ * Ephemeral invite code format (BLE + QR + typed share the same token):
+ * - Length: 8
+ * - Alphabet: 32 chars (no I/O/0/1) → 5 bits/char
+ * - Entropy: 40 bits
+ * Brute-force resistance also depends on TTL (90s) + rate limits — not length alone.
+ */
+export const WIPP_TOUCH_CODE_LENGTH = 8;
+export const WIPP_TOUCH_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const WIPP_TOUCH_CODE_ENTROPY_BITS =
+  Math.log2(WIPP_TOUCH_CODE_ALPHABET.length) * WIPP_TOUCH_CODE_LENGTH; // 40
+
+const CODE_ALPHABET = WIPP_TOUCH_CODE_ALPHABET;
 const TTL_MS = 90_000;
 
 function uid(prefix: string) {
   return `${prefix}_${randomBytes(10).toString("hex")}`;
 }
 
-function mintCode(len = 8) {
+function mintCode(len = WIPP_TOUCH_CODE_LENGTH) {
   const bytes = randomBytes(len);
   let out = "";
   for (let i = 0; i < len; i++) out += CODE_ALPHABET[bytes[i]! % CODE_ALPHABET.length];
@@ -130,11 +142,11 @@ export async function createTouchShare(senderId: string): Promise<TouchInviteDto
     where sender_id = ${senderId} and status = 'active'
   `;
 
-  let code = mintCode(8);
+  let code = mintCode();
   for (let i = 0; i < 5; i++) {
     const clash = await sql`select id from wipp_touch_invites where code = ${code} limit 1`;
     if (!clash[0]) break;
-    code = mintCode(8);
+    code = mintCode();
   }
 
   const id = uid("touch");
@@ -174,6 +186,24 @@ export async function cancelTouchShare(senderId: string, inviteId: string): Prom
     `;
   }
   return (await loadInvite(inviteId))!;
+}
+
+/** Public peek — no PII. Used by /t/CODE landing (install / open app). */
+export async function peekTouchCodePublic(code: string): Promise<{
+  valid: boolean;
+  status: string;
+  expiresAt: number | null;
+}> {
+  await ensureMessagingReady();
+  const dto = await loadInvite(code);
+  if (!dto) return { valid: false, status: "not_found", expiresAt: null };
+  if (dto.status === "expired" || Date.now() > dto.expiresAt) {
+    return { valid: false, status: "expired", expiresAt: dto.expiresAt };
+  }
+  if (dto.status !== "active") {
+    return { valid: false, status: dto.status, expiresAt: dto.expiresAt };
+  }
+  return { valid: true, status: "active", expiresAt: dto.expiresAt };
 }
 
 /** Peek invite by short code (for BLE / QR / typed code). Auth required. */

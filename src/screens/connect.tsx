@@ -169,7 +169,7 @@ export function ScannerScreen() {
           displayName: me.displayName,
         });
       }
-      await resolveTouchCode(code);
+      await resolveTouchCode(code, { manual: true });
       const { invite } = await acceptTouchCode(code);
       const r = invite.receiver;
       const sender = invite.sender;

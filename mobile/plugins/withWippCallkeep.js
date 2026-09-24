@@ -12,7 +12,7 @@ function withWippCallkeep(config) {
     modes.add("audio");
     modes.add("voip");
     modes.add("remote-notification");
-    modes.add("fetch");
+    // Do NOT add "fetch" — unused by CallKeep/Touch; wastes background budget.
     plist.UIBackgroundModes = [...modes];
     return cfg;
   });

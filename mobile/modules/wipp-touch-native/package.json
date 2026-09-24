@@ -1,0 +1,14 @@
+{
+  "name": "wipp-touch-native",
+  "version": "1.0.0",
+  "description": "WIPP Touch BLE advertise (iOS CBPeripheralManager + Android) and Android NFC HCE",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {},
+  "keywords": ["expo", "wipp", "ble", "nfc"],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "expo": "*",
+    "react-native": "*"
+  }
+}

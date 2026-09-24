@@ -1,11 +1,18 @@
 /**
- * Passive-side WIPP Touch receiver: BLE scan without opening Touch UI.
- * On hit → resolve invite → local notification Accept / Refuse.
+ * Passive WIPP Touch receiver — BLE scan without opening Touch UI.
+ * One notification per invite, only after proximity gate.
  */
 import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { acceptTouchCode, rejectTouchCode, resolveTouchCode } from "./touch-api";
 import { startTouchScan, stopTouchScan } from "./touch-ble";
+import {
+  clearTouchProximityState,
+  enableTouchCalibration,
+  markTouchNotified,
+  setTouchRssiThreshold,
+} from "./touch-proximity";
 import { getStoredToken } from "./session";
 
 const handled = new Set<string>();
@@ -54,19 +61,22 @@ export async function registerTouchNotificationCategories() {
   ]);
 }
 
-async function onCodeFound(code: string) {
+async function onProximityHit(code: string) {
   if (handled.has(code)) return;
   const token = await getStoredToken();
   if (!token) return;
+  // Mark early to guarantee at most one notif even if resolve is slow.
+  handled.add(code);
+  markTouchNotified(code);
   try {
     const { invite } = await resolveTouchCode(code);
-    handled.add(code);
     await presentTouchInviteNotification({
       code: invite.code,
       fromName: invite.sender.firstName || invite.sender.displayName,
     });
   } catch {
-    /* expired / self / not found — ignore quietly */
+    // expired / self / rate-limited — allow a later different code
+    handled.delete(code);
   }
 }
 
@@ -74,9 +84,19 @@ async function onCodeFound(code: string) {
 export async function startTouchReceiver(): Promise<{ ok: boolean; reason?: string }> {
   const token = await getStoredToken();
   if (!token) return { ok: false, reason: "not_logged_in" };
+  const extra = Constants.expoConfig?.extra as
+    | { wippTouchRssiThreshold?: number; wippTouchCalibration?: boolean }
+    | undefined;
+  if (typeof extra?.wippTouchRssiThreshold === "number") {
+    setTouchRssiThreshold(extra.wippTouchRssiThreshold);
+  }
+  if (extra?.wippTouchCalibration || process.env.EXPO_PUBLIC_WIPP_TOUCH_CALIBRATION === "1") {
+    enableTouchCalibration(true);
+  }
   await registerTouchNotificationCategories();
+  clearTouchProximityState();
   return startTouchScan((hit) => {
-    void onCodeFound(hit.code);
+    void onProximityHit(hit.code);
   });
 }
 

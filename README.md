@@ -66,8 +66,10 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
    - **Rebuild EAS natif** requis pour CallKit (iOS) / ConnectionService (Android) — le JS OTA ne suffit pas  
    - Comptes démo serveur : `@deena` / `@lea` / `@samira` (mdp `wipp-demo`)
 8. **WIPP Touch** — invitation éphémère unique pour BLE + QR + code  
-   - `POST /api/wipp/touch/share` → token 8 car. / TTL 90s (pas de PII)  
-   - B détecte en BLE **sans** ouvrir Touch → notif Accepter/Refuser  
-   - Fallback QR/code = **même** invitation  
-   - **Rebuild EAS** requis pour BLE (`react-native-ble-plx` + `react-native-ble-advertiser`)  
-   - Migration : `migrations/0007_wipp_touch.sql`
+   - Code : **8** caractères, alphabet 32 (sans I/O/0/1) → **40 bits** ; TTL 90 s ; rate limit create/resolve/accept/manual  
+   - `POST /touch/share` · `GET /touch/code/:code` · `GET /touch/peek/:code` (public, sans PII)  
+   - Deep link : `https://wippapp.com/t/CODE` (Universal Links / App Links + page store)  
+   - Module natif `wipp-touch-native` : iOS `CBPeripheralManager`, Android `addServiceUuid`  
+   - RSSI configurable + mode calibration (`EXPO_PUBLIC_WIPP_TOUCH_CALIBRATION=1`)  
+   - NFC : **non implémenté** (étude `docs/WIPP_TOUCH_NFC.md`)  
+   - **Rebuild EAS** requis · matrice : `docs/WIPP_TOUCH_TEST_MATRIX.md`
