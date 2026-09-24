@@ -58,8 +58,8 @@ export const SURPRISE_CARD_CATALOG: SurpriseCardDef[] = [
     card_name_en: "WIPP Love",
     asset_url: "/fx/surprise/cards/wipp-amour.jpg",
     scratch_zone: { x: 36, y: 23, w: 52, h: 48 },
-    scratch_material: "love",
-    scratch_color: "#e7a0b0",
+    scratch_material: "gold",
+    scratch_color: "#e7c56a",
   },
   {
     card_id: "wipp_voyage",
@@ -76,8 +76,8 @@ export const SURPRISE_CARD_CATALOG: SurpriseCardDef[] = [
     card_name_en: "WIPP Party",
     asset_url: "/fx/surprise/cards/wipp-fete.jpg",
     scratch_zone: { x: 26, y: 29, w: 58, h: 44 },
-    scratch_material: "birthday",
-    scratch_color: "#f0d56a",
+    scratch_material: "gold",
+    scratch_color: "#e7c56a",
   },
   {
     card_id: "wipp_marbre",
