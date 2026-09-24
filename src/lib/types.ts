@@ -266,6 +266,8 @@ export type Message = {
   stickerId?: string;
   /** Foil design for a scratch surprise. The secret itself stays in `text`. */
   scratchDesign?: "gold" | "love" | "birthday" | "fun" | "secret" | "heart" | "spark" | "crown" | "duo";
+  /** Official card catalog id (e.g. wipp_gold). When set, asset + scratch_zone are used. */
+  scratchCardId?: string;
   revealedAt?: number;
   effectId?: string;
   listingId?: string;

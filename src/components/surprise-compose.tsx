@@ -7,35 +7,31 @@ import {
   Smile,
   Wand2,
 } from "lucide-react";
-import type { ScratchDesign } from "@/components/scratch-card";
-import { ScratchCard } from "@/components/scratch-card";
-import { CardPickerDrawer, SURPRISE_CARDS } from "@/components/card-picker-drawer";
+import { CardPickerDrawer } from "@/components/card-picker-drawer";
+import { SurpriseCardView } from "@/components/surprise-card-view";
+import { DEFAULT_SURPRISE_CARD_ID, surpriseCardById } from "@/lib/surprise-cards";
 import { useT } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const MAX = 200;
 
-const PREVIEW_BY_DESIGN: Partial<Record<ScratchDesign, string>> = Object.fromEntries(
-  SURPRISE_CARDS.map((c) => [c.design, c.src]),
-) as Partial<Record<ScratchDesign, string>>;
-
 export function SurpriseCompose({
   text,
-  design,
+  cardId = DEFAULT_SURPRISE_CARD_ID,
   animationLabel,
   onBack,
   onText,
-  onDesign,
+  onCardId,
   onAnimation,
   onClearAnimation,
   onSend,
 }: {
   text: string;
-  design: ScratchDesign;
+  cardId?: string;
   animationLabel?: string | null;
   onBack: () => void;
   onText: (v: string) => void;
-  onDesign: (d: ScratchDesign) => void;
+  onCardId: (id: string) => void;
   onAnimation: () => void;
   onClearAnimation?: () => void;
   onSend: () => void;
@@ -43,9 +39,9 @@ export function SurpriseCompose({
   const t = useT();
   const [live, setLive] = useState(true);
   const [pickCard, setPickCard] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0);
+  const [scratchKey, setScratchKey] = useState(0);
 
-  const previewSrc = PREVIEW_BY_DESIGN[design] ?? SURPRISE_CARDS[0]?.src ?? "/fx/surprise/card-love.jpg";
+  const card = surpriseCardById(cardId);
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-[#05070e]">
@@ -162,46 +158,25 @@ export function SurpriseCompose({
         </div>
 
         <div className="mt-3 rounded-[22px] bg-[#0a0c12] p-2.5 ring-1 ring-[#ffd84d]/25">
-          {live ? (
-            <div className="relative">
-              <img
-                src={previewSrc}
-                alt=""
-                draggable={false}
-                decoding="async"
-                className="block h-auto w-full rounded-[16px] object-contain"
-              />
-              {text.trim() ? (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <p
-                    className="max-w-[40%] -translate-y-[6%] rotate-[-4deg] text-center font-serif text-[14px] font-bold italic leading-snug text-[#1a1208]"
-                    style={{ textShadow: "0 1px 0 rgb(255 255 255 / 0.25)" }}
-                  >
-                    {text.trim().slice(0, 80)}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center px-3 py-4">
-              <ScratchCard
-                key={`${previewKey}-${design}`}
-                text={text.trim() || t("scratchHere")}
-                design={design}
-                wait={t("scratchBrush")}
+          {card ? (
+            <>
+              <SurpriseCardView
+                key={`${card.card_id}-${scratchKey}`}
+                card={card}
+                text={text}
                 hint={t("scratchHere")}
-                found={t("scratchFound")}
-                replayLabel={t("scratchReplay")}
+                resetKey={scratchKey}
+                interactive
               />
               <button
                 type="button"
-                className="mt-3 text-[12px] font-medium text-white/45"
-                onClick={() => setPreviewKey((n) => n + 1)}
+                className="mt-3 w-full text-center text-[12px] font-medium text-white/45"
+                onClick={() => setScratchKey((n) => n + 1)}
               >
                 {t("scratchReset")}
               </button>
-            </div>
-          )}
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -219,11 +194,11 @@ export function SurpriseCompose({
 
       {pickCard ? (
         <CardPickerDrawer
-          selected={design}
+          selectedId={cardId}
           onClose={() => setPickCard(false)}
-          onPick={(card) => {
-            onDesign(card.design);
-            setPreviewKey((n) => n + 1);
+          onPick={(picked) => {
+            onCardId(picked.card_id);
+            setScratchKey((n) => n + 1);
             setPickCard(false);
             setLive(true);
           }}

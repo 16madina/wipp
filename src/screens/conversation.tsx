@@ -31,6 +31,7 @@ import { SmartImg } from "@/components/smart-img";
 import { StoryMediaGrid, readImageFile, readVideoFile, type StoryMediaPick } from "@/components/gallery";
 import { BlockSheet, ReportSheet, SafetyRow } from "@/components/safety";
 import { ScratchCard, type ScratchDesign } from "@/components/scratch-card";
+import { SurpriseCardView } from "@/components/surprise-card-view";
 import { AmourFx, EffectStudio, amourLabel, amourSrc } from "@/components/fx-amour";
 import { ArView, prepareAr } from "@/components/ar-view";
 import { NightFx, nightLabel, nightSrc } from "@/components/fx-night";
@@ -39,6 +40,7 @@ import { DayFx, dayLabel, daySrc } from "@/components/fx-day";
 import { BirthdayFx, artSrc, birthdayLabel } from "@/components/fx-birthday";
 import { SurpriseHub } from "@/components/surprise-hub";
 import { SurpriseCompose } from "@/components/surprise-compose";
+import { DEFAULT_SURPRISE_CARD_ID, surpriseCardById } from "@/lib/surprise-cards";
 
 function sceneSrc(id: string) {
   if (id.startsWith("love_")) return amourSrc(id);
@@ -105,6 +107,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const [celebrate, setCelebrate] = useState<string | null>(null);
   const [scratchText, setScratchText] = useState("");
   const [scratchDesign, setScratchDesign] = useState<ScratchDesign>("gold");
+  const [scratchCardId, setScratchCardId] = useState(DEFAULT_SURPRISE_CARD_ID);
   const [scratchTry, setScratchTry] = useState(0);
   const [pickPhoto, setPickPhoto] = useState(false);
   const [galleryKind, setGalleryKind] = useState<"image" | "video">("image");
@@ -591,30 +594,62 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                           />
                         ) : null}
                         {m.type === "scratch" ? (
-                          <ScratchCard
-                            text={m.text || "···"}
-                            design={m.scratchDesign}
-                            revealed={Boolean(m.revealedAt)}
-                            time={formatClock(m.createdAt)}
-                            wait={t("scratchBrush")}
-                            hint={t("scratchRub")}
-                            found={t("scratchFound")}
-                            replayLabel={t("scratchReplay")}
-                            onReveal={() => {
-                              markScratch(chatId, m.id);
-                              if (isPoster(m.effectId)) {
-                                seenFx.add(m.id);
-                                window.setTimeout(() => setFxPlay(m.effectId!), 200);
-                                return;
-                              }
-                              if (m.effectId) {
-                                seenFx.add(m.id);
-                                setFxPlay(m.effectId);
-                              }
-                              setCelebrate(m.text || "");
-                              window.setTimeout(() => setCelebrate(null), 2600);
-                            }}
-                          />
+                          (() => {
+                            const card = surpriseCardById(m.scratchCardId);
+                            if (card && m.scratchCardId) {
+                              return (
+                                <div className="w-[min(100%,280px)]">
+                                  <SurpriseCardView
+                                    card={card}
+                                    text={m.text || "···"}
+                                    hint={t("scratchRub")}
+                                    revealed={Boolean(m.revealedAt)}
+                                    interactive={!m.revealedAt}
+                                    onReveal={() => {
+                                      markScratch(chatId, m.id);
+                                      if (isPoster(m.effectId)) {
+                                        seenFx.add(m.id);
+                                        window.setTimeout(() => setFxPlay(m.effectId!), 200);
+                                        return;
+                                      }
+                                      if (m.effectId) {
+                                        seenFx.add(m.id);
+                                        setFxPlay(m.effectId);
+                                      }
+                                      setCelebrate(m.text || "");
+                                      window.setTimeout(() => setCelebrate(null), 2600);
+                                    }}
+                                  />
+                                </div>
+                              );
+                            }
+                            return (
+                              <ScratchCard
+                                text={m.text || "···"}
+                                design={m.scratchDesign}
+                                revealed={Boolean(m.revealedAt)}
+                                time={formatClock(m.createdAt)}
+                                wait={t("scratchBrush")}
+                                hint={t("scratchRub")}
+                                found={t("scratchFound")}
+                                replayLabel={t("scratchReplay")}
+                                onReveal={() => {
+                                  markScratch(chatId, m.id);
+                                  if (isPoster(m.effectId)) {
+                                    seenFx.add(m.id);
+                                    window.setTimeout(() => setFxPlay(m.effectId!), 200);
+                                    return;
+                                  }
+                                  if (m.effectId) {
+                                    seenFx.add(m.id);
+                                    setFxPlay(m.effectId);
+                                  }
+                                  setCelebrate(m.text || "");
+                                  window.setTimeout(() => setCelebrate(null), 2600);
+                                }}
+                              />
+                            );
+                          })()
                         ) : null}
                         {m.type === "scratch" && m.effectId ? (
                           <span
@@ -1118,7 +1153,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           onScratch={() => {
             setSurprise(false);
             setScratchText("");
-            setScratchDesign("love");
+            setScratchCardId(DEFAULT_SURPRISE_CARD_ID);
+            setScratchDesign("gold");
             setScratchTry(0);
             setScratchConfirm(false);
             setDraftFx(null);
@@ -1127,7 +1163,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           onScratchCard={() => {
             setSurprise(false);
             setScratchText("");
-            setScratchDesign("love");
+            setScratchCardId(DEFAULT_SURPRISE_CARD_ID);
+            setScratchDesign("gold");
             setScratchTry(0);
             setScratchConfirm(false);
             setDraftFx(null);
@@ -1138,7 +1175,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       {scratchOpen ? (
         <SurpriseCompose
           text={scratchText}
-          design={scratchDesign}
+          cardId={scratchCardId}
           animationLabel={
             draftFx
               ? draftFx.startsWith("birthday_")
@@ -1156,8 +1193,10 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             setSurprise(true);
           }}
           onText={setScratchText}
-          onDesign={(d) => {
-            setScratchDesign(d);
+          onCardId={(id) => {
+            setScratchCardId(id);
+            const card = surpriseCardById(id);
+            if (card) setScratchDesign(card.scratch_material);
             setScratchTry((n) => n + 1);
           }}
           onAnimation={() => setFxOpen("cats")}
@@ -1222,17 +1261,37 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           <StatusBar />
           <Header title={<span className="font-bold">{t("scratchPreviewTitle")}</span>} onBack={() => setScratchConfirm(false)} />
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <ScratchCard
-              text={scratchText || "···"}
-              design={scratchDesign}
-              wait={t("scratchBrush")}
-              hint={t("scratchRub")}
-              found={t("scratchFound")}
-              replayLabel={t("scratchReplay")}
-              onReveal={() => {
-                if (draftFx) setFxPlay(draftFx);
-              }}
-            />
+            {(() => {
+              const card = surpriseCardById(scratchCardId);
+              if (card) {
+                return (
+                  <div className="w-full max-w-[340px]">
+                    <SurpriseCardView
+                      card={card}
+                      text={scratchText || "···"}
+                      hint={t("scratchRub")}
+                      interactive
+                      onReveal={() => {
+                        if (draftFx) setFxPlay(draftFx);
+                      }}
+                    />
+                  </div>
+                );
+              }
+              return (
+                <ScratchCard
+                  text={scratchText || "···"}
+                  design={scratchDesign}
+                  wait={t("scratchBrush")}
+                  hint={t("scratchRub")}
+                  found={t("scratchFound")}
+                  replayLabel={t("scratchReplay")}
+                  onReveal={() => {
+                    if (draftFx) setFxPlay(draftFx);
+                  }}
+                />
+              );
+            })()}
             <p className="mt-5 text-[18px] font-bold">{t("scratchPerfect")}</p>
             <p className="mt-1 max-w-[260px] text-[13px] leading-snug text-muted">
               {draftFx ? (lang === "fr" ? "Gratte pour voir l’animation que l’autre va recevoir." : "Scratch to preview the animation they will get.") : t("scratchHidden")}
@@ -1246,7 +1305,13 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 const secret = scratchText.trim();
                 if (!secret) return;
                 haptic("send");
-                sendMessage(chatId, { type: "scratch", text: secret, scratchDesign, effectId: draftFx || undefined });
+                sendMessage(chatId, {
+                  type: "scratch",
+                  text: secret,
+                  scratchDesign,
+                  scratchCardId,
+                  effectId: draftFx || undefined,
+                });
                 setScratchText("");
                 setDraftFx(null);
                 setScratchConfirm(false);

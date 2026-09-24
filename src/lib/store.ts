@@ -678,6 +678,7 @@ export const useWgoStore = create<WgoState>()(
           viewOnce: data.viewOnce || undefined,
           stickerId: data.stickerId,
           scratchDesign: data.scratchDesign,
+          scratchCardId: data.scratchCardId,
           effectId: data.effectId,
           revealedAt: data.revealedAt,
           listingId: data.listingId,

@@ -1,36 +1,17 @@
 import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { ScratchDesign } from "@/components/scratch-card";
+import { SURPRISE_CARD_CATALOG, type SurpriseCardDef } from "@/lib/surprise-cards";
 import { useT, useWgoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-export type CardOption = {
-  id: ScratchDesign | string;
-  label: string;
-  labelEn: string;
-  src: string;
-  design: ScratchDesign;
-};
-
-/** Catalog used by « Choisir la carte ». New images go in /public/fx/surprise/cards/. */
-export const SURPRISE_CARDS: CardOption[] = [
-  {
-    id: "love",
-    label: "Amour",
-    labelEn: "Love",
-    src: "/fx/surprise/card-love.jpg",
-    design: "love",
-  },
-];
-
 export function CardPickerDrawer({
-  selected,
+  selectedId,
   onClose,
   onPick,
 }: {
-  selected: ScratchDesign;
+  selectedId: string;
   onClose: () => void;
-  onPick: (card: CardOption) => void;
+  onPick: (card: SurpriseCardDef) => void;
 }) {
   const t = useT();
   const lang = useWgoStore((s) => s.language);
@@ -38,12 +19,12 @@ export function CardPickerDrawer({
 
   const cards = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return SURPRISE_CARDS;
-    return SURPRISE_CARDS.filter(
+    if (!query) return SURPRISE_CARD_CATALOG;
+    return SURPRISE_CARD_CATALOG.filter(
       (c) =>
-        c.label.toLowerCase().includes(query) ||
-        c.labelEn.toLowerCase().includes(query) ||
-        c.id.toLowerCase().includes(query),
+        c.card_name.toLowerCase().includes(query) ||
+        c.card_name_en.toLowerCase().includes(query) ||
+        c.card_id.toLowerCase().includes(query),
     );
   }, [q]);
 
@@ -85,10 +66,10 @@ export function CardPickerDrawer({
           ) : (
             <div className="grid grid-cols-1 gap-3">
               {cards.map((card) => {
-                const on = selected === card.design;
+                const on = selectedId === card.card_id;
                 return (
                   <button
-                    key={card.id}
+                    key={card.card_id}
                     type="button"
                     className={cn(
                       "press overflow-hidden rounded-[18px] text-left ring-1 transition",
@@ -97,7 +78,7 @@ export function CardPickerDrawer({
                     onClick={() => onPick(card)}
                   >
                     <img
-                      src={card.src}
+                      src={card.asset_url}
                       alt=""
                       draggable={false}
                       decoding="async"
@@ -105,7 +86,7 @@ export function CardPickerDrawer({
                     />
                     <div className="flex items-center justify-between gap-2 bg-[#0c1018] px-3 py-2.5">
                       <span className="text-[14px] font-semibold text-white">
-                        {lang === "fr" ? card.label : card.labelEn}
+                        {lang === "fr" ? card.card_name : card.card_name_en}
                       </span>
                       {on ? (
                         <span className="rounded-full bg-[#ffd84d] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#0b1220]">
