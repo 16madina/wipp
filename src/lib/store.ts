@@ -237,6 +237,7 @@ type WgoState = ReturnType<typeof fresh> & {
     type: "text" | "image" | "video";
     text?: string;
     bg?: string;
+    audioUrl?: string;
     imageUrl?: string;
     videoUrl?: string;
     durationMs?: number;
@@ -673,6 +674,7 @@ export const useWgoStore = create<WgoState>()(
           status: "sending",
           reactions: [],
           duration: data.duration,
+          audioUrl: data.audioUrl,
           imageUrl: data.imageUrl,
           videoUrl: data.videoUrl,
           viewOnce: data.viewOnce || undefined,

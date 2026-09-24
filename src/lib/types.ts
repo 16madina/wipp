@@ -259,6 +259,8 @@ export type Message = {
   status: "sending" | "sent" | "delivered" | "read" | "failed";
   reactions: { userId: string; emoji: string }[];
   duration?: number;
+  /** Local or remote audio blob URL for voice notes. */
+  audioUrl?: string;
   imageUrl?: string;
   videoUrl?: string;
   viewOnce?: boolean;

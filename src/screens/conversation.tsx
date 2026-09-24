@@ -11,7 +11,9 @@ import {
   MapPin,
   Mic,
   MoreHorizontal,
+  Pause,
   Phone,
+  Play,
   Plus,
   Search,
   Send,
@@ -59,6 +61,7 @@ import { haptic } from "@/lib/haptics";
 import { SHOP_CAT_KEYS } from "@/lib/i18n";
 import { isEmojiSticker } from "@/lib/emoji";
 import { isStickerId, stickerById, stickerLabel, stickersInPack, WIPP_STICKERS } from "@/lib/stickers";
+import { createVoiceRecorder, type VoiceRecorder } from "@/lib/voice-recorder";
 import { isChatSealed, useT, useWgoStore } from "@/lib/store";
 import { DISAPPEAR_24H, DISAPPEAR_7D } from "@/lib/types";
 import type { Message } from "@/lib/types";
@@ -69,6 +72,95 @@ const EMPTY_MSGS: Message[] = [];
 const seenFx = new Set<string>();
 
 type StickerTab = "recent" | "emoji" | "expressions" | "love" | "fun" | "famille" | "scene" | "wipp" | "gif";
+
+type VoicePhase = "recording" | "paused" | "preview";
+
+type VoiceUi = {
+  phase: VoicePhase;
+  elapsed: number;
+  previewUrl?: string;
+  durationSec?: number;
+  micDenied?: boolean;
+};
+
+function VoicePlayButton({
+  url,
+  duration,
+  mine,
+}: {
+  url?: string;
+  duration?: number;
+  mine?: boolean;
+}) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
+    };
+  }, [url]);
+
+  async function toggle() {
+    if (!url) return;
+    if (!audioRef.current) {
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.addEventListener("ended", () => {
+        setPlaying(false);
+        setProgress(0);
+      });
+      audio.addEventListener("timeupdate", () => {
+        if (!audio.duration) return;
+        setProgress(audio.currentTime / audio.duration);
+      });
+    }
+    const audio = audioRef.current;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+      return;
+    }
+    try {
+      await audio.play();
+      setPlaying(true);
+    } catch {
+      setPlaying(false);
+    }
+  }
+
+  return (
+    <div className="flex min-w-[160px] items-center gap-2">
+      <button
+        type="button"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg"
+        aria-label={playing ? "Pause" : "Play"}
+        onClick={(e) => {
+          e.stopPropagation();
+          void toggle();
+        }}
+        disabled={!url}
+      >
+        {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5 translate-x-px" />}
+      </button>
+      <span className="relative flex h-5 flex-1 items-end gap-0.5 overflow-hidden">
+        {Array.from({ length: 16 }).map((_, b) => (
+          <span
+            key={b}
+            className={cn("w-0.5 rounded-full", mine ? "bg-paper/80" : "bg-fg/50")}
+            style={{
+              height: 6 + ((b * 7) % 14),
+              opacity: progress > 0 && b / 16 <= progress ? 1 : 0.55,
+            }}
+          />
+        ))}
+      </span>
+      <span className="text-[12px] tabular-nums opacity-80">{formatDuration(duration ?? 0)}</span>
+    </div>
+  );
+}
 
 export function ConversationScreen({ chatId }: { chatId: string }) {
   const t = useT();
@@ -97,8 +189,12 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const burnViewOnce = useWgoStore((s) => s.burnViewOnce);
   const recentStickerIds = useWgoStore((s) => s.recentStickerIds ?? []);
   const [text, setText] = useState("");
-  const [rec, setRec] = useState<null | { t0: number; locked: boolean }>(null);
-  const [elapsed, setElapsed] = useState(0);
+  const [voice, setVoice] = useState<VoiceUi | null>(null);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const voiceRec = useRef<VoiceRecorder | null>(null);
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
+  const recordStartedAt = useRef(0);
+  const pausedAccumMs = useRef(0);
   const [active, setActive] = useState<Message | null>(null);
   const [attach, setAttach] = useState(false);
   const [surprise, setSurprise] = useState(false);
@@ -161,10 +257,22 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   }, [messages.length, typing]);
 
   useEffect(() => {
-    if (!rec) return;
-    const id = window.setInterval(() => setElapsed((Date.now() - rec.t0) / 1000), 200);
+    if (!voice || voice.phase === "preview") return;
+    const id = window.setInterval(() => {
+      const live = voice.phase === "paused" ? 0 : Date.now() - recordStartedAt.current;
+      setVoice((v) => (v ? { ...v, elapsed: (pausedAccumMs.current + live) / 1000 } : v));
+    }, 200);
     return () => window.clearInterval(id);
-  }, [rec]);
+  }, [voice?.phase]);
+
+  useEffect(() => {
+    return () => {
+      voiceRec.current?.cancel();
+      previewAudio.current?.pause();
+      if (voice?.previewUrl) URL.revokeObjectURL(voice.previewUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let timer = 0;
@@ -220,6 +328,136 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             : `${t("shopContext")} · ${t(SHOP_CAT_KEYS[shop.category])}`
           : formatLastSeen(peer?.lastSeen, Boolean(peer?.online), lang);
 
+  async function startVoice() {
+    haptic("tap");
+    voiceRec.current?.cancel();
+    if (voice?.previewUrl) URL.revokeObjectURL(voice.previewUrl);
+    previewAudio.current?.pause();
+    previewAudio.current = null;
+    const rec = createVoiceRecorder();
+    voiceRec.current = rec;
+    pausedAccumMs.current = 0;
+    recordStartedAt.current = Date.now();
+    setVoice({ phase: "recording", elapsed: 0 });
+    try {
+      await rec.start();
+      // If start fell back silently, still mark UI — micDenied hint when no MediaRecorder stream
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setVoice((v) => (v ? { ...v, micDenied: true } : v));
+      }
+    } catch {
+      setVoice((v) => (v ? { ...v, micDenied: true } : v));
+    }
+  }
+
+  function pauseVoice() {
+    const rec = voiceRec.current;
+    if (!rec || !voice || voice.phase !== "recording") return;
+    rec.pause();
+    pausedAccumMs.current += Date.now() - recordStartedAt.current;
+    setVoice({ ...voice, phase: "paused", elapsed: pausedAccumMs.current / 1000 });
+    haptic("tap");
+  }
+
+  function resumeVoice() {
+    const rec = voiceRec.current;
+    if (!rec || !voice || voice.phase !== "paused") return;
+    rec.resume();
+    recordStartedAt.current = Date.now();
+    setVoice({ ...voice, phase: "recording" });
+    haptic("tap");
+  }
+
+  async function openVoicePreview() {
+    const rec = voiceRec.current;
+    if (!rec || !voice) return;
+    if (voice.phase === "recording") {
+      pausedAccumMs.current += Date.now() - recordStartedAt.current;
+    }
+    const result = await rec.stop();
+    voiceRec.current = null;
+    if (!result) {
+      setVoice(null);
+      return;
+    }
+    setVoice({
+      phase: "preview",
+      elapsed: result.durationSec,
+      previewUrl: result.url,
+      durationSec: result.durationSec,
+      micDenied: voice.micDenied,
+    });
+    setPreviewPlaying(false);
+    previewAudio.current?.pause();
+    previewAudio.current = null;
+    haptic("tap");
+  }
+
+  function togglePreviewPlay() {
+    if (!voice?.previewUrl) return;
+    if (!previewAudio.current) {
+      const audio = new Audio(voice.previewUrl);
+      previewAudio.current = audio;
+      audio.addEventListener("ended", () => setPreviewPlaying(false));
+      audio.addEventListener("pause", () => setPreviewPlaying(false));
+      audio.addEventListener("play", () => setPreviewPlaying(true));
+    }
+    const audio = previewAudio.current;
+    if (!audio.paused) {
+      audio.pause();
+      setPreviewPlaying(false);
+    } else {
+      void audio.play().then(() => setPreviewPlaying(true)).catch(() => setPreviewPlaying(false));
+    }
+    haptic("tap");
+  }
+
+  function cancelVoice() {
+    voiceRec.current?.cancel();
+    voiceRec.current = null;
+    previewAudio.current?.pause();
+    previewAudio.current = null;
+    if (voice?.previewUrl) URL.revokeObjectURL(voice.previewUrl);
+    setPreviewPlaying(false);
+    setVoice(null);
+    pausedAccumMs.current = 0;
+  }
+
+  function sendVoice() {
+    if (!voice) return;
+    const finish = async () => {
+      let url = voice.previewUrl;
+      let duration = voice.durationSec ?? Math.max(1, Math.round(voice.elapsed));
+      if (voice.phase !== "preview") {
+        const rec = voiceRec.current;
+        if (rec) {
+          if (voice.phase === "recording") {
+            pausedAccumMs.current += Date.now() - recordStartedAt.current;
+          }
+          const result = await rec.stop();
+          voiceRec.current = null;
+          if (result) {
+            url = result.url;
+            duration = result.durationSec;
+          }
+        }
+      }
+      haptic("send");
+      sendMessage(chatId, {
+        type: "voice",
+        duration,
+        audioUrl: url,
+        text: t("voice"),
+      });
+      previewAudio.current?.pause();
+      previewAudio.current = null;
+      setPreviewPlaying(false);
+      setVoice(null);
+      pausedAccumMs.current = 0;
+    };
+    void finish();
+  }
+
   function send() {
     const value = text.trim();
     if (!value) return;
@@ -227,17 +465,6 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     sendMessage(chatId, { text: value });
     setText("");
     setDraftFx(null);
-  }
-
-  function finishVoice(cancel = false) {
-    if (!rec) return;
-    const dur = Math.max(1, Math.round((Date.now() - rec.t0) / 1000));
-    setRec(null);
-    setElapsed(0);
-    if (!cancel) {
-      haptic("send");
-      sendMessage(chatId, { type: "voice", duration: dur, text: t("voice") });
-    }
   }
 
   function sendSticker(id: string, label: string) {
@@ -690,23 +917,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                           </span>
                         ) : null}
                         {m.type === "voice" ? (
-                          <div className="flex items-center gap-2">
-                            <span className="flex size-8 items-center justify-center rounded-full bg-accent text-accent-fg">
-                              <span className="ml-0.5 text-[11px] font-semibold">▶</span>
-                            </span>
-                            <span className="flex h-5 items-end gap-0.5">
-                              {Array.from({ length: 16 }).map((_, b) => (
-                                <span
-                                  key={b}
-                                  className={cn("w-0.5 rounded-full", mine ? "bg-paper/80" : "bg-fg/50")}
-                                  style={{ height: 6 + ((b * 7) % 14) }}
-                                />
-                              ))}
-                            </span>
-                            <span className="text-[12px] tabular-nums opacity-80">
-                              {formatDuration(m.duration ?? 0)}
-                            </span>
-                          </div>
+                          <VoicePlayButton url={m.audioUrl} duration={m.duration} mine={mine} />
                         ) : m.type === "sticker" || m.type === "image" || m.type === "video" || m.type === "scratch" || m.viewOnce ? null : m.encFailed ? (
                           <p className={cn("flex items-center gap-1.5 text-[13px] italic", mine ? "text-paper/70" : "text-muted")}>
                             <Lock className="size-3.5 shrink-0" />
@@ -761,21 +972,109 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               </div>
             ) : null}
           </div>
-          {rec ? (
-            <div className="glass flex items-center gap-3 px-4 py-3">
-              <button type="button" className="text-[13px] text-danger" onClick={() => finishVoice(true)}>
-                {t("slideCancel")}
-              </button>
-              <span className="h-2 flex-1 rounded-full bg-danger/40" />
-              <span className="text-[13px] tabular-nums">{formatDuration(elapsed)}</span>
-              <button
-                type="button"
-                className="flex size-12 items-center justify-center rounded-full bg-accent text-accent-fg"
-                aria-label={t("send")}
-                onClick={() => finishVoice(false)}
-              >
-                <Send className="size-5" />
-              </button>
+          {voice ? (
+            <div className="glass flex flex-col gap-2 px-3 py-3">
+              {voice.micDenied ? (
+                <p className="px-1 text-[12px] text-muted">{t("voiceMicDenied")}</p>
+              ) : null}
+              {voice.phase === "preview" ? (
+                <p className="px-1 text-[12px] font-medium text-fg/80">{t("voicePreview")}</p>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="shrink-0 text-[13px] text-danger"
+                  onClick={cancelVoice}
+                >
+                  {t("slideCancel")}
+                </button>
+                {voice.phase === "preview" ? (
+                  <button
+                    type="button"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-fg ring-1 ring-hair"
+                    aria-label={t("voicePreview")}
+                    onClick={togglePreviewPlay}
+                  >
+                    {previewPlaying ? (
+                      <Pause className="size-4" />
+                    ) : (
+                      <Play className="size-4 translate-x-px" />
+                    )}
+                  </button>
+                ) : voice.phase === "paused" ? (
+                  <button
+                    type="button"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-fg ring-1 ring-hair"
+                    aria-label={t("voiceResume")}
+                    onClick={resumeVoice}
+                  >
+                    <Play className="size-4 translate-x-px" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger ring-1 ring-danger/30"
+                    aria-label={t("voicePause")}
+                    onClick={pauseVoice}
+                  >
+                    <Pause className="size-4" />
+                  </button>
+                )}
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span
+                    className={cn(
+                      "size-2 shrink-0 rounded-full",
+                      voice.phase === "recording" ? "animate-pulse bg-danger" : "bg-muted",
+                    )}
+                  />
+                  <span className="relative flex h-5 flex-1 items-end gap-0.5 overflow-hidden">
+                    {Array.from({ length: 20 }).map((_, b) => (
+                      <span
+                        key={b}
+                        className={cn(
+                          "w-0.5 rounded-full bg-accent/70",
+                          voice.phase === "recording" && "animate-pulse",
+                        )}
+                        style={{
+                          height: 5 + ((b * 5 + Math.floor(voice.elapsed * 3)) % 16),
+                          animationDelay: `${b * 40}ms`,
+                        }}
+                      />
+                    ))}
+                  </span>
+                  <span className="shrink-0 text-[13px] tabular-nums">
+                    {formatDuration(voice.durationSec ?? Math.max(0, Math.round(voice.elapsed)))}
+                  </span>
+                </div>
+                {voice.phase === "preview" ? (
+                  <button
+                    type="button"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg"
+                    aria-label={t("send")}
+                    onClick={sendVoice}
+                  >
+                    <Send className="size-5" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-full bg-surface-2 px-3 py-2 text-[13px] font-medium ring-1 ring-hair"
+                      onClick={() => void openVoicePreview()}
+                    >
+                      {t("voiceDone")}
+                    </button>
+                    <button
+                      type="button"
+                      className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg"
+                      aria-label={t("send")}
+                      onClick={sendVoice}
+                    >
+                      <Send className="size-5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ) : (
             <>
@@ -867,7 +1166,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                     type="button"
                     className="press mb-0.5 flex size-9 shrink-0 items-center justify-center text-fg"
                     aria-label={t("voice")}
-                    onPointerDown={() => setRec({ t0: Date.now(), locked: false })}
+                    onClick={() => void startVoice()}
                   >
                     <Mic className="size-5" />
                   </button>
