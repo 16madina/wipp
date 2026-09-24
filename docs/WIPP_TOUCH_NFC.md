@@ -18,3 +18,6 @@
 1. Rebuild EAS Android avec module `wipp-touch-native`.
 2. AASA `applinks:wippapp.com` + `/t/*` (TEAMID à renseigner).
 3. iPhone déverrouillé, NFC ON, WIPP installée ou page store.
+
+## Statut validation physique
+**Expérimental** jusqu’à ce qu’un iPhone affiche de façon reproductible `https://wippapp.com/t/CODE` (voir `WIPP_TOUCH_VALIDATION_PROTOCOL.md`). Pas de simulation CI.

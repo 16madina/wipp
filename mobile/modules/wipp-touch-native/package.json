@@ -4,9 +4,11 @@
   "description": "WIPP Touch BLE advertise (iOS CBPeripheralManager + Android) and Android NFC HCE",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "author": "WIPP",
+  "homepage": "https://wippapp.com",
   "scripts": {},
   "keywords": ["expo", "wipp", "ble", "nfc"],
-  "license": "UNLICENSED",
+  "license": "MIT",
   "peerDependencies": {
     "expo": "*",
     "react-native": "*"

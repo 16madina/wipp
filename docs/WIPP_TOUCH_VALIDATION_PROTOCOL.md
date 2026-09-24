@@ -23,13 +23,16 @@ Logs serveur : Vercel / runtime `[wipp-touch-calib]`.
 
 ## Builds à installer
 
-| Plateforme | Profil EAS | Usage |
-|------------|------------|--------|
-| Android APK | `preview` | A et B Android (BLE + NFC HCE) |
-| iOS device | `preview` | A et B iPhone (BLE ; NFC récepteur) |
+| Plateforme | Profil EAS | Usage | Statut / lien |
+|------------|------------|--------|----------------|
+| Android APK | `preview` | A et B Android (BLE + NFC HCE) | voir `.grok/deploy.json` / dashboard EAS |
+| iOS device | `preview` | A et B iPhone (BLE ; NFC récepteur) | credentials Apple interactives si absentes |
+| iOS simulator | `preview-simulator` | smoke pods / non valide pour RSSI réel | optionnel |
 
 Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.  
 API : `https://wippapp.com`.
+
+**Avant les essais** : installer le **même** build preview calib sur tous les téléphones ; activer Bluetooth (+ NFC pour essais NFC) ; ne pas toucher la config serveur.
 
 ---
 
@@ -125,6 +128,35 @@ Pour chaque direction, tester B dans l’état :
 | 2 | | | | |
 | 3 | | | | |
 
+**Statut prototype** : NFC Android→iPhone = **expérimental jusqu’à confirmation physique** (pas de simulation en CI).
+
+---
+
+## Journal de résultats (à remplir sur appareils)
+
+> Les résultats ci-dessous restent **vides** tant que les builds preview n’ont pas été exécutés sur téléphones réels. Ne pas inventer de RSSI.
+
+### Builds utilisés
+- Android APK : _(lien / build id)_
+- iOS device : _(lien / build id)_
+- Commit : _(sha)_
+
+### Phase 0 — données RSSI
+
+_(coller tableaux Phase 0 remplies)_
+
+### Scénario produit + états B
+
+_(coller fiches d’essai)_
+
+### Multi + anti-FP
+
+_(coller tableaux)_
+
+### NFC
+
+_(succès reproductible / **expérimental**)_
+
 ---
 
 ## Après collecte — réglages recommandés
@@ -135,4 +167,23 @@ Ne toucher `wipp_touch_config` **qu’après** les tableaux Phase 0 :
 - Si 2 appareils légitimes à 5 cm ont écart < 8 dB → baisser `rssiGapDb` (ex. 5) **ou** exiger choc B.
 - Si iOS BG rate la fenêtre 1,5 s → confirmer que `windowAfterIosBgMs: 5000` suffit (logs `detectDelayMs`).
 
-Documenter la reco finale dans ce fichier sous « Réglages retenus ».
+### Réglages retenus (post-calib)
+
+```json
+{
+  "status": "pending_physical_calibration",
+  "frozen_during_collection": {
+    "shockGThreshold": 2.2,
+    "shockMaxDurationMs": 120,
+    "windowBeforeMs": 1500,
+    "windowAfterMs": 1500,
+    "windowAfterIosBgMs": 5000,
+    "rssiMinDbm": -55,
+    "rssiGapDb": 8,
+    "calibrationLog": true
+  },
+  "recommended_after_calib": null
+}
+```
+
+Documenter la reco finale ici une fois les logs `[wipp-touch-calib]` collectés.

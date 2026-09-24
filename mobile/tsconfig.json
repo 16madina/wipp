@@ -5,6 +5,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "wipp-touch-native": [
+        "./modules/wipp-touch-native/src/index.ts"
+      ],
+      "wipp-touch-native/*": [
+        "./modules/wipp-touch-native/*"
       ]
     }
   },
