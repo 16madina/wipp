@@ -1,7 +1,7 @@
 {
   "domain": "wippapp.com",
   "apiUrl": "https://wippapp.com",
-  "vercelUrl": "https://workspace-phi-pied.vercel.app",
+  "vercelUrl": "https://workspace-krzwa4wpy-missdeemindset-9503.vercel.app",
   "vercelProjectName": "workspace",
   "expoOwner": "missdee",
   "expoSlug": "wipp",
@@ -9,8 +9,8 @@
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
   "androidBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/e5fb15bd-254e-485e-9780-33549b87309a",
-  "notes": "Android APK + iOS simulator builds OK. Device iOS n\u00e9cessite Apple credentials. LiveKit apr\u00e8s tests.",
-  "iosBuildNote": "preview-simulator apr\u00e8s fix useFrameworks dynamic (SPM Firebase)",
+  "notes": "Android APK + iOS simulator builds OK. Device iOS nécessite Apple credentials. LiveKit après tests.",
+  "iosBuildNote": "preview-simulator après fix useFrameworks dynamic (SPM Firebase)",
   "iosSimulatorBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/999ee7a3-4719-47d6-9f5e-5644a1839908",
   "androidApkUrl": "https://expo.dev/artifacts/eas/dc7kw1pQ7nw3Fc-sA4PASwYj58n63hXUoqXvivEtduc.apk",
   "iosSimulatorArchiveUrl": "https://expo.dev/artifacts/eas/NSY4leI8YkfRbLrJoPS6nIQyIt7VXYcOVdV1wxSRkAo.tar.gz"
