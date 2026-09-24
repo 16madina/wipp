@@ -94,14 +94,14 @@ export function AmourFx({ id, onDone }: { id: string; onDone: () => void }) {
   if (reduce) return null;
 
   const extras =
-    row.id === "love_hearts" || row.id === "love_rain" ? <Fly />
+    row.id === "love_rain" ? <Fly />
     : row.id === "love_petals" ? <Petals />
     : row.id === "love_balloons" ? <Balloons />
     : row.id === "love_envelope" ? <Envelope />
     : null;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-love" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-visible fx-stage fx-stage-love" aria-hidden>
       <i className="fx-veil fx-veil-love" />
       <i className="bd-cake-halo fx-halo-love" />
       <i className="fx-bloom fx-bloom-love" />

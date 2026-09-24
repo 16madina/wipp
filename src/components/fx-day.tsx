@@ -30,16 +30,16 @@ export function dayLabel(id: string, lang: "fr" | "en") {
 }
 
 const HERO: Record<string, number> = {
-  day_sun: 46,
-  day_coffee: 44,
-  day_sunflowers: 46,
-  day_hummingbird: 46,
-  day_sunrise: 42,
-  day_alarm: 44,
-  day_orange: 46,
-  day_flower_arch: 42,
-  day_cloud_heart: 48,
-  day_bird: 44,
+  day_sun: 42,
+  day_coffee: 40,
+  day_sunflowers: 42,
+  day_hummingbird: 42,
+  day_sunrise: 40,
+  day_alarm: 40,
+  day_orange: 40,
+  day_flower_arch: 40,
+  day_cloud_heart: 44,
+  day_bird: 40,
 };
 
 const FLIES = [
@@ -114,7 +114,7 @@ export function DayFx({ id, onDone }: { id: string; onDone: () => void }) {
   const petal = row.id === "day_sunflowers" || row.id === "day_flower_arch" ? (row.id === "day_flower_arch" ? "dy-petal dy-petal-white" : "dy-petal") : "";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-day" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-visible fx-stage fx-stage-day" aria-hidden>
       <i className="fx-veil fx-veil-day" />
       <i className={`dy-glow dy-glow-${row.id}`} />
       <i className="fx-bloom fx-bloom-warm" />

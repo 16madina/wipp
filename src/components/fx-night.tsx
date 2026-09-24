@@ -58,18 +58,6 @@ const SHOOTS_IMG = [
   { top: 46, size: 15, delay: 2.3, dur: 1.5, rot: 22 },
 ];
 
-const HERO: Record<string, number> = {
-  night_moon: 30,
-  night_sleeping_bear: 36,
-  night_star_cloud: 32,
-  night_lantern: 26,
-  night_window: 34,
-  night_star_jar: 28,
-  night_sleepy_cloud: 34,
-  night_star_balloons: 30,
-  night_galaxy: 38,
-};
-
 export function NightFx({ id, onDone }: { id: string; onDone: () => void }) {
   const row = NIGHT.find((a) => a.id === id);
   const reduce = useWgoStore((s) => s.a11y?.reduceMotion);
@@ -94,7 +82,7 @@ export function NightFx({ id, onDone }: { id: string; onDone: () => void }) {
   const hang = row.id === "night_star_cloud";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-night" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-visible fx-stage fx-stage-night" aria-hidden>
       <i className="fx-veil fx-veil-night" />
       <i className="nt-glow" />
       <i className="fx-bloom fx-bloom-cool" />
@@ -152,14 +140,13 @@ export function NightFx({ id, onDone }: { id: string; onDone: () => void }) {
           ))
         : null}
       {!copies ? (
-        <div className={`bd-cake-stage nt-fit nt-go-${row.id}`}>
+        <div className={`bd-cake-stage nt-go-${row.id}`}>
           <img
             src={nightSrc(row.id)}
             alt=""
             draggable={false}
             decoding="async"
-            className="nt-img fx-hero-img"
-            style={HERO[row.id] ? { maxWidth: `${HERO[row.id]}vw` } : undefined}
+            className="bd-cake-img fx-hero-img"
           />
         </div>
       ) : null}
