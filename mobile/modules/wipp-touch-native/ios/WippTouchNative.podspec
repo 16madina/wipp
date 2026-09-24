@@ -10,16 +10,16 @@ Pod::Spec.new do |s|
   s.license        = package['license']
   s.author         = package['author']
   s.homepage       = package['homepage']
-  s.platforms      = { :ios => '16.4' }
+  s.platforms      = {
+    :ios => '16.4'
+  }
   s.swift_version  = '5.9'
-  s.source         = { :git => 'https://github.com/wippapp/wipp-touch-native.git' }
-  # Required with use_frameworks!:dynamic (Firebase / RNFirebase SPM).
+  s.source         = { git: 'https://github.com/expo/expo.git' }
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
 
-  s.source_files = '**/*.{h,m,mm,swift}'
-  s.frameworks = 'CoreBluetooth'
+  s.source_files = '**/*.{h,m,swift}'
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'SWIFT_COMPILATION_MODE' => 'wholemodule'
