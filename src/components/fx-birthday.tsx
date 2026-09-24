@@ -140,11 +140,13 @@ export function BirthdayFx({ id, onDone }: { id: string; onDone: () => void }) {
   );
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden" aria-hidden>
-      <i className="bd-cake-halo" />
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-bday" aria-hidden>
+      <i className="fx-veil fx-veil-bday" />
+      <i className="bd-cake-halo fx-halo-bday" />
+      <i className="fx-bloom fx-bloom-warm" />
       {burst ? BITS.filter((p) => !p.front).map(bit) : null}
       <div className={`bd-cake-stage bd-go-${row.id}`}>
-        <img src={artSrc(row.id)} alt="" draggable={false} decoding="async" className="bd-cake-img" />
+        <img src={artSrc(row.id)} alt="" draggable={false} decoding="async" className="bd-cake-img fx-hero-img" />
         {row.id === "birthday_cake"
           ? WICKS.map((w) => (
               <i key={w.x} className="bd-wick" style={{ left: w.x, top: w.y, animationDelay: w.d, animationDuration: w.t }} />
@@ -152,6 +154,20 @@ export function BirthdayFx({ id, onDone }: { id: string; onDone: () => void }) {
           : null}
       </div>
       {burst ? BITS.filter((p) => p.front).map(bit) : null}
+      {Array.from({ length: 9 }, (_, i) => (
+        <i
+          key={`s${i}`}
+          className="fx-sparkle fx-sparkle-warm"
+          style={{
+            left: `${8 + ((i * 19) % 84)}%`,
+            top: `${12 + ((i * 29) % 70)}%`,
+            animationDelay: `${0.18 + (i % 5) * 0.2}s`,
+            animationDuration: `${2.4 + (i % 3) * 0.35}s`,
+            width: 4 + (i % 3) * 2,
+            height: 4 + (i % 3) * 2,
+          }}
+        />
+      ))}
     </div>
   );
 }

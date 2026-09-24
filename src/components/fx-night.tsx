@@ -94,8 +94,10 @@ export function NightFx({ id, onDone }: { id: string; onDone: () => void }) {
   const hang = row.id === "night_star_cloud";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-visible" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-night" aria-hidden>
+      <i className="fx-veil fx-veil-night" />
       <i className="nt-glow" />
+      <i className="fx-bloom fx-bloom-cool" />
       {SPARKS.map((p) => (
         <i
           key={p.i}
@@ -150,14 +152,16 @@ export function NightFx({ id, onDone }: { id: string; onDone: () => void }) {
           ))
         : null}
       {!copies ? (
-        <img
-          src={nightSrc(row.id)}
-          alt=""
-          draggable={false}
-          decoding="async"
-          className={`nt-hero nt-hero-${row.id}`}
-          style={{ width: `${HERO[row.id] ?? 36}vw`, animationDuration: `${row.ms}ms` }}
-        />
+        <div className={`bd-cake-stage nt-fit nt-go-${row.id}`}>
+          <img
+            src={nightSrc(row.id)}
+            alt=""
+            draggable={false}
+            decoding="async"
+            className="nt-img fx-hero-img"
+            style={HERO[row.id] ? { maxWidth: `${HERO[row.id]}vw` } : undefined}
+          />
+        </div>
       ) : null}
     </div>
   );

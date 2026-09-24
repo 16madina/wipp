@@ -114,8 +114,10 @@ export function DayFx({ id, onDone }: { id: string; onDone: () => void }) {
   const petal = row.id === "day_sunflowers" || row.id === "day_flower_arch" ? (row.id === "day_flower_arch" ? "dy-petal dy-petal-white" : "dy-petal") : "";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-visible" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-day" aria-hidden>
+      <i className="fx-veil fx-veil-day" />
       <i className={`dy-glow dy-glow-${row.id}`} />
+      <i className="fx-bloom fx-bloom-warm" />
       {row.id === "day_alarm"
         ? [0, 1, 2].map((i) => <i key={i} className="dy-ring" style={{ animationDelay: `${0.35 + i * 0.18}s` }} />)
         : null}
@@ -195,7 +197,7 @@ export function DayFx({ id, onDone }: { id: string; onDone: () => void }) {
           alt=""
           draggable={false}
           decoding="async"
-          className={`dy-hero dy-go-${row.id}`}
+          className={`dy-hero dy-go-${row.id} fx-hero-img`}
           style={{ width: `${HERO[row.id] ?? 36}vw`, animationDuration: `${row.ms}ms` }}
         />
       ) : null}

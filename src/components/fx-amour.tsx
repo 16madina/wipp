@@ -93,12 +93,36 @@ export function AmourFx({ id, onDone }: { id: string; onDone: () => void }) {
 
   if (reduce) return null;
 
+  const extras =
+    row.id === "love_hearts" || row.id === "love_rain" ? <Fly />
+    : row.id === "love_petals" ? <Petals />
+    : row.id === "love_balloons" ? <Balloons />
+    : row.id === "love_envelope" ? <Envelope />
+    : null;
+
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden" aria-hidden>
-      <i className="bd-cake-halo" />
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-love" aria-hidden>
+      <i className="fx-veil fx-veil-love" />
+      <i className="bd-cake-halo fx-halo-love" />
+      <i className="fx-bloom fx-bloom-love" />
+      {Array.from({ length: 12 }, (_, i) => (
+        <i
+          key={i}
+          className="fx-sparkle fx-sparkle-love"
+          style={{
+            left: `${6 + ((i * 17) % 88)}%`,
+            top: `${10 + ((i * 23) % 72)}%`,
+            animationDelay: `${0.12 + (i % 7) * 0.16}s`,
+            animationDuration: `${2.2 + (i % 4) * 0.32}s`,
+            width: 3 + (i % 3) * 2,
+            height: 3 + (i % 3) * 2,
+          }}
+        />
+      ))}
       <div className={`bd-cake-stage bd-go-${row.id}`}>
-        <img src={amourSrc(row.id)} alt="" draggable={false} decoding="async" className="bd-cake-img" />
+        <img src={amourSrc(row.id)} alt="" draggable={false} decoding="async" className="bd-cake-img fx-hero-img" />
       </div>
+      {extras}
     </div>
   );
 }
@@ -106,16 +130,16 @@ export function AmourFx({ id, onDone }: { id: string; onDone: () => void }) {
 function Fly() {
   return (
     <>
-      <span className="fx-beat">♥</span>
-      {Array.from({ length: 11 }, (_, i) => (
+      {Array.from({ length: 14 }, (_, i) => (
         <span
           key={i}
           className="fx-rise"
           style={{
-            left: `${8 + ((i * 19) % 84)}%`,
-            fontSize: 12 + (i % 4) * 6,
-            animationDelay: `${0.35 + i * 0.08}s`,
-            animationDuration: `${1.8 + (i % 3) * 0.3}s`,
+            left: `${5 + ((i * 17) % 90)}%`,
+            fontSize: 11 + (i % 5) * 5,
+            animationDelay: `${0.28 + i * 0.07}s`,
+            animationDuration: `${1.9 + (i % 4) * 0.28}s`,
+            opacity: 0.85,
           }}
         >
           ♥
@@ -128,14 +152,14 @@ function Fly() {
 function Petals() {
   return (
     <>
-      {Array.from({ length: 28 }, (_, i) => (
+      {Array.from({ length: 22 }, (_, i) => (
         <i
           key={i}
           className="fx-petal"
           style={{
-            left: `${(i * 13) % 100}%`,
-            animationDelay: `${(i % 8) * 0.18}s`,
-            animationDuration: `${2.2 + (i % 5) * 0.25}s`,
+            left: `${(i * 11) % 100}%`,
+            animationDelay: `${0.2 + (i % 8) * 0.14}s`,
+            animationDuration: `${2.4 + (i % 5) * 0.22}s`,
             background: i % 3 === 0 ? "#ff4d6d" : i % 3 === 1 ? "#c9184a" : "#ff8fa3",
           }}
         />
@@ -181,11 +205,17 @@ function Draw() {
 
 function Envelope() {
   return (
-    <div className="fx-env">
-      <div className="fx-env-body" />
-      <div className="fx-flap" />
-      {Array.from({ length: 8 }, (_, i) => (
-        <span key={i} className="fx-env-heart" style={{ left: `${30 + (i % 4) * 12}%`, animationDelay: `${0.7 + i * 0.08}s` }}>
+    <div className="fx-env fx-env-overlay">
+      {Array.from({ length: 10 }, (_, i) => (
+        <span
+          key={i}
+          className="fx-env-heart"
+          style={{
+            left: `${22 + (i % 5) * 12}%`,
+            animationDelay: `${0.55 + i * 0.07}s`,
+            fontSize: 12 + (i % 3) * 3,
+          }}
+        >
           ♥
         </span>
       ))}
@@ -194,11 +224,21 @@ function Envelope() {
 }
 
 function Balloons() {
-  const colors = ["#ff2d55", "#ff5a7a", "#ffd84d", "#ff8fab", "#c9184a"];
+  const colors = ["#ff2d55", "#ff5a7a", "#ffd84d", "#ff8fab", "#c9184a", "#ff6b9d"];
   return (
     <>
       {colors.map((c, i) => (
-        <span key={c} className="fx-balloon" style={{ background: c, animationDelay: `${i * 0.05}s`, left: `${28 + i * 9}%` }} />
+        <span
+          key={c}
+          className="fx-balloon"
+          style={{
+            background: c,
+            animationDelay: `${0.15 + i * 0.06}s`,
+            left: `${18 + i * 11}%`,
+            width: 18 + (i % 3) * 4,
+            height: 24 + (i % 3) * 5,
+          }}
+        />
       ))}
     </>
   );
