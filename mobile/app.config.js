@@ -26,9 +26,9 @@ module.exports = {
   icon: "./assets/images/icon.png",
   scheme: "wipp",
   userInterfaceStyle: "dark",
-  runtimeVersion: {
-    policy: "appVersion",
-  },
+  // String form works for managed CNG and avoids bare-workflow policy errors
+  // if a local ios/ folder is accidentally present during upload.
+  runtimeVersion: "1.0.0",
   updates: easProjectId
     ? {
         url: `https://u.expo.dev/${easProjectId}`,

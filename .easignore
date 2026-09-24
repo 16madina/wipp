@@ -3,6 +3,7 @@ node_modules/
 mobile/node_modules/
 .git/
 .vercel/
+**/.vercel/
 .tanstack/
 .grok/
 artifacts/
@@ -19,8 +20,13 @@ docs/
 *.mov
 .env
 .env.*
-package-lock.json
 **/dist/
 **/.expo/
 **/*.log
 **/.DS_Store
+
+# Never upload generated native projects from local prebuild
+mobile/ios/
+mobile/android/
+**/Pods/
+**/build/

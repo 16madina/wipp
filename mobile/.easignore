@@ -5,6 +5,7 @@ dist/
 web-build/
 ios/
 android/
+Pods/
 *.jks
 *.p8
 *.p12
@@ -22,5 +23,12 @@ android/
 ../public/
 ../src/
 ../server/
+../scripts/
+../migrations/
+../docs/
+../.grok/
+../.cursor/
 **/*.mp4
 **/*.mov
+**/*.log
+**/.DS_Store
