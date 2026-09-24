@@ -17,6 +17,7 @@ import { Route as SiteRouteImport } from './routes/site'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as GTokenRouteImport } from './routes/g.$token'
+import { Route as TCodeRouteImport } from './routes/t.$code'
 import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const GTokenRoute = GTokenRouteImport.update({
   path: '/g/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TCodeRoute = TCodeRouteImport.update({
+  id: '/t/$code',
+  path: '/t/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWippSplatRoute = ApiWippSplatRouteImport.update({
   id: '/api/wipp/$',
   path: '/api/wipp/$',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/g/$token': typeof GTokenRoute
+  '/t/$code': typeof TCodeRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/g/$token': typeof GTokenRoute
+  '/t/$code': typeof TCodeRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/g/$token': typeof GTokenRoute
+  '/t/$code': typeof TCodeRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/g/$token'
+    | '/t/$code'
     | '/api/wipp/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/g/$token'
+    | '/t/$code'
     | '/api/wipp/$'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/g/$token'
+    | '/t/$code'
     | '/api/wipp/$'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   GTokenRoute: typeof GTokenRoute
+  TCodeRoute: typeof TCodeRoute
   ApiWippSplatRoute: typeof ApiWippSplatRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/t/$code': {
+      id: '/t/$code'
+      path: '/t/$code'
+      fullPath: '/t/$code'
+      preLoaderRoute: typeof TCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/wipp/$': {
       id: '/api/wipp/$'
       path: '/api/wipp/$'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   GTokenRoute: GTokenRoute,
+  TCodeRoute: TCodeRoute,
   ApiWippSplatRoute: ApiWippSplatRoute,
 }
 export const routeTree = rootRouteImport
