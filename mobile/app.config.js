@@ -125,7 +125,15 @@ module.exports = {
         mode: "production",
       },
     ],
-    "@react-native-firebase/app",
+    [
+      "@react-native-firebase/app",
+      {
+        // CocoaPods Firebase (not SPM) so we can use static frameworks with
+        // the local WippTouchNative Expo module. SPM requires dynamic linkage,
+        // which conflicts with custom static Expo modules under precompiled RN.
+        ios: { disableSPM: true },
+      },
+    ],
     "@react-native-firebase/auth",
     "./plugins/withWippCallkeep.js",
     "./plugins/withWippTouchNative.js",
@@ -143,7 +151,12 @@ module.exports = {
       "expo-build-properties",
       {
         ios: {
-          useFrameworks: "dynamic",
+          useFrameworks: "static",
+          forceStaticLinking: [
+            "RNFBApp",
+            "RNFBAuth",
+            "WippTouchNative",
+          ],
         },
         android: {
           permissions: [
