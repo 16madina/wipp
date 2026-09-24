@@ -76,7 +76,7 @@ export function SurpriseCompose({
         <span className="size-10 shrink-0" aria-hidden />
       </header>
 
-      <div className="relative z-10 no-scrollbar flex-1 overflow-y-auto px-4 pb-28">
+      <div className="relative z-10 no-scrollbar flex-1 overflow-y-auto px-4 pb-36">
         <h1 className="mt-2 text-[26px] font-bold tracking-tight text-white">{t("surpriseCreateTitle")}</h1>
         <p className="mt-1 text-[13px] text-white/55">{t("surpriseCreateSub")}</p>
 
@@ -170,20 +170,20 @@ export function SurpriseCompose({
           </label>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[22px] bg-[#0a0c12] p-2 ring-1 ring-[#ffd84d]/25">
+        <div className="mt-3 rounded-[22px] bg-[#0a0c12] p-2.5 ring-1 ring-[#ffd84d]/25">
           {live ? (
-            <div className="relative overflow-hidden rounded-[18px]">
+            <div className="relative">
               <img
                 src={PREVIEW_BY_DESIGN[design] ?? PREVIEW_BY_DESIGN.love}
                 alt=""
                 draggable={false}
                 decoding="async"
-                className="block h-auto w-full object-contain"
+                className="block h-auto w-full rounded-[16px] object-contain"
               />
               {text.trim() ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p
-                    className="max-w-[42%] -translate-y-[4%] rotate-[-4deg] text-center font-serif text-[14px] font-bold italic leading-snug text-[#1a1208]"
+                    className="max-w-[40%] -translate-y-[6%] rotate-[-4deg] text-center font-serif text-[14px] font-bold italic leading-snug text-[#1a1208]"
                     style={{ textShadow: "0 1px 0 rgb(255 255 255 / 0.25)" }}
                   >
                     {text.trim().slice(0, 80)}
