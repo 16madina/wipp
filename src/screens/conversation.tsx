@@ -57,7 +57,7 @@ import { Header, IconBtn, Sheet, StatusBar } from "@/components/ui";
 import { formatClock, formatDuration, formatLastSeen, formatRemain } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { SHOP_CAT_KEYS } from "@/lib/i18n";
-import { EMOJI_CATS, isEmojiSticker, stickerIdFromEmoji } from "@/lib/emoji";
+import { isEmojiSticker } from "@/lib/emoji";
 import { isStickerId, stickerById, stickerLabel, stickersInPack, WIPP_STICKERS } from "@/lib/stickers";
 import { isChatSealed, useT, useWgoStore } from "@/lib/store";
 import { DISAPPEAR_24H, DISAPPEAR_7D } from "@/lib/types";
@@ -113,7 +113,6 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const [galleryKind, setGalleryKind] = useState<"image" | "video">("image");
   const [pickContact, setPickContact] = useState(false);
   const [emojiBar, setEmojiBar] = useState(false);
-  const [emojiCat, setEmojiCat] = useState<(typeof EMOJI_CATS)[number]["id"] | "moji">(EMOJI_CATS[0].id);
   const [stickerQuery, setStickerQuery] = useState("");
   const [stickerSearch, setStickerSearch] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -248,17 +247,6 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     setPickStickers(false);
     setEmojiBar(false);
   }
-
-  function insertEmoji(emoji: string) {
-    setText((prev) => `${prev}${emoji}`);
-    haptic("tap");
-  }
-
-  function sendUnicodeEmoji(emoji: string) {
-    sendSticker(stickerIdFromEmoji(emoji), emoji);
-  }
-
-  const activeEmojiCat = EMOJI_CATS.find((c) => c.id === emojiCat) ?? EMOJI_CATS[0];
 
   function sendMedia(pick: StoryMediaPick) {
     haptic("send");
@@ -792,36 +780,18 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           ) : (
             <>
               {emojiBar ? (
-                <div className="glass flex max-h-52 flex-col px-2 pt-2 pb-1">
-                  <div className="no-scrollbar mb-1.5 flex gap-1 overflow-x-auto pb-0.5">
-                    {EMOJI_CATS.map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        aria-label={lang === "fr" ? cat.labelFr : cat.labelEn}
-                        className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full text-[18px]",
-                          emojiCat === cat.id ? "bg-accent/25 ring-1 ring-accent" : "bg-navy/40",
-                        )}
-                        onClick={() => setEmojiCat(cat.id)}
-                      >
-                        {cat.icon}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="no-scrollbar grid max-h-40 grid-cols-8 gap-0.5 overflow-y-auto pb-1">
-                    {activeEmojiCat.emojis.map((emoji) => (
-                      <button
-                        key={`${activeEmojiCat.id}-${emoji}`}
-                        type="button"
-                        className="press flex aspect-square items-center justify-center rounded-lg text-[22px] leading-none"
-                        aria-label={emoji}
-                        onClick={() => insertEmoji(emoji)}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                <div className="glass no-scrollbar grid max-h-40 grid-cols-6 gap-1 overflow-y-auto px-2 py-2">
+                  {stickersInPack("moji").map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="press flex aspect-square items-center justify-center rounded-xl"
+                      aria-label={lang === "fr" ? s.labelFr : s.labelEn}
+                      onClick={() => sendSticker(s.id, lang === "fr" ? s.labelFr : s.labelEn)}
+                    >
+                      <WippSticker id={s.id} size={44} />
+                    </button>
+                  ))}
                 </div>
               ) : null}
               <div className="glass flex min-w-0 items-end gap-0.5 px-1.5 py-2">
@@ -968,63 +938,18 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         <p className="px-2 py-8 text-center text-[13px] text-muted">{t("stickerRecentEmpty")}</p>
                       )
                     ) : stickerTab === "emoji" && !stickerQuery ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="no-scrollbar flex gap-1 overflow-x-auto pb-0.5">
-                          {EMOJI_CATS.map((cat) => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              aria-label={lang === "fr" ? cat.labelFr : cat.labelEn}
-                              className={cn(
-                                "flex size-9 shrink-0 items-center justify-center rounded-full text-[18px]",
-                                emojiCat === cat.id ? "bg-accent/25 ring-1 ring-accent" : "bg-navy/40",
-                              )}
-                              onClick={() => setEmojiCat(cat.id)}
-                            >
-                              {cat.icon}
-                            </button>
-                          ))}
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {stickersInPack("moji").map((s) => (
                           <button
+                            key={s.id}
                             type="button"
-                            aria-label="WIPP Moji"
-                            className={cn(
-                              "flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold",
-                              emojiCat === "moji" ? "bg-accent text-accent-fg" : "bg-navy/40 text-muted",
-                            )}
-                            onClick={() => setEmojiCat("moji")}
+                            className="press flex aspect-square items-center justify-center rounded-2xl bg-navy/40"
+                            aria-label={lang === "fr" ? s.labelFr : s.labelEn}
+                            onClick={() => sendSticker(s.id, lang === "fr" ? s.labelFr : s.labelEn)}
                           >
-                            W
+                            <WippSticker id={s.id} size={64} />
                           </button>
-                        </div>
-                        {emojiCat === "moji" ? (
-                          <div className="grid grid-cols-4 gap-1.5">
-                            {stickersInPack("moji").map((s) => (
-                              <button
-                                key={s.id}
-                                type="button"
-                                className="press flex aspect-square items-center justify-center rounded-2xl bg-navy/40"
-                                aria-label={lang === "fr" ? s.labelFr : s.labelEn}
-                                onClick={() => sendSticker(s.id, lang === "fr" ? s.labelFr : s.labelEn)}
-                              >
-                                <WippSticker id={s.id} size={64} />
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-8 gap-1">
-                            {activeEmojiCat.emojis.map((emoji) => (
-                              <button
-                                key={`tray-${activeEmojiCat.id}-${emoji}`}
-                                type="button"
-                                className="press flex aspect-square items-center justify-center rounded-xl bg-navy/40 text-[22px] leading-none"
-                                aria-label={emoji}
-                                onClick={() => sendUnicodeEmoji(emoji)}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        ))}
                       </div>
                     ) : (
                       <div className="grid grid-cols-4 gap-1.5">
