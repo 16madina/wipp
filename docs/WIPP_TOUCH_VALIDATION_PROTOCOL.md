@@ -25,14 +25,16 @@ Logs serveur : Vercel / runtime `[wipp-touch-calib]`.
 
 | Plateforme | Profil EAS | Usage | Statut / lien |
 |------------|------------|--------|----------------|
-| Android APK | `preview` | A et B Android (BLE + NFC HCE) | voir `.grok/deploy.json` / dashboard EAS |
-| iOS device | `preview` | A et B iPhone (BLE ; NFC récepteur) | credentials Apple interactives si absentes |
-| iOS simulator | `preview-simulator` | smoke pods / non valide pour RSSI réel | optionnel |
+| Android APK | `preview` | A et B Android (BLE + NFC HCE) | **Quota Free EAS épuisé** jusqu’au **2026-10-01**. Ancien APK `e5fb15bd` = **sans** module Touch — ne pas l’utiliser pour cette campagne. |
+| iOS device | `preview` | A et B iPhone (BLE ; NFC récepteur) | **Bloqué** : credentials Apple en mode interactif (`eas build -p ios --profile preview`). |
+| iOS simulator | `preview-simulator` | smoke pods / non valide pour RSSI réel | **OK** — [7bcc92f5](https://expo.dev/accounts/missdee/projects/wipp/builds/7bcc92f5-5935-4ff3-8351-f42f54f6a82f) (commit `8e3ca06`, `EXPO_PUBLIC_WIPP_TOUCH_CALIBRATION=1`) |
+
+Archive sim : https://expo.dev/artifacts/eas/MbwhxKM-HHlMeoN3FBpRBM0GVrN5-pT3yOpG7Ty5bhA.tar.gz
 
 Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.  
 API : `https://wippapp.com`.
 
-**Avant les essais** : installer le **même** build preview calib sur tous les téléphones ; activer Bluetooth (+ NFC pour essais NFC) ; ne pas toucher la config serveur.
+**Avant les essais physiques** : installer le **même** build preview calib (post-Touch) sur tous les téléphones ; activer Bluetooth (+ NFC pour essais NFC) ; ne pas toucher la config serveur.
 
 ---
 
@@ -137,25 +139,26 @@ Pour chaque direction, tester B dans l’état :
 > Les résultats ci-dessous restent **vides** tant que les builds preview n’ont pas été exécutés sur téléphones réels. Ne pas inventer de RSSI.
 
 ### Builds utilisés
-- Android APK : _(lien / build id)_
-- iOS device : _(lien / build id)_
-- Commit : _(sha)_
+- Android APK : **pending** (quota EAS Free jusqu’au 2026-10-01 ; puis `eas build -p android --profile preview`)
+- iOS device : **pending** (`eas build -p ios --profile preview` en interactif pour credentials)
+- iOS simulator (smoke only) : [7bcc92f5](https://expo.dev/accounts/missdee/projects/wipp/builds/7bcc92f5-5935-4ff3-8351-f42f54f6a82f)
+- Commit : `8e3ca06`
 
 ### Phase 0 — données RSSI
 
-_(coller tableaux Phase 0 remplies)_
+_Aucune mesure appareil dans cet environnement cloud. Remplir ici après essais téléphones._
 
 ### Scénario produit + états B
 
-_(coller fiches d’essai)_
+_En attente appareils physiques (FG / BG / locked / force-quit)._
 
 ### Multi + anti-FP
 
-_(coller tableaux)_
+_En attente._
 
 ### NFC
 
-_(succès reproductible / **expérimental**)_
+**Expérimental** — non vérifié sur iPhone physique que `https://wippapp.com/t/CODE` s’affiche de façon reproductible. Ne pas simuler.
 
 ---
 

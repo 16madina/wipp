@@ -9,9 +9,10 @@
   "bundleId": "com.wipp.app",
   "supportEmail": "support@wippapp.com",
   "androidBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/e5fb15bd-254e-485e-9780-33549b87309a",
-  "notes": "Android APK + iOS simulator builds OK. Device iOS nécessite Apple credentials. LiveKit après tests.",
-  "iosBuildNote": "preview-simulator après fix useFrameworks dynamic (SPM Firebase)",
-  "iosSimulatorBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/999ee7a3-4719-47d6-9f5e-5644a1839908",
   "androidApkUrl": "https://expo.dev/artifacts/eas/dc7kw1pQ7nw3Fc-sA4PASwYj58n63hXUoqXvivEtduc.apk",
-  "iosSimulatorArchiveUrl": "https://expo.dev/artifacts/eas/NSY4leI8YkfRbLrJoPS6nIQyIt7VXYcOVdV1wxSRkAo.tar.gz"
+  "androidBuildNote": "APK e5fb15bd = avant module Touch. Rebuild preview bloqué quota Free jusqu’au 2026-10-01.",
+  "iosSimulatorBuildUrl": "https://expo.dev/accounts/missdee/projects/wipp/builds/7bcc92f5-5935-4ff3-8351-f42f54f6a82f",
+  "iosSimulatorArchiveUrl": "https://expo.dev/artifacts/eas/MbwhxKM-HHlMeoN3FBpRBM0GVrN5-pT3yOpG7Ty5bhA.tar.gz",
+  "iosBuildNote": "preview-simulator OK (commit 8e3ca06) — calib + WippTouchNative. Device preview: credentials Apple interactives requises.",
+  "notes": "Touch prototype validé. Validation physique: docs/WIPP_TOUCH_VALIDATION_PROTOCOL.md. Seuils RSSI figés jusqu’à collecte [wipp-touch-calib]."
 }
