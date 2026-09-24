@@ -9,26 +9,15 @@ import {
 } from "lucide-react";
 import type { ScratchDesign } from "@/components/scratch-card";
 import { ScratchCard } from "@/components/scratch-card";
+import { CardPickerDrawer, SURPRISE_CARDS } from "@/components/card-picker-drawer";
 import { useT } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-const DESIGNS: { id: ScratchDesign; glyph: string; labelKey: "themeGold" | "themeLove" | "themeBirthday" | "themeFun" | "themeSecret" }[] = [
-  { id: "gold", glyph: "🖤", labelKey: "themeGold" },
-  { id: "love", glyph: "❤️", labelKey: "themeLove" },
-  { id: "birthday", glyph: "🎂", labelKey: "themeBirthday" },
-  { id: "fun", glyph: "😂", labelKey: "themeFun" },
-  { id: "secret", glyph: "🌙", labelKey: "themeSecret" },
-];
-
-/** Premium lifestyle previews (photo 1 style). Falls back to love art. */
-const PREVIEW_BY_DESIGN: Partial<Record<ScratchDesign, string>> = {
-  love: "/fx/surprise/card-love.jpg",
-  gold: "/fx/surprise/card-love.jpg",
-  heart: "/fx/surprise/card-love.jpg",
-  duo: "/fx/surprise/card-love.jpg",
-};
-
 const MAX = 200;
+
+const PREVIEW_BY_DESIGN: Partial<Record<ScratchDesign, string>> = Object.fromEntries(
+  SURPRISE_CARDS.map((c) => [c.design, c.src]),
+) as Partial<Record<ScratchDesign, string>>;
 
 export function SurpriseCompose({
   text,
@@ -55,6 +44,8 @@ export function SurpriseCompose({
   const [live, setLive] = useState(true);
   const [pickCard, setPickCard] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+
+  const previewSrc = PREVIEW_BY_DESIGN[design] ?? SURPRISE_CARDS[0]?.src ?? "/fx/surprise/card-love.jpg";
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-[#05070e]">
@@ -174,7 +165,7 @@ export function SurpriseCompose({
           {live ? (
             <div className="relative">
               <img
-                src={PREVIEW_BY_DESIGN[design] ?? PREVIEW_BY_DESIGN.love}
+                src={previewSrc}
                 alt=""
                 draggable={false}
                 decoding="async"
@@ -227,34 +218,16 @@ export function SurpriseCompose({
       </div>
 
       {pickCard ? (
-        <div className="absolute inset-0 z-40 flex flex-col justify-end bg-black/55">
-          <button type="button" className="absolute inset-0" aria-label={t("back")} onClick={() => setPickCard(false)} />
-          <div className="relative rounded-t-[24px] bg-[#0c1018] px-4 pb-8 pt-3 ring-1 ring-white/10">
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
-            <p className="mb-3 text-center text-[16px] font-bold text-white">{t("surpriseChooseCard")}</p>
-            <div className="grid grid-cols-3 gap-2.5">
-              {DESIGNS.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  className={cn(
-                    "flex flex-col items-center rounded-2xl py-3 ring-1",
-                    design === d.id ? "bg-[#ffd84d] text-[#0b1220] ring-[#ffd84d]" : "bg-[#070b14] text-white ring-white/10",
-                  )}
-                  onClick={() => {
-                    onDesign(d.id);
-                    setPreviewKey((n) => n + 1);
-                    setPickCard(false);
-                    setLive(true);
-                  }}
-                >
-                  <span className="text-[22px]">{d.glyph}</span>
-                  <span className="mt-1 text-[12px] font-semibold">{t(d.labelKey)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CardPickerDrawer
+          selected={design}
+          onClose={() => setPickCard(false)}
+          onPick={(card) => {
+            onDesign(card.design);
+            setPreviewKey((n) => n + 1);
+            setPickCard(false);
+            setLive(true);
+          }}
+        />
       ) : null}
     </div>
   );
