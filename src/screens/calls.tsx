@@ -21,6 +21,7 @@ import { BlockSheet, ReportSheet, SafetyRow } from "@/components/safety";
 import { Btn, Chip, Empty, Header, IconBtn, Sheet, StatusBar } from "@/components/ui";
 import { formatChatTime, formatDuration } from "@/lib/format";
 import { haptic, hapticStop } from "@/lib/haptics";
+import { createLiveKitSession, fetchCallToken, type LiveKitSessionStatus } from "@/lib/livekit/session";
 import { isChatSealed, useT, useWgoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { CallLog } from "@/lib/types";
@@ -432,7 +433,9 @@ function CallSession() {
   const [facing, setFacing] = useState<"user" | "environment">("user");
   const [mediaError, setMediaError] = useState(false);
   const [localReady, setLocalReady] = useState(false);
+  const [lkStatus, setLkStatus] = useState<LiveKitSessionStatus>("idle");
   const localRef = useRef<HTMLVideoElement>(null);
+  const remoteRef = useRef<HTMLVideoElement>(null);
   const pipVideoRef = useRef<HTMLVideoElement>(null);
   const osPipVideoRef = useRef<HTMLVideoElement>(null);
   const pipCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -448,6 +451,7 @@ function CallSession() {
     moved: boolean;
   } | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const lkRef = useRef(createLiveKitSession((s) => setLkStatus(s)));
   const hangingRef = useRef(false);
   const [pipPos, setPipPos] = useState<{ x: number; y: number } | null>(null);
   const [osPipOn, setOsPipOn] = useState(false);
@@ -517,6 +521,8 @@ function CallSession() {
       streamRef.current = null;
       return;
     }
+    // LiveKit owns media once connected — skip duplicate getUserMedia.
+    if (lkStatus === "connected" || lkStatus === "connecting") return;
     let cancelled = false;
     if (!navigator.mediaDevices?.getUserMedia) {
       setMediaError(true);
@@ -552,7 +558,71 @@ function CallSession() {
     return () => {
       cancelled = true;
     };
-  }, [wantMedia, mode, facing]);
+  }, [wantMedia, mode, facing, lkStatus]);
+
+  // Try LiveKit when the call goes live; fall back to local media if not configured.
+  useEffect(() => {
+    if (phase !== "live" || !live || !user) return;
+    let cancelled = false;
+    const lk = lkRef.current;
+    void (async () => {
+      setLkStatus("connecting");
+      const token = await fetchCallToken({
+        peerId: live.userId,
+        kind: mode,
+        identity: me.username || me.id || "me",
+        displayName: me.displayName,
+      });
+      if (cancelled) return;
+      if (token.mode !== "livekit") {
+        setLkStatus("local");
+        return;
+      }
+      try {
+        // Hand mic/cam to LiveKit — stop local preview tracks first.
+        streamRef.current?.getTracks().forEach((tr) => tr.stop());
+        streamRef.current = null;
+        await lk.connect({
+          url: token.url,
+          token: token.token,
+          video: mode === "video",
+          audio: true,
+        });
+        if (cancelled) {
+          await lk.disconnect();
+          return;
+        }
+        lk.setMuted(muted);
+        lk.setCameraEnabled(!camOff && mode === "video");
+        lk.attachLocalVideo(localRef.current);
+        lk.attachRemoteVideo(remoteRef.current);
+        setLocalReady(true);
+        setMediaError(false);
+      } catch {
+        if (!cancelled) setLkStatus("local");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, live?.userId, mode]);
+
+  useEffect(() => {
+    if (lkStatus !== "connected") return;
+    lkRef.current.setMuted(muted);
+  }, [muted, lkStatus]);
+
+  useEffect(() => {
+    if (lkStatus !== "connected") return;
+    lkRef.current.setCameraEnabled(!camOff && mode === "video");
+  }, [camOff, mode, lkStatus]);
+
+  useEffect(() => {
+    if (lkStatus !== "connected") return;
+    lkRef.current.attachLocalVideo(localRef.current);
+    lkRef.current.attachRemoteVideo(remoteRef.current);
+  }, [lkStatus, pip]);
 
   useEffect(() => {
     const stream = streamRef.current;
@@ -593,6 +663,7 @@ function CallSession() {
     return () => {
       streamRef.current?.getTracks().forEach((tr) => tr.stop());
       streamRef.current = null;
+      void lkRef.current.disconnect();
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => undefined);
       }
@@ -719,6 +790,7 @@ function CallSession() {
     }
     streamRef.current?.getTracks().forEach((tr) => tr.stop());
     streamRef.current = null;
+    void lkRef.current.disconnect();
     setPhase("ended");
     window.setTimeout(() => endCall(duration), 700);
   }
@@ -917,6 +989,14 @@ function CallSession() {
       ) : (
         <div className="absolute inset-0 bg-navy" />
       )}
+      {lkStatus === "connected" && mode === "video" ? (
+        <video
+          ref={remoteRef}
+          playsInline
+          autoPlay
+          className="absolute inset-0 size-full object-cover"
+        />
+      ) : null}
       <div className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/20 to-ink/90" />
 
       <div className="relative flex h-full flex-col">
@@ -968,6 +1048,15 @@ function CallSession() {
             <>
               <h1 className="mt-6 text-[26px] font-semibold">{user.displayName}</h1>
               <p className="mt-1 text-[14px] text-paper/70 tabular-nums">{status}</p>
+              {phase === "live" && lkStatus === "connecting" ? (
+                <p className="mt-2 text-[12px] text-paper/45">{t("callLivekitConnecting")}</p>
+              ) : null}
+              {phase === "live" && lkStatus === "local" ? (
+                <p className="mt-2 text-[12px] text-paper/45">{t("callLivekitLocal")}</p>
+              ) : null}
+              {phase === "live" && lkStatus === "connected" ? (
+                <p className="mt-2 text-[12px] text-accent/80">{t("callLivekitConnected")}</p>
+              ) : null}
               {canPip ? (
                 <p className="mt-3 text-[12px] text-paper/45">{t("callPipHint")}</p>
               ) : null}

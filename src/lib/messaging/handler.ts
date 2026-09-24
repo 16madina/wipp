@@ -1,3 +1,5 @@
+import { liveKitPublicConfig } from "@/lib/livekit/config";
+import { mintCallToken } from "@/lib/livekit/token";
 import {
   WippHttpError,
   adminBlockUser,
@@ -102,7 +104,49 @@ export async function handleWippApi(request: Request): Promise<Response> {
     const [a, b, c] = parts;
 
     if (method === "GET" && a === "health") {
-      return json({ ok: true, service: "wipp-messaging", demoPassword: "wipp-demo" });
+      const livekit = liveKitPublicConfig();
+      return json({
+        ok: true,
+        service: "wipp-messaging",
+        demoPassword: "wipp-demo",
+        livekit,
+      });
+    }
+
+    if (method === "GET" && a === "calls" && b === "config") {
+      return json(liveKitPublicConfig());
+    }
+
+    if (method === "POST" && a === "calls" && b === "token") {
+      // Soft auth: prefer session identity when present, else accept body identity (demo).
+      let identity = "demo";
+      let displayName: string | undefined;
+      try {
+        const me = await resolveSession(bearer(request));
+        identity = me.username || me.id;
+        displayName = me.displayName;
+      } catch {
+        /* demo / offline */
+      }
+      const body = await readBody<{
+        roomName?: string;
+        identity?: string;
+        displayName?: string;
+        video?: boolean;
+        peerId?: string;
+      }>(request);
+      if (body.identity?.trim()) identity = body.identity.trim();
+      if (body.displayName?.trim()) displayName = body.displayName.trim();
+      const roomName =
+        body.roomName?.trim() ||
+        `wipp-${[identity, body.peerId || "peer"].sort().join("-")}`;
+      const token = await mintCallToken({
+        roomName,
+        identity,
+        displayName,
+        video: Boolean(body.video),
+      });
+      return json(token);
     }
 
     if (method === "POST" && a === "register") {

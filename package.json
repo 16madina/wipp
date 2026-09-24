@@ -63,6 +63,8 @@
     "date-fns": "^4.0.0",
     "jose": "6.2.9",
     "kysely": "^0.28.5",
+    "livekit-client": "^2.22.3",
+    "livekit-server-sdk": "^2.19.1",
     "lucide-react": "^0.510.0",
     "pg": "^8.16.3",
     "react": "^19.2.0",

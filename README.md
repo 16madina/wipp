@@ -59,4 +59,9 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
 2. **EXPO_TOKEN** pour OTA
 3. **Admin panel** sur wippapp.com
 4. Firebase Phone Auth (SMS OTP)
-5. Médias + push + LiveKit
+5. Médias + push
+6. **LiveKit** — appels A/V : poser dans `.env` :
+   - `LIVEKIT_URL` (ex. `wss://xxx.livekit.cloud`)
+   - `LIVEKIT_API_KEY`
+   - `LIVEKIT_API_SECRET`  
+   Sans ces variables, les appels restent en **aperçu local** (cam/micro appareil). Token : `POST /api/wipp/calls/token`.

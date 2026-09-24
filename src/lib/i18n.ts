@@ -253,6 +253,9 @@ const fr = {
   returnToCall: "Revenir à l’appel",
   callPipHint: "Glisse vers le bas pour réduire l’appel",
   callInProgress: "Appel en cours",
+  callLivekitConnecting: "Connexion LiveKit…",
+  callLivekitLocal: "Aperçu local — ajoute LIVEKIT_URL + clés pour le vrai réseau.",
+  callLivekitConnected: "LiveKit connecté",
   deleteCall: "Supprimer",
 
   yourStory: "Votre story",
@@ -1239,6 +1242,9 @@ const en: Record<keyof typeof fr, string> = {
   returnToCall: "Return to call",
   callPipHint: "Swipe down to shrink the call",
   callInProgress: "Call in progress",
+  callLivekitConnecting: "Connecting LiveKit…",
+  callLivekitLocal: "Local preview — set LIVEKIT_URL + keys for real media.",
+  callLivekitConnected: "LiveKit connected",
   deleteCall: "Delete",
 
   yourStory: "Your story",
