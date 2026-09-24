@@ -7,10 +7,16 @@
   "author": "WIPP",
   "homepage": "https://wippapp.com",
   "scripts": {},
-  "keywords": ["expo", "wipp", "ble", "nfc"],
+  "keywords": [
+    "expo",
+    "wipp",
+    "ble",
+    "nfc"
+  ],
   "license": "MIT",
   "peerDependencies": {
     "expo": "*",
     "react-native": "*"
-  }
+  },
+  "react-native": "src/index.ts"
 }

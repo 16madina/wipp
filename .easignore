@@ -10,11 +10,13 @@ artifacts/
 screenshots/
 attachments/
 public/
-src/
-server/
-scripts/
-migrations/
-docs/
+# Only monorepo web roots — bare "src/" also matched mobile/modules/*/src
+# and broke Metro resolution of wipp-touch-native.
+/src/
+/server/
+/scripts/
+/migrations/
+/docs/
 .cursor/
 *.mp4
 *.mov
