@@ -116,14 +116,19 @@ function paintFoil(ctx: CanvasRenderingContext2D, w: number, h: number, material
     ctx.quadraticCurveTo(w * 0.5, y0 + (Math.random() - 0.5) * 14, w * 0.92, y0 + (Math.random() - 0.5) * 10);
     ctx.stroke();
   }
-  // Embossed hint — like printed into the latex
-  ctx.fillStyle = "rgba(26, 20, 8, 0.55)";
-  ctx.font = `600 ${Math.max(11, Math.min(14, w * 0.075))}px system-ui, sans-serif`;
+  // Embossed print into the latex (not a floating sticker label)
+  const size = Math.max(11, Math.min(13, w * 0.07));
+  ctx.font = `600 ${size}px system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.shadowColor = "rgba(255,255,255,0.25)";
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 1;
+  ctx.lineJoin = "round";
+  // Recessed edge
+  ctx.fillStyle = "rgba(255, 236, 180, 0.35)";
+  ctx.fillText(hint, w / 2, h / 2 - 0.8);
+  ctx.fillStyle = "rgba(55, 38, 8, 0.55)";
+  ctx.fillText(hint, w / 2, h / 2 + 0.8);
+  // Ink sunk into foil
+  ctx.fillStyle = "rgba(72, 52, 14, 0.72)";
   ctx.fillText(hint, w / 2, h / 2);
   ctx.restore();
 }
