@@ -527,10 +527,12 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   );
                 }
                 return (
-                  <button
+                  <div
                     key={m.id}
-                    type="button"
+                    role={m.type === "scratch" ? "group" : "button"}
+                    tabIndex={0}
                     onClick={() => {
+                      if (m.type === "scratch") return;
                       if (mine && m.status === "failed") {
                         retryMessage(chatId, m.id);
                         return;
@@ -539,8 +541,15 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         if (!m.viewed) setViewer(m);
                         return;
                       }
-                      if (m.type === "sticker" || m.type === "video" || m.type === "scratch") return;
+                      if (m.type === "sticker" || m.type === "video") return;
                       setActive(m);
+                    }}
+                    onKeyDown={(e) => {
+                      if (m.type === "scratch") return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).click();
+                      }
                     }}
                     className={cn("mb-1 flex w-full", mine ? "justify-end" : "justify-start")}
                   >
@@ -596,7 +605,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         {m.type === "scratch" ? (
                           (() => {
                             const card = surpriseCardById(m.scratchCardId || DEFAULT_SURPRISE_CARD_ID);
-                            const showOpen = Boolean(m.revealedAt) || mine;
+                            // Recipient (and sender) must scratch — only open after revealedAt
+                            const showOpen = Boolean(m.revealedAt);
                             if (card) {
                               return (
                                 <div className="w-[min(100%,280px)]">
@@ -741,7 +751,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         </div>
                       ) : null}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             {typing ? (

@@ -66,6 +66,7 @@ function foilColors(material: ScratchDesign) {
   return ["#6e5420", "#d7b45a", "#a68534"] as const;
 }
 
+/** Opaque foil covering the whole scratch zone — finger reveals the message underneath. */
 function paintFoil(ctx: CanvasRenderingContext2D, w: number, h: number, material: ScratchDesign, hint: string) {
   const base = foilColors(material);
   const g = ctx.createLinearGradient(0, 0, w, h);
@@ -73,17 +74,20 @@ function paintFoil(ctx: CanvasRenderingContext2D, w: number, h: number, material
   g.addColorStop(0.45, base[1]);
   g.addColorStop(1, base[2]);
   ctx.fillStyle = g;
-  // Soft ellipse so the zone roughly matches a brushstroke blob
-  ctx.beginPath();
-  ctx.ellipse(w * 0.5, h * 0.5, w * 0.48, h * 0.42, -0.08, 0, Math.PI * 2);
-  ctx.fill();
-  for (let i = 0; i < 280; i++) {
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 420; i++) {
     const n = Math.random();
-    ctx.fillStyle = n > 0.5 ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.16)";
-    ctx.fillRect(Math.random() * w, Math.random() * h, 1.2, 1.2);
+    ctx.fillStyle = n > 0.5 ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.18)";
+    ctx.fillRect(Math.random() * w, Math.random() * h, 1.4, 1.4);
   }
+  // Soft edge so it sits on the gold brushstroke
+  ctx.strokeStyle = "rgba(0,0,0,0.12)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(w * 0.5, h * 0.5, w * 0.48, h * 0.42, -0.06, 0, Math.PI * 2);
+  ctx.stroke();
   ctx.fillStyle = material === "secret" ? "#d5d8de" : "#1a1408";
-  ctx.font = "600 13px system-ui, sans-serif";
+  ctx.font = `600 ${Math.max(12, Math.min(15, w * 0.08))}px system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(hint, w / 2, h / 2);
@@ -91,7 +95,7 @@ function paintFoil(ctx: CanvasRenderingContext2D, w: number, h: number, material
 
 /**
  * Permanent card asset + secret message + interactive scratch layer over scratch_zone.
- * Reset only remounts the foil layer (key change) — the asset stays put.
+ * Recipient scratches the foil with their finger; when enough is cleared, message shows and onReveal fires (animation).
  */
 export function SurpriseCardView({
   card,
@@ -144,7 +148,7 @@ export function SurpriseCardView({
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
@@ -157,15 +161,16 @@ export function SurpriseCardView({
   }, [open, card.scratch_material, hint, resetKey]);
 
   function stamp(ctx: CanvasRenderingContext2D, x: number, y: number, dpr: number) {
-    const r = (18 + Math.random() * 6) * dpr;
+    // Finger-sized hole — wide enough for real thumb strokes on mobile
+    const r = (28 + Math.random() * 10) * dpr;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 6; i++) {
       const a = Math.random() * Math.PI * 2;
-      const dist = r * (0.45 + Math.random() * 0.55);
+      const dist = r * (0.3 + Math.random() * 0.7);
       ctx.beginPath();
-      ctx.arc(x + Math.cos(a) * dist, y + Math.sin(a) * dist, r * (0.18 + Math.random() * 0.22), 0, Math.PI * 2);
+      ctx.arc(x + Math.cos(a) * dist, y + Math.sin(a) * dist, r * (0.22 + Math.random() * 0.28), 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -177,33 +182,36 @@ export function SurpriseCardView({
     setFading(true);
     haptic("success");
     ting();
+    // Foil fades → message fully visible → animation kicks in
     window.setTimeout(() => {
       setOpen(true);
       onReveal?.();
-    }, 420);
+    }, 280);
   }
 
   function cleared(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
     const sample = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let clear = 0;
     let total = 0;
-    for (let i = 3; i < sample.length; i += 16) {
+    for (let i = 3; i < sample.length; i += 12) {
       total++;
-      if (sample[i] < 24) clear++;
+      if (sample[i] < 28) clear++;
     }
     return total ? clear / total : 0;
   }
 
   function scratch(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!interactive || done.current || fading) return;
+    e.preventDefault();
+    e.stopPropagation();
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
+    const ctx = canvas?.getContext("2d", { willReadFrequently: true });
     if (!canvas || !ctx) return;
     setHintOn(false);
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const dpr = canvas.width / rect.width;
+    const dpr = canvas.width / Math.max(1, rect.width);
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "destination-out";
@@ -212,7 +220,7 @@ export function SurpriseCardView({
       const dx = x - prev.x;
       const dy = y - prev.y;
       const dist = Math.hypot(dx, dy);
-      const steps = Math.max(1, Math.ceil(dist / 6));
+      const steps = Math.max(1, Math.ceil(dist / 5));
       for (let i = 1; i <= steps; i++) {
         stamp(ctx, (prev.x + (dx * i) / steps) * dpr, (prev.y + (dy * i) / steps) * dpr, dpr);
       }
@@ -226,11 +234,12 @@ export function SurpriseCardView({
       lastSound.current = now;
       scratchNoise();
     }
-    if (now - lastHaptic.current > 140) {
+    if (now - lastHaptic.current > 120) {
       lastHaptic.current = now;
       haptic("tap");
     }
-    if (cleared(ctx, canvas) >= 0.55) finish();
+    // ~35% of the foil cleared → reveal message + fire animation
+    if (cleared(ctx, canvas) >= 0.35) finish();
   }
 
   const z = card.scratch_zone;
@@ -243,21 +252,20 @@ export function SurpriseCardView({
         alt=""
         draggable={false}
         decoding="async"
-        className="block h-auto w-full object-contain"
+        className="pointer-events-none block h-auto w-full object-contain"
       />
 
-      {/* Layers 2–4 — message under foil, interactive foil, hint */}
+      {/* Layers 2–4 — message under foil → interactive foil → “Gratte…” */}
       <div
-        className="absolute overflow-hidden"
+        className="absolute overflow-hidden rounded-[40%]"
         style={{
           left: `${z.x}%`,
           top: `${z.y}%`,
           width: `${z.w}%`,
           height: `${z.h}%`,
         }}
-        onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="absolute inset-0 flex items-center justify-center px-2 text-center">
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center px-2 text-center">
           <p className="whitespace-pre-wrap font-serif text-[13px] font-bold italic leading-snug text-[#1a1208] sm:text-[15px]">
             {text.trim() || "···"}
           </p>
@@ -266,28 +274,35 @@ export function SurpriseCardView({
         {!open ? (
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 size-full touch-none"
+            className="absolute inset-0 z-10 size-full touch-none"
             style={{
               pointerEvents: interactive ? "auto" : "none",
+              touchAction: "none",
               opacity: fading ? 0 : 1,
-              transition: "opacity 400ms ease",
+              transition: "opacity 280ms ease",
+              cursor: interactive ? "crosshair" : "default",
             }}
             onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               last.current = null;
               e.currentTarget.setPointerCapture(e.pointerId);
               scratch(e);
             }}
             onPointerMove={(e) => {
-              if (e.buttons || e.pointerType === "touch") scratch(e);
+              if (e.buttons || e.pointerType === "touch" || e.pointerType === "pen") scratch(e);
             }}
             onPointerUp={() => {
+              last.current = null;
+            }}
+            onPointerCancel={() => {
               last.current = null;
             }}
           />
         ) : null}
 
         {hintOn && interactive ? (
-          <span className="scratch-finger pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden />
+          <span className="scratch-finger pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2" aria-hidden />
         ) : null}
       </div>
     </div>
