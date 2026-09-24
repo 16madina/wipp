@@ -595,16 +595,17 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         ) : null}
                         {m.type === "scratch" ? (
                           (() => {
-                            const card = surpriseCardById(m.scratchCardId);
-                            if (card && m.scratchCardId) {
+                            const card = surpriseCardById(m.scratchCardId || DEFAULT_SURPRISE_CARD_ID);
+                            const showOpen = Boolean(m.revealedAt) || mine;
+                            if (card) {
                               return (
                                 <div className="w-[min(100%,280px)]">
                                   <SurpriseCardView
                                     card={card}
                                     text={m.text || "···"}
                                     hint={t("scratchRub")}
-                                    revealed={Boolean(m.revealedAt)}
-                                    interactive={!m.revealedAt}
+                                    revealed={showOpen}
+                                    interactive={!showOpen}
                                     onReveal={() => {
                                       markScratch(chatId, m.id);
                                       if (isPoster(m.effectId)) {
@@ -627,7 +628,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                               <ScratchCard
                                 text={m.text || "···"}
                                 design={m.scratchDesign}
-                                revealed={Boolean(m.revealedAt)}
+                                revealed={showOpen}
                                 time={formatClock(m.createdAt)}
                                 wait={t("scratchBrush")}
                                 hint={t("scratchRub")}
@@ -1260,42 +1261,73 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         <div className="absolute inset-0 z-[60] flex flex-col bg-[#070b14]">
           <StatusBar />
           <Header title={<span className="font-bold">{t("scratchPreviewTitle")}</span>} onBack={() => setScratchConfirm(false)} />
-          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+          <div className="no-scrollbar flex-1 overflow-y-auto px-6 pb-4 pt-2">
             {(() => {
-              const card = surpriseCardById(scratchCardId);
-              if (card) {
-                return (
-                  <div className="w-full max-w-[340px]">
-                    <SurpriseCardView
-                      card={card}
+              const card = surpriseCardById(scratchCardId || DEFAULT_SURPRISE_CARD_ID);
+              const cardName = card
+                ? lang === "fr"
+                  ? card.card_name
+                  : card.card_name_en
+                : t("surpriseRecapNone");
+              const animName = draftFx
+                ? draftFx.startsWith("birthday_")
+                  ? birthdayLabel(draftFx, lang)
+                  : draftFx.startsWith("night_")
+                    ? nightLabel(draftFx, lang)
+                    : draftFx.startsWith("day_")
+                      ? dayLabel(draftFx, lang)
+                      : amourLabel(draftFx, lang)
+                : t("surpriseRecapNone");
+              return (
+                <>
+                  <div className="mb-4 space-y-2 rounded-2xl bg-white/5 p-3 ring-1 ring-white/10 text-left">
+                    <p className="text-[12px] text-white/50">{t("surpriseRecapMessage")}</p>
+                    <p className="text-[15px] font-semibold text-white">“{scratchText.trim()}”</p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="rounded-full bg-[#ffd84d]/15 px-2.5 py-1 text-[11px] font-semibold text-[#ffd84d]">
+                        {t("surpriseRecapCard")}: {cardName}
+                      </span>
+                      <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/80">
+                        {t("surpriseRecapAnim")}: {animName}
+                      </span>
+                    </div>
+                  </div>
+                  {card ? (
+                    <div className="mx-auto w-full max-w-[340px]">
+                      <SurpriseCardView
+                        card={card}
+                        text={scratchText || "···"}
+                        hint={t("scratchRub")}
+                        interactive
+                        onReveal={() => {
+                          if (draftFx) setFxPlay(draftFx);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <ScratchCard
                       text={scratchText || "···"}
+                      design={scratchDesign}
+                      wait={t("scratchBrush")}
                       hint={t("scratchRub")}
-                      interactive
+                      found={t("scratchFound")}
+                      replayLabel={t("scratchReplay")}
                       onReveal={() => {
                         if (draftFx) setFxPlay(draftFx);
                       }}
                     />
-                  </div>
-                );
-              }
-              return (
-                <ScratchCard
-                  text={scratchText || "···"}
-                  design={scratchDesign}
-                  wait={t("scratchBrush")}
-                  hint={t("scratchRub")}
-                  found={t("scratchFound")}
-                  replayLabel={t("scratchReplay")}
-                  onReveal={() => {
-                    if (draftFx) setFxPlay(draftFx);
-                  }}
-                />
+                  )}
+                  <p className="mt-5 text-center text-[18px] font-bold">{t("scratchPerfect")}</p>
+                  <p className="mt-1 text-center text-[13px] leading-snug text-muted">
+                    {draftFx
+                      ? lang === "fr"
+                        ? "Gratte pour voir l’animation que l’autre va recevoir."
+                        : "Scratch to preview the animation they will get."
+                      : t("scratchHidden")}
+                  </p>
+                </>
               );
             })()}
-            <p className="mt-5 text-[18px] font-bold">{t("scratchPerfect")}</p>
-            <p className="mt-1 max-w-[260px] text-[13px] leading-snug text-muted">
-              {draftFx ? (lang === "fr" ? "Gratte pour voir l’animation que l’autre va recevoir." : "Scratch to preview the animation they will get.") : t("scratchHidden")}
-            </p>
           </div>
           <div className="px-4 pb-4">
             <button
@@ -1304,18 +1336,21 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               onClick={() => {
                 const secret = scratchText.trim();
                 if (!secret) return;
+                const cardId = scratchCardId || DEFAULT_SURPRISE_CARD_ID;
+                const card = surpriseCardById(cardId);
                 haptic("send");
                 sendMessage(chatId, {
                   type: "scratch",
                   text: secret,
-                  scratchDesign,
-                  scratchCardId,
+                  scratchDesign: card?.scratch_material ?? scratchDesign,
+                  scratchCardId: cardId,
                   effectId: draftFx || undefined,
                 });
                 setScratchText("");
                 setDraftFx(null);
                 setScratchConfirm(false);
                 setScratchOpen(false);
+                setSurprise(false);
               }}
             >
               <Send className="size-4" />

@@ -353,7 +353,7 @@ export function EffectStudio({
   const visible = query ? sections : sections.filter((s) => s.id === cat);
 
   return (
-    <div className="absolute inset-0 z-[55]">
+    <div className="absolute inset-0 z-[80]">
       <button type="button" className="absolute inset-0 bg-black/55" aria-label={t("back")} onClick={onClose} />
       <aside className="fx-drawer absolute inset-y-0 right-0 flex w-full max-w-[420px] flex-col bg-[#070b14] shadow-[-12px_0_40px_rgb(0_0_0/0.5)]">
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-white/15" />

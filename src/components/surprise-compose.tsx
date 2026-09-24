@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronRight,
   ImageIcon,
@@ -10,7 +10,7 @@ import {
 import { CardPickerDrawer } from "@/components/card-picker-drawer";
 import { SurpriseCardView } from "@/components/surprise-card-view";
 import { DEFAULT_SURPRISE_CARD_ID, surpriseCardById } from "@/lib/surprise-cards";
-import { useT } from "@/lib/store";
+import { useT, useWgoStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const MAX = 200;
@@ -37,11 +37,19 @@ export function SurpriseCompose({
   onSend: () => void;
 }) {
   const t = useT();
+  const lang = useWgoStore((s) => s.language);
   const [live, setLive] = useState(true);
   const [pickCard, setPickCard] = useState(false);
   const [scratchKey, setScratchKey] = useState(0);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const card = surpriseCardById(cardId);
+  const cardLabel = card ? (lang === "fr" ? card.card_name : card.card_name_en) : t("surpriseChooseCard");
+
+  useEffect(() => {
+    // Remount foil when the selected card changes so the preview matches instantly.
+    setScratchKey((n) => n + 1);
+  }, [cardId]);
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-[#05070e]">
@@ -122,12 +130,21 @@ export function SurpriseCompose({
           </button>
           <button
             type="button"
-            className="press flex h-[52px] items-center justify-between gap-1 rounded-2xl bg-[#0c1018] px-3 text-white ring-1 ring-[#ffd84d]/70"
+            className="press flex h-[52px] items-center justify-between gap-1.5 rounded-2xl bg-[#0c1018] px-2.5 text-white ring-1 ring-[#ffd84d]/70"
             onClick={() => setPickCard(true)}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <ImageIcon className="size-4 shrink-0 text-[#ffd84d]" />
-              <span className="truncate text-left text-[12px] font-bold leading-tight">{t("surpriseChooseCard")}</span>
+              {card ? (
+                <img
+                  src={card.asset_url}
+                  alt=""
+                  draggable={false}
+                  className="size-8 shrink-0 rounded-md object-cover ring-1 ring-white/15"
+                />
+              ) : (
+                <ImageIcon className="size-4 shrink-0 text-[#ffd84d]" />
+              )}
+              <span className="truncate text-left text-[12px] font-bold leading-tight">{cardLabel}</span>
             </span>
             <ChevronRight className="size-4 shrink-0 text-[#ffd84d]/80" />
           </button>
@@ -157,13 +174,13 @@ export function SurpriseCompose({
           </label>
         </div>
 
-        <div className="mt-3 rounded-[22px] bg-[#0a0c12] p-2.5 ring-1 ring-[#ffd84d]/25">
+        <div ref={previewRef} className="mt-3 rounded-[22px] bg-[#0a0c12] p-2.5 ring-1 ring-[#ffd84d]/25">
           {card ? (
             <>
               <SurpriseCardView
                 key={`${card.card_id}-${scratchKey}`}
                 card={card}
-                text={text}
+                text={live ? text : ""}
                 hint={t("scratchHere")}
                 resetKey={scratchKey}
                 interactive
@@ -183,7 +200,7 @@ export function SurpriseCompose({
       <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#05070e] via-[#05070eef] to-transparent px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-6">
         <button
           type="button"
-          disabled={!text.trim()}
+          disabled={!text.trim() || !card}
           className="press flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#ffd84d] text-[15px] font-bold text-[#0b1220] shadow-[0_12px_28px_rgb(255_216_77/0.28)] disabled:opacity-40"
           onClick={onSend}
         >
@@ -198,9 +215,11 @@ export function SurpriseCompose({
           onClose={() => setPickCard(false)}
           onPick={(picked) => {
             onCardId(picked.card_id);
-            setScratchKey((n) => n + 1);
             setPickCard(false);
             setLive(true);
+            window.requestAnimationFrame(() => {
+              previewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
           }}
         />
       ) : null}
