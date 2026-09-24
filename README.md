@@ -65,3 +65,9 @@ Comptes démo : `@deena` / `@lea` / `@samira` — mdp `wipp-demo`.
    - Push token : `POST /api/wipp/devices/push`  
    - **Rebuild EAS natif** requis pour CallKit (iOS) / ConnectionService (Android) — le JS OTA ne suffit pas  
    - Comptes démo serveur : `@deena` / `@lea` / `@samira` (mdp `wipp-demo`)
+8. **WIPP Touch** — invitation éphémère unique pour BLE + QR + code  
+   - `POST /api/wipp/touch/share` → token 8 car. / TTL 90s (pas de PII)  
+   - B détecte en BLE **sans** ouvrir Touch → notif Accepter/Refuser  
+   - Fallback QR/code = **même** invitation  
+   - **Rebuild EAS** requis pour BLE (`react-native-ble-plx` + `react-native-ble-advertiser`)  
+   - Migration : `migrations/0007_wipp_touch.sql`

@@ -18,6 +18,7 @@ import {
   type PhoneConfirmation,
 } from '@/lib/firebase-phone';
 import { ensureDemoSession, login, loginWithPhone, register } from '@/lib/api';
+import { startTouchReceiver } from '@/lib/touch-receiver';
 
 /**
  * Admin : numéro + mot de passe → panneau admin.
@@ -47,6 +48,7 @@ export default function LoginScreen() {
       } else {
         await login(phone.trim().replace(/^@/, '') || 'admin', password);
       }
+      void startTouchReceiver().catch(() => undefined);
       router.replace('/(tabs)');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Connexion impossible');
@@ -77,6 +79,7 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       await confirmPhoneCode(confirmation, code);
+      void startTouchReceiver().catch(() => undefined);
       router.replace('/(tabs)');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Code incorrect');
@@ -95,6 +98,7 @@ export default function LoginScreen() {
         password,
         displayName: displayName.trim() || u,
       });
+      void startTouchReceiver().catch(() => undefined);
       router.replace('/(tabs)');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Inscription impossible');
@@ -245,6 +249,7 @@ export default function LoginScreen() {
             setBusy(true);
             try {
               await ensureDemoSession();
+              void startTouchReceiver().catch(() => undefined);
               router.replace('/(tabs)');
             } catch (e) {
               setError(e instanceof Error ? e.message : 'Démo indisponible');

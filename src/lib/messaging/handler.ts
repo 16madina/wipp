@@ -1,3 +1,12 @@
+import {
+  acceptTouchCode,
+  cancelTouchShare,
+  createTouchShare,
+  getTouchShare,
+  rejectTouchCode,
+  resolveTouchCode,
+  WIPP_TOUCH_SERVICE_UUID,
+} from "@/lib/messaging/touch";
 import { liveKitPublicConfig } from "@/lib/livekit/config";
 import { mintCallToken } from "@/lib/livekit/token";
 import {
@@ -109,7 +118,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
 
     await ensureMessagingReady();
     const parts = pathParts(request);
-    const [a, b, c] = parts;
+    const [a, b, c, d] = parts;
 
     if (method === "GET" && a === "health") {
       const livekit = liveKitPublicConfig();
@@ -118,6 +127,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         service: "wipp-messaging",
         demoPassword: "wipp-demo",
         livekit,
+        touch: { serviceUuid: WIPP_TOUCH_SERVICE_UUID },
       });
     }
 
@@ -167,6 +177,42 @@ export async function handleWippApi(request: Request): Promise<Response> {
         kind: body.kind,
       });
       return json(result);
+    }
+
+    if (method === "POST" && a === "touch" && b === "share") {
+      const me = await resolveSession(bearer(request));
+      const invite = await createTouchShare(me.id);
+      return json({ invite }, 201);
+    }
+
+    if (method === "GET" && a === "touch" && b === "share" && c) {
+      const me = await resolveSession(bearer(request));
+      const invite = await getTouchShare(me.id, c);
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "touch" && b === "share" && c && d === "cancel") {
+      const me = await resolveSession(bearer(request));
+      const invite = await cancelTouchShare(me.id, c);
+      return json({ invite });
+    }
+
+    if (method === "GET" && a === "touch" && b === "code" && c) {
+      const me = await resolveSession(bearer(request));
+      const invite = await resolveTouchCode(me.id, c);
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "touch" && b === "code" && c && d === "accept") {
+      const me = await resolveSession(bearer(request));
+      const invite = await acceptTouchCode(me.id, c);
+      return json({ invite });
+    }
+
+    if (method === "POST" && a === "touch" && b === "code" && c && d === "reject") {
+      const me = await resolveSession(bearer(request));
+      const invite = await rejectTouchCode(me.id, c);
+      return json({ invite });
     }
 
     if (method === "POST" && a === "calls" && b === "invite") {

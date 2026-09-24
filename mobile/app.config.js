@@ -45,7 +45,18 @@ module.exports = {
     googleServicesFile: "./GoogleService-Info.plist",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      UIBackgroundModes: ["audio", "voip", "remote-notification", "fetch"],
+      NSBluetoothAlwaysUsageDescription:
+        "WIPP Touch utilise le Bluetooth pour partager ton WIPP à proximité, sans numéro.",
+      NSBluetoothPeripheralUsageDescription:
+        "WIPP Touch utilise le Bluetooth pour partager ton WIPP à proximité.",
+      UIBackgroundModes: [
+        "audio",
+        "voip",
+        "remote-notification",
+        "fetch",
+        "bluetooth-central",
+        "bluetooth-peripheral",
+      ],
     },
   },
   android: {
@@ -59,7 +70,15 @@ module.exports = {
       "USE_FULL_SCREEN_INTENT",
       "FOREGROUND_SERVICE",
       "FOREGROUND_SERVICE_PHONE_CALL",
+      "FOREGROUND_SERVICE_CONNECTED_DEVICE",
       "MANAGE_OWN_CALLS",
+      "BLUETOOTH",
+      "BLUETOOTH_ADMIN",
+      "BLUETOOTH_SCAN",
+      "BLUETOOTH_ADVERTISE",
+      "BLUETOOTH_CONNECT",
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION",
     ],
     adaptiveIcon: {
       backgroundColor: "#0B1220",
@@ -89,6 +108,15 @@ module.exports = {
     "@react-native-firebase/auth",
     "./plugins/withWippCallkeep.js",
     [
+      "react-native-ble-plx",
+      {
+        isBackgroundEnabled: true,
+        modes: ["peripheral", "central"],
+        bluetoothAlwaysPermission:
+          "WIPP Touch utilise le Bluetooth pour partager ton WIPP à proximité, sans numéro.",
+      },
+    ],
+    [
       "expo-build-properties",
       {
         ios: {
@@ -99,6 +127,11 @@ module.exports = {
           permissions: [
             "android.permission.POST_NOTIFICATIONS",
             "android.permission.USE_FULL_SCREEN_INTENT",
+            "android.permission.BLUETOOTH_SCAN",
+            "android.permission.BLUETOOTH_ADVERTISE",
+            "android.permission.BLUETOOTH_CONNECT",
+            "android.permission.ACCESS_FINE_LOCATION",
+            "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
           ],
         },
       },

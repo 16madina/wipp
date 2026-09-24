@@ -5,6 +5,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
+import {
+  bindTouchNotificationResponses,
+  startTouchReceiver,
+} from '@/lib/touch-receiver';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -28,6 +32,14 @@ export default function RootLayout() {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
+  useEffect(() => {
+    const unsub = bindTouchNotificationResponses();
+    void startTouchReceiver().catch(() => undefined);
+    return () => {
+      unsub.remove();
+    };
+  }, []);
+
   if (!loaded) return null;
 
   return (
@@ -43,6 +55,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="touch" options={{ title: 'WIPP Touch' }} />
         <Stack.Screen name="admin" options={{ title: 'Admin' }} />
         <Stack.Screen name="chat/[id]" options={{ title: 'Conversation' }} />
       </Stack>

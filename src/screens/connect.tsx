@@ -11,6 +11,9 @@ import { useT, useWgoStore } from "@/lib/store";
 import type { FoundVia } from "@/lib/types";
 import { cn, APP_HOST } from "@/lib/utils";
 import { ConnectHubExtras, ScanResultHint } from "./connect-extras";
+import { getActiveTouchInvite } from "@/lib/messaging/touch-active";
+import { acceptTouchCode, resolveTouchCode } from "@/lib/messaging/touch-client";
+import { ensureServerSession, getStoredToken } from "@/lib/messaging/client";
 
 export function ConnectScreen() {
   const t = useT();
@@ -74,19 +77,27 @@ export function MyQrScreen() {
   const push = useWgoStore((s) => s.push);
   const me = useWgoStore((s) => s.me);
   const [copied, setCopied] = useState(false);
-  const link = `${APP_HOST}/${me.username}`;
+  const touchInvite = getActiveTouchInvite();
+  const isTouchShare = Boolean(touchInvite?.status === "active" && touchInvite.code);
+  const link = isTouchShare ? touchInvite!.qrPayload.replace(/^https?:\/\//, "") : `${APP_HOST}/${me.username}`;
+  const qrValue = isTouchShare ? touchInvite!.qrPayload : link;
+  const shareUrl = isTouchShare ? touchInvite!.qrPayload : `https://${link}`;
 
   async function share() {
-    const payload = { title: "Wipp", text: `@${me.username}`, url: `https://${link}` };
+    const payload = {
+      title: "Wipp",
+      text: isTouchShare ? `Code WIPP Touch ${touchInvite!.code}` : `@${me.username}`,
+      url: shareUrl,
+    };
     try {
       if (navigator.share) await navigator.share(payload);
       else {
-        await navigator.clipboard.writeText(`https://${link}`);
+        await navigator.clipboard.writeText(isTouchShare ? touchInvite!.code : shareUrl);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1600);
       }
     } catch {
-      await navigator.clipboard.writeText(`https://${link}`);
+      await navigator.clipboard.writeText(isTouchShare ? touchInvite!.code : shareUrl);
       setCopied(true);
     }
   }
@@ -94,29 +105,34 @@ export function MyQrScreen() {
   return (
     <div className="flex h-full flex-col bg-navy text-paper">
       <StatusBar />
-      <Header title={t("myQr")} onBack={pop} className="text-paper [&_button]:text-paper" />
+      <Header title={isTouchShare ? t("wgoTouch") : t("myQr")} onBack={pop} className="text-paper [&_button]:text-paper" />
       <div className="flex flex-1 flex-col items-center overflow-y-auto no-scrollbar px-6 pt-2 pb-10">
         <WippWordmark className="mb-4 text-[22px] text-paper" />
         <Avatar user={me} size={72} />
         <p className="mt-3 text-[20px] font-semibold">{me.displayName}</p>
         <p className="text-[14px] text-paper/60">@{me.username}</p>
+        {isTouchShare ? (
+          <p className="mt-2 font-mono text-[22px] font-semibold tracking-[0.2em] text-accent">{touchInvite!.code}</p>
+        ) : null}
         <div className="wipp-card mt-5 rounded-2xl p-1">
           <div className="rounded-xl bg-paper p-4">
-            <QrCard value={link} size={220} />
+            <QrCard value={qrValue} size={220} />
           </div>
         </div>
         <p className="mt-4 max-w-[28ch] text-center text-[13px] leading-relaxed text-paper/60">
-          {t("myCardHint")}
+          {isTouchShare ? t("touchFail") : t("myCardHint")}
         </p>
-        <p className="mt-1 text-[12px] text-paper/40">{link}</p>
+        <p className="mt-1 text-[12px] text-paper/40">{isTouchShare ? touchInvite!.qrPayload : link}</p>
         <Btn className="mt-5 w-full" onClick={share}>
           <Share2 className="size-4" />
           {copied ? t("copied") : t("shareMyCard")}
         </Btn>
-        <Btn variant="secondary" className="mt-2 w-full" onClick={() => push({ name: "wgo-touch" })}>
-          <Smartphone className="size-4" />
-          {t("wgoTouch")}
-        </Btn>
+        {!isTouchShare ? (
+          <Btn variant="secondary" className="mt-2 w-full" onClick={() => push({ name: "wgo-touch" })}>
+            <Smartphone className="size-4" />
+            {t("wgoTouch")}
+          </Btn>
+        ) : null}
       </div>
     </div>
   );
@@ -126,9 +142,64 @@ export function ScannerScreen() {
   const t = useT();
   const pop = useWgoStore((s) => s.pop);
   const replace = useWgoStore((s) => s.replace);
+  const completeTouch = useWgoStore((s) => s.completeTouch);
   const redeemQr = useWgoStore((s) => s.redeemQr);
+  const me = useWgoStore((s) => s.me);
   const [scan, setScan] = useState<null | "profile" | "once" | "group" | "shop">(null);
   const [fail, setFail] = useState<string | null>(null);
+  const [touchCode, setTouchCode] = useState("");
+  const [touchBusy, setTouchBusy] = useState(false);
+
+  async function redeemTouchCode(raw: string) {
+    const code = raw
+      .trim()
+      .toUpperCase()
+      .replace(/^.*\/T\//i, "")
+      .replace(/[^A-Z0-9]/g, "");
+    if (code.length < 6) {
+      setFail(t("codeNotFound"));
+      return;
+    }
+    setTouchBusy(true);
+    setFail(null);
+    try {
+      if (!getStoredToken()) {
+        await ensureServerSession({
+          username: me.username || "deena",
+          displayName: me.displayName,
+        });
+      }
+      await resolveTouchCode(code);
+      const { invite } = await acceptTouchCode(code);
+      const r = invite.receiver;
+      const sender = invite.sender;
+      useWgoStore.setState((st) => ({
+        users: {
+          ...st.users,
+          [sender.id]: {
+            ...st.users[sender.id],
+            id: sender.id,
+            firstName: sender.firstName,
+            lastName: "",
+            displayName: sender.displayName,
+            username: sender.username,
+            bio: "",
+            avatar: sender.avatarUrl || "/avatars/deena.jpg",
+            online: true,
+            city: "",
+            connected: true,
+          },
+        },
+      }));
+      completeTouch(sender.id);
+      replace({ name: "found-profile", userId: sender.id, via: "touch" });
+      void r;
+    } catch (err) {
+      setFail(err instanceof Error ? err.message : t("codeNotFound"));
+    } finally {
+      setTouchBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!scan) return;
@@ -186,6 +257,23 @@ export function ScannerScreen() {
         </button>
         <p className="mt-6 text-[14px] text-paper/60">{t("scanHint")}</p>
         {fail ? <p className="mt-2 text-[13px] text-danger">{fail}</p> : null}
+        <div className="mt-6 w-full rounded-2xl bg-paper/8 p-3 ring-1 ring-paper/10">
+          <p className="mb-2 text-center text-[12px] text-paper/50">Code WIPP Touch</p>
+          <input
+            value={touchCode}
+            onChange={(e) => setTouchCode(e.target.value.toUpperCase())}
+            placeholder="ABCD2345"
+            maxLength={12}
+            className="h-11 w-full rounded-xl bg-ink px-3 text-center font-mono text-[18px] tracking-[0.2em] text-paper outline-none ring-1 ring-paper/15"
+          />
+          <Btn
+            className="mt-2 w-full"
+            disabled={touchBusy || touchCode.trim().length < 6}
+            onClick={() => void redeemTouchCode(touchCode)}
+          >
+            {touchBusy ? "…" : t("touchAllow")}
+          </Btn>
+        </div>
         <div className="mt-6 grid w-full gap-2">
           <Btn onClick={() => { setFail(null); setScan("profile"); }}>
             {t("scanProfile")}

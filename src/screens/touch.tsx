@@ -1,22 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, QrCode, ScanLine } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { WippMark, WippWordmark } from "@/components/logo";
 import { Btn, Header, StatusBar } from "@/components/ui";
-import { NEARBY } from "@/lib/seed";
 import { announce, haptic, reducedMotion } from "@/lib/haptics";
+import {
+  cancelTouchShare,
+  createTouchShare,
+  getTouchShareStatus,
+  type TouchInvite,
+} from "@/lib/messaging/touch-client";
+import {
+  clearActiveTouchInvite,
+  setActiveTouchInvite,
+} from "@/lib/messaging/touch-active";
+import { ensureServerSession, getStoredToken } from "@/lib/messaging/client";
 import { useT, useWgoStore } from "@/lib/store";
 import type { MeProfile, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Phase = "idle" | "reaching" | "contact" | "pick" | "offer" | "waiting" | "connected" | "failed";
 
-const CLOSE_M = 15;
-const TOKEN_MS = 60_000;
-
-function mintToken() {
-  return `WIPP-TEMP-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-}
+/** Real BLE search window before QR/code fallback (same invite). */
+const SEARCH_MS = 12_000;
 
 function playConnectChime() {
   try {
@@ -49,7 +55,7 @@ function MiniPhone({
   user?: User | MeProfile | null;
   phase: Phase;
 }) {
-  const showPeer = side === "them" && phase !== "idle" && phase !== "failed";
+  const showPeer = side === "them" && (phase === "waiting" || phase === "connected" || phase === "offer");
   return (
     <div className={cn("mini-phone", side === "me" ? "phone-me" : "phone-them")}>
       <span className="mini-island" />
@@ -59,10 +65,16 @@ function MiniPhone({
             <Avatar user={user} size={40} />
             <WippWordmark className="mt-2 text-[13px] text-paper" />
           </>
-        ) : showPeer ? (
+        ) : showPeer && user ? (
           <>
             <Avatar user={user} size={40} />
-            <p className="mt-2 text-[13px] font-semibold text-paper">{user?.firstName}</p>
+            <p className="mt-2 text-[13px] font-semibold text-paper">
+              {"firstName" in user && user.firstName
+                ? user.firstName
+                : "displayName" in user
+                  ? String((user as { displayName?: string }).displayName ?? "")
+                  : ""}
+            </p>
           </>
         ) : (
           <span className="touch-radar" aria-hidden>
@@ -107,66 +119,76 @@ function Lockup({
   );
 }
 
+function receiverAsUser(invite: TouchInvite): User | null {
+  const r = invite.receiver;
+  if (!r) return null;
+  return {
+    id: r.id,
+    firstName: r.firstName,
+    lastName: "",
+    displayName: r.displayName,
+    username: r.username,
+    bio: "",
+    avatar: r.avatarUrl || "/avatars/deena.jpg",
+    online: true,
+    city: "",
+    connected: true,
+  };
+}
+
 export function WgoTouchScreen() {
   const t = useT();
   const pop = useWgoStore((s) => s.pop);
   const push = useWgoStore((s) => s.push);
   const me = useWgoStore((s) => s.me);
-  const users = useWgoStore((s) => s.users);
-  const blocked = useWgoStore((s) => s.blockedIds);
   const allowed = useWgoStore((s) => s.touchAllowed);
   const setTouchAllowed = useWgoStore((s) => s.setTouchAllowed);
   const completeTouch = useWgoStore((s) => s.completeTouch);
   const openOrCreateDm = useWgoStore((s) => s.openOrCreateDm);
 
-  const nearby = useMemo(
-    () =>
-      NEARBY.filter((n) => n.meters <= CLOSE_M && !blocked.includes(n.id) && users[n.id])
-        .map((n) => ({ ...n, user: users[n.id] }))
-        .sort((a, b) => {
-          const ac = a.user.connected ? 1 : 0;
-          const bc = b.user.connected ? 1 : 0;
-          if (ac !== bc) return ac - bc;
-          return a.meters - b.meters;
-        }),
-    [blocked, users],
-  );
-
   const [phase, setPhase] = useState<Phase>("idle");
   const [hold, setHold] = useState(0);
   const [peerId, setPeerId] = useState<string | null>(null);
-  const tokenRef = useRef(mintToken());
-  const tokenUntilRef = useRef(Date.now() + TOKEN_MS);
+  const [invite, setInvite] = useState<TouchInvite | null>(null);
+  const [btHint, setBtHint] = useState<string | null>(null);
   const holding = useRef(false);
   const timers = useRef<number[]>([]);
-  const peer = peerId ? users[peerId] : nearby[0]?.user;
+  const inviteIdRef = useRef<string | null>(null);
+  const peer = peerId ? useWgoStore.getState().users[peerId] : null;
 
   useEffect(() => {
     return () => {
       holding.current = false;
       timers.current.forEach((id) => window.clearTimeout(id));
+      const id = inviteIdRef.current;
+      if (id) void cancelTouchShare(id).catch(() => undefined);
+      clearActiveTouchInvite();
     };
   }, []);
-
-  useEffect(() => {
-    if (phase !== "idle" || !allowed) return;
-    const id = window.setInterval(() => {
-      if (Date.now() >= tokenUntilRef.current) {
-        tokenRef.current = mintToken();
-        tokenUntilRef.current = Date.now() + TOKEN_MS;
-      }
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [phase, allowed]);
 
   function later(ms: number, fn: () => void) {
     const id = window.setTimeout(fn, ms);
     timers.current.push(id);
   }
 
-  function remint() {
-    tokenRef.current = mintToken();
-    tokenUntilRef.current = Date.now() + TOKEN_MS;
+  async function ensureInvite(): Promise<TouchInvite | null> {
+    try {
+      if (!getStoredToken()) {
+        await ensureServerSession({
+          username: me.username || "deena",
+          displayName: me.displayName,
+        });
+      }
+      const { invite: next } = await createTouchShare();
+      inviteIdRef.current = next.id;
+      setActiveTouchInvite(next);
+      setInvite(next);
+      return next;
+    } catch (err) {
+      console.warn("[wipp-touch] create share", err);
+      setBtHint(t("touchNeedBt"));
+      return null;
+    }
   }
 
   function resetToIdle() {
@@ -175,40 +197,111 @@ export function WgoTouchScreen() {
     holding.current = false;
     setHold(0);
     setPeerId(null);
-    remint();
+    const id = inviteIdRef.current;
+    if (id) void cancelTouchShare(id).catch(() => undefined);
+    inviteIdRef.current = null;
+    clearActiveTouchInvite();
+    setInvite(null);
+    setBtHint(null);
     setPhase("idle");
   }
 
-  function afterContact() {
-    if (nearby.length === 0) {
+  function onAccepted(inv: TouchInvite) {
+    const u = receiverAsUser(inv);
+    if (u) {
+      useWgoStore.setState((st) => ({
+        users: { ...st.users, [u.id]: { ...st.users[u.id], ...u, connected: true } },
+      }));
+      completeTouch(u.id);
+      setPeerId(u.id);
+    }
+    setInvite(inv);
+    setPhase("connected");
+    haptic("success");
+    playConnectChime();
+    announce(t("touchConnected"));
+  }
+
+  function startPolling(shareId: string) {
+    const tick = async () => {
+      try {
+        const { invite: cur } = await getTouchShareStatus(shareId);
+        setInvite(cur);
+        setActiveTouchInvite(cur.status === "active" ? cur : null);
+        if (cur.status === "accepted") {
+          clearActiveTouchInvite();
+          onAccepted(cur);
+          return;
+        }
+        if (cur.status === "rejected" || cur.status === "cancelled" || cur.status === "expired") {
+          clearActiveTouchInvite();
+          setPhase("failed");
+          haptic("error");
+          return;
+        }
+      } catch {
+        /* keep searching */
+      }
+      later(1500, () => void tick());
+    };
+    void tick();
+  }
+
+  async function start() {
+    if (phase !== "idle") return;
+    holding.current = false;
+    setHold(1);
+    haptic("hold");
+    setBtHint(null);
+
+    const share = await ensureInvite();
+    if (!share) {
       setPhase("failed");
       haptic("error");
       return;
     }
-    if (nearby.length === 1) {
-      setPeerId(nearby[0].id);
-      setPhase("offer");
-      return;
-    }
-    setPhase("pick");
-  }
 
-  function start() {
-    if (phase !== "idle") return;
-    if (!tokenRef.current || Date.now() >= tokenUntilRef.current) remint();
-    holding.current = false;
-    setHold(1);
-    haptic("hold");
+    // Native BLE advertise is handled by the Expo app when available.
+    // Web cannot advertise — after SEARCH_MS we fall back to same-token QR/code.
+    try {
+      const ble = await import("@/lib/touch-ble-bridge");
+      const adv = await ble.startShareAdvertise?.(share.code);
+      if (adv && !adv.ok && adv.reason === "bluetooth_off") {
+        setBtHint(t("touchNeedBt"));
+      }
+    } catch {
+      /* web / no native bridge */
+    }
+
     if (reducedMotion()) {
-      afterContact();
+      setPhase("waiting");
+      startPolling(share.id);
+      later(SEARCH_MS, () => {
+        if (inviteIdRef.current === share.id && useWgoStore.getState()) {
+          setPhase((p) => (p === "waiting" || p === "reaching" || p === "contact" ? "failed" : p));
+        }
+      });
       return;
     }
+
     setPhase("reaching");
     later(720, () => {
       setPhase("contact");
       haptic("connect");
     });
-    later(720 + 560, afterContact);
+    later(720 + 400, () => {
+      setPhase("waiting");
+      startPolling(share.id);
+    });
+    later(SEARCH_MS, () => {
+      setPhase((p) => {
+        if (p === "waiting" || p === "reaching" || p === "contact") {
+          haptic("error");
+          return "failed";
+        }
+        return p;
+      });
+    });
   }
 
   function onPointerDown() {
@@ -219,7 +312,7 @@ export function WgoTouchScreen() {
       if (!holding.current) return;
       const p = Math.min(1, (Date.now() - t0) / 700);
       setHold(p);
-      if (p >= 1) start();
+      if (p >= 1) void start();
       else requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -229,19 +322,6 @@ export function WgoTouchScreen() {
     if (phase !== "idle") return;
     holding.current = false;
     setHold(0);
-  }
-
-  function acceptPeer(id: string) {
-    setPeerId(id);
-    setPhase("waiting");
-    later(1100, () => {
-      completeTouch(id);
-      remint();
-      setPhase("connected");
-      haptic("success");
-      playConnectChime();
-      announce(t("touchConnected"));
-    });
   }
 
   const detecting = phase === "idle" || phase === "reaching" || phase === "contact";
@@ -274,7 +354,7 @@ export function WgoTouchScreen() {
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto no-scrollbar">
         <div className="touch-glow" data-phase={animPhase} />
 
-        {detecting ? (
+        {detecting || phase === "waiting" ? (
           <button
             type="button"
             className="touch-stage"
@@ -311,10 +391,8 @@ export function WgoTouchScreen() {
               />
             ) : null}
           </button>
-        ) : phase === "pick" ? (
-          <p className="px-8 pt-4 text-center text-[14px] leading-relaxed text-paper/70">{t("touchPick")}</p>
-        ) : phase === "offer" || phase === "waiting" || phase === "connected" ? (
-          <Lockup me={me} peer={peer} done={phase === "connected"} />
+        ) : phase === "connected" ? (
+          <Lockup me={me} peer={peer} done />
         ) : (
           <div className="flex justify-center px-4 py-8">
             <WippMark size={64} invert />
@@ -337,43 +415,12 @@ export function WgoTouchScreen() {
           </>
         ) : null}
 
-        {phase === "pick" ? (
-          <div className="mt-4 px-4">
-            {nearby.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                className="press mb-2 flex w-full items-center gap-3 rounded-2xl bg-paper/8 px-3 py-3 text-left ring-1 ring-paper/10"
-                onClick={() => {
-                  setPeerId(n.id);
-                  setPhase("offer");
-                }}
-              >
-                <Avatar user={n.user} size={48} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[16px] font-semibold">{n.user.displayName}</span>
-                  <span className="text-[12px] text-paper/55">@{n.user.username}</span>
-                </span>
-                <span className="text-[12px] tabular-nums text-accent">{n.meters}&nbsp;m</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {phase === "offer" && peer ? (
-          <div className="relative z-10 mx-4 mt-1 rounded-2xl bg-paper/8 px-5 py-5 text-center ring-1 ring-accent/30 rise">
-            <p className="text-[12px] font-medium tracking-[0.14em] text-accent uppercase">{t("touchDetected")}</p>
-            <Avatar user={peer} size={72} className="mx-auto mt-3" />
-            <p className="mt-3 text-[20px] font-semibold">{peer.displayName}</p>
-            <p className="text-[14px] text-paper/55">@{peer.username}</p>
-            <p className="mt-2 text-[13px] leading-snug text-paper/75">
-              {peer.firstName} {t("touchWantsShare")}
-            </p>
-          </div>
-        ) : null}
-
         {phase === "waiting" ? (
           <p className="px-8 pt-2 text-center text-[14px] leading-relaxed text-paper/60">{t("touchWaiting")}</p>
+        ) : null}
+
+        {btHint ? (
+          <p className="mt-2 px-8 text-center text-[13px] text-accent">{btHint}</p>
         ) : null}
 
         {phase === "connected" && peer ? (
@@ -390,14 +437,19 @@ export function WgoTouchScreen() {
         ) : null}
 
         {phase === "failed" ? (
-          <p className="px-8 text-center text-[15px] leading-relaxed text-paper/70">{t("touchFail")}</p>
+          <div className="px-8 text-center">
+            <p className="text-[15px] leading-relaxed text-paper/70">{t("touchFail")}</p>
+            {invite?.code ? (
+              <p className="mt-3 font-mono text-[22px] font-semibold tracking-[0.2em] text-accent">{invite.code}</p>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
       <div className="relative z-10 shrink-0 px-5 pb-8 pt-3">
         {phase === "idle" ? (
           <>
-            <Btn className="w-full" onClick={start}>
+            <Btn className="w-full" onClick={() => void start()}>
               {t("touchCta")}
             </Btn>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -405,21 +457,18 @@ export function WgoTouchScreen() {
                 <ScanLine className="size-4" />
                 {t("touchScanQr")}
               </Btn>
-              <Btn variant="secondary" className="text-paper" onClick={() => push({ name: "my-qr" })}>
+              <Btn
+                variant="secondary"
+                className="text-paper"
+                onClick={() => {
+                  void ensureInvite().then(() => push({ name: "my-qr" }));
+                }}
+              >
                 <QrCode className="size-4" />
                 {t("touchShowQr")}
               </Btn>
             </div>
           </>
-        ) : null}
-
-        {phase === "offer" && peerId ? (
-          <div className="grid grid-cols-2 gap-2">
-            <Btn variant="secondary" className="text-paper" onClick={resetToIdle}>
-              {t("touchRefuse")}
-            </Btn>
-            <Btn onClick={() => acceptPeer(peerId)}>{t("accept")}</Btn>
-          </div>
         ) : null}
 
         {phase === "waiting" ? (
@@ -448,7 +497,7 @@ export function WgoTouchScreen() {
           </div>
         ) : null}
 
-        {phase === "pick" || phase === "reaching" || phase === "contact" ? (
+        {phase === "reaching" || phase === "contact" || phase === "waiting" ? (
           <button type="button" className="mt-1 h-11 w-full text-[13px] text-paper/45" onClick={resetToIdle}>
             {t("cancel")}
           </button>
