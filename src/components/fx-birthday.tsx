@@ -140,7 +140,7 @@ export function BirthdayFx({ id, onDone }: { id: string; onDone: () => void }) {
   );
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[96] overflow-visible fx-stage fx-stage-bday" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[96] overflow-hidden fx-stage fx-stage-bday" aria-hidden>
       <i className="fx-veil fx-veil-bday" />
       <i className="bd-cake-halo fx-halo-bday" />
       <i className="fx-bloom fx-bloom-warm" />
