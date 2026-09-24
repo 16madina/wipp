@@ -57,7 +57,7 @@ import { Header, IconBtn, Sheet, StatusBar } from "@/components/ui";
 import { formatClock, formatDuration, formatLastSeen, formatRemain } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { SHOP_CAT_KEYS } from "@/lib/i18n";
-import { isEmojiSticker } from "@/lib/emoji";
+import { EMOJI_CATS, isEmojiSticker, stickerIdFromEmoji } from "@/lib/emoji";
 import { isStickerId, stickerById, stickerLabel, stickersInPack, WIPP_STICKERS } from "@/lib/stickers";
 import { isChatSealed, useT, useWgoStore } from "@/lib/store";
 import { DISAPPEAR_24H, DISAPPEAR_7D } from "@/lib/types";
@@ -113,6 +113,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const [galleryKind, setGalleryKind] = useState<"image" | "video">("image");
   const [pickContact, setPickContact] = useState(false);
   const [emojiBar, setEmojiBar] = useState(false);
+  const [emojiCat, setEmojiCat] = useState<(typeof EMOJI_CATS)[number]["id"] | "moji">(EMOJI_CATS[0].id);
   const [stickerQuery, setStickerQuery] = useState("");
   const [stickerSearch, setStickerSearch] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -245,7 +246,19 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     sendMessage(chatId, { type: "sticker", stickerId: id, text: label });
     setStickerTab("recent");
     setPickStickers(false);
+    setEmojiBar(false);
   }
+
+  function insertEmoji(emoji: string) {
+    setText((prev) => `${prev}${emoji}`);
+    haptic("tap");
+  }
+
+  function sendUnicodeEmoji(emoji: string) {
+    sendSticker(stickerIdFromEmoji(emoji), emoji);
+  }
+
+  const activeEmojiCat = EMOJI_CATS.find((c) => c.id === emojiCat) ?? EMOJI_CATS[0];
 
   function sendMedia(pick: StoryMediaPick) {
     haptic("send");
@@ -779,25 +792,43 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           ) : (
             <>
               {emojiBar ? (
-                <div className="glass no-scrollbar grid max-h-40 grid-cols-6 gap-1 overflow-y-auto px-2 py-2">
-                  {stickersInPack("moji").map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className="press flex aspect-square items-center justify-center rounded-xl"
-                      aria-label={lang === "fr" ? s.labelFr : s.labelEn}
-                      onClick={() => sendSticker(s.id, lang === "fr" ? s.labelFr : s.labelEn)}
-                    >
-                      <WippSticker id={s.id} size={44} />
-                    </button>
-                  ))}
+                <div className="glass flex max-h-52 flex-col px-2 pt-2 pb-1">
+                  <div className="no-scrollbar mb-1.5 flex gap-1 overflow-x-auto pb-0.5">
+                    {EMOJI_CATS.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        aria-label={lang === "fr" ? cat.labelFr : cat.labelEn}
+                        className={cn(
+                          "flex size-8 shrink-0 items-center justify-center rounded-full text-[18px]",
+                          emojiCat === cat.id ? "bg-accent/25 ring-1 ring-accent" : "bg-navy/40",
+                        )}
+                        onClick={() => setEmojiCat(cat.id)}
+                      >
+                        {cat.icon}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="no-scrollbar grid max-h-40 grid-cols-8 gap-0.5 overflow-y-auto pb-1">
+                    {activeEmojiCat.emojis.map((emoji) => (
+                      <button
+                        key={`${activeEmojiCat.id}-${emoji}`}
+                        type="button"
+                        className="press flex aspect-square items-center justify-center rounded-lg text-[22px] leading-none"
+                        aria-label={emoji}
+                        onClick={() => insertEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
-              <div className="glass flex items-end gap-1 px-2 py-2">
+              <div className="glass flex min-w-0 items-end gap-0.5 px-1.5 py-2">
                 <button
                   type="button"
                   aria-label="Plus"
-                  className="press mb-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-navy/70 ring-1 ring-hair"
+                  className="press mb-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-navy/70 ring-1 ring-hair"
                   onClick={() => {
                     setPickStickers(false);
                     setEmojiBar(false);
@@ -806,7 +837,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 >
                   <Plus className="size-5" />
                 </button>
-                <div className="flex min-h-11 flex-1 items-end rounded-full bg-surface-2 ring-1 ring-hair">
+                <div className="flex min-h-11 min-w-0 flex-1 items-end rounded-full bg-surface-2 ring-1 ring-hair">
                   <textarea
                     rows={1}
                     value={text}
@@ -818,12 +849,12 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                       }
                     }}
                     placeholder={t("writeMessage")}
-                    className="max-h-28 flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] outline-none"
+                    className="max-h-28 min-w-0 flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] outline-none"
                   />
                   <button
                     type="button"
                     aria-label={t("stickerEmoji")}
-                    className={cn("press mb-1 mr-1 flex size-8 items-center justify-center rounded-full", emojiBar ? "text-accent" : "text-muted")}
+                    className={cn("press mb-1 mr-1 flex size-8 shrink-0 items-center justify-center rounded-full", emojiBar ? "text-accent" : "text-muted")}
                     onClick={() => {
                       setEmojiBar((v) => !v);
                       setPickStickers(false);
@@ -835,7 +866,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 <button
                   type="button"
                   aria-label={t("stickers")}
-                  className={cn("press relative mb-0.5 flex size-10 shrink-0 items-center justify-center", pickStickers ? "text-accent" : "text-fg")}
+                  className={cn("press relative mb-0.5 flex size-9 shrink-0 items-center justify-center", pickStickers ? "text-accent" : "text-fg")}
                   onClick={() => {
                     setEmojiBar(false);
                     setPickStickers((v) => !v);
@@ -847,7 +878,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 <button
                   type="button"
                   aria-label={t("shareCamera")}
-                  className="press mb-0.5 flex size-10 shrink-0 items-center justify-center text-fg"
+                  className="press mb-0.5 flex size-9 shrink-0 items-center justify-center text-fg"
                   onClick={() => cameraRef.current?.click()}
                 >
                   <Camera className="size-5" />
@@ -855,7 +886,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 {text.trim() ? (
                   <button
                     type="button"
-                    className="press mb-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg"
+                    className="press mb-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg"
                     aria-label={t("send")}
                     onClick={send}
                   >
@@ -864,7 +895,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 ) : (
                   <button
                     type="button"
-                    className="press mb-0.5 flex size-10 shrink-0 items-center justify-center text-fg"
+                    className="press mb-0.5 flex size-9 shrink-0 items-center justify-center text-fg"
                     aria-label={t("voice")}
                     onPointerDown={() => setRec({ t0: Date.now(), locked: false })}
                   >
@@ -937,18 +968,63 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         <p className="px-2 py-8 text-center text-[13px] text-muted">{t("stickerRecentEmpty")}</p>
                       )
                     ) : stickerTab === "emoji" && !stickerQuery ? (
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {stickersInPack("moji").map((s) => (
+                      <div className="flex flex-col gap-2">
+                        <div className="no-scrollbar flex gap-1 overflow-x-auto pb-0.5">
+                          {EMOJI_CATS.map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              aria-label={lang === "fr" ? cat.labelFr : cat.labelEn}
+                              className={cn(
+                                "flex size-9 shrink-0 items-center justify-center rounded-full text-[18px]",
+                                emojiCat === cat.id ? "bg-accent/25 ring-1 ring-accent" : "bg-navy/40",
+                              )}
+                              onClick={() => setEmojiCat(cat.id)}
+                            >
+                              {cat.icon}
+                            </button>
+                          ))}
                           <button
-                            key={s.id}
                             type="button"
-                            className="press flex aspect-square items-center justify-center rounded-2xl bg-navy/40"
-                            aria-label={lang === "fr" ? s.labelFr : s.labelEn}
-                            onClick={() => sendSticker(s.id, lang === "fr" ? s.labelFr : s.labelEn)}
+                            aria-label="WIPP Moji"
+                            className={cn(
+                              "flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold",
+                              emojiCat === "moji" ? "bg-accent text-accent-fg" : "bg-navy/40 text-muted",
+                            )}
+                            onClick={() => setEmojiCat("moji")}
                           >
-                            <WippSticker id={s.id} size={64} />
+                            W
                           </button>
-                        ))}
+                        </div>
+                        {emojiCat === "moji" ? (
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {stickersInPack("moji").map((s) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className="press flex aspect-square items-center justify-center rounded-2xl bg-navy/40"
+                                aria-label={lang === "fr" ? s.labelFr : s.labelEn}
+                                onClick={() => sendSticker(s.id, lang === "fr" ? s.labelFr : s.labelEn)}
+                              >
+                                <WippSticker id={s.id} size={64} />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-8 gap-1">
+                            {activeEmojiCat.emojis.map((emoji) => (
+                              <button
+                                key={`tray-${activeEmojiCat.id}-${emoji}`}
+                                type="button"
+                                className="press flex aspect-square items-center justify-center rounded-xl bg-navy/40 text-[22px] leading-none"
+                                aria-label={emoji}
+                                onClick={() => sendUnicodeEmoji(emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="grid grid-cols-4 gap-1.5">

@@ -234,7 +234,7 @@ function CastSticker({
       role={replay ? "button" : undefined}
       tabIndex={replay ? 0 : undefined}
       aria-label={row.labelFr}
-      className={cn("relative shrink-0", replay ? "cursor-pointer" : "pointer-events-none", className)}
+      className={cn("relative shrink-0", replay && "cursor-pointer", className)}
       style={{ width: size, height: size }}
       onClick={
         replay
