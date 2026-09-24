@@ -170,20 +170,20 @@ export function SurpriseCompose({
           </label>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[22px] bg-[#0a0c12] ring-1 ring-[#ffd84d]/25">
+        <div className="mt-3 overflow-hidden rounded-[22px] bg-[#0a0c12] p-2 ring-1 ring-[#ffd84d]/25">
           {live ? (
-            <div className="relative">
+            <div className="relative overflow-hidden rounded-[18px]">
               <img
                 src={PREVIEW_BY_DESIGN[design] ?? PREVIEW_BY_DESIGN.love}
                 alt=""
                 draggable={false}
                 decoding="async"
-                className="w-full object-cover"
+                className="block h-auto w-full object-contain"
               />
               {text.trim() ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p
-                    className="max-w-[46%] -translate-y-[2%] rotate-[-4deg] text-center font-serif text-[15px] font-bold italic leading-snug text-[#1a1208]"
+                    className="max-w-[42%] -translate-y-[4%] rotate-[-4deg] text-center font-serif text-[14px] font-bold italic leading-snug text-[#1a1208]"
                     style={{ textShadow: "0 1px 0 rgb(255 255 255 / 0.25)" }}
                   >
                     {text.trim().slice(0, 80)}
@@ -192,7 +192,7 @@ export function SurpriseCompose({
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-col items-center px-4 py-5">
+            <div className="flex flex-col items-center px-3 py-4">
               <ScratchCard
                 key={`${previewKey}-${design}`}
                 text={text.trim() || t("scratchHere")}
