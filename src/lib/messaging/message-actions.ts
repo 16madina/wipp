@@ -7,7 +7,7 @@ import { getSql } from "@/lib/db";
 import { listPushTokens } from "@/lib/messaging/calls";
 import { sendExpoPush } from "@/lib/push/expo";
 import { EDIT_WINDOW_MS } from "@/lib/messaging/plain";
-import { ensureMessagingReady, WippHttpError } from "@/lib/messaging/server";
+import { assertChatUnblocked, ensureMessagingReady, isBlocked, WippHttpError } from "@/lib/messaging/server";
 import type { WippMessage } from "@/lib/messaging/types";
 import {
   isPresent,
@@ -77,6 +77,8 @@ function mapRow(r: Row, reactions: { profileId: string; emoji: string; createdAt
 }
 
 export async function listThread(meId: string, chatId: string, after?: number): Promise<WippMessage[]> {
+  const { sweepMedia } = await import("./media-store");
+  await sweepMedia();
   await ensureMessagingReady();
   await assertMember(meId, chatId);
   const sql = await getSql();
@@ -147,6 +149,7 @@ export async function afterMessageStored(
 export async function editMessage(meId: string, chatId: string, messageId: string, body: string) {
   await ensureMessagingReady();
   await assertMember(meId, chatId);
+  await assertChatUnblocked(meId, chatId);
   const text = body.trim();
   if (!text) throw new WippHttpError(400, "empty", "Message vide.");
   const sql = await getSql();
@@ -199,12 +202,15 @@ export async function tombstoneMessage(meId: string, chatId: string, messageId: 
   if (rows[0].sender_id !== meId) {
     throw new WippHttpError(403, "forbidden", "Tu ne peux supprimer pour tous que tes messages.");
   }
+  await assertChatUnblocked(meId, chatId);
   await sql`
     update wipp_messages
     set body = ${TOMBSTONE}, deleted_at = now(), pinned_at = null, pinned_by = null
     where id = ${messageId}
   `;
   await sql`delete from wipp_reactions where message_id = ${messageId}`;
+  const { purgeMessageMedia } = await import("./media-store");
+  await purgeMessageMedia(messageId);
   await emit(chatId, "delete", { messageId, scope: "all" });
   return { ok: true as const, messageId, scope: "all" as const };
 }
@@ -212,6 +218,7 @@ export async function tombstoneMessage(meId: string, chatId: string, messageId: 
 export async function setReaction(meId: string, chatId: string, messageId: string, emoji: string) {
   await ensureMessagingReady();
   await assertMember(meId, chatId);
+  await assertChatUnblocked(meId, chatId);
   const clean = emoji.trim().slice(0, 16);
   if (!clean) throw new WippHttpError(400, "empty", "Réaction vide.");
   const sql = await getSql();
@@ -240,6 +247,7 @@ export async function setReaction(meId: string, chatId: string, messageId: strin
 export async function setPin(meId: string, chatId: string, messageId: string, pinned: boolean) {
   await ensureMessagingReady();
   await assertMember(meId, chatId);
+  await assertChatUnblocked(meId, chatId);
   const sql = await getSql();
   await sql`
     update wipp_messages
@@ -260,6 +268,7 @@ export async function markReceipt(
 ) {
   await ensureMessagingReady();
   await assertMember(meId, chatId);
+  await assertChatUnblocked(meId, chatId);
   const sql = await getSql();
   const ids = messageIds.slice(0, 100);
   for (const messageId of ids) {
@@ -301,6 +310,7 @@ export async function setFocus(meId: string, chatId: string, active: boolean) {
 
 export async function setTyping(meId: string, chatId: string, active: boolean) {
   await assertMember(meId, chatId);
+  await assertChatUnblocked(meId, chatId);
   const sql = await getSql();
   const rows = await sql<{ username: string }>`
     select username from wipp_profiles where id = ${meId} limit 1
@@ -330,6 +340,7 @@ async function notifyPeers(meId: string, chatId: string, vault: boolean) {
     if (isPresent(chatId, peer.profile_id)) continue;
     const { peerIsMuted } = await import("./chat-prefs");
     if (await peerIsMuted(chatId, peer.profile_id)) continue;
+    if (await isBlocked(meId, peer.profile_id)) continue;
     const tokens = await listPushTokens(peer.profile_id);
     const expo = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
     if (!expo.length) continue;

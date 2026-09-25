@@ -727,6 +727,25 @@ export const useWgoStore = create<WgoState>()(
         void get().sealMessage(chatId, message.id);
         if (!chatId.startsWith("srv:")) pumpReceipt(set, get, chatId, message.id);
 
+        if (chatId.startsWith("srv:") && data.stickerId && message.type === "sticker") {
+          void (async () => {
+            const { describeMedia } = await import("@/lib/messaging/media-crypto");
+            const { sendViaServer } = await import("@/lib/messaging/sync");
+            const { isPrivateChat } = await import("@/lib/private-vault");
+            const st = get();
+            const peerId = st.chats.find((c) => c.id === chatId)?.participantIds.find((id) => id !== "me");
+            const peerPub = peerId
+              ? st.peerPublicKeys[peerId] ||
+                (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice("srvuser:".length)] : undefined)
+              : undefined;
+            await sendViaServer(chatId, describeMedia({ kind: "sticker", stickerId: data.stickerId }), message.id, {
+              identity: st.identity,
+              peerPublicJwk: peerPub ?? null,
+              vault: isPrivateChat(chatId),
+            });
+          })();
+        }
+
         // Dual-write text messages to the messaging server for srv: chats (E2E when peer key known)
         if (message.type === "text" && message.text) {
           void (async () => {
@@ -1189,7 +1208,11 @@ export const useWgoStore = create<WgoState>()(
           ),
         })),
 
-      blockUser: (userId) =>
+      blockUser: (userId) => {
+        const profileId = userId.startsWith("srvuser:") ? userId.slice("srvuser:".length) : userId;
+        if (profileId.startsWith("p_") || userId.startsWith("srvuser:")) {
+          void import("@/lib/messaging/client").then((c) => c.postBlock({ profileId }).catch(() => undefined));
+        }
         set((st) => ({
           blockedIds: [...new Set([...st.blockedIds, userId])],
           chats: st.chats.filter(
@@ -1198,12 +1221,18 @@ export const useWgoStore = create<WgoState>()(
           requests: st.requests.map((r) =>
             r.fromId === userId ? { ...r, status: "ignored" } : r,
           ),
-        })),
+        }));
+      },
 
-      unblockUser: (userId) =>
+      unblockUser: (userId) => {
+        const profileId = userId.startsWith("srvuser:") ? userId.slice("srvuser:".length) : userId;
+        if (profileId.startsWith("p_") || userId.startsWith("srvuser:")) {
+          void import("@/lib/messaging/client").then((c) => c.postUnblock({ profileId }).catch(() => undefined));
+        }
         set((st) => ({
           blockedIds: st.blockedIds.filter((id) => id !== userId),
-        })),
+        }));
+      },
 
       reportTarget: ({ kind, targetId, reason }) =>
         set((st) => ({
@@ -1391,6 +1420,11 @@ export const useWgoStore = create<WgoState>()(
       },
 
       setDisappear: (chatId, ms) => {
+        if (chatId.startsWith("srv:")) {
+          void import("@/lib/messaging/client").then((c) =>
+            c.postDisappear(chatId.slice(4), ms).catch(() => undefined),
+          );
+        }
         const lang = get().language;
         const label = !ms
           ? t(lang, "disappearOffSys")

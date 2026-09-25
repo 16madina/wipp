@@ -354,6 +354,45 @@ export async function postFocus(chatId: string, active: boolean) {
   return api(`/chats/${chatId}/focus`, { method: 'POST', body: JSON.stringify({ active }) });
 }
 
+export async function postBlock(target: { username?: string; profileId?: string }) {
+  return api('/blocks', { method: 'POST', body: JSON.stringify(target) });
+}
+
+export async function postUnblock(target: { username?: string; profileId?: string }) {
+  return api('/blocks/remove', { method: 'POST', body: JSON.stringify(target) });
+}
+
+export async function postDisappear(chatId: string, ms: number) {
+  return api(`/chats/${chatId}/disappear`, { method: 'POST', body: JSON.stringify({ ms }) });
+}
+
+export async function createAttachment(chatId: string, input: { chunkCount: number; byteSize: number; viewOnce?: boolean }) {
+  return api<{ id: string }>(`/chats/${chatId}/attachments`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function putChunk(attachmentId: string, index: number, ciphertext: string, sha256: string) {
+  return api(`/attachments/${attachmentId}/chunks/${index}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ciphertext, sha256 }),
+  });
+}
+
+export async function readChunk(attachmentId: string, index: number) {
+  return api<{ ciphertext: string; sha256: string; index: number }>(`/attachments/${attachmentId}/chunks/${index}`);
+}
+
+export async function consumeAttachment(attachmentId: string) {
+  return api(`/attachments/${attachmentId}/consume`, { method: 'POST', body: '{}' });
+}
+
+export async function moderationPublicKey() {
+  return api<{ publicJwk: JsonWebKey }>('/moderation/key');
+}
+
+export async function postReport(input: { chatId: string; messageId: string; reason: string; sealedPayload: string }) {
+  return api('/reports', { method: 'POST', body: JSON.stringify(input) });
+}
+
 export async function health() {
   return api<{ ok: boolean; service: string }>('/health', { auth: false });
 }

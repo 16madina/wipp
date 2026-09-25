@@ -55,6 +55,32 @@ export class WippHttpError extends Error {
   }
 }
 
+export async function isBlocked(a: string, b: string) {
+  if (!a || !b || a === b) return false;
+  const sql = await getSql();
+  const rows = await sql`
+    select 1 from wipp_blocks
+    where (blocker_id = ${a} and blocked_id = ${b})
+       or (blocker_id = ${b} and blocked_id = ${a})
+    limit 1
+  `;
+  return rows.length > 0;
+}
+
+export async function assertNotBlocked(a: string, b: string) {
+  if (await isBlocked(a, b)) {
+    throw new WippHttpError(403, "blocked", "Cette personne est bloquée.");
+  }
+}
+
+export async function assertChatUnblocked(meId: string, chatId: string) {
+  const sql = await getSql();
+  const peers = await sql<{ profile_id: string }>`
+    select profile_id from wipp_chat_members where chat_id = ${chatId} and profile_id <> ${meId}
+  `;
+  for (const peer of peers) await assertNotBlocked(meId, peer.profile_id);
+}
+
 type ProfileRow = {
   id: string;
   username: string;
@@ -389,6 +415,61 @@ export async function adminBlockUser(meId: string, targetUsername: string, reaso
   return { ok: true, blockedId: target.id, username };
 }
 
+export async function blockUser(meId: string, target: { username?: string; profileId?: string }) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  let blockedId = target.profileId?.trim() || "";
+  if (!blockedId && target.username) {
+    const username = normalizeUsername(target.username);
+    const rows = await sql<{ id: string }>`
+      select id from wipp_profiles where lower(username) = ${username} limit 1
+    `;
+    blockedId = rows[0]?.id ?? "";
+  }
+  if (!blockedId) throw new WippHttpError(404, "user_not_found", "Personne introuvable.");
+  if (blockedId === meId) throw new WippHttpError(400, "self_block", "Impossible de te bloquer.");
+  const id = uid("blk");
+  await sql`
+    insert into wipp_blocks (id, blocker_id, blocked_id, reason)
+    values (${id}, ${meId}, ${blockedId}, ${""})
+    on conflict (blocker_id, blocked_id) do nothing
+  `;
+  return { ok: true as const, blockedId };
+}
+
+export async function unblockUser(meId: string, target: { username?: string; profileId?: string }) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  let blockedId = target.profileId?.trim() || "";
+  if (!blockedId && target.username) {
+    const username = normalizeUsername(target.username);
+    const rows = await sql<{ id: string }>`
+      select id from wipp_profiles where lower(username) = ${username} limit 1
+    `;
+    blockedId = rows[0]?.id ?? "";
+  }
+  if (!blockedId) throw new WippHttpError(404, "user_not_found", "Personne introuvable.");
+  await sql`
+    delete from wipp_blocks where blocker_id = ${meId} and blocked_id = ${blockedId}
+  `;
+  return { ok: true as const };
+}
+
+const DISAPPEAR_ALLOWED = new Set([0, 86_400_000, 604_800_000]);
+
+export async function setDisappear(meId: string, chatId: string, ms: number) {
+  await ensureMessagingReady();
+  await assertMember(meId, chatId);
+  if (!DISAPPEAR_ALLOWED.has(ms)) {
+    throw new WippHttpError(400, "bad_ttl", "Durée éphémère invalide.");
+  }
+  const sql = await getSql();
+  await sql`
+    update wipp_chats set disappear_after_ms = ${ms || null} where id = ${chatId}
+  `;
+  return { ok: true as const, disappearAfterMs: ms || null };
+}
+
 export async function adminUnblockUser(meId: string, targetUsername: string) {
   await assertAdmin(meId);
   const sql = await getSql();
@@ -576,6 +657,7 @@ export async function getOrCreateDm(meId: string, peerUsername: string): Promise
   const peer = peers[0];
   if (!peer) throw new WippHttpError(404, "user_not_found", `@${username} introuvable.`);
   if (peer.id === meId) throw new WippHttpError(400, "self_chat", "Impossible de discuter avec soi-même.");
+  await assertNotBlocked(meId, peer.id);
 
   const existing = await sql<{ chat_id: string }>`
     select m1.chat_id
@@ -673,6 +755,9 @@ export async function sendMessage(
 ): Promise<WippMessage> {
   await ensureMessagingReady();
   await assertMember(meId, chatId);
+  await assertChatUnblocked(meId, chatId);
+  const { sweepMedia } = await import("./media-store");
+  await sweepMedia();
   const text = body.trim();
   if (!text) throw new WippHttpError(400, "empty", "Message vide.");
   const replyTo = opts?.replyTo?.trim() || null;
@@ -709,9 +794,14 @@ export async function sendMessage(
   }
   const id = uid("m");
   const msgId = clientId ? `m_${createHash("sha256").update(`${chatId}:${clientId}`).digest("hex").slice(0, 24)}` : id;
+  const ttl = await sql<{ disappear_after_ms: number | null }>`
+    select disappear_after_ms from wipp_chats where id = ${chatId} limit 1
+  `;
+  const ms = Number(ttl[0]?.disappear_after_ms ?? 0);
+  const expiresAt = ms > 0 ? new Date(Date.now() + ms).toISOString() : null;
   await sql`
-    insert into wipp_messages (id, chat_id, sender_id, body, client_id, reply_to)
-    values (${msgId}, ${chatId}, ${meId}, ${text}, ${clientId ?? null}, ${replyTo})
+    insert into wipp_messages (id, chat_id, sender_id, body, client_id, reply_to, expires_at)
+    values (${msgId}, ${chatId}, ${meId}, ${text}, ${clientId ?? null}, ${replyTo}, ${expiresAt})
   `;
   const { afterMessageStored, listThread } = await import("./message-actions");
   const stored = (await listThread(meId, chatId)).find((m) => m.id === msgId);

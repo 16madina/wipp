@@ -301,9 +301,21 @@ export async function decryptMergedMessages(
         ct: env.ct,
       });
       const plain = decodePlain(text);
+      const { parseMedia, mediaLabel } = await import("./media-crypto");
+      const media = parseMedia(plain.text);
       next.push({
         ...m,
-        text: m.deletedForAll ? "Message supprimé" : plain.text,
+        type: media ? (media.kind === "voice" || media.kind === "image" || media.kind === "video" ? media.kind : media.kind === "sticker" ? "sticker" : m.type) : m.type,
+        text: m.deletedForAll ? "Message supprimé" : media ? mediaLabel(media.kind) : plain.text,
+        stickerId: media?.stickerId ?? m.stickerId,
+        viewOnce: media?.viewOnce ?? m.viewOnce,
+        attachmentId: media?.id ?? m.attachmentId,
+        mediaKey: media?.fileKey ?? m.mediaKey,
+        mediaChunks: media?.chunks ?? m.mediaChunks,
+        contactCard: media?.contact ?? m.contactCard,
+        geo: media?.location ?? m.geo,
+        linkCard: media?.link ?? m.linkCard,
+        duration: media?.durationMs ? Math.round(media.durationMs / 1000) : m.duration,
         replyTo: plain.reply?.id ?? m.replyTo,
         replyPreview: plain.reply?.preview ?? m.replyPreview,
         forwarded: plain.forwarded,

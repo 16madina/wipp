@@ -95,6 +95,7 @@ function VoicePlayButton({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [rate, setRate] = useState(1);
 
   useEffect(() => {
     return () => {
@@ -157,6 +158,18 @@ function VoicePlayButton({
           />
         ))}
       </span>
+      <button
+        type="button"
+        className="text-[11px] tabular-nums opacity-80"
+        onClick={(e) => {
+          e.stopPropagation();
+          const next = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1;
+          setRate(next);
+          if (audioRef.current) audioRef.current.playbackRate = next;
+        }}
+      >
+        {rate}×
+      </button>
       <span className="text-[12px] tabular-nums opacity-80">{formatDuration(duration ?? 0)}</span>
     </div>
   );
@@ -660,13 +673,61 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       }
       return;
     }
-    sendMessage(chatId, { text: `📄 ${file.name}` });
+    if (chatId.startsWith("srv:")) {
+      void file.arrayBuffer().then((buf) => {
+        void import("@/lib/messaging/media-upload").then(async (mod) => {
+          const st = useWgoStore.getState();
+          const peerId = chat?.participantIds.find((id) => id !== "me");
+          const peerPub = peerId
+            ? st.peerPublicKeys[peerId] ||
+              (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice("srvuser:".length)] : undefined)
+            : undefined;
+          const { isPrivateChat } = await import("@/lib/private-vault");
+          await mod.uploadCipherFile({
+            chatId,
+            bytes: new Uint8Array(buf),
+            kind: "file",
+            name: file.name,
+            mime: file.type || undefined,
+            identity: st.identity,
+            peerPublicJwk: peerPub ?? null,
+            clientId: `file-${Date.now()}`,
+            vault: isPrivateChat(chatId),
+          });
+        });
+      });
+    } else {
+      sendMessage(chatId, { text: `📄 ${file.name}` });
+    }
     close();
   }
 
   function sharePlace() {
-    const city = useWgoStore.getState().me.city || "Longueuil";
-    sendMessage(chatId, { text: `📍 ${city}` });
+    if (!chatId.startsWith("srv:") || !navigator.geolocation) {
+      setAttach(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      void import("@/lib/messaging/media-crypto").then(async ({ describeMedia }) => {
+        const { sendViaServer } = await import("@/lib/messaging/sync");
+        const { isPrivateChat } = await import("@/lib/private-vault");
+        const st = useWgoStore.getState();
+        const peerId = chat?.participantIds.find((id) => id !== "me");
+        const peerPub = peerId
+          ? st.peerPublicKeys[peerId] ||
+            (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice("srvuser:".length)] : undefined)
+          : undefined;
+        await sendViaServer(
+          chatId,
+          describeMedia({
+            kind: "location",
+            location: { lat: pos.coords.latitude, lon: pos.coords.longitude },
+          }),
+          `geo-${Date.now()}`,
+          { identity: st.identity, peerPublicJwk: peerPub ?? null, vault: isPrivateChat(chatId) },
+        );
+      });
+    });
     setAttach(false);
   }
 
@@ -2006,7 +2067,29 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               type="button"
               className="flex h-14 items-center gap-3 rounded-xl px-2 text-left"
               onClick={() => {
-                sendMessage(chatId, { text: `@${u.username}` });
+                if (chatId.startsWith("srv:")) {
+                  void import("@/lib/messaging/media-crypto").then(async ({ describeMedia }) => {
+                    const { sendViaServer } = await import("@/lib/messaging/sync");
+                    const { isPrivateChat } = await import("@/lib/private-vault");
+                    const st = useWgoStore.getState();
+                    const peerId = chat?.participantIds.find((id) => id !== "me");
+                    const peerPub = peerId
+                      ? st.peerPublicKeys[peerId] ||
+                        (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice("srvuser:".length)] : undefined)
+                      : undefined;
+                    await sendViaServer(
+                      chatId,
+                      describeMedia({
+                        kind: "contact",
+                        contact: { userId: u.id, username: u.username, displayName: u.displayName },
+                      }),
+                      `card-${Date.now()}`,
+                      { identity: st.identity, peerPublicJwk: peerPub ?? null, vault: isPrivateChat(chatId) },
+                    );
+                  });
+                } else {
+                  sendMessage(chatId, { text: `@${u.username}` });
+                }
                 setPickContact(false);
               }}
             >

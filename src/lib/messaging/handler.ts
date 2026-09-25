@@ -53,6 +53,10 @@ import {
   resolveSession,
   searchProfiles,
   sendMessage,
+  blockUser,
+  unblockUser,
+  setDisappear,
+  assertNotBlocked,
 } from "./server";
 
 const CORS_HEADERS: Record<string, string> = {
@@ -173,6 +177,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const roomName =
         body.roomName?.trim() ||
         `wipp-${[identity, body.peerId || "peer"].sort().join("-")}`;
+      try {
+        const me = await resolveSession(bearer(request));
+        if (body.peerId) await assertNotBlocked(me.id, body.peerId);
+      } catch (err) {
+        if (err instanceof WippHttpError && err.code === "blocked") throw err;
+      }
       const token = await mintCallToken({
         roomName,
         identity,
@@ -624,6 +634,92 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const me = await resolveSession(bearer(request));
       const devices = await listDevices(me.id);
       return json({ devices });
+    }
+
+    if (method === "POST" && a === "blocks" && !b) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string; profileId?: string }>(request);
+      return json(await blockUser(me.id, body));
+    }
+
+    if (method === "POST" && a === "blocks" && b === "remove") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string; profileId?: string }>(request);
+      return json(await unblockUser(me.id, body));
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "disappear") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ ms?: number }>(request);
+      return json(await setDisappear(me.id, b, Number(body.ms ?? 0)));
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "attachments" && !d) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ chunkCount?: number; byteSize?: number; viewOnce?: boolean }>(request);
+      const { createAttachment } = await import("./media-store");
+      return json(
+        await createAttachment(me.id, b, {
+          chunkCount: Number(body.chunkCount ?? 0),
+          byteSize: Number(body.byteSize ?? 0),
+          viewOnce: Boolean(body.viewOnce),
+        }),
+        201,
+      );
+    }
+
+    if (a === "attachments" && b && c === "chunks" && d) {
+      const me = await resolveSession(bearer(request));
+      const index = Number(d);
+      const { putChunk, readChunk } = await import("./media-store");
+      if (method === "PUT") {
+        const body = await readBody<{ ciphertext?: string; sha256?: string }>(request);
+        return json(await putChunk(me.id, b, index, body.ciphertext ?? "", body.sha256 ?? ""));
+      }
+      if (method === "GET") {
+        return json(await readChunk(me.id, b, index));
+      }
+    }
+
+    if (method === "POST" && a === "attachments" && b && c === "complete") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ messageId?: string }>(request);
+      const { completeAttachment } = await import("./media-store");
+      return json(await completeAttachment(me.id, b, body.messageId));
+    }
+
+    if (method === "POST" && a === "attachments" && b && c === "consume") {
+      const me = await resolveSession(bearer(request));
+      const { consumeAttachment } = await import("./media-store");
+      return json(await consumeAttachment(me.id, b));
+    }
+
+    if (method === "GET" && a === "moderation" && b === "key") {
+      await resolveSession(bearer(request));
+      const { moderationPublicKey } = await import("./report-seal");
+      const publicJwk = await moderationPublicKey();
+      return json({ publicJwk });
+    }
+
+    if (method === "POST" && a === "reports") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ chatId?: string; messageId?: string; reason?: string; sealedPayload?: string }>(request);
+      const { submitReport } = await import("./report-seal");
+      return json(
+        await submitReport(me.id, {
+          chatId: body.chatId ?? "",
+          messageId: body.messageId ?? "",
+          reason: body.reason ?? "",
+          sealedPayload: body.sealedPayload ?? "",
+        }),
+        201,
+      );
+    }
+
+    if (method === "POST" && a === "admin" && b === "flags" && c && d === "open") {
+      const me = await resolveSession(bearer(request));
+      const { openSealedReport } = await import("./report-seal");
+      return json(await openSealedReport(me.id, c));
     }
 
     return json({ error: "not_found", message: "Route API inconnue." }, 404);

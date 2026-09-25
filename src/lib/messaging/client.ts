@@ -320,3 +320,58 @@ export async function hangupCall(callId: string) {
   });
 }
 
+export async function postBlock(target: { username?: string; profileId?: string }) {
+  return api<{ ok: boolean; blockedId: string }>("/blocks", { method: "POST", body: JSON.stringify(target) });
+}
+
+export async function postUnblock(target: { username?: string; profileId?: string }) {
+  return api<{ ok: boolean }>("/blocks/remove", { method: "POST", body: JSON.stringify(target) });
+}
+
+export async function postDisappear(chatId: string, ms: number) {
+  return api<{ ok: boolean; disappearAfterMs: number | null }>(`/chats/${chatId}/disappear`, {
+    method: "POST",
+    body: JSON.stringify({ ms }),
+  });
+}
+
+export async function createServerAttachment(chatId: string, input: { chunkCount: number; byteSize: number; viewOnce?: boolean }) {
+  return api<{ id: string; state: string }>(`/chats/${chatId}/attachments`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function putServerChunk(attachmentId: string, index: number, ciphertext: string, sha256: string) {
+  return api<{ ok: boolean }>(`/attachments/${attachmentId}/chunks/${index}`, {
+    method: "PUT",
+    body: JSON.stringify({ ciphertext, sha256 }),
+  });
+}
+
+export async function completeServerAttachment(attachmentId: string, messageId?: string) {
+  return api<{ ok: boolean; state: string }>(`/attachments/${attachmentId}/complete`, {
+    method: "POST",
+    body: JSON.stringify({ messageId }),
+  });
+}
+
+export async function fetchServerChunk(attachmentId: string, index: number) {
+  return api<{ ciphertext: string; sha256: string; index: number }>(`/attachments/${attachmentId}/chunks/${index}`);
+}
+
+export async function consumeServerAttachment(attachmentId: string) {
+  return api<{ ok: boolean; state: string }>(`/attachments/${attachmentId}/consume`, {
+    method: "POST",
+    body: "{}",
+  });
+}
+
+export async function fetchModerationPublicKey() {
+  return api<{ publicJwk: JsonWebKey }>("/moderation/key");
+}
+
+export async function postReport(input: { chatId: string; messageId: string; reason: string; sealedPayload: string }) {
+  return api<{ id: string; status: string }>(`/reports`, { method: "POST", body: JSON.stringify(input) });
+}
+

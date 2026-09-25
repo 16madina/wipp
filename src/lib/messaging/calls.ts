@@ -4,7 +4,7 @@
  */
 import { getSql } from "@/lib/db";
 import { sendExpoPush } from "@/lib/push/expo";
-import { WippHttpError, ensureMessagingReady } from "@/lib/messaging/server";
+import { WippHttpError, assertNotBlocked, ensureMessagingReady } from "@/lib/messaging/server";
 
 function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
@@ -150,6 +150,7 @@ export async function createCallInvite(input: {
   if (calleeId === input.callerId) {
     throw new WippHttpError(400, "self_call", "Tu ne peux pas t’appeler toi-même.");
   }
+  await assertNotBlocked(input.callerId, calleeId);
   const kind = input.kind === "video" ? "video" : "audio";
   const roomName = roomFor(input.callerId, calleeId);
   const id = uid("call");
@@ -300,6 +301,7 @@ export async function answerCallInvite(input: {
     throw new WippHttpError(410, "expired", "Appel expiré.");
   }
 
+  if (input.accept) await assertNotBlocked(row.caller_id, row.callee_id);
   const next = input.accept ? "accepted" : "rejected";
   // Only callee accepts/rejects; caller cancel uses hangup
   if (row.callee_id !== input.meId && input.accept) {

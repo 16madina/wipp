@@ -290,6 +290,12 @@ export type Message = {
   pinned?: boolean;
   forwarded?: boolean;
   expiresAt?: number;
+  attachmentId?: string;
+  mediaKey?: string;
+  mediaChunks?: { i: number; iv: string; sha256: string }[];
+  contactCard?: { userId: string; username: string; displayName: string; fingerprint?: string };
+  geo?: { lat: number; lon: number };
+  linkCard?: { url: string; title?: string; description?: string };
   enc?: EncBlob;
   encFailed?: boolean;
   translated?: string;
