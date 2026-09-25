@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
+import { PinGate } from '@/components/PinGate';
 import { apiBase, ensureSession, logout, type WippProfile } from '@/lib/api';
+import { enablePrivateVault, isPrivateEnabled } from '@/lib/private-vault';
 
 const c = Colors.dark;
 
@@ -10,6 +12,12 @@ export default function MeScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<WippProfile | null>(null);
   const [busy, setBusy] = useState(false);
+  const [priveOn, setPriveOn] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
+
+  useEffect(() => {
+    void isPrivateEnabled().then(setPriveOn);
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -52,6 +60,40 @@ export default function MeScreen() {
         </Pressable>
       ) : null}
 
+      <Pressable
+        style={styles.prive}
+        onPress={() => {
+          if (priveOn) {
+            Alert.alert(
+              'WIPP Privé',
+              'Pour ouvrir WIPP Privé, maintiens le logo wipp pendant 3 secondes sur Chats.',
+            );
+            return;
+          }
+          setPinOpen(true);
+        }}>
+        <Text style={styles.priveTitle}>WIPP Privé</Text>
+        <Text style={styles.priveSub}>
+          Cache et protège certaines conversations avec la biométrie de ton appareil.
+        </Text>
+      </Pressable>
+      <PinGate
+        visible={pinOpen}
+        title="Choisis un code WIPP Privé"
+        onCancel={() => setPinOpen(false)}
+        onSubmit={(pin) => {
+          setPinOpen(false);
+          void enablePrivateVault(pin)
+            .then(() => {
+              setPriveOn(true);
+              Alert.alert(
+                'WIPP Privé',
+                'Pour ouvrir WIPP Privé, maintiens le logo wipp pendant 3 secondes.',
+              );
+            })
+            .catch(() => Alert.alert('WIPP Privé', 'Le code doit contenir au moins 4 caractères.'));
+        }}
+      />
       <Text style={styles.meta}>Session conservée sur cet appareil.</Text>
       <Text style={styles.meta}>API : {apiBase()}</Text>
       <Pressable
@@ -99,6 +141,14 @@ const styles = StyleSheet.create({
   adminBtnTxt: { color: c.accentFg, fontWeight: '800', fontSize: 16 },
   adminBtnSub: { color: 'rgba(11,18,32,0.7)', marginTop: 4, fontSize: 12 },
   meta: { color: c.textMuted, fontSize: 12 },
+  prive: {
+    backgroundColor: c.surface,
+    borderRadius: 16,
+    padding: 16,
+    gap: 6,
+  },
+  priveTitle: { color: c.text, fontSize: 16, fontWeight: '700' },
+  priveSub: { color: c.textMuted, fontSize: 13, lineHeight: 18 },
   logout: {
     marginTop: 12,
     borderRadius: 999,

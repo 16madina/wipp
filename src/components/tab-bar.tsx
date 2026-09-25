@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { WippWordmark } from "@/components/logo";
 import { haptic } from "@/lib/haptics";
+import { isPrivateChat } from "@/lib/private-vault";
 import { useT, useWgoStore } from "@/lib/store";
 import type { I18nKey } from "@/lib/i18n";
 import type { Screen } from "@/lib/types";
@@ -69,7 +70,10 @@ export function TabBar({ active }: { active: Screen["name"] }) {
   const setNearby = useWgoStore((s) => s.setNearby);
   const nearby = useWgoStore((s) => s.nearby);
   const unread = useWgoStore((s) =>
-    s.chats.reduce((n, c) => n + (c.archived || c.isRequest ? 0 : c.unread), 0),
+    s.chats.reduce(
+      (n, c) => n + (c.archived || c.isRequest || isPrivateChat(c.id) ? 0 : c.unread),
+      0,
+    ),
   );
   const missed = useWgoStore(
     (s) => s.calls.filter((c) => c.missed && c.at > (s.callsSeenAt ?? 0)).length,

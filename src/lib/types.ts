@@ -148,7 +148,8 @@ export type ScreenName =
   | "lifestyle"
   | "create-lifestyle"
   | "e2e-info"
-  | "my-activity";
+  | "my-activity"
+  | "wipp-private";
 
 export type Screen =
   | { name: "splash" }
@@ -202,6 +203,7 @@ export type Screen =
   | { name: "lifestyle"; itemId: string }
   | { name: "create-lifestyle" }
   | { name: "e2e-info"; chatId: string }
+  | { name: "wipp-private" }
   | { name: "my-activity"; kind: "listings" | "events" | "saved" };
 
 export type User = {

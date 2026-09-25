@@ -21,6 +21,7 @@ import {
   NewGroupScreen,
   RequestsScreen,
 } from "./chats";
+import { PrivateChatsScreen } from "./private-chats";
 import {
   ConnectScreen,
   FoundProfileScreen,
@@ -183,6 +184,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <MyActivityScreen kind={screen.kind} />;
     case "privacy":
       return <PrivacyScreen />;
+    case "wipp-private":
+      return <PrivateChatsScreen />;
     case "account":
       return <AccountScreen />;
     case "security":

@@ -40,6 +40,7 @@ import { LEGAL_CONTACT } from "@/lib/legal";
 import { shortFp } from "@/lib/crypto";
 import { TAKEN_USERNAMES } from "@/lib/seed";
 import { useT, useWgoStore } from "@/lib/store";
+import { enablePrivateVault, isPrivateEnabled } from "@/lib/private-vault";
 import type { A11yPrefs, PrivacyAudience, PrivacyAudienceKey, ThemeMode } from "@/lib/types";
 import { defaultA11y } from "@/lib/types";
 import { announce, haptic } from "@/lib/haptics";
@@ -618,6 +619,7 @@ export function PrivacyScreen() {
   const setReadReceipts = useWgoStore((s) => s.setReadReceipts);
   const setEphemeralCalls = useWgoStore((s) => s.setEphemeralCalls);
   const [open, setOpen] = useState<PrivacyAudienceKey | null>(null);
+  const [, setVaultTick] = useState(0);
   const labelFor = (v: PrivacyAudience) =>
     v === "everyone" ? t("everyone") : v === "contacts" ? t("contacts") : t("nobody");
 
@@ -658,6 +660,24 @@ export function PrivacyScreen() {
         ) : null}
         <div className="mt-4">
           <Section title={t("privacy")}>
+            <Row
+              label="WIPP Privé"
+              value={isPrivateEnabled() ? "Activé" : "Désactivé"}
+              onClick={() => {
+                if (isPrivateEnabled()) {
+                  window.alert("Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.");
+                  return;
+                }
+                const pin = window.prompt("Choisis un code WIPP Privé (4 caractères minimum)");
+                if (!pin) return;
+                void enablePrivateVault(pin)
+                  .then(() => {
+                    setVaultTick((n) => n + 1);
+                    window.alert("Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.");
+                  })
+                  .catch(() => window.alert("Le code doit contenir au moins 4 caractères."));
+              }}
+            />
             <Row
               label={t("readReceipts")}
               trailing={

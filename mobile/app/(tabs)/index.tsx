@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -9,13 +10,21 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/Colors';
+import { PinGate } from '@/components/PinGate';
 import {
   ensureSession,
   fetchChats,
   type WippChat,
   type WippProfile,
 } from '@/lib/api';
+import {
+  authenticatePrivate,
+  isPrivateEnabled,
+  lockChatPrivate,
+  privateChatIds,
+} from '@/lib/private-vault';
 
 const c = Colors.dark;
 
@@ -25,6 +34,26 @@ export default function ChatsScreen() {
   const [chats, setChats] = useState<WippChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pinFor, setPinFor] = useState<null | { kind: 'open' } | { kind: 'lock'; chatId: string }>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hapticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pinWait = useRef<((pin: string | null) => void) | null>(null);
+
+  const askPin = useCallback(
+    () =>
+      new Promise<string | null>((resolve) => {
+        pinWait.current = resolve;
+        setPinFor({ kind: 'open' });
+      }),
+    [],
+  );
+
+  const clearHold = () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    if (hapticTimer.current) clearTimeout(hapticTimer.current);
+    holdTimer.current = null;
+    hapticTimer.current = null;
+  };
 
   const load = useCallback(async () => {
     setError('');
@@ -35,8 +64,9 @@ export default function ChatsScreen() {
         return;
       }
       setProfile(me);
+      const hidden = new Set(await privateChatIds());
       const list = await fetchChats();
-      setChats(list);
+      setChats(list.filter((chat) => !hidden.has(chat.id)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur réseau');
     } finally {
@@ -62,7 +92,25 @@ export default function ChatsScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.brand}>wipp</Text>
+        <Pressable
+          onPressIn={() => {
+            void (async () => {
+              if (!(await isPrivateEnabled())) return;
+              hapticTimer.current = setTimeout(() => {
+                void Haptics.selectionAsync();
+              }, 2500);
+              holdTimer.current = setTimeout(() => {
+                void (async () => {
+                  const ok = await authenticatePrivate(askPin);
+                  if (ok) router.push('/private');
+                })();
+              }, 3000);
+            })();
+          }}
+          onPressOut={clearHold}
+          delayLongPress={10000}>
+          <Text style={styles.brand}>wipp</Text>
+        </Pressable>
         <Text style={styles.muted}>@{profile?.username ?? '…'}</Text>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -86,7 +134,25 @@ export default function ChatsScreen() {
                 pathname: '/chat/[id]',
                 params: { id: item.id, title: item.peer.displayName, username: item.peer.username },
               })
-            }>
+            }
+            onLongPress={() => {
+              Alert.alert(item.peer.displayName, undefined, [
+                {
+                  text: 'Masquer et verrouiller',
+                  onPress: () => {
+                    void (async () => {
+                      if (!(await isPrivateEnabled())) {
+                        Alert.alert('WIPP Privé', 'Active WIPP Privé dans Moi avant de masquer une conversation.');
+                        return;
+                      }
+                      const ok = await lockChatPrivate(item.id, askPin);
+                      if (ok) await load();
+                    })();
+                  },
+                },
+                { text: 'Annuler', style: 'cancel' },
+              ]);
+            }}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {(item.peer.displayName || item.peer.username).slice(0, 1).toUpperCase()}
@@ -109,6 +175,20 @@ export default function ChatsScreen() {
             </View>
           </Pressable>
         )}
+      />
+      <PinGate
+        visible={pinFor !== null}
+        title="Code WIPP Privé"
+        onCancel={() => {
+          pinWait.current?.(null);
+          pinWait.current = null;
+          setPinFor(null);
+        }}
+        onSubmit={(pin) => {
+          pinWait.current?.(pin);
+          pinWait.current = null;
+          setPinFor(null);
+        }}
       />
     </View>
   );

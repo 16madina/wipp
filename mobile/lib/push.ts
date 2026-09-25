@@ -11,7 +11,12 @@ import {
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
-    const data = notification.request.content.data as { type?: string };
+    const data = notification.request.content.data as { type?: string; private?: boolean };
+    if (data?.private) {
+      notification.request.content.title = "WIPP";
+      notification.request.content.body = "Nouveau message";
+      notification.request.content.subtitle = undefined;
+    }
     const isCall = data?.type === "incoming_call";
     return {
       shouldShowAlert: true,

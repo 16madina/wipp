@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { isPrivateChat } from "@/lib/private-vault";
 import type { I18nKey } from "./i18n";
 import { t } from "./i18n";
 import { LEGAL_VERSION } from "./legal";
@@ -2107,8 +2108,14 @@ export const useWgoStore = create<WgoState>()(
         a11y: s.a11y ?? defaultA11y,
         me: s.me,
         users: s.users,
-        chats: s.chats,
-        messages: persistMessages(s.messages),
+        chats: s.chats.map((c) =>
+          isPrivateChat(c.id) ? { ...c, preview: "", unread: 0 } : c,
+        ),
+        messages: persistMessages(
+          Object.fromEntries(
+            Object.entries(s.messages).filter(([chatId]) => !isPrivateChat(chatId)),
+          ),
+        ),
         stories: s.stories,
         viewedStories: s.viewedStories,
         calls: s.calls,

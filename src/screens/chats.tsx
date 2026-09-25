@@ -25,6 +25,13 @@ import { Badge, Btn, Chip, Empty, Header, IconBtn, SearchField, StatusBar } from
 import { formatChatTime, formatRemainShort } from "@/lib/format";
 import { SHOP_CAT_KEYS } from "@/lib/i18n";
 import { isChatSealed, useT, useWgoStore } from "@/lib/store";
+import {
+  isPrivateChat,
+  isPrivateEnabled,
+  lockChatPrivate,
+  subscribePrivateVault,
+} from "@/lib/private-vault";
+import { openPrivateIfUnlocked } from "@/screens/private-chats";
 import { isStoryLive } from "@/lib/types";
 import type { Chat, Shop, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -61,6 +68,10 @@ export function ChatsScreen() {
   const reports = useWgoStore((s) => s.reports);
   const [now, setNow] = useState(Date.now());
   const [filter, setFilter] = useState<"all" | "personal" | "shops" | "groups">("all");
+  const [menuChatId, setMenuChatId] = useState<string | null>(null);
+  const [, setVaultTick] = useState(0);
+
+  useEffect(() => subscribePrivateVault(() => setVaultTick((n) => n + 1)), []);
 
   useEffect(() => {
     sealExpired();
@@ -72,7 +83,7 @@ export function ChatsScreen() {
   }, [sealExpired]);
 
   const visible = chats
-    .filter((c) => !c.archived && !c.isRequest && c.participantIds.includes("me"))
+    .filter((c) => !c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id))
     .filter((c) => {
       if (c.type === "dm") {
         const other = c.participantIds.find((id) => id !== "me");
@@ -112,7 +123,26 @@ export function ChatsScreen() {
       <div className="glass sticky top-0 z-10">
         <StatusBar />
         <div className="flex items-center gap-2 px-4 pb-2">
-          <WgoWordmark className="text-[22px]" />
+          <span
+            className="inline-flex"
+            onPointerDown={() => {
+              if (!isPrivateEnabled()) return;
+              const haptic = window.setTimeout(() => navigator.vibrate?.(12), 2500);
+              const open = window.setTimeout(() => {
+                void openPrivateIfUnlocked(push);
+              }, 3000);
+              const up = () => {
+                window.clearTimeout(haptic);
+                window.clearTimeout(open);
+                window.removeEventListener("pointerup", up);
+                window.removeEventListener("pointercancel", up);
+              };
+              window.addEventListener("pointerup", up);
+              window.addEventListener("pointercancel", up);
+            }}
+          >
+            <WgoWordmark className="text-[22px]" />
+          </span>
           <div className="ml-auto flex items-center">
             <IconBtn label={t("search")} onClick={() => push({ name: "global-search" })}>
               <Search className="size-5" />
@@ -251,6 +281,10 @@ export function ChatsScreen() {
                     markRead(chat.id);
                     push({ name: "conversation", chatId: chat.id });
                   }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setMenuChatId(chat.id);
+                  }}
                 >
                   {chat.type === "group" ? (
                     <GroupAvatar users={groupUsers} size={52} photo={chat.avatar} priority={i < 8} />
@@ -304,6 +338,27 @@ export function ChatsScreen() {
           })
         )}
       </div>
+      {menuChatId ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setMenuChatId(null)}>
+          <div className="mb-6 w-[min(100%,360px)] overflow-hidden rounded-2xl bg-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="w-full px-4 py-4 text-left text-[16px]"
+              onClick={() => {
+                const id = menuChatId;
+                setMenuChatId(null);
+                if (!isPrivateEnabled()) {
+                  window.alert("Active WIPP Privé dans Confidentialité.");
+                  return;
+                }
+                void lockChatPrivate(id, () => Promise.resolve(window.prompt("Code WIPP Privé")));
+              }}
+            >
+              Masquer et verrouiller
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -502,11 +557,13 @@ export function GlobalSearchScreen() {
           `${u.displayName} ${u.username} ${u.bio}`.toLowerCase().includes(query),
       )
     : [];
-  const chatHits = query ? chats.filter((c) => (c.name ?? "").toLowerCase().includes(query)) : [];
+  const chatHits = query
+    ? chats.filter((c) => !isPrivateChat(c.id) && (c.name ?? "").toLowerCase().includes(query))
+    : [];
   const msgHits = query
     ? Object.values(messages)
         .flat()
-        .filter((m) => m.text?.toLowerCase().includes(query))
+        .filter((m) => !isPrivateChat(m.chatId) && m.text?.toLowerCase().includes(query))
         .slice(0, 8)
     : [];
   const listingHits = query

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
+import * as ScreenCapture from 'expo-screen-capture';
 import Colors from '@/constants/Colors';
 import {
   ensureSession,
@@ -35,9 +36,10 @@ type DisplayMessage = WippMessage & {
 };
 
 export default function ChatScreen() {
-  const { id, title, username } = useLocalSearchParams<{
+  const { id, title, username, private: isPrivate } = useLocalSearchParams<{
     id: string;
     title?: string;
+    private?: string;
     username?: string;
   }>();
   const navigation = useNavigation();
