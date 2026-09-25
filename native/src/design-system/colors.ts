@@ -30,3 +30,15 @@ export const colors: Record<'light' | 'dark', ColorTokens> = {
 };
 
 export type ColorSchemeName = keyof typeof colors;
+
+/** Reference palette for the dark chats surface. */
+export const ink = {
+  background: '#07090F',
+  surface: '#121722',
+  text: '#FFFFFF',
+  muted: '#8E939C',
+  line: '#1C2230',
+  yellow: '#FFD83F',
+  onYellow: '#1A1408',
+  pill: '#161C28',
+} as const;

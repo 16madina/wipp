@@ -1,5 +1,5 @@
 export { Button } from './button';
-export { colors, type ColorSchemeName, type ColorTokens } from './colors';
+export { colors, ink, type ColorSchemeName, type ColorTokens } from './colors';
 export { Pressable } from './pressable';
 export { radii } from './radii';
 export { Screen } from './screen';
