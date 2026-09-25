@@ -675,6 +675,14 @@ export async function sendMessage(
       const { listThread } = await import("./message-actions");
       const existing = (await listThread(meId, chatId)).find((m) => m.id === dup[0].id);
       if (existing) return existing;
+      return {
+        id: dup[0].id,
+        chatId: dup[0].chat_id,
+        senderId: dup[0].sender_id,
+        body: dup[0].body,
+        clientId: dup[0].client_id,
+        createdAt: Date.parse(dup[0].created_at),
+      };
     }
   }
   const id = uid("m");
