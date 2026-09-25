@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
 import { apiBase, ensureSession, logout, type WippProfile } from '@/lib/api';
 
-const c = Colors.dark;
+const ROWS = [
+  ['Confidentialité', '/privacy'],
+  ['Notifications', '/privacy'],
+  ['Apparence', '/privacy'],
+  ['Sécurité', '/privacy'],
+  ['Aide', '/privacy'],
+] as const;
 
 export default function MeScreen() {
   const router = useRouter();
@@ -22,102 +27,68 @@ export default function MeScreen() {
     })();
   }, [router]);
 
-  async function onLogout() {
-    setBusy(true);
-    try {
-      await logout();
-      router.replace('/login');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <View style={styles.root}>
-      <View style={styles.card}>
-        <Text style={styles.brand}>wipp</Text>
+    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+      <Text style={styles.brand}>wipp</Text>
+      <View style={styles.hero}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{(profile?.displayName || 'W').slice(0, 1).toUpperCase()}</Text>
+        </View>
         <Text style={styles.name}>{profile?.displayName ?? '…'}</Text>
         <Text style={styles.handle}>@{profile?.username ?? '…'}</Text>
-        {profile?.isAdmin ? <Text style={styles.badge}>Admin</Text> : null}
-        <Text style={styles.bio}>{profile?.bio || 'Compte connecté'}</Text>
-        {profile?.phoneE164 ? (
-          <Text style={styles.phone}>{profile.phoneE164}</Text>
-        ) : null}
+        <Text style={styles.bio}>{profile?.bio || 'Discute · Partage · Découvre'}</Text>
       </View>
-
+      {ROWS.map(([label, href]) => (
+        <Pressable key={label} style={styles.row} onPress={() => router.push(href)}>
+          <Text style={styles.rowLabel}>{label}</Text>
+          <Text style={styles.chev}>›</Text>
+        </Pressable>
+      ))}
       {profile?.isAdmin ? (
-        <Pressable style={styles.adminBtn} onPress={() => router.push('/admin')}>
-          <Text style={styles.adminBtnTxt}>Ouvrir le panneau admin</Text>
-          <Text style={styles.adminBtnSub}>Stats · users · messages · modération</Text>
+        <Pressable style={styles.row} onPress={() => router.push('/admin')}>
+          <Text style={styles.rowLabel}>Administration</Text>
+          <Text style={styles.chev}>›</Text>
         </Pressable>
       ) : null}
-
-      <Pressable style={styles.prive} onPress={() => router.push('/privacy')}>
-        <Text style={styles.priveTitle}>Confidentialité</Text>
-        <Text style={styles.priveSub}>WIPP Privé, biométrie et code de cet appareil.</Text>
-      </Pressable>
       <Text style={styles.meta}>Session conservée sur cet appareil.</Text>
-      <Text style={styles.meta}>API : {apiBase()}</Text>
+      <Text style={styles.meta}>{apiBase()}</Text>
       <Pressable
         style={[styles.logout, busy && { opacity: 0.6 }]}
         disabled={busy}
-        onPress={() => void onLogout()}>
-        <Text style={styles.logoutTxt}>Se déconnecter</Text>
+        onPress={() => {
+          setBusy(true);
+          void logout().finally(() => router.replace('/login'));
+        }}
+      >
+        <Text style={styles.logoutText}>Se déconnecter</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: c.background, padding: 20, gap: 14 },
-  card: {
-    backgroundColor: c.surface,
-    borderRadius: 20,
-    padding: 20,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,216,77,0.25)',
-  },
-  brand: { color: c.accent, fontWeight: '800', fontSize: 18, marginBottom: 8 },
-  name: { color: c.text, fontSize: 22, fontWeight: '700' },
-  handle: { color: c.accent, fontSize: 14 },
-  badge: {
-    alignSelf: 'flex-start',
-    marginTop: 6,
-    backgroundColor: 'rgba(255,216,77,0.15)',
-    color: c.accent,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  bio: { color: c.textMuted, marginTop: 8, fontSize: 13 },
-  phone: { color: c.textMuted, fontSize: 12, marginTop: 4 },
-  adminBtn: {
-    backgroundColor: c.accent,
-    borderRadius: 18,
-    padding: 16,
-  },
-  adminBtnTxt: { color: c.accentFg, fontWeight: '800', fontSize: 16 },
-  adminBtnSub: { color: 'rgba(11,18,32,0.7)', marginTop: 4, fontSize: 12 },
-  meta: { color: c.textMuted, fontSize: 12 },
-  prive: {
-    backgroundColor: c.surface,
-    borderRadius: 16,
-    padding: 16,
-    gap: 6,
-  },
-  priveTitle: { color: c.text, fontSize: 16, fontWeight: '700' },
-  priveSub: { color: c.textMuted, fontSize: 13, lineHeight: 18 },
-  logout: {
-    marginTop: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,93,115,0.5)',
-    paddingVertical: 14,
+  root: { flex: 1, backgroundColor: '#070a0f' },
+  content: { padding: 18, paddingBottom: 40 },
+  brand: { color: '#f4f6fb', fontSize: 28, fontWeight: '800', letterSpacing: -1 },
+  hero: { alignItems: 'center', paddingVertical: 18 },
+  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#ffd84d', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#1a1400', fontSize: 32, fontWeight: '800' },
+  name: { color: '#f4f6fb', fontSize: 22, fontWeight: '700', marginTop: 12 },
+  handle: { color: '#ffd84d', marginTop: 2 },
+  bio: { color: '#8b93a7', marginTop: 6, textAlign: 'center' },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#121722',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginTop: 8,
   },
-  logoutTxt: { color: '#ff5d73', fontWeight: '700' },
+  rowLabel: { color: '#f4f6fb', fontSize: 16 },
+  chev: { color: '#8b93a7', fontSize: 22 },
+  meta: { color: '#8b93a7', fontSize: 12, marginTop: 14 },
+  logout: { marginTop: 18, alignItems: 'center', padding: 14 },
+  logoutText: { color: '#ff6b6b', fontWeight: '700' },
 });

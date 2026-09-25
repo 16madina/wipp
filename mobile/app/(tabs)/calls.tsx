@@ -116,10 +116,10 @@ export default function CallsScreen() {
   return (
     <View style={styles.root}>
       <Text style={styles.title}>Appels</Text>
-      <Text style={styles.body}>
-        Signal d’appel + push Expo. CallKit / ConnectionService s’activent après un rebuild
-        natif EAS (plugin callkeep).
-      </Text>
+      <View style={styles.filters}>
+        <Text style={styles.chipOn}>Tous</Text>
+        <Text style={styles.chip}>Manqués</Text>
+      </View>
       <Text style={styles.meta}>{authed ? status : "Connecte-toi pour recevoir des appels."}</Text>
 
       {incoming && fromName ? (
@@ -164,8 +164,10 @@ export default function CallsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: c.background, padding: 24, gap: 12 },
-  title: { color: c.text, fontSize: 24, fontWeight: "700" },
-  body: { color: c.textMuted, fontSize: 14, lineHeight: 20 },
+  title: { color: c.text, fontSize: 28, fontWeight: "700" },
+  filters: { flexDirection: "row", gap: 8 },
+  chipOn: { backgroundColor: "#ffd84d", color: "#1a1400", overflow: "hidden", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, fontWeight: "700" },
+  chip: { backgroundColor: "#121722", color: "#f4f6fb", overflow: "hidden", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
   meta: { color: "#ffd84d", fontSize: 13 },
   label: { color: c.text, fontSize: 13, marginTop: 8 },
   input: {

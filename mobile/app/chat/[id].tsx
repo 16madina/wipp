@@ -82,7 +82,10 @@ export default function ChatScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: title || (username ? `@${username}` : 'Chat'),
+      title: title || (username ? `@${username}` : 'Discussion'),
+      headerStyle: { backgroundColor: '#070a0f' },
+      headerTintColor: '#ffd84d',
+      headerTitleStyle: { color: '#f4f6fb', fontWeight: '700' },
     });
   }, [navigation, title, username]);
 

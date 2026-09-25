@@ -53,9 +53,8 @@ export default function ConnectScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.kicker}>CONNECT</Text>
-      <Text style={styles.title}>Écrire à un @username</Text>
-      <Text style={styles.body}>Recherche serveur Supabase — essai @lea ou @samira.</Text>
+      <Text style={styles.title}>Comment voulez-vous vous connecter ?</Text>
+      <Text style={styles.body}>WIPP Touch, un QR, un @username, ou les personnes à proximité.</Text>
       <Pressable
         style={({ pressed }) => [styles.touchCta, pressed && { opacity: 0.9 }]}
         onPress={() => router.push('/touch')}>
