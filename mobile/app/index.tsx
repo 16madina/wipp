@@ -1,82 +1,79 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
-import { restoreSession } from '@/lib/api';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+import Constants from 'expo-constants';
 
 /**
- * Porte d’entrée WhatsApp-like :
- * logo / animation → si session valide → chats, sinon → login.
+ * L'application ouverte dans le navigateur, affichée plein écran dans Expo.
+ * Elle vient de l'ordinateur (même adresse qu'Expo, port 8080), pas d'un site public.
  */
+function appOnThisComputer() {
+  const hostUri = Constants.expoConfig?.hostUri ?? '';
+  const host = hostUri.split(':')[0];
+  if (!host) return null;
+  return `http://${host}:8080`;
+}
+
 export default function BootScreen() {
-  const router = useRouter();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.92)).current;
-  const [status, setStatus] = useState('Ouverture…');
+  const url = useMemo(() => appOnThisComputer(), []);
+  const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 520, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 7, useNativeDriver: true }),
-    ]).start();
-
-    let cancelled = false;
-    const minSplash = new Promise((r) => setTimeout(r, 900));
-
-    void (async () => {
-      setStatus('Vérification de la session…');
-      const [profile] = await Promise.all([restoreSession(), minSplash]);
-      if (cancelled) return;
-      if (profile) {
-        setStatus(`Bonjour @${profile.username}`);
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/login');
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [opacity, router, scale]);
+  if (!url || failed) {
+    return (
+      <View style={styles.root}>
+        <Text style={styles.brand}>wipp</Text>
+        <Text style={styles.message}>
+          Lance d’abord l’application sur l’ordinateur, puis rouvre Wipp ici.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
-      <Animated.View style={{ opacity, transform: [{ scale }], alignItems: 'center' }}>
-        <Image
-          source={require('../assets/images/icon.png')}
-          style={styles.logo}
-          accessibilityLabel="Wipp"
-        />
-        <Text style={styles.brand}>wipp</Text>
-        <Text style={styles.status}>{status}</Text>
-      </Animated.View>
+      <WebView
+        source={{ uri: url }}
+        style={styles.web}
+        originWhitelist={['*']}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        setSupportMultipleWindows={false}
+        startInLoadingState
+        renderLoading={() => (
+          <View style={styles.loading}>
+            <Text style={styles.brand}>wipp</Text>
+            <ActivityIndicator color="#ffd84d" />
+          </View>
+        )}
+        onHttpError={() => setFailed(true)}
+        onError={() => setFailed(true)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
+  root: { flex: 1, backgroundColor: '#070a0f' },
+  web: { flex: 1, backgroundColor: '#070a0f' },
+  loading: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logo: {
-    width: 112,
-    height: 112,
-    borderRadius: 28,
-    marginBottom: 18,
+    backgroundColor: '#070a0f',
+    gap: 16,
   },
   brand: {
-    color: Colors.dark.tint,
+    color: '#ffd84d',
     fontSize: 40,
     fontWeight: '800',
     letterSpacing: -1.2,
   },
-  status: {
-    marginTop: 14,
-    color: '#8b93a7',
-    fontSize: 14,
+  message: {
+    color: '#f9fafb',
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 28,
   },
 });

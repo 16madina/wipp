@@ -159,6 +159,7 @@ module.exports = {
           ],
         },
         android: {
+          usesCleartextTraffic: true,
           permissions: [
             "android.permission.POST_NOTIFICATIONS",
             "android.permission.USE_FULL_SCREEN_INTENT",
