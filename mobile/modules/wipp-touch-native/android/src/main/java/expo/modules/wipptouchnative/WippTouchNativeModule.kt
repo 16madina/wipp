@@ -8,11 +8,10 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.ParcelUuid
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.UUID
-import kotlin.coroutines.resume
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Android WIPP Touch:
@@ -27,29 +26,43 @@ class WippTouchNativeModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("WippTouchNative")
 
-    AsyncFunction("startAdvertise") { serviceUuid: String, _codeUuid: String, code: String ->
+    AsyncFunction("startAdvertise") { serviceUuid: String, _codeUuid: String, code: String, promise: Promise ->
+      fun finish(payload: Map<String, Any>) {
+        promise.resolve(payload)
+      }
+
       val cleaned = code.uppercase().filter { it.isLetterOrDigit() }
       if (cleaned.length !in 6..12) {
-        return@AsyncFunction mapOf("ok" to false, "reason" to "invalid_code")
+        finish(mapOf("ok" to false, "reason" to "invalid_code"))
+        return@AsyncFunction
       }
       val ctx = appContext.reactContext
-        ?: return@AsyncFunction mapOf("ok" to false, "reason" to "no_context")
+      if (ctx == null) {
+        finish(mapOf("ok" to false, "reason" to "no_context"))
+        return@AsyncFunction
+      }
       if (!ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-        return@AsyncFunction mapOf("ok" to false, "reason" to "bluetooth_unavailable")
+        finish(mapOf("ok" to false, "reason" to "bluetooth_unavailable"))
+        return@AsyncFunction
       }
       val adapter = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
       if (adapter == null || !adapter.isEnabled) {
-        return@AsyncFunction mapOf("ok" to false, "reason" to "bluetooth_off")
+        finish(mapOf("ok" to false, "reason" to "bluetooth_off"))
+        return@AsyncFunction
       }
       val le = adapter.bluetoothLeAdvertiser
-        ?: return@AsyncFunction mapOf("ok" to false, "reason" to "advertise_unsupported")
+      if (le == null) {
+        finish(mapOf("ok" to false, "reason" to "advertise_unsupported"))
+        return@AsyncFunction
+      }
 
       stopInternal()
 
       val parcel = try {
         ParcelUuid(UUID.fromString(serviceUuid))
       } catch (_: Exception) {
-        return@AsyncFunction mapOf("ok" to false, "reason" to "invalid_uuid")
+        finish(mapOf("ok" to false, "reason" to "invalid_uuid"))
+        return@AsyncFunction
       }
 
       // ADV packet: Service UUID only (31-byte budget with 128-bit UUID).
@@ -73,47 +86,43 @@ class WippTouchNativeModule : Module() {
         .setTimeout(0)
         .build()
 
-      suspendCancellableCoroutine { cont ->
-        val cb = object : AdvertiseCallback() {
-          override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-            if (cont.isActive) {
-              cont.resume(
-                mapOf(
-                  "ok" to true,
-                  "includesServiceUuid" to true,
-                  "includesServiceData" to true,
-                  "serviceUuid" to serviceUuid,
-                ),
-              )
-            }
-          }
+      var settled = false
+      fun settle(payload: Map<String, Any>) {
+        if (settled) return
+        settled = true
+        promise.resolve(payload)
+      }
 
-          override fun onStartFailure(errorCode: Int) {
-            if (cont.isActive) {
-              cont.resume(
-                mapOf(
-                  "ok" to false,
-                  "reason" to "advertise_failed",
-                  "errorCode" to errorCode,
-                ),
-              )
-            }
-          }
+      val cb = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+          settle(
+            mapOf(
+              "ok" to true,
+              "includesServiceUuid" to true,
+              "includesServiceData" to true,
+              "serviceUuid" to serviceUuid,
+            ),
+          )
         }
-        callback = cb
-        advertiser = le
-        try {
-          le.startAdvertising(settings, advData, scanResponse, cb)
-        } catch (e: SecurityException) {
-          if (cont.isActive) {
-            cont.resume(mapOf("ok" to false, "reason" to "bluetooth_permission", "message" to (e.message ?: "")))
-          }
-        } catch (e: Exception) {
-          if (cont.isActive) {
-            cont.resume(mapOf("ok" to false, "reason" to "advertise_failed", "message" to (e.message ?: "")))
-          }
+
+        override fun onStartFailure(errorCode: Int) {
+          settle(
+            mapOf(
+              "ok" to false,
+              "reason" to "advertise_failed",
+              "errorCode" to errorCode,
+            ),
+          )
         }
-        cont.invokeOnCancellation { stopInternal() }
+      }
+      callback = cb
+      advertiser = le
+      try {
+        le.startAdvertising(settings, advData, scanResponse, cb)
+      } catch (e: SecurityException) {
+        settle(mapOf("ok" to false, "reason" to "bluetooth_permission", "message" to (e.message ?: "")))
+      } catch (e: Exception) {
+        settle(mapOf("ok" to false, "reason" to "advertise_failed", "message" to (e.message ?: "")))
       }
     }
 
