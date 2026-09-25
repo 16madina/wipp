@@ -26,7 +26,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Chats',
+          title: 'Discussions',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon name="comments" color={color} />,
         }}
       />

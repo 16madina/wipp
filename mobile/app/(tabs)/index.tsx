@@ -123,9 +123,29 @@ export default function ChatsScreen() {
           delayLongPress={10000}>
           <Text style={styles.brand}>wipp</Text>
         </Pressable>
-        <Pressable onPress={() => router.push('/archives')}>
-          <Text style={styles.muted}>Archives</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push('/archives')}>
+            <Text style={styles.muted}>Archives</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/(tabs)/me')} style={styles.meDot}>
+            <Text style={styles.meDotText}>{(profile?.displayName || 'W').slice(0, 1).toUpperCase()}</Text>
+          </Pressable>
+        </View>
+      </View>
+      <View style={styles.stories}>
+        <View style={styles.story}>
+          <View style={styles.storyRing}>
+            <Text style={styles.storyPlus}>+</Text>
+          </View>
+          <Text style={styles.storyLabel}>Votre story</Text>
+        </View>
+      </View>
+      <View style={styles.filters}>
+        {['Tous', 'Perso', 'Boutiques', 'Groupes'].map((label, i) => (
+          <View key={label} style={[styles.chip, i === 0 && styles.chipOn]}>
+            <Text style={[styles.chipText, i === 0 && styles.chipTextOn]}>{label}</Text>
+          </View>
+        ))}
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
@@ -276,7 +296,20 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'space-between',
   },
-  brand: { color: c.accent, fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  brand: { color: '#f4f6fb', fontSize: 28, fontWeight: '800', letterSpacing: -1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  meDot: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#ffd84d', alignItems: 'center', justifyContent: 'center' },
+  meDotText: { color: '#1a1400', fontWeight: '800' },
+  stories: { paddingHorizontal: 16, paddingBottom: 8 },
+  story: { width: 68, alignItems: 'center', gap: 6 },
+  storyRing: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: '#2a3142', alignItems: 'center', justifyContent: 'center' },
+  storyPlus: { color: '#ffd84d', fontSize: 22, fontWeight: '700' },
+  storyLabel: { color: c.textMuted, fontSize: 11 },
+  filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
+  chip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#121722' },
+  chipOn: { backgroundColor: '#ffd84d' },
+  chipText: { color: '#f4f6fb', fontSize: 13 },
+  chipTextOn: { color: '#1a1400', fontWeight: '700' },
   muted: { color: c.textMuted, fontSize: 13 },
   error: { color: c.danger, paddingHorizontal: 18, marginBottom: 8 },
   empty: { padding: 28, gap: 8 },
