@@ -12,19 +12,26 @@ import * as ScreenCapture from 'expo-screen-capture';
 import Colors from '@/constants/Colors';
 import { PinGate } from '@/components/PinGate';
 import { fetchChats, type WippChat } from '@/lib/api';
-import { privateChatIds, unlockChatFromPrivate } from '@/lib/private-vault';
+import {
+  authenticateBiometric,
+  lastPinWaitMs,
+  privateChatIds,
+  replacePrivateCode,
+  unlockChatFromPrivate,
+} from '@/lib/private-vault';
 
 const c = Colors.dark;
 
 export default function PrivateChatsScreen() {
   const router = useRouter();
   const [chats, setChats] = useState<WippChat[]>([]);
-  const [pinOpen, setPinOpen] = useState(false);
+  const [pinFor, setPinFor] = useState<null | 'open' | 'reset-next' | 'reset-confirm'>(null);
+  const [pendingCode, setPendingCode] = useState('');
   const pinWait = useRef<((pin: string | null) => void) | null>(null);
   const askPin = () =>
     new Promise<string | null>((resolve) => {
       pinWait.current = resolve;
-      setPinOpen(true);
+      setPinFor('open');
     });
 
   const load = useCallback(async () => {
@@ -77,6 +84,10 @@ export default function PrivateChatsScreen() {
                     void (async () => {
                       const ok = await unlockChatFromPrivate(item.id, askPin);
                       if (ok) await load();
+                      else if (lastPinWaitMs() > 0) {
+                        const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
+                        Alert.alert('Code WIPP Privé', `Code incorrect. Réessaie dans ${secs} s.`);
+                      }
                     })();
                   },
                 },
@@ -91,17 +102,61 @@ export default function PrivateChatsScreen() {
         )}
       />
       <PinGate
-        visible={pinOpen}
-        title="Code WIPP Privé"
+        visible={pinFor !== null}
+        title={pinFor === 'reset-confirm' ? 'Confirmer le nouveau code' : 'Code WIPP Privé'}
+        hint="Ce code est distinct du code de déverrouillage du téléphone."
+        onForgot={
+          pinFor === 'open'
+            ? () => {
+                void (async () => {
+                  const bio = await authenticateBiometric();
+                  if (bio === 'unavailable') {
+                    Alert.alert(
+                      'Code oublié',
+                      'Sans biométrie configurée, ce code ne peut pas être réinitialisé sur cet appareil. Le coffre reste scellé.',
+                    );
+                    return;
+                  }
+                  if (bio !== 'success') return;
+                  pinWait.current?.(null);
+                  pinWait.current = null;
+                  setPinFor('reset-next');
+                })();
+              }
+            : undefined
+        }
         onCancel={() => {
           pinWait.current?.(null);
           pinWait.current = null;
-          setPinOpen(false);
+          setPendingCode('');
+          setPinFor(null);
         }}
         onSubmit={(pin) => {
+          if (pinFor === 'reset-next') {
+            if (pin.trim().length < 4) {
+              Alert.alert('WIPP Privé', 'Le code doit contenir au moins 4 caractères.');
+              return;
+            }
+            setPendingCode(pin.trim());
+            setPinFor('reset-confirm');
+            return;
+          }
+          if (pinFor === 'reset-confirm') {
+            if (pin.trim() !== pendingCode) {
+              Alert.alert('WIPP Privé', 'Les deux codes ne correspondent pas.');
+              setPinFor('reset-next');
+              return;
+            }
+            void replacePrivateCode(pin).then(() => {
+              setPendingCode('');
+              setPinFor(null);
+              Alert.alert('WIPP Privé', 'Nouveau code enregistré. Tes conversations privées sont inchangées.');
+            });
+            return;
+          }
           pinWait.current?.(pin);
           pinWait.current = null;
-          setPinOpen(false);
+          setPinFor(null);
         }}
       />
     </View>

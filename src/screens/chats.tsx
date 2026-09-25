@@ -28,6 +28,7 @@ import { isChatSealed, useT, useWgoStore } from "@/lib/store";
 import {
   isPrivateChat,
   isPrivateEnabled,
+  lastPinWaitMs,
   lockChatPrivate,
   subscribePrivateVault,
 } from "@/lib/private-vault";
@@ -351,7 +352,12 @@ export function ChatsScreen() {
                   window.alert("Active WIPP Privé dans Confidentialité.");
                   return;
                 }
-                void lockChatPrivate(id, () => Promise.resolve(window.prompt("Code WIPP Privé")));
+                void lockChatPrivate(id, () => Promise.resolve(window.prompt("Code WIPP Privé"))).then((ok) => {
+                  if (!ok && lastPinWaitMs() > 0) {
+                    const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
+                    window.alert(`Code incorrect. Réessaie dans ${secs} s.`);
+                  }
+                });
               }}
             >
               Masquer et verrouiller

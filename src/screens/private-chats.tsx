@@ -4,6 +4,7 @@ import { Avatar, GroupAvatar } from "@/components/avatar";
 import { useT, useWgoStore } from "@/lib/store";
 import {
   isPrivateChat,
+  lastPinWaitMs,
   subscribePrivateVault,
   unlockChatFromPrivate,
   unlockPrivateVault,
@@ -113,4 +114,8 @@ function PrivateRow({
 export async function openPrivateIfUnlocked(push: (s: { name: "wipp-private" }) => void) {
   const ok = await unlockPrivateVault(askPin);
   if (ok) push({ name: "wipp-private" });
+  else if (lastPinWaitMs() > 0) {
+    const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
+    window.alert(`Code incorrect. Réessaie dans ${secs} s.`);
+  }
 }

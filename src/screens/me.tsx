@@ -40,7 +40,7 @@ import { LEGAL_CONTACT } from "@/lib/legal";
 import { shortFp } from "@/lib/crypto";
 import { TAKEN_USERNAMES } from "@/lib/seed";
 import { useT, useWgoStore } from "@/lib/store";
-import { enablePrivateVault, isPrivateEnabled } from "@/lib/private-vault";
+import { enablePrivateVault, isPrivateEnabled, replacePrivateCode, verifyPin } from "@/lib/private-vault";
 import type { A11yPrefs, PrivacyAudience, PrivacyAudienceKey, ThemeMode } from "@/lib/types";
 import { defaultA11y } from "@/lib/types";
 import { announce, haptic } from "@/lib/haptics";
@@ -619,6 +619,7 @@ export function PrivacyScreen() {
   const setReadReceipts = useWgoStore((s) => s.setReadReceipts);
   const setEphemeralCalls = useWgoStore((s) => s.setEphemeralCalls);
   const [open, setOpen] = useState<PrivacyAudienceKey | null>(null);
+  const [wippPane, setWippPane] = useState(false);
   const [, setVaultTick] = useState(0);
   const labelFor = (v: PrivacyAudience) =>
     v === "everyone" ? t("everyone") : v === "contacts" ? t("contacts") : t("nobody");
@@ -626,8 +627,59 @@ export function PrivacyScreen() {
   return (
     <div className="flex h-full flex-col">
       <StatusBar />
-      <Header title={t("privacy")} onBack={pop} />
+      <Header title={wippPane ? "WIPP Privé" : t("privacy")} onBack={wippPane ? () => setWippPane(false) : pop} />
       <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+        {wippPane ? (
+          <Section>
+            <Row
+              label={isPrivateEnabled() ? "Modifier le code" : "Créer le code"}
+              onClick={() => {
+                void (async () => {
+                  const existed = isPrivateEnabled();
+                  if (existed) {
+                    const old = window.prompt("Ancien code WIPP Privé");
+                    if (!old) return;
+                    const checked = await verifyPin(old);
+                    if (!checked.ok) {
+                      const secs = Math.max(1, Math.ceil(checked.waitMs / 1000));
+                      window.alert(`Code incorrect. Réessaie dans ${secs} s.`);
+                      return;
+                    }
+                  }
+                  const next = window.prompt("Nouveau code WIPP Privé (4 caractères minimum)");
+                  if (!next) return;
+                  const again = window.prompt("Confirmer le nouveau code");
+                  if (again?.trim() !== next.trim()) {
+                    window.alert("Les deux codes ne correspondent pas.");
+                    return;
+                  }
+                  try {
+                    if (existed) await replacePrivateCode(next);
+                    else await enablePrivateVault(next);
+                    setVaultTick((n) => n + 1);
+                    window.alert(
+                      existed
+                        ? "Le code a été modifié. Tes conversations privées sont inchangées."
+                        : "Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.",
+                    );
+                  } catch {
+                    window.alert("Le code doit contenir au moins 4 caractères.");
+                  }
+                })();
+              }}
+            />
+            <Row
+              label="Code oublié ?"
+              onClick={() =>
+                window.alert(
+                  "Sur le web, il n'y a pas de biométrie. Sans le code, le coffre reste scellé sur cet appareil. Aucun email, SMS ou copie serveur ne peut le récupérer.",
+                )
+              }
+            />
+          </Section>
+        ) : null}
+        {!wippPane ? (
+        <>
         <Section>
           {PRIVACY_ROWS.map((row) => (
             <Row
@@ -663,20 +715,7 @@ export function PrivacyScreen() {
             <Row
               label="WIPP Privé"
               value={isPrivateEnabled() ? "Activé" : "Désactivé"}
-              onClick={() => {
-                if (isPrivateEnabled()) {
-                  window.alert("Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.");
-                  return;
-                }
-                const pin = window.prompt("Choisis un code WIPP Privé (4 caractères minimum)");
-                if (!pin) return;
-                void enablePrivateVault(pin)
-                  .then(() => {
-                    setVaultTick((n) => n + 1);
-                    window.alert("Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.");
-                  })
-                  .catch(() => window.alert("Le code doit contenir au moins 4 caractères."));
-              }}
+              onClick={() => setWippPane(true)}
             />
             <Row
               label={t("readReceipts")}
@@ -700,6 +739,8 @@ export function PrivacyScreen() {
           <p className="px-6 pt-3 text-[13px] leading-relaxed text-muted">{t("readReceiptsHint")}</p>
           <p className="px-6 pt-2 text-[13px] leading-relaxed text-muted">{t("ephemeralCallsHint")}</p>
         </div>
+        </>
+        ) : null}
       </div>
     </div>
   );

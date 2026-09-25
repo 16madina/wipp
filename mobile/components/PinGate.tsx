@@ -6,14 +6,18 @@ const c = Colors.dark;
 
 export function PinGate({
   visible,
-  title,
+  title = 'Code WIPP Privé',
+  hint,
   onCancel,
   onSubmit,
+  onForgot,
 }: {
   visible: boolean;
-  title: string;
+  title?: string;
+  hint?: string;
   onCancel: () => void;
   onSubmit: (pin: string) => void;
+  onForgot?: () => void;
 }) {
   const [pin, setPin] = useState('');
   return (
@@ -21,6 +25,7 @@ export function PinGate({
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
+          {hint ? <Text style={styles.hint}>{hint}</Text> : null}
           <TextInput
             value={pin}
             onChangeText={setPin}
@@ -30,6 +35,11 @@ export function PinGate({
             placeholderTextColor={c.textMuted}
             style={styles.input}
           />
+          {onForgot ? (
+            <Pressable onPress={onForgot}>
+              <Text style={styles.forgot}>Code oublié ?</Text>
+            </Pressable>
+          ) : null}
           <View style={styles.row}>
             <Pressable onPress={onCancel}>
               <Text style={styles.cancel}>Annuler</Text>
@@ -65,6 +75,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: { color: c.text, fontSize: 17, fontWeight: '700' },
+  hint: { color: c.textMuted, fontSize: 13, lineHeight: 18 },
+  forgot: { color: c.accent, fontSize: 14 },
   input: {
     borderWidth: 1,
     borderColor: c.hair,

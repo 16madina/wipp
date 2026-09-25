@@ -9,10 +9,19 @@ import * as SecureStore from "expo-secure-store";
 const IDS_KEY = "wipp-prive-ids-v1";
 const VERIFIER_KEY = "wipp-prive-verifier-v1";
 const ENABLED_KEY = "wipp-prive-enabled-v1";
+const LOCK_KEY = "wipp-prive-lock-v1";
 
 type Verifier = { salt: string; hash: string };
+type LockState = { fails: number; until: number };
+
+const WAIT_MS = [0, 1_000, 2_000, 5_000, 15_000, 30_000, 60_000];
 
 const listeners = new Set<() => void>();
+let lastWaitMs = 0;
+
+export function lastPinWaitMs() {
+  return lastWaitMs;
+}
 
 function emit() {
   listeners.forEach((fn) => fn());
@@ -44,44 +53,118 @@ export async function privateChatIds(): Promise<string[]> {
   }
 }
 
+export async function biometricAvailable() {
+  const hasHardware = await LocalAuthentication.hasHardwareAsync();
+  if (!hasHardware) return false;
+  return LocalAuthentication.isEnrolledAsync();
+}
+
+async function readLock(): Promise<LockState> {
+  try {
+    const raw = await SecureStore.getItemAsync(LOCK_KEY);
+    if (!raw) return { fails: 0, until: 0 };
+    const parsed = JSON.parse(raw) as LockState;
+    return { fails: parsed.fails || 0, until: parsed.until || 0 };
+  } catch {
+    return { fails: 0, until: 0 };
+  }
+}
+
+function waitForFails(fails: number) {
+  return WAIT_MS[Math.min(fails, WAIT_MS.length - 1)] ?? 60_000;
+}
+
+async function noteFailure() {
+  const cur = await readLock();
+  const fails = cur.fails + 1;
+  const until = Date.now() + waitForFails(fails);
+  await SecureStore.setItemAsync(LOCK_KEY, JSON.stringify({ fails, until }));
+  return until - Date.now();
+}
+
+async function noteSuccess() {
+  await SecureStore.deleteItemAsync(LOCK_KEY);
+}
+
 export async function enablePrivateVault(pin: string) {
-  if (pin.trim().length < 4) throw new Error("short");
-  const salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const hash = await sha256(`${salt}:${pin.trim()}`);
-  const verifier: Verifier = { salt, hash };
-  await SecureStore.setItemAsync(VERIFIER_KEY, JSON.stringify(verifier));
+  await writeVerifier(pin);
   await SecureStore.setItemAsync(ENABLED_KEY, "1");
   if (!(await SecureStore.getItemAsync(IDS_KEY))) {
     await SecureStore.setItemAsync(IDS_KEY, "[]");
   }
+  await noteSuccess();
   emit();
 }
 
-async function verifyPin(pin: string) {
+/** Remplace uniquement le vérificateur. Les conversations masquées restent. */
+export async function replacePrivateCode(pin: string) {
+  await writeVerifier(pin);
+  await noteSuccess();
+}
+
+async function writeVerifier(pin: string) {
+  const code = pin.trim();
+  if (code.length < 4) throw new Error("short");
+  const saltBytes = new Uint8Array(16);
+  crypto.getRandomValues(saltBytes);
+  const salt = [...saltBytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const hash = await sha256(`${salt}:${code}`);
+  const verifier: Verifier = { salt, hash };
+  await SecureStore.setItemAsync(VERIFIER_KEY, JSON.stringify(verifier));
+}
+
+export async function verifyPin(pin: string): Promise<{ ok: true } | { ok: false; waitMs: number }> {
+  const lock = await readLock();
+  const remaining = lock.until - Date.now();
+  if (remaining > 0) {
+    lastWaitMs = remaining;
+    return { ok: false, waitMs: remaining };
+  }
   const raw = await SecureStore.getItemAsync(VERIFIER_KEY);
-  if (!raw) return false;
+  if (!raw) return { ok: false, waitMs: 0 };
   const verifier = JSON.parse(raw) as Verifier;
   const hash = await sha256(`${verifier.salt}:${pin.trim()}`);
-  return hash === verifier.hash;
+  if (hash === verifier.hash) {
+    lastWaitMs = 0;
+    await noteSuccess();
+    return { ok: true };
+  }
+  const waitMs = await noteFailure();
+  lastWaitMs = waitMs;
+  return { ok: false, waitMs };
+}
+
+export type BiometricOutcome = "success" | "cancel" | "unavailable";
+
+/** Biométrie de l'appareil seulement — jamais le code de déverrouillage du téléphone. */
+export async function authenticateBiometric(): Promise<BiometricOutcome> {
+  if (!(await biometricAvailable())) return "unavailable";
+  const result = await LocalAuthentication.authenticateAsync({
+    promptMessage: "WIPP Privé",
+    cancelLabel: "Annuler",
+    disableDeviceFallback: true,
+  });
+  if (result.success) return "success";
+  if (
+    result.error === "not_available" ||
+    result.error === "not_enrolled" ||
+    result.error === "lockout"
+  ) {
+    return "unavailable";
+  }
+  return "cancel";
 }
 
 export async function authenticatePrivate(askPin: () => Promise<string | null>) {
   if (!(await isPrivateEnabled())) return false;
-  const hasHardware = await LocalAuthentication.hasHardwareAsync();
-  const enrolled = hasHardware && (await LocalAuthentication.isEnrolledAsync());
-  if (enrolled) {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "WIPP Privé",
-      cancelLabel: "Annuler",
-      fallbackLabel: "Code",
-      disableDeviceFallback: false,
-    });
-    if (result.success) return true;
-    if (result.error === "user_cancel" || result.error === "system_cancel") return false;
-  }
+  lastWaitMs = 0;
+  const bio = await authenticateBiometric();
+  if (bio === "success") return true;
+  if (bio === "cancel") return false;
   const pin = await askPin();
   if (!pin) return false;
-  return verifyPin(pin);
+  const checked = await verifyPin(pin);
+  return checked.ok;
 }
 
 export async function lockChatPrivate(chatId: string, askPin: () => Promise<string | null>) {

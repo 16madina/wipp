@@ -60,6 +60,7 @@ export default function RootLayout() {
         <Stack.Screen name="admin" options={{ title: 'Admin' }} />
         <Stack.Screen name="chat/[id]" options={{ title: 'Conversation' }} />
         <Stack.Screen name="private" options={{ headerShown: false }} />
+        <Stack.Screen name="privacy" options={{ headerShown: false }} />
       </Stack>
     </>
   );
