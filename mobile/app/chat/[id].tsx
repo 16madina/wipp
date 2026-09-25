@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -57,6 +57,14 @@ export default function ChatScreen() {
       title: title || (username ? `@${username}` : 'Chat'),
     });
   }, [navigation, title, username]);
+
+  useEffect(() => {
+    if (isPrivate !== '1') return;
+    void ScreenCapture.preventScreenCaptureAsync('wipp-prive-chat');
+    return () => {
+      void ScreenCapture.allowScreenCaptureAsync('wipp-prive-chat');
+    };
+  }, [isPrivate]);
 
   const decodeList = useCallback(
     async (list: WippMessage[], idBundle: KeyBundle, chatId: string) => {
