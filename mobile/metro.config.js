@@ -10,6 +10,7 @@ config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),
   "wipp-touch-native": touchNative,
 };
-config.watchFolders = [...(config.watchFolders || []), touchNative];
+const messaging = path.resolve(__dirname, "../src/lib/messaging");
+config.watchFolders = [...(config.watchFolders || []), touchNative, messaging];
 
 module.exports = config;

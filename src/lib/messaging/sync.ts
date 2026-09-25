@@ -12,7 +12,9 @@ import {
   previewFromBody,
   type KeyBundle,
 } from "@/lib/crypto";
+import { decodePlain, encodePlain, type ReplyCite } from "@/lib/messaging/plain";
 import {
+  editServerMessage,
   ensureServerSession,
   fetchServerChats,
   fetchServerMessages,
@@ -75,8 +77,17 @@ export async function mapServerMessageAsync(
     reactions: [],
   };
   const parsed = parseMessageBody(m.body);
+  const meta = messageMeta(m, meServerId);
   if (parsed.kind === "plain") {
-    return { ...base, text: parsed.text };
+    const plain = decodePlain(parsed.text);
+    return {
+      ...base,
+      ...meta,
+      text: m.deletedAt ? "Message supprimé" : plain.text,
+      replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
+      replyPreview: plain.reply?.preview,
+      forwarded: plain.forwarded,
+    };
   }
   if (!identity) {
     return { ...base, enc: parsed.envelope, encFailed: true };
@@ -84,7 +95,17 @@ export async function mapServerMessageAsync(
   try {
     const key = await deriveChatKey(identity, parsed.envelope.spk, serverChatId);
     const text = await decryptText(key, parsed.envelope);
-    return { ...base, text, enc: parsed.envelope, encFailed: false };
+    const plain = decodePlain(text);
+    return {
+      ...base,
+      ...meta,
+      text: m.deletedAt ? "Message supprimé" : plain.text,
+      replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
+      replyPreview: plain.reply?.preview,
+      forwarded: plain.forwarded,
+      enc: parsed.envelope,
+      encFailed: false,
+    };
   } catch {
     return { ...base, enc: parsed.envelope, encFailed: true };
   }
@@ -93,18 +114,50 @@ export async function mapServerMessageAsync(
 function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): Message {
   const fromMe = meServerId && m.senderId === meServerId;
   const parsed = parseMessageBody(m.body);
+  const plain = parsed.kind === "plain" ? decodePlain(parsed.text) : undefined;
   return {
     id: m.id,
     chatId: toLocalChatId(m.chatId),
     fromId: fromMe ? "me" : `srvuser:${m.senderId}`,
-    type: "text",
-    text: parsed.kind === "plain" ? parsed.text : undefined,
-    enc: parsed.kind === "e2e" ? parsed.envelope : undefined,
-    encFailed: parsed.kind === "e2e",
+    type: m.deletedAt ? "system" : "text",
+    text: m.deletedAt ? "Message supprimé" : plain?.text,
+    enc: parsed.kind === "e2e" && !m.deletedAt ? parsed.envelope : undefined,
+    encFailed: parsed.kind === "e2e" && !m.deletedAt,
     createdAt: m.createdAt,
-    status: "read",
-    reactions: [],
+    status: receiptStatus(m, Boolean(fromMe)),
+    reactions: (m.reactions ?? []).map((r) => ({
+      userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
+      emoji: r.emoji,
+    })),
+    replyTo: plain?.reply?.id ?? m.replyTo ?? undefined,
+    replyPreview: plain?.reply?.preview,
+    editedAt: m.editedAt ?? undefined,
+    deletedForAll: Boolean(m.deletedAt),
+    pinned: Boolean(m.pinnedAt),
+    forwarded: plain?.forwarded,
   };
+}
+
+function messageMeta(m: WippMessage, meServerId: string | undefined) {
+  const fromMe = Boolean(meServerId && m.senderId === meServerId);
+  return {
+    status: receiptStatus(m, fromMe),
+    reactions: (m.reactions ?? []).map((r) => ({
+      userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
+      emoji: r.emoji,
+    })),
+    editedAt: m.editedAt ?? undefined,
+    deletedForAll: Boolean(m.deletedAt),
+    pinned: Boolean(m.pinnedAt),
+    type: m.deletedAt ? ("system" as const) : ("text" as const),
+  };
+}
+
+function receiptStatus(m: WippMessage, fromMe: boolean): Message["status"] {
+  if (!fromMe) return "sent";
+  if (m.readAt) return "read";
+  if (m.deliveredAt) return "delivered";
+  return "sent";
 }
 
 type StoreSlice = {
@@ -164,10 +217,30 @@ export function mergeServerMessagesIntoState(
   const byId = new Map(existing.map((m) => [m.id, m]));
   for (const sm of serverMessages) {
     const mapped = mapServerMessageSync(sm, meServerId);
+    if (sm.clientId && sm.clientId !== sm.id) {
+      const optimistic = byId.get(sm.clientId);
+      if (optimistic) {
+        byId.delete(sm.clientId);
+        if (optimistic.text && mapped.enc && !mapped.text) {
+          mapped.text = optimistic.text;
+          mapped.replyPreview = mapped.replyPreview ?? optimistic.replyPreview;
+          mapped.forwarded = mapped.forwarded ?? optimistic.forwarded;
+          mapped.encFailed = false;
+        }
+      }
+    }
     const prev = byId.get(sm.id);
-    // Keep already-decrypted plaintext if we have it
-    if (prev?.text && mapped.enc && !mapped.text) {
-      byId.set(sm.id, { ...mapped, text: prev.text, encFailed: false });
+    const ctChanged = Boolean(prev?.enc?.ct && mapped.enc?.ct && prev.enc.ct !== mapped.enc.ct);
+    if (prev?.text && mapped.enc && !mapped.text && !ctChanged && !mapped.deletedForAll) {
+      byId.set(sm.id, {
+        ...mapped,
+        text: prev.text,
+        replyPreview: mapped.replyPreview ?? prev.replyPreview,
+        forwarded: mapped.forwarded ?? prev.forwarded,
+        encFailed: false,
+      });
+    } else if (ctChanged) {
+      byId.set(sm.id, { ...mapped, text: undefined, encFailed: true });
     } else {
       byId.set(sm.id, mapped);
     }
@@ -220,7 +293,15 @@ export async function decryptMergedMessages(
         iv: env.iv,
         ct: env.ct,
       });
-      next.push({ ...m, text, encFailed: false });
+      const plain = decodePlain(text);
+      next.push({
+        ...m,
+        text: m.deletedForAll ? "Message supprimé" : plain.text,
+        replyTo: plain.reply?.id ?? m.replyTo,
+        replyPreview: plain.reply?.preview ?? m.replyPreview,
+        forwarded: plain.forwarded,
+        encFailed: false,
+      });
       changed = true;
     } catch {
       next.push({ ...m, encFailed: true });
@@ -265,17 +346,47 @@ export async function sendViaServer(
   opts?: {
     identity?: KeyBundle | null;
     peerPublicJwk?: JsonWebKey | null;
+    reply?: ReplyCite;
+    forwarded?: boolean;
+    vault?: boolean;
   },
 ) {
   if (!isServerChatId(localChatId)) return null;
   const serverChatId = toServerChatId(localChatId);
-  let body = text;
+  const plain = encodePlain({ text, reply: opts?.reply, forwarded: opts?.forwarded });
+  let body = plain;
   if (opts?.identity && opts.peerPublicJwk) {
     const key = await deriveChatKey(opts.identity, opts.peerPublicJwk, serverChatId);
-    const blob = await encryptText(key, text);
+    const blob = await encryptText(key, plain);
     body = JSON.stringify(makeE2eEnvelope(blob, opts.identity.publicJwk));
   }
-  return postServerMessage(serverChatId, body, clientId);
+  return postServerMessage(serverChatId, body, clientId, {
+    replyTo: opts?.reply?.id,
+    vault: opts?.vault,
+  });
+}
+
+export async function editViaServer(
+  localChatId: string,
+  messageId: string,
+  text: string,
+  opts?: {
+    identity?: KeyBundle | null;
+    peerPublicJwk?: JsonWebKey | null;
+    reply?: ReplyCite;
+    forwarded?: boolean;
+  },
+) {
+  if (!isServerChatId(localChatId)) return null;
+  const serverChatId = toServerChatId(localChatId);
+  const plain = encodePlain({ text, reply: opts?.reply, forwarded: opts?.forwarded });
+  let body = plain;
+  if (opts?.identity && opts.peerPublicJwk) {
+    const key = await deriveChatKey(opts.identity, opts.peerPublicJwk, serverChatId);
+    const blob = await encryptText(key, plain);
+    body = JSON.stringify(makeE2eEnvelope(blob, opts.identity.publicJwk));
+  }
+  return editServerMessage(serverChatId, messageId, body);
 }
 
 export async function startChatWithUsername(username: string) {

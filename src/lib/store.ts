@@ -665,6 +665,9 @@ export const useWgoStore = create<WgoState>()(
       sendMessage: (chatId, data) => {
         const existingChat = get().chats.find((c) => c.id === chatId);
         if (existingChat && isChatSealed(existingChat)) return;
+        const cited = data.replyTo
+          ? (get().messages[chatId] ?? []).find((m) => m.id === data.replyTo)
+          : undefined;
         const message: Message = {
           id: uid("m"),
           chatId,
@@ -687,6 +690,10 @@ export const useWgoStore = create<WgoState>()(
           listingId: data.listingId,
           shopId: data.shopId ?? existingChat?.shopId,
           replyTo: data.replyTo,
+          replyPreview:
+            data.replyPreview ??
+            (cited?.deletedForAll ? "Message supprimé" : cited?.text?.replace(/\s+/g, " ").trim().slice(0, 80)),
+          forwarded: data.forwarded,
           expiresAt: existingChat?.disappearAfterMs
             ? Date.now() + existingChat.disappearAfterMs
             : undefined,
@@ -716,7 +723,7 @@ export const useWgoStore = create<WgoState>()(
         };
         });
         void get().sealMessage(chatId, message.id);
-        pumpReceipt(set, get, chatId, message.id);
+        if (!chatId.startsWith("srv:")) pumpReceipt(set, get, chatId, message.id);
 
         // Dual-write text messages to the messaging server for srv: chats (E2E when peer key known)
         if (message.type === "text" && message.text) {
@@ -738,10 +745,43 @@ export const useWgoStore = create<WgoState>()(
                     ? st.peerPublicKeys[peerId.slice("srvuser:".length)]
                     : undefined)
                 : undefined;
-              await sendViaServer(chatId, message.text!, message.id, {
-                identity: st.identity,
-                peerPublicJwk: peerPub ?? null,
-              });
+              const reply = message.replyTo
+                ? (st.messages[chatId] ?? []).find((m) => m.id === message.replyTo)
+                : undefined;
+              const cite = reply?.deletedForAll
+                ? "Message supprimé"
+                : (reply?.text ?? data.replyPreview ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+              const { isPrivateChat } = await import("@/lib/private-vault");
+              try {
+                await sendViaServer(chatId, message.text!, message.id, {
+                  identity: st.identity,
+                  peerPublicJwk: peerPub ?? null,
+                  reply: message.replyTo ? { id: message.replyTo, preview: cite, senderId: reply?.fromId } : undefined,
+                  forwarded: data.forwarded,
+                  vault: isPrivateChat(chatId),
+                });
+              } catch (err) {
+                const { enqueueOutbox } = await import("@/lib/messaging/outbox");
+                enqueueOutbox({
+                  localChatId: chatId,
+                  clientId: message.id,
+                  text: message.text!,
+                  replyId: message.replyTo,
+                  replyPreview: cite,
+                  replySenderId: reply?.fromId,
+                  forwarded: data.forwarded,
+                  vault: isPrivateChat(chatId),
+                });
+                set((s) => ({
+                  messages: {
+                    ...s.messages,
+                    [chatId]: (s.messages[chatId] ?? []).map((m) =>
+                      m.id === message.id ? { ...m, status: "failed" as const } : m,
+                    ),
+                  },
+                }));
+                throw err;
+              }
               const synced = await syncChatMessages(chatId);
               if (synced && "messages" in synced) {
                 set((s) =>
@@ -837,6 +877,27 @@ export const useWgoStore = create<WgoState>()(
       retryMessage: (chatId, messageId) => {
         const msg = (get().messages[chatId] ?? []).find((m) => m.id === messageId);
         if (!msg || msg.status !== "failed") return;
+        if (chatId.startsWith("srv:") && msg.text) {
+          set((st) => ({
+            messages: {
+              ...st.messages,
+              [chatId]: (st.messages[chatId] ?? []).map((m) =>
+                m.id === messageId ? { ...m, status: "sending" as const } : m,
+              ),
+            },
+          }));
+          void (async () => {
+            const { flushOutboxItem } = await import("@/lib/messaging/flush-outbox");
+            await flushOutboxItem(get, set, {
+              localChatId: chatId,
+              clientId: messageId,
+              text: msg.text!,
+              replyId: msg.replyTo,
+              replyPreview: msg.replyPreview,
+            });
+          })();
+          return;
+        }
         set((st) => ({
           messages: {
             ...st.messages,
@@ -858,7 +919,7 @@ export const useWgoStore = create<WgoState>()(
           },
         })),
 
-      addReaction: (chatId, messageId, emoji) =>
+      addReaction: (chatId, messageId, emoji) => {
         set((st) => ({
           messages: {
             ...st.messages,
@@ -870,15 +931,27 @@ export const useWgoStore = create<WgoState>()(
               return { ...m, reactions: [...rest, { emoji, userId: "me" }] };
             }),
           },
-        })),
+        }));
+        if (chatId.startsWith("srv:")) {
+          void import("@/lib/messaging/client").then(({ reactServerMessage }) =>
+            reactServerMessage(chatId.replace(/^srv:/, ""), messageId, emoji),
+          );
+        }
+      },
 
-      deleteMessage: (chatId, messageId) =>
+      deleteMessage: (chatId, messageId) => {
         set((st) => ({
           messages: {
             ...st.messages,
             [chatId]: (st.messages[chatId] ?? []).filter((m) => m.id !== messageId),
           },
-        })),
+        }));
+        if (chatId.startsWith("srv:")) {
+          void import("@/lib/messaging/client").then(({ hideServerMessage }) =>
+            hideServerMessage(chatId.replace(/^srv:/, ""), messageId),
+          );
+        }
+      },
 
       translateMessage: (chatId, messageId) =>
         set((st) => ({

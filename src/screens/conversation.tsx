@@ -168,6 +168,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const pop = useWgoStore((s) => s.pop);
   const push = useWgoStore((s) => s.push);
   const chat = useWgoStore((s) => s.chats.find((c) => c.id === chatId));
+  const srvChats = useWgoStore((s) => s.chats);
   const messages = useWgoStore((s) => s.messages[chatId]) ?? EMPTY_MSGS;
   const users = useWgoStore((s) => s.users);
   const shops = useWgoStore((s) => s.shops);
@@ -189,6 +190,10 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const burnViewOnce = useWgoStore((s) => s.burnViewOnce);
   const recentStickerIds = useWgoStore((s) => s.recentStickerIds ?? []);
   const [text, setText] = useState("");
+  const [reply, setReply] = useState<Message | null>(null);
+  const [editing, setEditing] = useState<Message | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const [voice, setVoice] = useState<VoiceUi | null>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const voiceRec = useRef<VoiceRecorder | null>(null);
@@ -232,6 +237,83 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   useEffect(() => {
     markRead(chatId);
     sealExpired();
+    if (!chatId.startsWith("srv:")) return;
+    const serverId = chatId.slice(4);
+    let stop = () => {};
+    void import("@/lib/messaging/client").then(async (api) => {
+      await api.postFocus(serverId, true);
+      const receiptsOn = useWgoStore.getState().privacy.readReceipts !== false;
+      const incoming = (useWgoStore.getState().messages[chatId] ?? [])
+        .filter((m) => m.fromId !== "me" && !m.deletedForAll)
+        .map((m) => m.id);
+      if (incoming.length) await api.postReceipts(serverId, incoming, receiptsOn ? "read" : "delivered");
+    });
+    let typingTimer = 0;
+    const beat = window.setInterval(() => {
+      void import("@/lib/messaging/client").then((api) => api.postFocus(serverId, true));
+    }, 12_000);
+    void import("@/lib/messaging/live-client").then(({ startMessageStream }) => {
+      stop = startMessageStream((event) => {
+        if (event.chatId !== serverId) return;
+        if (event.kind === "typing") {
+          const payload = event.payload as { active?: boolean; profileId?: string };
+          void import("@/lib/messaging/client").then(({ getStoredProfile }) => {
+            if (payload.profileId && payload.profileId === getStoredProfile()?.id) return;
+            window.clearTimeout(typingTimer);
+            const active = Boolean(payload.active);
+            useWgoStore.setState((st) => ({
+              typing: { ...st.typing, [chatId]: active },
+            }));
+            if (active) {
+              typingTimer = window.setTimeout(() => {
+                useWgoStore.setState((st) => ({ typing: { ...st.typing, [chatId]: false } }));
+              }, 4500);
+            }
+          });
+          return;
+        }
+        void import("@/lib/messaging/sync").then(async (sync) => {
+          const synced = await sync.syncChatMessages(chatId);
+          if (!synced || !("messages" in synced)) return;
+          useWgoStore.setState((s) =>
+            sync.mergeServerMessagesIntoState(s, serverId, synced.messages, synced.meServerId),
+          );
+          const dec = await sync.decryptMergedMessages(
+            useWgoStore.getState(),
+            chatId,
+            useWgoStore.getState().identity,
+          );
+          if (Object.keys(dec).length) useWgoStore.setState(dec);
+          if (event.kind === "message") {
+            const { getStoredProfile, postReceipts } = await import("@/lib/messaging/client");
+            const me = getStoredProfile()?.id;
+            const incoming = synced.messages
+              .filter((m) => m.senderId !== me && !m.deletedAt)
+              .map((m) => m.id);
+            if (incoming.length) {
+              const receiptsOn = useWgoStore.getState().privacy.readReceipts !== false;
+              await postReceipts(serverId, incoming, receiptsOn ? "read" : "delivered");
+            }
+          }
+        });
+      });
+    });
+    const onOnline = () => {
+      void import("@/lib/messaging/flush-outbox").then(({ flushAllOutbox }) =>
+        flushAllOutbox(useWgoStore.getState as never, useWgoStore.setState as never),
+      );
+    };
+    window.addEventListener("online", onOnline);
+    return () => {
+      stop();
+      window.clearInterval(beat);
+      window.clearTimeout(typingTimer);
+      window.removeEventListener("online", onOnline);
+      void import("@/lib/messaging/client").then((api) => {
+        void api.postFocus(serverId, false);
+        void api.postTyping(serverId, false);
+      });
+    };
   }, [chatId, markRead, sealExpired]);
 
   useEffect(() => {
@@ -462,8 +544,42 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     const value = text.trim();
     if (!value) return;
     haptic("send");
-    sendMessage(chatId, { text: value });
+    if (editing && chatId.startsWith("srv:")) {
+      void import("@/lib/messaging/sync").then(async (sync) => {
+        const st = useWgoStore.getState();
+        const peerId = chat?.participantIds.find((id) => id !== "me");
+        const peerPub = peerId
+          ? st.peerPublicKeys[peerId] ||
+            (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice("srvuser:".length)] : undefined)
+          : undefined;
+        await sync.editViaServer(chatId, editing.id, value, {
+          identity: st.identity,
+          peerPublicJwk: peerPub ?? null,
+          reply: editing.replyTo
+            ? { id: editing.replyTo, preview: editing.replyPreview ?? "" }
+            : undefined,
+          forwarded: editing.forwarded,
+        });
+        const synced = await sync.syncChatMessages(chatId);
+        if (synced && "messages" in synced) {
+          useWgoStore.setState((s) =>
+            sync.mergeServerMessagesIntoState(s, chatId.slice(4), synced.messages, synced.meServerId),
+          );
+          const dec = await sync.decryptMergedMessages(
+            useWgoStore.getState(),
+            chatId,
+            useWgoStore.getState().identity,
+          );
+          if (Object.keys(dec).length) useWgoStore.setState(dec);
+        }
+      });
+      setEditing(null);
+      setText("");
+      return;
+    }
+    sendMessage(chatId, { text: value, replyTo: reply?.id });
     setText("");
+    setReply(null);
     setDraftFx(null);
   }
 
@@ -757,6 +873,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 return (
                   <div
                     key={m.id}
+                    id={`msg-${m.id}`}
                     role={m.type === "scratch" ? "group" : "button"}
                     tabIndex={0}
                     onClick={() => {
@@ -928,7 +1045,24 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                             {m.enc.iv}.{m.enc.ct}
                           </p>
                         ) : (
-                          <p className="text-[15px] leading-snug">{m.text ?? t("e2eLocked")}</p>
+                          <>
+                            {m.replyTo ? (
+                              <button
+                                type="button"
+                                className="mb-1 block w-full rounded-lg bg-black/10 px-2 py-1 text-left text-[12px]"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  document.getElementById(`msg-${m.replyTo}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                }}
+                              >
+                                {m.replyPreview || "Message"}
+                              </button>
+                            ) : null}
+                            {m.forwarded ? <p className="mb-0.5 text-[11px] opacity-70">Transféré</p> : null}
+                            <p className="text-[15px] leading-snug">{m.deletedForAll ? "Message supprimé" : (m.text ?? t("e2eLocked"))}</p>
+                            {m.editedAt ? <p className="mt-0.5 text-[11px] opacity-70">Modifié</p> : null}
+                            {m.pinned ? <p className="mt-0.5 text-[11px] opacity-70">Épinglé</p> : null}
+                          </>
                         )}
                         {m.translated ? (
                           <p className="mt-1 border-t border-white/10 pt-1 text-[13px] opacity-80">{m.translated}</p>
@@ -968,7 +1102,9 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               })}
             {typing ? (
               <div className="mt-1 flex justify-start">
-                <div className="rounded-2xl rounded-bl-sm bg-bubble-them px-3 py-2 text-[13px] text-muted">···</div>
+                <div className="rounded-2xl rounded-bl-sm bg-bubble-them px-3 py-2 text-[13px] text-muted">
+                  {(peer?.displayName ?? "…")} écrit…
+                </div>
               </div>
             ) : null}
           </div>
@@ -1093,6 +1229,31 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   ))}
                 </div>
               ) : null}
+              {selected.length ? (
+                <div className="mb-1 flex items-center justify-between px-3 text-[12px]">
+                  <span>{selected.length} sélectionné(s)</span>
+                  <span className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        for (const id of selected) deleteMessage(chatId, id);
+                        setSelected([]);
+                      }}
+                    >
+                      Supprimer pour moi
+                    </button>
+                    <button type="button" onClick={() => setSelected([])}>Annuler</button>
+                  </span>
+                </div>
+              ) : null}
+              {reply || editing ? (
+                <div className="mb-1 flex items-center justify-between px-3 text-[12px] text-muted">
+                  <span>{editing ? "Modification" : `Réponse · ${reply?.text?.slice(0, 60) ?? ""}`}</span>
+                  <button type="button" onClick={() => { setReply(null); setEditing(null); }}>
+                    Annuler
+                  </button>
+                </div>
+              ) : null}
               <div className="glass flex min-w-0 items-end gap-0.5 px-1.5 py-2">
                 <button
                   type="button"
@@ -1110,7 +1271,14 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   <textarea
                     rows={1}
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      if (chatId.startsWith("srv:")) {
+                        void import("@/lib/messaging/client").then(({ postTyping }) =>
+                          postTyping(chatId.slice(4), e.target.value.trim().length > 0),
+                        );
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -1318,6 +1486,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       <Sheet open={Boolean(active)} onClose={() => setActive(null)}>
         {active ? (
           <div className="grid gap-1">
+            {!active.deletedForAll ? (
             <div className="mb-2 flex justify-center gap-2">
               {REACTS.map((e) => (
                 <button
@@ -1333,15 +1502,79 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 </button>
               ))}
             </div>
+            ) : null}
+            {!active.deletedForAll ? (
             <button
               type="button"
               className="flex h-12 items-center gap-3 rounded-lg px-2"
               onClick={() => {
-                if (active.text) navigator.clipboard.writeText(active.text);
+                setReply(active);
                 setActive(null);
               }}
             >
-              <Copy className="size-4" /> {t("copyMsg")}
+              Répondre
+            </button>
+            ) : null}
+            {active.text && active.type === "text" && !active.deletedForAll ? (
+              <button
+                type="button"
+                className="flex h-12 items-center gap-3 rounded-lg px-2"
+                onClick={() => {
+                  if (active.text) navigator.clipboard.writeText(active.text);
+                  setActive(null);
+                }}
+              >
+                <Copy className="size-4" /> {t("copyMsg")}
+              </button>
+            ) : null}
+            {active.fromId === "me" && active.type === "text" && !active.deletedForAll && Date.now() - active.createdAt < 15 * 60 * 1000 ? (
+              <button
+                type="button"
+                className="flex h-12 items-center gap-3 rounded-lg px-2"
+                onClick={() => {
+                  setEditing(active);
+                  setText(active.text ?? "");
+                  setActive(null);
+                }}
+              >
+                Modifier
+              </button>
+            ) : null}
+            {active.text && active.type === "text" && !active.deletedForAll ? (
+            <button
+              type="button"
+              className="flex h-12 items-center gap-3 rounded-lg px-2"
+              onClick={() => {
+                setForwardMsg(active);
+                setActive(null);
+              }}
+            >
+              Transférer
+            </button>
+            ) : null}
+            {chatId.startsWith("srv:") ? (
+              <button
+                type="button"
+                className="flex h-12 items-center gap-3 rounded-lg px-2"
+                onClick={() => {
+                  void import("@/lib/messaging/client").then(async ({ pinServerMessage }) => {
+                    await pinServerMessage(chatId.slice(4), active.id, !active.pinned);
+                  });
+                  setActive(null);
+                }}
+              >
+                {active.pinned ? "Désépingler" : "Épingler"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="flex h-12 items-center gap-3 rounded-lg px-2"
+              onClick={() => {
+                setSelected((ids) => (ids.includes(active.id) ? ids : [...ids, active.id]));
+                setActive(null);
+              }}
+            >
+              Sélectionner
             </button>
             <button
               type="button"
@@ -1375,6 +1608,20 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             >
               <Trash2 className="size-4" /> {t("deleteMe")}
             </button>
+            {active.fromId === "me" && chatId.startsWith("srv:") ? (
+              <button
+                type="button"
+                className="flex h-12 items-center gap-3 rounded-lg px-2 text-danger"
+                onClick={() => {
+                  void import("@/lib/messaging/client").then(async ({ tombstoneServerMessage }) => {
+                    await tombstoneServerMessage(chatId.slice(4), active.id);
+                  });
+                  setActive(null);
+                }}
+              >
+                Supprimer pour tout le monde
+              </button>
+            ) : null}
             {active.fromId !== "me" ? (
               <button
                 type="button"
@@ -1389,6 +1636,28 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             ) : null}
           </div>
         ) : null}
+      </Sheet>
+      <Sheet open={Boolean(forwardMsg)} onClose={() => setForwardMsg(null)} title="Transférer">
+        <div className="grid gap-1">
+          {srvChats.filter((c) => c.id.startsWith("srv:") && c.id !== chatId).map((c) => {
+            const other = c.participantIds.find((id) => id !== "me");
+            const name = other ? users[other]?.displayName : c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className="flex h-12 items-center rounded-lg px-2 text-left"
+                onClick={() => {
+                  if (!forwardMsg?.text) return;
+                  sendMessage(c.id, { text: forwardMsg.text, forwarded: true });
+                  setForwardMsg(null);
+                }}
+              >
+                {name || "Conversation"}
+              </button>
+            );
+          })}
+        </div>
       </Sheet>
       <input
         ref={cameraRef}

@@ -36,6 +36,13 @@ export type WippMessage = {
   encFailed?: boolean;
   clientId?: string | null;
   createdAt: number;
+  replyTo?: string | null;
+  editedAt?: number | null;
+  deletedAt?: number | null;
+  pinnedAt?: number | null;
+  deliveredAt?: number | null;
+  readAt?: number | null;
+  reactions?: { profileId: string; emoji: string; createdAt: number }[];
 };
 
 function defaultApiBase() {
@@ -273,12 +280,62 @@ export async function fetchMessages(chatId: string) {
   return data.messages;
 }
 
-export async function sendMessage(chatId: string, body: string, clientId: string) {
+export async function sendMessage(
+  chatId: string,
+  body: string,
+  clientId: string,
+  opts?: { replyTo?: string; vault?: boolean },
+) {
   const data = await api<{ message: WippMessage }>(`/chats/${chatId}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ body, clientId }),
+    body: JSON.stringify({ body, clientId, replyTo: opts?.replyTo, vault: opts?.vault }),
   });
   return data.message;
+}
+
+export async function editMessage(chatId: string, messageId: string, body: string) {
+  const data = await api<{ message: WippMessage }>(`/chats/${chatId}/messages/${messageId}/edit`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+  return data.message;
+}
+
+export async function hideMessage(chatId: string, messageId: string) {
+  return api(`/chats/${chatId}/messages/${messageId}/hide`, { method: 'POST', body: '{}' });
+}
+
+export async function tombstoneMessage(chatId: string, messageId: string) {
+  return api(`/chats/${chatId}/messages/${messageId}/tombstone`, { method: 'POST', body: '{}' });
+}
+
+export async function reactMessage(chatId: string, messageId: string, emoji: string) {
+  return api(`/chats/${chatId}/messages/${messageId}/reaction`, {
+    method: 'POST',
+    body: JSON.stringify({ emoji }),
+  });
+}
+
+export async function pinMessage(chatId: string, messageId: string, pinned: boolean) {
+  return api(`/chats/${chatId}/messages/${messageId}/pin`, {
+    method: 'POST',
+    body: JSON.stringify({ pinned }),
+  });
+}
+
+export async function postReceipts(chatId: string, messageIds: string[], kind: 'delivered' | 'read') {
+  return api(`/chats/${chatId}/receipts`, {
+    method: 'POST',
+    body: JSON.stringify({ messageIds, kind }),
+  });
+}
+
+export async function postTyping(chatId: string, active: boolean) {
+  return api(`/chats/${chatId}/typing`, { method: 'POST', body: JSON.stringify({ active }) });
+}
+
+export async function postFocus(chatId: string, active: boolean) {
+  return api(`/chats/${chatId}/focus`, { method: 'POST', body: JSON.stringify({ active }) });
 }
 
 export async function health() {

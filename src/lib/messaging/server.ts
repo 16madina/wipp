@@ -118,7 +118,8 @@ function messagePreview(body: string) {
   const t = body.trim();
   if (t.startsWith("{")) {
     try {
-      const o = JSON.parse(t) as { e2e?: boolean };
+      const o = JSON.parse(t) as { e2e?: boolean; tombstone?: boolean };
+      if (o?.tombstone === true) return "Message supprimé";
       if (o?.e2e === true) return "🔒 Message chiffré";
     } catch {
       /* plain */
@@ -637,46 +638,8 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
 }
 
 export async function listMessages(meId: string, chatId: string, after?: number): Promise<WippMessage[]> {
-  await ensureMessagingReady();
-  await assertMember(meId, chatId);
-  const sql = await getSql();
-  const rows = after
-    ? await sql<{
-        id: string;
-        chat_id: string;
-        sender_id: string;
-        body: string;
-        client_id: string | null;
-        created_at: string;
-      }>`
-        select id, chat_id, sender_id, body, client_id, created_at::text
-        from wipp_messages
-        where chat_id = ${chatId} and created_at > to_timestamp(${after / 1000.0})
-        order by created_at asc
-        limit 200
-      `
-    : await sql<{
-        id: string;
-        chat_id: string;
-        sender_id: string;
-        body: string;
-        client_id: string | null;
-        created_at: string;
-      }>`
-        select id, chat_id, sender_id, body, client_id, created_at::text
-        from wipp_messages
-        where chat_id = ${chatId}
-        order by created_at asc
-        limit 200
-      `;
-  return rows.map((r) => ({
-    id: r.id,
-    chatId: r.chat_id,
-    senderId: r.sender_id,
-    body: r.body,
-    clientId: r.client_id,
-    createdAt: Date.parse(r.created_at),
-  }));
+  const { listThread } = await import("./message-actions");
+  return listThread(meId, chatId, after);
 }
 
 export async function sendMessage(
@@ -684,11 +647,17 @@ export async function sendMessage(
   chatId: string,
   body: string,
   clientId?: string,
+  opts?: { replyTo?: string | null; vault?: boolean },
 ): Promise<WippMessage> {
   await ensureMessagingReady();
   await assertMember(meId, chatId);
   const text = body.trim();
   if (!text) throw new WippHttpError(400, "empty", "Message vide.");
+  const replyTo = opts?.replyTo?.trim() || null;
+  if (replyTo) {
+    const { validateReply } = await import("./message-actions");
+    await validateReply(chatId, replyTo);
+  }
   const sql = await getSql();
   if (clientId) {
     const dup = await sql<{
@@ -703,31 +672,30 @@ export async function sendMessage(
       from wipp_messages where chat_id = ${chatId} and client_id = ${clientId} limit 1
     `;
     if (dup[0]) {
-      return {
-        id: dup[0].id,
-        chatId: dup[0].chat_id,
-        senderId: dup[0].sender_id,
-        body: dup[0].body,
-        clientId: dup[0].client_id,
-        createdAt: Date.parse(dup[0].created_at),
-      };
+      const { listThread } = await import("./message-actions");
+      const existing = (await listThread(meId, chatId)).find((m) => m.id === dup[0].id);
+      if (existing) return existing;
     }
   }
   const id = uid("m");
-  // Deterministic-ish id from clientId when present (debug-friendly)
   const msgId = clientId ? `m_${createHash("sha256").update(`${chatId}:${clientId}`).digest("hex").slice(0, 24)}` : id;
   await sql`
-    insert into wipp_messages (id, chat_id, sender_id, body, client_id)
-    values (${msgId}, ${chatId}, ${meId}, ${text}, ${clientId ?? null})
+    insert into wipp_messages (id, chat_id, sender_id, body, client_id, reply_to)
+    values (${msgId}, ${chatId}, ${meId}, ${text}, ${clientId ?? null}, ${replyTo})
   `;
-  return {
+  const { afterMessageStored, listThread } = await import("./message-actions");
+  const stored = (await listThread(meId, chatId)).find((m) => m.id === msgId);
+  const message: WippMessage = stored ?? {
     id: msgId,
     chatId,
     senderId: meId,
     body: text,
     clientId: clientId ?? null,
     createdAt: Date.now(),
+    replyTo,
   };
+  await afterMessageStored(meId, message, { vault: Boolean(opts?.vault) });
+  return message;
 }
 
 async function assertMember(meId: string, chatId: string) {

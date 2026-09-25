@@ -10,6 +10,7 @@ import {
   replacePrivateCode,
   verifyPin,
 } from '@/lib/private-vault';
+import { readReceiptsEnabled, setReadReceiptsEnabled } from '@/lib/receipts-pref';
 
 const c = Colors.dark;
 
@@ -18,6 +19,7 @@ type PinMode = null | 'create' | 'create-confirm' | 'old' | 'next' | 'confirm';
 export default function PrivacyScreen() {
   const router = useRouter();
   const [priveOn, setPriveOn] = useState(false);
+  const [receiptsOn, setReceiptsOn] = useState(true);
   const [detail, setDetail] = useState(false);
   const [pinMode, setPinMode] = useState<PinMode>(null);
   const [pendingCode, setPendingCode] = useState('');
@@ -25,6 +27,7 @@ export default function PrivacyScreen() {
   useFocusEffect(
     useCallback(() => {
       void isPrivateEnabled().then(setPriveOn);
+      void readReceiptsEnabled().then(setReceiptsOn);
     }, []),
   );
 
@@ -80,10 +83,22 @@ export default function PrivacyScreen() {
           </Pressable>
         </View>
       ) : (
+        <>
         <Pressable style={styles.card} onPress={() => setDetail(true)}>
           <Text style={styles.rowTitle}>WIPP Privé</Text>
           <Text style={styles.sub}>{priveOn ? 'Activé' : 'Désactivé'}</Text>
         </Pressable>
+        <Pressable
+          style={styles.card}
+          onPress={() => {
+            const next = !receiptsOn;
+            setReceiptsOn(next);
+            void setReadReceiptsEnabled(next);
+          }}>
+          <Text style={styles.rowTitle}>Accusés de lecture</Text>
+          <Text style={styles.sub}>{receiptsOn ? 'Activés' : 'Désactivés'}</Text>
+        </Pressable>
+        </>
       )}
 
       <PinGate

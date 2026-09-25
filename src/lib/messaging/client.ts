@@ -131,12 +131,64 @@ export async function fetchServerMessages(chatId: string, after?: number) {
   return data.messages;
 }
 
-export async function postServerMessage(chatId: string, body: string, clientId: string) {
+export async function postServerMessage(
+  chatId: string,
+  body: string,
+  clientId: string,
+  opts?: { replyTo?: string | null; vault?: boolean },
+) {
   const data = await api<{ message: WippMessage }>(`/chats/${chatId}/messages`, {
     method: "POST",
-    body: JSON.stringify({ body, clientId }),
+    body: JSON.stringify({ body, clientId, replyTo: opts?.replyTo, vault: opts?.vault }),
   });
   return data.message;
+}
+
+export async function editServerMessage(chatId: string, messageId: string, body: string) {
+  const data = await api<{ message: WippMessage }>(`/chats/${chatId}/messages/${messageId}/edit`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
+  return data.message;
+}
+
+export async function hideServerMessage(chatId: string, messageId: string) {
+  return api(`/chats/${chatId}/messages/${messageId}/hide`, { method: "POST", body: "{}" });
+}
+
+export async function tombstoneServerMessage(chatId: string, messageId: string) {
+  return api(`/chats/${chatId}/messages/${messageId}/tombstone`, { method: "POST", body: "{}" });
+}
+
+export async function reactServerMessage(chatId: string, messageId: string, emoji: string) {
+  const data = await api<{ message: WippMessage }>(`/chats/${chatId}/messages/${messageId}/reaction`, {
+    method: "POST",
+    body: JSON.stringify({ emoji }),
+  });
+  return data.message;
+}
+
+export async function pinServerMessage(chatId: string, messageId: string, pinned: boolean) {
+  const data = await api<{ message: WippMessage }>(`/chats/${chatId}/messages/${messageId}/pin`, {
+    method: "POST",
+    body: JSON.stringify({ pinned }),
+  });
+  return data.message;
+}
+
+export async function postReceipts(chatId: string, messageIds: string[], kind: "delivered" | "read") {
+  return api(`/chats/${chatId}/receipts`, {
+    method: "POST",
+    body: JSON.stringify({ messageIds, kind }),
+  });
+}
+
+export async function postFocus(chatId: string, active: boolean) {
+  return api(`/chats/${chatId}/focus`, { method: "POST", body: JSON.stringify({ active }) });
+}
+
+export async function postTyping(chatId: string, active: boolean) {
+  return api(`/chats/${chatId}/typing`, { method: "POST", body: JSON.stringify({ active }) });
 }
 
 export async function createWebLinkCode(origin?: string) {

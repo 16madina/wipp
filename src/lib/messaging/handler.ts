@@ -128,7 +128,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
 
     await ensureMessagingReady();
     const parts = pathParts(request);
-    const [a, b, c, d] = parts;
+    const [a, b, c, d, e] = parts;
 
     if (method === "GET" && a === "health") {
       const livekit = liveKitPublicConfig();
@@ -489,11 +489,87 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ messages });
     }
 
-    if (method === "POST" && a === "chats" && b && c === "messages") {
+    if (method === "GET" && a === "stream") {
       const me = await resolveSession(bearer(request));
-      const body = await readBody<{ body?: string; clientId?: string }>(request);
-      const message = await sendMessage(me.id, b, body.body ?? "", body.clientId);
+      const { subscribeLive } = await import("./message-live");
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      const memberRows = await sql<{ chat_id: string }>`
+        select chat_id from wipp_chat_members where profile_id = ${me.id}
+      `;
+      const memberChats = new Set(memberRows.map((r) => r.chat_id));
+      const encoder = new TextEncoder();
+      let unsub = () => {};
+      const stream = new ReadableStream({
+        start(controller) {
+          unsub = subscribeLive((event) => {
+            if (!memberChats.has(event.chatId)) return;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+          });
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ kind: "ready" })}\n\n`));
+        },
+        cancel() {
+          unsub();
+        },
+      });
+      return withCors(
+        new Response(stream, {
+          headers: {
+            "content-type": "text/event-stream",
+            "cache-control": "no-cache",
+          },
+        }),
+      );
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "messages" && !d) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ body?: string; clientId?: string; replyTo?: string; vault?: boolean }>(request);
+      const message = await sendMessage(me.id, b, body.body ?? "", body.clientId, {
+        replyTo: body.replyTo,
+        vault: body.vault,
+      });
       return json({ message }, 201);
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "messages" && d && e) {
+      const me = await resolveSession(bearer(request));
+      const actions = await import("./message-actions");
+      if (e === "edit") {
+        const body = await readBody<{ body?: string }>(request);
+        return json({ message: await actions.editMessage(me.id, b, d, body.body ?? "") });
+      }
+      if (e === "hide") return json(await actions.hideMessage(me.id, b, d));
+      if (e === "tombstone") return json(await actions.tombstoneMessage(me.id, b, d));
+      if (e === "reaction") {
+        const body = await readBody<{ emoji?: string }>(request);
+        return json({ message: await actions.setReaction(me.id, b, d, body.emoji ?? "") });
+      }
+      if (e === "pin") {
+        const body = await readBody<{ pinned?: boolean }>(request);
+        return json({ message: await actions.setPin(me.id, b, d, Boolean(body.pinned)) });
+      }
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "receipts") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ messageIds?: string[]; kind?: "delivered" | "read" }>(request);
+      const { markReceipt } = await import("./message-actions");
+      return json(await markReceipt(me.id, b, body.messageIds ?? [], body.kind === "read" ? "read" : "delivered"));
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "focus") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ active?: boolean }>(request);
+      const { setFocus } = await import("./message-actions");
+      return json(await setFocus(me.id, b, Boolean(body.active)));
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "typing") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ active?: boolean }>(request);
+      const { setTyping } = await import("./message-actions");
+      return json(await setTyping(me.id, b, body.active !== false));
     }
 
     if (method === "POST" && a === "chats" && !b) {

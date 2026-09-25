@@ -40,6 +40,12 @@ export type WippChatSummary = {
   unread: number;
 };
 
+export type WippReaction = {
+  profileId: string;
+  emoji: string;
+  createdAt: number;
+};
+
 export type WippMessage = {
   id: string;
   chatId: string;
@@ -47,6 +53,14 @@ export type WippMessage = {
   body: string;
   clientId?: string | null;
   createdAt: number;
+  replyTo?: string | null;
+  editedAt?: number | null;
+  deletedAt?: number | null;
+  pinnedAt?: number | null;
+  pinnedBy?: string | null;
+  deliveredAt?: number | null;
+  readAt?: number | null;
+  reactions?: WippReaction[];
 };
 
 export type WippSessionPayload = {

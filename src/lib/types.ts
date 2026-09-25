@@ -277,6 +277,11 @@ export type Message = {
   listingId?: string;
   shopId?: string;
   replyTo?: string;
+  replyPreview?: string;
+  editedAt?: number;
+  deletedForAll?: boolean;
+  pinned?: boolean;
+  forwarded?: boolean;
   expiresAt?: number;
   enc?: EncBlob;
   encFailed?: boolean;
