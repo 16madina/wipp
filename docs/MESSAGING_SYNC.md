@@ -23,7 +23,7 @@ Texte, aperçu de citation, drapeau « transféré ». Un message simple reste u
 - Accusés : `delivered` quand l’appareil a synchronisé, `read` seulement si les accusés de lecture sont activés chez le lecteur. Plus de timer de démo sur les chats `srv:`.
 - Frappe : événement éphémère, pas de ligne en base. Le serveur oublie l’état après 4 s. Le client efface « écrit… » après 4,5 s sans nouvel événement, même si l’autre appareil disparaît.
 - Push : « Nouveau message » sans contenu. WIPP Privé (`vault: true` à l’envoi) : titre WIPP, corps « Nouveau message », `data.private`. Pas de push si le destinataire a le chat ouvert (présence 20 s).
-- Hors ligne : file `wipp-outbox-v1`, `client_id` idempotent.
+- Hors ligne : file `wipp-outbox-v1`, `client_id` idempotent. Un renvoi avec le même `client_id` rend le message déjà stocké, même s’il est masqué pour l’expéditeur, et n’envoie pas un second push.
 
 ## Temps réel
 
