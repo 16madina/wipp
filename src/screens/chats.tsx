@@ -342,6 +342,33 @@ export function ChatsScreen() {
       {menuChatId ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setMenuChatId(null)}>
           <div className="mb-6 w-[min(100%,360px)] overflow-hidden rounded-2xl bg-card" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().pinChat(id, !useWgoStore.getState().chats.find((c) => c.id === id)?.pinned); }}>
+              Épingler
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().archiveChat(id, true); }}>
+              Archiver
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().setMute(id, "always"); }}>
+              Sourdine toujours
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().setMute(id, "1h"); }}>
+              Sourdine 1 heure
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().setMute(id, "8h"); }}>
+              Sourdine 8 heures
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().setMute(id, "1w"); }}>
+              Sourdine 1 semaine
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().setMute(id, "off"); }}>
+              Réactiver les notifications
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { const id = menuChatId; setMenuChatId(null); useWgoStore.getState().toggleUnread(id); }}>
+              Marquer lu / non lu
+            </button>
+            <button type="button" className="w-full px-4 py-3 text-left text-[16px]" onClick={() => { setMenuChatId(null); push({ name: "archives" }); }}>
+              Archives
+            </button>
             <button
               type="button"
               className="w-full px-4 py-4 text-left text-[16px]"

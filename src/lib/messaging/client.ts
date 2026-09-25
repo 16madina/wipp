@@ -183,6 +183,18 @@ export async function postReceipts(chatId: string, messageIds: string[], kind: "
   });
 }
 
+export async function postChatPrefs(
+  chatId: string,
+  patch: {
+    pinned?: boolean;
+    archived?: boolean;
+    mute?: "off" | "1h" | "8h" | "1w" | "always";
+    manuallyUnread?: boolean;
+  },
+) {
+  return api(`/chats/${chatId}/prefs`, { method: "POST", body: JSON.stringify(patch) });
+}
+
 export async function postFocus(chatId: string, active: boolean) {
   return api(`/chats/${chatId}/focus`, { method: "POST", body: JSON.stringify({ active }) });
 }

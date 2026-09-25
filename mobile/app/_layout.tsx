@@ -61,6 +61,8 @@ export default function RootLayout() {
         <Stack.Screen name="chat/[id]" options={{ title: 'Conversation' }} />
         <Stack.Screen name="private" options={{ headerShown: false }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
+        <Stack.Screen name="archives" options={{ title: 'Archives' }} />
+        <Stack.Screen name="chat-info/[id]" options={{ title: 'Infos' }} />
       </Stack>
     </>
   );

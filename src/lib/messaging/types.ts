@@ -38,6 +38,11 @@ export type WippChatSummary = {
   preview: string;
   lastAt: number;
   unread: number;
+  pinnedAt?: number | null;
+  archivedAt?: number | null;
+  /** number = expiry, "always" = muted forever, null = not muted */
+  mutedUntil?: number | "always" | null;
+  manuallyUnreadAt?: number | null;
 };
 
 export type WippReaction = {

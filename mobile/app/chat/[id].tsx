@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as Clipboard from 'expo-clipboard';
@@ -63,6 +64,8 @@ export default function ChatScreen() {
   const [me, setMe] = useState<WippProfile | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [text, setText] = useState('');
+  const [findOpen, setFindOpen] = useState(false);
+  const [threadQuery, setThreadQuery] = useState('');
   const [reply, setReply] = useState<DisplayMessage | null>(null);
   const [editing, setEditing] = useState<DisplayMessage | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -150,7 +153,11 @@ export default function ChatScreen() {
 
   useLayoutEffect(() => {
     void load().catch(() => setLoading(false));
-  }, [load]);
+    if (!id) return;
+    void AsyncStorage.getItem(`wipp-draft:${id}`).then((saved) => {
+      if (saved) setText(saved);
+    });
+  }, [load, id]);
 
   async function onSend() {
     const body = text.trim();
@@ -183,6 +190,7 @@ export default function ChatScreen() {
         await dropOutbox(clientId);
       }
       setReply(null);
+      if (id) await AsyncStorage.removeItem(`wipp-draft:${id}`);
       await load();
     } catch {
       setText(body);
@@ -266,7 +274,7 @@ export default function ChatScreen() {
       {peerTyping ? <Text style={styles.e2e}>{peerTyping}</Text> : null}
       <FlatList
         ref={listRef}
-        data={messages}
+        data={messages.filter((m) => !threadQuery.trim() || m.displayText.toLowerCase().includes(threadQuery.trim().toLowerCase()))}
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ padding: 14, gap: 8 }}
         onScrollToIndexFailed={() => undefined}
@@ -406,6 +414,18 @@ export default function ChatScreen() {
           ))}
         </View>
       ) : null}
+      <Pressable onPress={() => setFindOpen((v) => !v)} style={{ paddingHorizontal: 16 }}>
+        <Text style={styles.cite}>Rechercher</Text>
+      </Pressable>
+      {findOpen ? (
+        <TextInput
+          value={threadQuery}
+          onChangeText={setThreadQuery}
+          placeholder="Rechercher dans la conversation"
+          placeholderTextColor={c.textMuted}
+          style={[styles.input, { marginHorizontal: 12, marginBottom: 8 }]}
+        />
+      ) : null}
       {reply ? <Text style={[styles.cite, { paddingHorizontal: 16 }]}>Réponse · {reply.displayText.slice(0, 40)}</Text> : null}
       {editing ? <Text style={[styles.cite, { paddingHorizontal: 16 }]}>Modification</Text> : null}
       <View style={styles.composer}>
@@ -413,7 +433,11 @@ export default function ChatScreen() {
           value={text}
           onChangeText={(value) => {
             setText(value);
-            if (id) void postTyping(id, value.trim().length > 0);
+            if (id) {
+              void postTyping(id, value.trim().length > 0);
+              if (value.trim()) void AsyncStorage.setItem(`wipp-draft:${id}`, value);
+              else void AsyncStorage.removeItem(`wipp-draft:${id}`);
+            }
           }}
           placeholder="Message"
           placeholderTextColor={c.textMuted}

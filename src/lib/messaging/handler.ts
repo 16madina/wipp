@@ -558,6 +558,18 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await markReceipt(me.id, b, body.messageIds ?? [], body.kind === "read" ? "read" : "delivered"));
     }
 
+    if (method === "POST" && a === "chats" && b && c === "prefs") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{
+        pinned?: boolean;
+        archived?: boolean;
+        mute?: "off" | "1h" | "8h" | "1w" | "always";
+        manuallyUnread?: boolean;
+      }>(request);
+      const { setChatPrefs } = await import("./chat-prefs");
+      return json(await setChatPrefs(me.id, b, body));
+    }
+
     if (method === "POST" && a === "chats" && b && c === "focus") {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ active?: boolean }>(request);

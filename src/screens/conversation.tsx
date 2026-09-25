@@ -189,7 +189,17 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const setDisappear = useWgoStore((s) => s.setDisappear);
   const burnViewOnce = useWgoStore((s) => s.burnViewOnce);
   const recentStickerIds = useWgoStore((s) => s.recentStickerIds ?? []);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(() => {
+    try {
+      const raw = localStorage.getItem("wipp-drafts-v1");
+      const all = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      return all[chatId] ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [threadQuery, setThreadQuery] = useState("");
+  const [findOpen, setFindOpen] = useState(false);
   const [reply, setReply] = useState<Message | null>(null);
   const [editing, setEditing] = useState<Message | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -580,6 +590,14 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     sendMessage(chatId, { text: value, replyTo: reply?.id });
     setText("");
     setReply(null);
+    try {
+      const raw = localStorage.getItem("wipp-drafts-v1");
+      const all = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      delete all[chatId];
+      localStorage.setItem("wipp-drafts-v1", JSON.stringify(all));
+    } catch {
+      /* local only */
+    }
     setDraftFx(null);
   }
 
@@ -826,8 +844,12 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             </button>
           ) : null}
           <div ref={scroller} className={cn("no-scrollbar relative z-10 flex-1 overflow-y-auto px-3 py-3", (burst === "shake" || burst === "moment-alert") && "cast-chat-shake")}>
+            {threadQuery ? (
+              <p className="mb-2 text-[12px] text-muted">Recherche locale · rien n’est envoyé au serveur</p>
+            ) : null}
             {messages
               .filter((m) => !m.expiresAt || m.expiresAt > now)
+              .filter((m) => !threadQuery.trim() || (m.text ?? "").toLowerCase().includes(threadQuery.trim().toLowerCase()))
               .map((m, i, list) => {
                 const mine = m.fromId === "me";
                 const prev = list[i - 1];
@@ -1246,6 +1268,14 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   </span>
                 </div>
               ) : null}
+              {findOpen ? (
+                <input
+                  value={threadQuery}
+                  onChange={(e) => setThreadQuery(e.target.value)}
+                  placeholder="Rechercher dans la conversation"
+                  className="mx-3 mb-1 h-9 rounded-full bg-surface-2 px-3 text-[13px] outline-none"
+                />
+              ) : null}
               {reply || editing ? (
                 <div className="mb-1 flex items-center justify-between px-3 text-[12px] text-muted">
                   <span>{editing ? "Modification" : `Réponse · ${reply?.text?.slice(0, 60) ?? ""}`}</span>
@@ -1273,6 +1303,15 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                     value={text}
                     onChange={(e) => {
                       setText(e.target.value);
+                      try {
+                        const raw = localStorage.getItem("wipp-drafts-v1");
+                        const all = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+                        if (e.target.value.trim()) all[chatId] = e.target.value;
+                        else delete all[chatId];
+                        localStorage.setItem("wipp-drafts-v1", JSON.stringify(all));
+                      } catch {
+                        /* local only */
+                      }
                       if (chatId.startsWith("srv:")) {
                         void import("@/lib/messaging/client").then(({ postTyping }) =>
                           postTyping(chatId.slice(4), e.target.value.trim().length > 0),
@@ -2027,6 +2066,26 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               }}
             >
               <Lock className="size-4" /> {t("e2e")}
+            </button>
+            <button
+              type="button"
+              className="flex h-12 items-center gap-3 rounded-lg px-2"
+              onClick={() => {
+                setMenu(false);
+                push({ name: "chat-info", chatId });
+              }}
+            >
+              Infos
+            </button>
+            <button
+              type="button"
+              className="flex h-12 items-center gap-3 rounded-lg px-2"
+              onClick={() => {
+                setFindOpen(true);
+                setMenu(false);
+              }}
+            >
+              Recherche dans le fil
             </button>
             {!ephemeral && !sealed ? (
               <button type="button" className="flex h-12 items-center gap-3 rounded-lg px-2" onClick={() => setDisappearOpen(true)}>

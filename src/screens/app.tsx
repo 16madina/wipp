@@ -30,6 +30,7 @@ import {
   ScannerScreen,
   SearchUserScreen,
 } from "./connect";
+import { ArchivesScreen, ChatInfoScreen } from "./chat-folder";
 import { ConversationScreen } from "./conversation";
 import {
   AccountScreen,
@@ -152,6 +153,10 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <ChatsScreen />;
     case "conversation":
       return <ConversationScreen chatId={screen.chatId} />;
+    case "archives":
+      return <ArchivesScreen />;
+    case "chat-info":
+      return <ChatInfoScreen chatId={screen.chatId} />;
     case "new-chat":
       return <NewChatScreen />;
     case "requests":

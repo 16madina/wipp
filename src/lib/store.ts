@@ -209,7 +209,9 @@ type WgoState = ReturnType<typeof fresh> & {
   translateMessage: (chatId: string, messageId: string) => void;
   markRead: (chatId: string) => void;
   toggleMute: (chatId: string) => void;
-  archiveChat: (chatId: string) => void;
+  setMute: (chatId: string, choice: "off" | "1h" | "8h" | "1w" | "always") => void;
+  pinChat: (chatId: string, pinned: boolean) => void;
+  archiveChat: (chatId: string, archived?: boolean) => void;
   deleteChat: (chatId: string) => void;
   toggleUnread: (chatId: string) => void;
   openOrCreateDm: (userId: string, asRequest?: boolean) => string;
@@ -980,7 +982,9 @@ export const useWgoStore = create<WgoState>()(
 
       markRead: (chatId) => {
         set((st) => ({
-          chats: st.chats.map((c) => (c.id === chatId ? { ...c, unread: 0 } : c)),
+          chats: st.chats.map((c) =>
+            c.id === chatId ? { ...c, unread: 0, manuallyUnreadAt: null } : c,
+          ),
           messages: st.privacy.readReceipts !== false
             ? {
                 ...st.messages,
@@ -1013,31 +1017,91 @@ export const useWgoStore = create<WgoState>()(
         }
       },
 
-      toggleMute: (chatId) =>
-        set((st) => ({
-          chats: st.chats.map((c) =>
-            c.id === chatId ? { ...c, muted: !c.muted } : c,
-          ),
-        })),
+      toggleMute: (chatId) => {
+        const chat = get().chats.find((c) => c.id === chatId);
+        get().setMute(chatId, chat?.muted ? "off" : "always");
+      },
 
-      archiveChat: (chatId) =>
+      setMute: (chatId, choice) => {
+        const muted = choice !== "off";
+        const until =
+          choice === "1h"
+            ? Date.now() + 3_600_000
+            : choice === "8h"
+              ? Date.now() + 8 * 3_600_000
+              : choice === "1w"
+                ? Date.now() + 7 * 86_400_000
+                : null;
         set((st) => ({
           chats: st.chats.map((c) =>
-            c.id === chatId ? { ...c, archived: true } : c,
+            c.id === chatId
+              ? { ...c, muted, muteAlways: choice === "always", mutedUntil: until }
+              : c,
           ),
-        })),
+        }));
+        if (chatId.startsWith("srv:")) {
+          void import("@/lib/messaging/client").then(({ postChatPrefs }) =>
+            postChatPrefs(chatId.slice(4), { mute: choice }),
+          );
+        }
+      },
+
+      pinChat: (chatId, pinned) => {
+        set((st) => ({
+          chats: st.chats.map((c) => (c.id === chatId ? { ...c, pinned } : c)),
+        }));
+        if (chatId.startsWith("srv:")) {
+          void import("@/lib/private-vault").then(({ isPrivateChat }) => {
+            if (isPrivateChat(chatId)) return;
+            void import("@/lib/messaging/client").then(({ postChatPrefs }) =>
+              postChatPrefs(chatId.slice(4), { pinned }),
+            );
+          });
+        }
+      },
+
+      archiveChat: (chatId, archived = true) => {
+        set((st) => ({
+          chats: st.chats.map((c) => (c.id === chatId ? { ...c, archived } : c)),
+        }));
+        if (chatId.startsWith("srv:")) {
+          void import("@/lib/private-vault").then(({ isPrivateChat }) => {
+            if (isPrivateChat(chatId)) return;
+            void import("@/lib/messaging/client").then(({ postChatPrefs }) =>
+              postChatPrefs(chatId.slice(4), { archived }),
+            );
+          });
+        }
+      },
 
       deleteChat: (chatId) =>
         set((st) => ({
           chats: st.chats.filter((c) => c.id !== chatId),
         })),
 
-      toggleUnread: (chatId) =>
+      toggleUnread: (chatId) => {
+        const chat = get().chats.find((c) => c.id === chatId);
+        const markUnread = !chat?.manuallyUnreadAt && !chat?.unread;
         set((st) => ({
           chats: st.chats.map((c) =>
-            c.id === chatId ? { ...c, unread: c.unread ? 0 : 1 } : c,
+            c.id === chatId
+              ? {
+                  ...c,
+                  manuallyUnreadAt: markUnread ? Date.now() : null,
+                  unread: markUnread ? Math.max(1, c.unread) : 0,
+                }
+              : c,
           ),
-        })),
+        }));
+        if (!chatId.startsWith("srv:")) return;
+        void import("@/lib/messaging/client").then(async ({ postChatPrefs, postReceipts }) => {
+          await postChatPrefs(chatId.slice(4), { manuallyUnread: markUnread });
+          if (!markUnread && get().privacy.readReceipts !== false) {
+            const ids = (get().messages[chatId] ?? []).filter((m) => m.fromId !== "me").map((m) => m.id);
+            if (ids.length) await postReceipts(chatId.slice(4), ids, "read");
+          }
+        });
+      },
 
       openOrCreateDm: (userId, asRequest = false) => {
         const existing = get().chats.find(

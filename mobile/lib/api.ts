@@ -24,6 +24,10 @@ export type WippChat = {
   preview: string;
   lastAt: number;
   unread: number;
+  pinnedAt?: number | null;
+  archivedAt?: number | null;
+  mutedUntil?: number | 'always' | null;
+  manuallyUnreadAt?: number | null;
 };
 
 export type WippMessage = {
@@ -332,6 +336,18 @@ export async function postReceipts(chatId: string, messageIds: string[], kind: '
 
 export async function postTyping(chatId: string, active: boolean) {
   return api(`/chats/${chatId}/typing`, { method: 'POST', body: JSON.stringify({ active }) });
+}
+
+export async function postChatPrefs(
+  chatId: string,
+  patch: {
+    pinned?: boolean;
+    archived?: boolean;
+    mute?: 'off' | '1h' | '8h' | '1w' | 'always';
+    manuallyUnread?: boolean;
+  },
+) {
+  return api(`/chats/${chatId}/prefs`, { method: 'POST', body: JSON.stringify(patch) });
 }
 
 export async function postFocus(chatId: string, active: boolean) {

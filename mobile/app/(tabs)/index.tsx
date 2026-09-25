@@ -16,6 +16,7 @@ import { PinGate } from '@/components/PinGate';
 import {
   ensureSession,
   fetchChats,
+  postChatPrefs,
   type WippChat,
   type WippProfile,
 } from '@/lib/api';
@@ -73,7 +74,7 @@ export default function ChatsScreen() {
       setProfile(me);
       const hidden = new Set(await privateChatIds());
       const list = await fetchChats();
-      setChats(list.filter((chat) => !hidden.has(chat.id)));
+      setChats(list.filter((chat) => !hidden.has(chat.id) && !chat.archivedAt));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur réseau');
     } finally {
@@ -122,7 +123,9 @@ export default function ChatsScreen() {
           delayLongPress={10000}>
           <Text style={styles.brand}>wipp</Text>
         </Pressable>
-        <Text style={styles.muted}>@{profile?.username ?? '…'}</Text>
+        <Pressable onPress={() => router.push('/archives')}>
+          <Text style={styles.muted}>Archives</Text>
+        </Pressable>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
@@ -148,6 +151,19 @@ export default function ChatsScreen() {
             }
             onLongPress={() => {
               Alert.alert(item.peer.displayName, undefined, [
+                { text: item.pinnedAt ? 'Désépingler' : 'Épingler', onPress: () => void postChatPrefs(item.id, { pinned: !item.pinnedAt }).then(load) },
+                { text: 'Archiver', onPress: () => void postChatPrefs(item.id, { archived: true }).then(load) },
+                { text: 'Sourdine 1 h', onPress: () => void postChatPrefs(item.id, { mute: '1h' }).then(load) },
+                { text: 'Sourdine 8 h', onPress: () => void postChatPrefs(item.id, { mute: '8h' }).then(load) },
+                { text: 'Sourdine 1 semaine', onPress: () => void postChatPrefs(item.id, { mute: '1w' }).then(load) },
+                { text: 'Sourdine toujours', onPress: () => void postChatPrefs(item.id, { mute: 'always' }).then(load) },
+                { text: 'Notifications', onPress: () => void postChatPrefs(item.id, { mute: 'off' }).then(load) },
+                { text: 'Marquer non lu', onPress: () => void postChatPrefs(item.id, { manuallyUnread: true }).then(load) },
+                { text: 'Marquer lu', onPress: () => void postChatPrefs(item.id, { manuallyUnread: false }).then(load) },
+                {
+                  text: 'Infos',
+                  onPress: () => router.push({ pathname: '/chat-info/[id]', params: { id: item.id, title: item.peer.displayName, username: item.peer.username } }),
+                },
                 {
                   text: 'Masquer et verrouiller',
                   onPress: () => {

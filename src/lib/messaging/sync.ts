@@ -24,6 +24,7 @@ import {
   publishMyE2eKey,
 } from "./client";
 import type { WippChatSummary, WippMessage } from "./types";
+import { isPrivateChat } from "@/lib/private-vault";
 import type { Chat, Message, User } from "@/lib/types";
 
 const SRV = "srv:";
@@ -185,16 +186,22 @@ export function mergeServerChatsIntoState(
       peerPublicKeys[sc.peer.id] = sc.peer.e2ePublicJwk;
     }
     const prev = byId.get(localId);
+    const vault = isPrivateChat(localId);
+    const muted =
+      sc.mutedUntil === "always" || (typeof sc.mutedUntil === "number" && sc.mutedUntil > Date.now());
     byId.set(localId, {
       id: localId,
       type: "dm",
       participantIds: ["me", user.id],
       preview: sc.preview || prev?.preview || "",
       lastAt: sc.lastAt || prev?.lastAt || Date.now(),
-      unread: sc.unread ?? 0,
-      pinned: prev?.pinned ?? false,
-      muted: prev?.muted ?? false,
-      archived: prev?.archived ?? false,
+      unread: sc.manuallyUnreadAt ? Math.max(1, sc.unread ?? 0) : (sc.unread ?? prev?.unread ?? 0),
+      pinned: vault ? Boolean(prev?.pinned) : Boolean(sc.pinnedAt),
+      muted,
+      mutedUntil: sc.mutedUntil === "always" ? null : (sc.mutedUntil ?? null),
+      muteAlways: sc.mutedUntil === "always",
+      manuallyUnreadAt: sc.manuallyUnreadAt ?? null,
+      archived: vault ? Boolean(prev?.archived) : Boolean(sc.archivedAt),
       isRequest: false,
     });
   }

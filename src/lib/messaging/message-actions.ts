@@ -292,6 +292,10 @@ export async function markReceipt(
 export async function setFocus(meId: string, chatId: string, active: boolean) {
   await assertMember(meId, chatId);
   notePresence(chatId, meId, active);
+  if (active) {
+    const { clearManualUnread } = await import("./chat-prefs");
+    await clearManualUnread(meId, chatId);
+  }
   return { ok: true as const };
 }
 
@@ -324,6 +328,8 @@ async function notifyPeers(meId: string, chatId: string, vault: boolean) {
   `;
   for (const peer of peers) {
     if (isPresent(chatId, peer.profile_id)) continue;
+    const { peerIsMuted } = await import("./chat-prefs");
+    if (await peerIsMuted(chatId, peer.profile_id)) continue;
     const tokens = await listPushTokens(peer.profile_id);
     const expo = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
     if (!expo.length) continue;

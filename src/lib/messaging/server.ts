@@ -606,8 +606,15 @@ export async function getOrCreateDm(meId: string, peerUsername: string): Promise
 export async function listChats(meId: string): Promise<WippChatSummary[]> {
   await ensureMessagingReady();
   const sql = await getSql();
-  const memberships = await sql<{ chat_id: string }>`
-    select chat_id from wipp_chat_members where profile_id = ${meId}
+  const memberships = await sql<{
+    chat_id: string;
+    pinned_at: string | null;
+    archived_at: string | null;
+    muted_until: string | null;
+    manually_unread_at: string | null;
+  }>`
+    select chat_id, pinned_at::text, archived_at::text, muted_until::text, manually_unread_at::text
+    from wipp_chat_members where profile_id = ${meId}
   `;
   const out: WippChatSummary[] = [];
   for (const m of memberships) {
@@ -625,12 +632,27 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
       where chat_id = ${m.chat_id}
       order by created_at desc limit 1
     `;
+    const unreadRows = await sql<{ c: number }>`
+      select count(*)::int as c
+      from wipp_messages msg
+      where msg.chat_id = ${m.chat_id}
+        and msg.sender_id <> ${meId}
+        and msg.deleted_at is null
+        and not exists (
+          select 1 from wipp_receipts r
+          where r.message_id = msg.id and r.profile_id = ${meId} and r.read_at is not null
+        )
+    `;
     out.push({
       id: m.chat_id,
       peer: mapProfile(peer),
       preview: last[0] ? messagePreview(last[0].body) : "",
       lastAt: last[0] ? Date.parse(last[0].created_at) : Date.now(),
-      unread: 0,
+      unread: Number(unreadRows[0]?.c ?? 0),
+      pinnedAt: m.pinned_at ? Date.parse(m.pinned_at) : null,
+      archivedAt: m.archived_at ? Date.parse(m.archived_at) : null,
+      mutedUntil: m.muted_until === "infinity" ? "always" : m.muted_until ? Date.parse(m.muted_until) : null,
+      manuallyUnreadAt: m.manually_unread_at ? Date.parse(m.manually_unread_at) : null,
     });
   }
   out.sort((a, b) => b.lastAt - a.lastAt);

@@ -148,6 +148,8 @@ export type ScreenName =
   | "lifestyle"
   | "create-lifestyle"
   | "e2e-info"
+  | "archives"
+  | "chat-info"
   | "my-activity"
   | "wipp-private";
 
@@ -203,6 +205,8 @@ export type Screen =
   | { name: "lifestyle"; itemId: string }
   | { name: "create-lifestyle" }
   | { name: "e2e-info"; chatId: string }
+  | { name: "archives" }
+  | { name: "chat-info"; chatId: string }
   | { name: "wipp-private" }
   | { name: "my-activity"; kind: "listings" | "events" | "saved" };
 
@@ -238,6 +242,9 @@ export type Chat = {
   participantIds: string[];
   unread: number;
   muted: boolean;
+  mutedUntil?: number | null;
+  muteAlways?: boolean;
+  manuallyUnreadAt?: number | null;
   pinned: boolean;
   archived: boolean;
   isRequest: boolean;
