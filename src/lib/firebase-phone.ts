@@ -9,10 +9,12 @@ import {
   type ApplicationVerifier,
   type Auth,
 } from "firebase/auth";
+import { Platform } from "react-native";
 import { FIREBASE_WEB_CONFIG } from "./firebase-config";
 
 let verifier: (ApplicationVerifier & { _reset?: () => void }) | null = null;
 let verificationId: string | null = null;
+let webVerifierReady: Promise<ApplicationVerifier> | null = null;
 
 export function setRecaptchaVerifier(next: (ApplicationVerifier & { _reset?: () => void }) | null) {
   verifier = next;
@@ -41,15 +43,40 @@ function smsSendError(err: unknown): string {
   if (code.includes("invalid-phone-number")) return "Numéro invalide. Vérifie l'indicatif et le numéro.";
   if (code.includes("too-many-requests") || code.includes("quota")) return "Trop d'essais. Réessaie dans un instant.";
   if (code.includes("network")) return "Réseau indisponible. Réessaie.";
-  if (code.includes("captcha")) return "Vérification anti-robot impossible. Réessaie.";
+  if (code.includes("captcha") || code.includes("argument-error")) {
+    return "Vérification anti-robot impossible ici. Ouvre WIPP sur ton téléphone pour recevoir le SMS.";
+  }
   return "Envoi du SMS impossible. Réessaie dans un instant.";
 }
 
+async function ensureVerifier(): Promise<ApplicationVerifier> {
+  if (verifier) return verifier;
+  if (Platform.OS === "web" && typeof document !== "undefined") {
+    webVerifierReady ??= (async () => {
+      const auth = firebaseAuth();
+      let el = document.getElementById("wipp-recaptcha");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "wipp-recaptcha";
+        Object.assign(el.style, { position: "fixed", left: "0", bottom: "0", zIndex: "20" });
+        document.body.appendChild(el);
+      }
+      const { RecaptchaVerifier } = await import("firebase/auth");
+      const v = new RecaptchaVerifier(auth, el, { size: "invisible" });
+      await v.render();
+      verifier = v as ApplicationVerifier & { _reset?: () => void };
+      return v;
+    })();
+    return webVerifierReady;
+  }
+  throw new Error("La vérification SMS n'est pas encore prête. Réessaie.");
+}
+
 export async function sendSmsCode(phone: string): Promise<void> {
-  if (!verifier) throw new Error("La vérification SMS n'est pas encore prête. Réessaie.");
   const auth = firebaseAuth();
+  const appVerifier = await ensureVerifier();
   const provider = new PhoneAuthProvider(auth);
-  verificationId = await provider.verifyPhoneNumber(phone, verifier);
+  verificationId = await provider.verifyPhoneNumber(phone, appVerifier);
 }
 
 export async function confirmSmsCode(code: string): Promise<string> {

@@ -1,6 +1,18 @@
 import { supabase } from "./supabase";
 import { useWippStore } from "./store";
 
+export function enterWithoutServer(phone: string) {
+  useWippStore.getState().completeSetup(
+    {
+      firstName: "",
+      lastName: "",
+      displayName: "",
+      phone,
+    },
+    true,
+  );
+}
+
 export async function enterWithSession(accessToken: string, refreshToken: string, phone: string) {
   await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
   const { data: u } = await supabase.auth.getUser();

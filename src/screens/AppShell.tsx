@@ -312,7 +312,7 @@ export function AppShell() {
           overflow: "visible",
         }}
       >
-        {Platform.OS === "web" ? null : <RecaptchaHost />}
+        {Platform.OS === "web" ? <View nativeID="wipp-recaptcha" /> : <RecaptchaHost />}
         <ScreenSwitch screen={top} />
         {showTabs ? <TabBar active={top.name} /> : null}
       </View>

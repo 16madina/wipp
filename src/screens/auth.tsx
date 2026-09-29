@@ -6,7 +6,6 @@ import { signinOtp, signupPhone, usernameAvailable } from "../lib/auth-api";
 import {
   clearPending,
   getVerifiedSignup,
-  pendingHasSms,
   pendingMode,
   pendingPhone,
   setVerifiedSignup,
@@ -14,7 +13,7 @@ import {
   verifyPhoneCode,
 } from "../lib/auth-flow";
 import { COUNTRIES, DEFAULT_COUNTRY, countryById, flagEmoji, flagUri, type Country } from "../lib/countries";
-import { enterWithSession } from "../lib/enter-session";
+import { enterWithSession, enterWithoutServer } from "../lib/enter-session";
 import { toE164 } from "../lib/firebase-phone";
 import {
   authLogin,
@@ -529,32 +528,36 @@ export function SmsReferenceScreen() {
     setError("");
     setNoAccount(null);
     if (signin) {
-      let payload: { idToken: string } | { phone: string; code: string } = { phone, code };
-      let verified: { idToken: string; phone: string } | null = null;
-      if (pendingHasSms()) {
-        const result = await verifyPhoneCode(code);
-        // Si Firebase refuse, on laisse le serveur vérifier le code (code admin temporaire).
-        if (!("error" in result)) {
-          verified = result;
-          payload = { idToken: result.idToken };
-        }
+      const result = await verifyPhoneCode(code);
+      if ("error" in result) {
+        setBusy(false);
+        setError(result.error);
+        return;
       }
       try {
-        const res = await signinOtp(payload);
+        const res = await signinOtp({ idToken: result.idToken });
         if (res.ok) {
           await enterWithSession(res.accessToken, res.refreshToken, phone);
           clearPending();
           setBusy(false);
           return;
         }
+        if ("noAccount" in res && res.noAccount) {
+          setBusy(false);
+          setNoAccount(result);
+          setError(res.error);
+          return;
+        }
+        enterWithoutServer(phone);
+        clearPending();
         setBusy(false);
-        setError(res.error);
-        if ("noAccount" in res && res.noAccount && verified) setNoAccount(verified);
-      } catch (err) {
+        return;
+      } catch {
+        enterWithoutServer(phone);
+        clearPending();
         setBusy(false);
-        setError(err instanceof Error ? err.message : "Connexion impossible.");
+        return;
       }
-      return;
     }
     const result = await verifyPhoneCode(code);
     setBusy(false);
