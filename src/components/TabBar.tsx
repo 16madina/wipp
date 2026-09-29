@@ -19,7 +19,7 @@ const TABS = [
 export function TabBar({ active }: { active: string }) {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const { compact, contentWidth, height } = useDeviceLayout();
+  const { compact, height } = useDeviceLayout();
   const goTab = useWippStore((s) => s.goTab);
   const push = useWippStore((s) => s.push);
   const unread = useWippStore((s) =>
@@ -41,7 +41,6 @@ export function TabBar({ active }: { active: string }) {
   const sheetMargin = 8;
   const sheetPad = 12;
   const altGap = 8;
-  const altW = Math.floor((contentWidth - sheetMargin * 2 - sheetPad * 2 - altGap) / 2);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -207,39 +206,42 @@ export function TabBar({ active }: { active: string }) {
                   <ChevronRight size={16} color={colors.accentFg} strokeWidth={2.4} />
                 </View>
               </Press>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: altGap, marginTop: 8 }}>
-                {alts.map((c) => (
-                  <Press
-                    key={c.id}
-                    onPress={() => go(c.id)}
-                    style={{
-                      width: altW,
-                      minHeight: 72,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      borderRadius: 16,
-                      backgroundColor: "#141a26",
-                      paddingVertical: 8,
-                      paddingLeft: 10,
-                      paddingRight: 8,
-                      borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
-                      <c.Icon size={22} color={colors.accent} strokeWidth={1.8} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontSize: 12.5, fontFamily: "Inter_700Bold", color: colors.fg, lineHeight: 15 }} numberOfLines={1}>
-                        {c.title}
-                      </Text>
-                      <Text style={{ fontSize: 10.5, color: "rgba(255,255,255,0.48)", lineHeight: 13, marginTop: 1 }} numberOfLines={2}>
-                        {c.hint}
-                      </Text>
-                    </View>
-                    <ChevronRight size={14} color="rgba(255,255,255,0.35)" strokeWidth={2} />
-                  </Press>
+              <View style={{ marginTop: 8, gap: altGap }}>
+                {[alts.slice(0, 2), alts.slice(2, 4)].map((row, ri) => (
+                  <View key={ri} style={{ flexDirection: "row", gap: altGap }}>
+                    {row.map((c) => (
+                      <Press
+                        key={c.id}
+                        onPress={() => go(c.id)}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          minHeight: 76,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 8,
+                          borderRadius: 16,
+                          backgroundColor: "#141a26",
+                          paddingVertical: 10,
+                          paddingHorizontal: 10,
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.07)",
+                        }}
+                      >
+                        <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
+                          <c.Icon size={22} color={colors.accent} strokeWidth={1.8} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: colors.fg, lineHeight: 16 }} numberOfLines={1}>
+                            {c.title}
+                          </Text>
+                          <Text style={{ fontSize: 10.5, color: "rgba(255,255,255,0.48)", lineHeight: 13, marginTop: 1 }} numberOfLines={2}>
+                            {c.hint}
+                          </Text>
+                        </View>
+                      </Press>
+                    ))}
+                  </View>
                 ))}
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, marginHorizontal: 2 }}>
