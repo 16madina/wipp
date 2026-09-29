@@ -36,10 +36,11 @@ import { useDeviceLayout } from "../lib/device-layout";
 import { formatClock, formatLastSeen } from "../lib/format";
 import { addLocalGif, GIF_INTEGRATION_PENDING, loadGifs } from "../lib/gifs";
 import { haptic } from "../lib/haptics";
-import { localBlobs, startUpload } from "../lib/messaging/send-media";
+import { localBlobs, startAlbumUpload, startUpload } from "../lib/messaging/send-media";
 import { EDIT_WINDOW_MS } from "../lib/messaging/plain";
 import { isServerChatId, toServerChatId } from "../lib/messaging/sync";
 import { chatPeer, isChatSealed, useT, useWippStore } from "../lib/store";
+import { isSeedDemoChat } from "../lib/seed";
 import { stickerById } from "../lib/stickers";
 import type { Surprise } from "../lib/surprise";
 import type { MediaItem, Message } from "../lib/types";
@@ -197,38 +198,70 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       const { consumeServerAttachment } = await import("../lib/messaging/client");
       void consumeServerAttachment;
       for (const m of messages) {
-        if (!m.attachmentId || !m.mediaKey || !m.mediaChunks?.length) continue;
-        if (m.imageUrl || m.videoUrl || m.audioUrl || m.file?.url || localBlobs.get(m.attachmentId)) continue;
         if (m.viewOnce && m.fromId !== "me") continue;
-        try {
-          const uri = localBlobs.get(m.attachmentId) ?? (await downloadCipherFile({
+        const pending = (m.album?.length
+          ? m.album.filter((a) => a.attachmentId && a.mediaKey && a.mediaChunks?.length && !a.url)
+          : []) as MediaItem[];
+        if (
+          !m.album?.length &&
+          m.attachmentId &&
+          m.mediaKey &&
+          m.mediaChunks?.length &&
+          !m.imageUrl &&
+          !m.videoUrl &&
+          !m.audioUrl &&
+          !m.file?.url &&
+          !localBlobs.get(m.attachmentId)
+        ) {
+          pending.push({
+            type: m.type === "video" ? "video" : "image",
+            url: "",
             attachmentId: m.attachmentId,
-            fileKey: m.mediaKey,
-            chunks: m.mediaChunks,
+            mediaKey: m.mediaKey,
+            mediaChunks: m.mediaChunks,
             mime: m.mediaMime,
-          }));
-          if (cancelled) return;
-          localBlobs.set(m.attachmentId, uri);
+          });
+        }
+        if (!pending.length) continue;
+        try {
+          const downloaded: MediaItem[] = [];
+          for (const part of pending) {
+            const uri =
+              localBlobs.get(part.attachmentId!) ??
+              (await downloadCipherFile({
+                attachmentId: part.attachmentId!,
+                fileKey: part.mediaKey!,
+                chunks: part.mediaChunks!,
+                mime: part.mime,
+              }));
+            if (cancelled) return;
+            localBlobs.set(part.attachmentId!, uri);
+            downloaded.push({ ...part, url: uri });
+          }
           useWippStore.setState((s) => ({
             messages: {
               ...s.messages,
-              [chatId]: (s.messages[chatId] ?? []).map((x) =>
-                x.id === m.id
-                  ? {
-                      ...x,
-                      mediaState: "ready",
-                      imageUrl: x.type === "image" || x.type === "gif" ? uri : x.imageUrl,
-                      videoUrl: x.type === "video" ? uri : x.videoUrl,
-                      audioUrl: x.type === "voice" ? uri : x.audioUrl,
-                      gifUrl: x.type === "gif" ? uri : x.gifUrl,
-                      file: x.file ? { ...x.file, url: uri } : x.file,
-                    }
-                  : x,
-              ),
+              [chatId]: (s.messages[chatId] ?? []).map((x) => {
+                if (x.id !== m.id) return x;
+                const first = downloaded[0];
+                const album = x.album?.length
+                  ? x.album.map((a) => downloaded.find((d) => d.attachmentId === a.attachmentId) ?? a)
+                  : x.album;
+                return {
+                  ...x,
+                  mediaState: "ready",
+                  album,
+                  imageUrl: x.type === "image" || x.type === "gif" ? (first?.url ?? x.imageUrl) : x.imageUrl,
+                  videoUrl: x.type === "video" ? (first?.url ?? x.videoUrl) : x.videoUrl,
+                  audioUrl: x.type === "voice" ? (first?.url ?? x.audioUrl) : x.audioUrl,
+                  gifUrl: x.type === "gif" ? (first?.url ?? x.gifUrl) : x.gifUrl,
+                  file: x.file && first?.url ? { ...x.file, url: first.url } : x.file,
+                };
+              }),
             },
           }));
         } catch {
-          /* keep pending */
+          /* offline / not ready */
         }
       }
     })();
@@ -257,7 +290,14 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         ? formatLastSeen(peer.lastSeen, peer.online, useWippStore.getState().language)
         : undefined;
   const canCall = Boolean(peer) && !sealed;
-  const chats = useWippStore.getState().chats.filter((c) => !c.archived && c.id !== chatId);
+  const chats = useWippStore
+    .getState()
+    .chats.filter(
+      (c) =>
+        !c.archived &&
+        c.id !== chatId &&
+        (!useWippStore.getState().serverConnected || !isSeedDemoChat(c.id)),
+    );
 
   function setDraftPersist(value: string) {
     setDraft(value);
@@ -284,12 +324,21 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
 
   function sendMediaFiles(assets: ImagePicker.ImagePickerAsset[], fromCamera: boolean) {
     const once = viewOnce || undefined;
-    const media = assets.filter((a) => (a.type ?? "").startsWith("video") || (a.mimeType ?? "").startsWith("video") || (a.mimeType ?? "").startsWith("image") || !a.mimeType);
+    const media = assets.filter(
+      (a) =>
+        (a.type ?? "").startsWith("video") ||
+        (a.mimeType ?? "").startsWith("video") ||
+        (a.mimeType ?? "").startsWith("image") ||
+        !a.mimeType,
+    );
+    if (!media.length) return;
+    const caption = draft.trim() || "";
     if (media.length > 1) {
       const album: MediaItem[] = media.map((a) => ({
         type: (a.type ?? a.mimeType ?? "").includes("video") ? "video" : "image",
         url: a.uri,
         duration: a.duration ?? undefined,
+        mime: a.mimeType ?? undefined,
       }));
       const first = album[0]!;
       const id = sendMessage(chatId, {
@@ -297,18 +346,21 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         imageUrl: first.type === "image" ? first.url : undefined,
         videoUrl: first.type === "video" ? first.url : undefined,
         album,
-        text: draft.trim() || "",
+        text: caption,
         viewOnce: once,
         mediaState: "preparing",
       });
-      startUpload({
+      startAlbumUpload({
         chatId,
         messageId: id,
-        blobUrl: first.url,
-        kind: first.type,
-        mime: assets[0]?.mimeType,
+        items: media.map((a, i) => ({
+          blobUrl: a.uri,
+          kind: album[i]!.type,
+          mime: a.mimeType ?? undefined,
+          durationMs: a.duration ? a.duration * 1000 : undefined,
+        })),
         viewOnce: once,
-        caption: draft.trim() || undefined,
+        caption,
       });
     } else {
       const a = assets[0];
@@ -318,7 +370,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         type: video ? "video" : "image",
         imageUrl: video ? undefined : a.uri,
         videoUrl: video ? a.uri : undefined,
-        text: draft.trim() || "",
+        text: caption,
         viewOnce: once,
         mediaState: "preparing",
         duration: a.duration ? Math.round(a.duration) : undefined,
@@ -331,7 +383,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         mime: a.mimeType,
         viewOnce: once,
         durationMs: a.duration ? a.duration * 1000 : undefined,
-        caption: draft.trim() || undefined,
+        caption,
       });
     }
     setDraftPersist("");
@@ -486,9 +538,13 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               ) : null}
               {!m.viewOnce && album.length > 1 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 6 }}>
-                  {album.slice(0, 4).map((a, i) => (
-                    <Image key={i} source={{ uri: a.url }} style={{ width: 72, height: 72, borderRadius: 8 }} contentFit="cover" />
-                  ))}
+                  {album.slice(0, 4).map((a, i) =>
+                    a.url ? (
+                      <Image key={i} source={{ uri: a.url }} style={{ width: 72, height: 72, borderRadius: 8 }} contentFit="cover" />
+                    ) : (
+                      <View key={i} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: colors.surface }} />
+                    ),
+                  )}
                 </View>
               ) : null}
               {!m.viewOnce && img && album.length <= 1 ? <Image source={img} style={{ width: 180, height: 180, maxWidth: "100%", borderRadius: 10, marginBottom: 6 }} contentFit="cover" /> : null}
@@ -822,8 +878,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 return (
                   <Press
                     onPress={() => {
-                      if (!forwardMsg?.text) return;
-                      sendMessage(c.id, { text: forwardMsg.text, forwarded: true, type: "text" });
+                      if (!forwardMsg) return;
+                      useWippStore.getState().forwardMessage(c.id, forwardMsg);
                       setForwardMsg(null);
                     }}
                     style={{ paddingVertical: 12 }}
@@ -845,9 +901,11 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           picked
             ? [
                 ...(!picked.deletedForAll ? [{ key: "reply", label: "Répondre", onSelect: () => setReply(picked) }] : []),
+                ...(!picked.deletedForAll && !picked.viewOnce && picked.type !== "system"
+                  ? [{ key: "forward", label: "Transférer", onSelect: () => setForwardMsg(picked) }]
+                  : []),
                 ...(picked.text && picked.type === "text" && !picked.deletedForAll
                   ? [
-                      { key: "forward", label: "Transférer", onSelect: () => setForwardMsg(picked) },
                       {
                         key: "copy",
                         label: "Copier",

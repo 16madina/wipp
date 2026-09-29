@@ -215,6 +215,25 @@ function msg(id: string, chatId: string, fromId: string, text: string, createdAt
 		...extra
 	};
 }
+const SEED_DEMO_CHAT_IDS = new Set([
+	"c-alex",
+	"c-maya",
+	"c-famille",
+	"c-julien",
+	"c-samira",
+	"c-soccer",
+	"c-noah",
+	"c-ines-temp",
+	"c-quartier",
+	"c-soiree",
+	"c-shop-deena",
+]);
+
+/** Static demo threads from seed.ts — not real DMs. Live `uid("c")` chats are not in this set. */
+export function isSeedDemoChat(id: string) {
+	return SEED_DEMO_CHAT_IDS.has(id);
+}
+
 export function seedChats(): Chat[] {
 	return [
 		{

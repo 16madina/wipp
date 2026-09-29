@@ -30,7 +30,7 @@ function unb64(s: string) {
   return out;
 }
 
-export async function uploadCipherFile(input: {
+type PutFileInput = {
   chatId: string;
   bytes: Uint8Array;
   kind: MediaEnvelope["kind"];
@@ -38,14 +38,11 @@ export async function uploadCipherFile(input: {
   name?: string;
   mime?: string;
   durationMs?: number;
-  identity?: KeyBundle | null;
-  peerPublicJwk?: JsonWebKey | null;
-  clientId: string;
-  vault?: boolean;
-  onProgress?: (fraction: number) => void;
-  caption?: string;
   size?: number;
-}) {
+  onProgress?: (fraction: number) => void;
+};
+
+async function putEncryptedBytes(input: PutFileInput) {
   const serverChatId = input.chatId.replace(/^srv:/, "");
   const chunkCount = Math.max(1, Math.ceil(input.bytes.byteLength / CHUNK_PLAIN_MAX));
   const created = await createServerAttachment(serverChatId, {
@@ -63,7 +60,7 @@ export async function uploadCipherFile(input: {
     await putServerChunk(created.id, i, b64(chunk.ciphertext), chunk.sha256);
     input.onProgress?.((i + 1) / (chunkCount + 1));
   }
-  const inner = describeMedia({
+  return {
     id: created.id,
     fileKey: b64(fileKey).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""),
     kind: input.kind,
@@ -71,19 +68,106 @@ export async function uploadCipherFile(input: {
     mime: input.mime,
     viewOnce: input.viewOnce,
     durationMs: input.durationMs,
-    caption: input.caption || undefined,
     size: input.size,
     chunks: metas,
+  };
+}
+
+export async function uploadCipherFile(input: {
+  chatId: string;
+  bytes: Uint8Array;
+  kind: MediaEnvelope["kind"];
+  viewOnce?: boolean;
+  name?: string;
+  mime?: string;
+  durationMs?: number;
+  identity?: KeyBundle | null;
+  peerPublicJwk?: JsonWebKey | null;
+  clientId: string;
+  vault?: boolean;
+  onProgress?: (fraction: number) => void;
+  caption?: string;
+  size?: number;
+}) {
+  const stored = await putEncryptedBytes(input);
+  const inner = describeMedia({
+    id: stored.id,
+    fileKey: stored.fileKey,
+    kind: stored.kind,
+    name: stored.name,
+    mime: stored.mime,
+    viewOnce: stored.viewOnce,
+    durationMs: stored.durationMs,
+    caption: input.caption || undefined,
+    size: stored.size,
+    chunks: stored.chunks,
   });
   const message = await sendViaServer(input.chatId, inner, input.clientId, {
     identity: input.identity,
     peerPublicJwk: input.peerPublicJwk,
     vault: input.vault,
   });
-  if (message?.id) await completeServerAttachment(created.id, message.id);
-  else await completeServerAttachment(created.id);
+  if (message?.id) await completeServerAttachment(stored.id, message.id);
+  else await completeServerAttachment(stored.id);
   input.onProgress?.(1);
-  return { attachmentId: created.id, message };
+  return { attachmentId: stored.id, message };
+}
+
+export async function uploadCipherAlbum(input: {
+  chatId: string;
+  files: { bytes: Uint8Array; kind: "image" | "video"; mime?: string; durationMs?: number; size?: number }[];
+  viewOnce?: boolean;
+  identity?: KeyBundle | null;
+  peerPublicJwk?: JsonWebKey | null;
+  clientId: string;
+  vault?: boolean;
+  onProgress?: (fraction: number) => void;
+  caption?: string;
+}) {
+  const parts = [];
+  for (let i = 0; i < input.files.length; i++) {
+    const file = input.files[i]!;
+    const stored = await putEncryptedBytes({
+      chatId: input.chatId,
+      bytes: file.bytes,
+      kind: file.kind,
+      viewOnce: input.viewOnce,
+      mime: file.mime,
+      durationMs: file.durationMs,
+      size: file.size,
+      onProgress: (f) => input.onProgress?.((i + f) / (input.files.length + 1)),
+    });
+    parts.push({
+      id: stored.id,
+      fileKey: stored.fileKey,
+      kind: file.kind,
+      mime: stored.mime,
+      durationMs: stored.durationMs,
+      size: stored.size,
+      chunks: stored.chunks,
+    });
+  }
+  const first = parts[0];
+  if (!first) throw new Error("empty album");
+  const inner = describeMedia({
+    kind: first.kind,
+    id: first.id,
+    fileKey: first.fileKey,
+    mime: first.mime,
+    viewOnce: input.viewOnce,
+    durationMs: first.durationMs,
+    caption: input.caption || undefined,
+    chunks: first.chunks,
+    album: parts,
+  });
+  const message = await sendViaServer(input.chatId, inner, input.clientId, {
+    identity: input.identity,
+    peerPublicJwk: input.peerPublicJwk,
+    vault: input.vault,
+  });
+  await Promise.all(parts.map((p) => (message?.id ? completeServerAttachment(p.id, message.id) : completeServerAttachment(p.id))));
+  input.onProgress?.(1);
+  return { attachmentId: first.id, parts, message };
 }
 
 export async function downloadCipherFile(input: {
