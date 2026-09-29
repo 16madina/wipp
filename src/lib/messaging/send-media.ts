@@ -91,3 +91,64 @@ export function retryMedia(messageId: string) {
 export function startUpload(job: MediaJob) {
   void uploadMedia(job);
 }
+
+export type AlbumJob = {
+  chatId: string;
+  messageId: string;
+  items: { blobUrl: string; kind: "image" | "video"; mime?: string; durationMs?: number }[];
+  viewOnce?: boolean;
+  caption?: string;
+};
+
+export async function uploadAlbum(job: AlbumJob) {
+  patch(job.chatId, job.messageId, { status: "sending", mediaState: "preparing", progress: 0 });
+  if (!job.chatId.startsWith("srv:")) {
+    patch(job.chatId, job.messageId, { status: "sent", mediaState: "sent", progress: 1 });
+    return;
+  }
+  try {
+    const st = useWippStore.getState();
+    const peer = peerKey(job.chatId);
+    if (!st.identity || !peer) throw new Error("no-e2e");
+    const { uploadCipherAlbum } = await import("./media-upload");
+    const files = [];
+    for (const item of job.items) {
+      const bytes = await readLocalBytes(item.blobUrl);
+      files.push({
+        bytes,
+        kind: item.kind,
+        mime: item.mime,
+        durationMs: item.durationMs,
+        size: bytes.byteLength,
+      });
+    }
+    const res = await uploadCipherAlbum({
+      chatId: job.chatId,
+      files,
+      viewOnce: job.viewOnce,
+      caption: job.caption,
+      identity: st.identity,
+      peerPublicJwk: peer,
+      clientId: job.messageId,
+      vault: isPrivateChat(job.chatId),
+      onProgress: (f) => patch(job.chatId, job.messageId, { mediaState: "uploading", progress: f }),
+    });
+    job.items.forEach((item, i) => {
+      const part = res.parts[i];
+      if (part) localBlobs.set(part.id, item.blobUrl);
+    });
+    patch(job.chatId, job.messageId, {
+      status: "sent",
+      mediaState: "sent",
+      progress: 1,
+      attachmentId: res.attachmentId,
+    });
+  } catch (err) {
+    console.warn("[wipp] album upload failed", err);
+    patch(job.chatId, job.messageId, { status: "failed", mediaState: "failed" });
+  }
+}
+
+export function startAlbumUpload(job: AlbumJob) {
+  void uploadAlbum(job);
+}

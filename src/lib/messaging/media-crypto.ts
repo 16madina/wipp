@@ -97,6 +97,18 @@ export type MediaEnvelope = {
   stickerId?: string;
   caption?: string;
   size?: number;
+  /** Extra photos/videos in the same bubble (re-encrypted per file). */
+  album?: MediaAlbumPart[];
+};
+
+export type MediaAlbumPart = {
+  id: string;
+  fileKey: string;
+  kind: "image" | "video";
+  mime?: string;
+  durationMs?: number;
+  size?: number;
+  chunks: { i: number; iv: string; sha256: string }[];
 };
 
 export function describeMedia(input: Omit<MediaEnvelope, "k">): string {

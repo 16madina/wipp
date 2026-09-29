@@ -38,7 +38,9 @@ export const TAKEN_USERNAMES: ReadonlySet<string> = new Set([
 	"aisha",
 	"adama",
 	"malik",
-	"sofia"
+	"sofia",
+	"camille",
+	"theo"
 ]);
 export function demoMe(): MeProfile {
 	return {
@@ -199,6 +201,27 @@ export function seedUsers(): Record<string, User> {
 			avatar: "/avatars/sofia.jpg",
 			online: true,
 			connected: false
+		}),
+		camille: u({
+			id: "camille",
+			firstName: "Camille",
+			lastName: "Bergeron",
+			displayName: "Camille",
+			username: "camille",
+			bio: "Archiviste · vinyles · Vieux-Longueuil",
+			avatar: "/avatars/camille.jpg",
+			online: true
+		}),
+		theo: u({
+			id: "theo",
+			firstName: "Théo",
+			lastName: "Lavoie",
+			displayName: "Théo",
+			username: "theo",
+			bio: "Course à pied · espresso · rives",
+			avatar: "/avatars/theo.jpg",
+			online: false,
+			lastSeen: m(22)
 		})
 	};
 }
@@ -215,8 +238,84 @@ function msg(id: string, chatId: string, fromId: string, text: string, createdAt
 		...extra
 	};
 }
+const SEED_DEMO_CHAT_IDS = new Set([
+	"c-alex",
+	"c-maya",
+	"c-famille",
+	"c-julien",
+	"c-samira",
+	"c-soccer",
+	"c-noah",
+	"c-ines-temp",
+	"c-quartier",
+	"c-soiree",
+	"c-shop-deena",
+]);
+
+/** Static demo threads from seed.ts — not real DMs. Live `uid("c")` chats are not in this set. */
+export function isSeedDemoChat(id: string) {
+	return SEED_DEMO_CHAT_IDS.has(id);
+}
+
+/** Fils fictifs qui restent après un compte test (pas dans SEED_DEMO_CHAT_IDS). */
+export function seedFictionalChats(): Chat[] {
+	return [
+		{
+			id: "fict-camille",
+			type: "dm",
+			participantIds: ["me", "camille"],
+			unread: 2,
+			muted: false,
+			pinned: false,
+			archived: false,
+			isRequest: false,
+			preview: "J’ai pris une table au fond.",
+			lastAt: m(1)
+		},
+		{
+			id: "fict-theo",
+			type: "dm",
+			participantIds: ["me", "theo"],
+			unread: 0,
+			muted: false,
+			pinned: false,
+			archived: false,
+			isRequest: false,
+			preview: "On se capte dimanche au parc ?",
+			lastAt: m(22)
+		}
+	];
+}
+
+export function seedFictionalMessages(): Record<string, Message[]> {
+	return {
+		"fict-camille": [
+			msg("fict-c1", "fict-camille", "me", "Tu as bien reçu le QR du café ?", h(3)),
+			msg("fict-c2", "fict-camille", "camille", "Oui, scanné. On se voit vers 17 h ?", h(2)),
+			msg("fict-c3", "fict-camille", "me", "Parfait. Je prends la table du fond.", h(2) + 8e4),
+			msg("fict-c4", "fict-camille", "camille", "J’arrive dans dix minutes.", m(4), { status: "delivered" }),
+			msg("fict-c5", "fict-camille", "camille", "J’ai pris une table au fond.", m(1), { status: "delivered" })
+		],
+		"fict-theo": [
+			msg("fict-t1", "fict-theo", "theo", "Salut — on s’est croisés dimanche au match.", d(1)),
+			msg("fict-t2", "fict-theo", "me", "Oui je me souviens. Bienvenue sur Wipp.", d(1) + 5e4),
+			msg("fict-t3", "fict-theo", "theo", "Donne-moi ton @, pas ton numéro.", h(6)),
+			msg("fict-t4", "fict-theo", "me", "@deena — et toi c’est @theo.", h(5)),
+			msg("fict-t5", "fict-theo", "theo", "On se capte dimanche au parc ?", m(22))
+		]
+	};
+}
+
+export function seedFictionalInbox(): { chats: Chat[]; messages: Record<string, Message[]> } {
+	return {
+		chats: seedFictionalChats(),
+		messages: seedFictionalMessages()
+	};
+}
+
 export function seedChats(): Chat[] {
 	return [
+		...seedFictionalChats(),
 		{
 			id: "c-alex",
 			type: "dm",
@@ -390,6 +489,7 @@ export function seedChats(): Chat[] {
 }
 export function seedMessages(): Record<string, Message[]> {
 	return {
+		...seedFictionalMessages(),
 		"c-alex": [
 			msg("m1", "c-alex", "me", "Tu es sur Wipp ?", d(2), { status: "read" }),
 			msg("m2", "c-alex", "alex", "Oui. Ajoute-moi : @alex", d(2) + 4e4),
@@ -750,7 +850,9 @@ export const REPLIES: Record<string, string[]> = {
 		"On se parle, et ça s’efface."
 	],
 	karim: ["Merci d’avoir accepté.", "Le fauteuil est encore dispo."],
-	sofia: ["Merci de m’avoir acceptée.", "Alex avait raison."]
+	sofia: ["Merci de m’avoir acceptée.", "Alex avait raison."],
+	camille: ["À tout à l’heure.", "La table est à nous.", "Je t’attends au Chen."],
+	theo: ["Carrément.", "Dimanche 10 h, comme d’habitude.", "Wipp > numéro."]
 };
 export const SHOP_OWNER_REPLIES: string[] = [
 	"Oui, dites-moi le créneau qui vous arrange.",

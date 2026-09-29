@@ -118,7 +118,7 @@ const fr = {
   wippSearchCardHint: "Recherche un @username",
   wippNearbyCard: "À proximité",
   wippNearbyCardHint: "Découvre des WIPP autour de toi",
-  wippConnectFoot: "Plus besoin de demander un numéro.",
+  wippConnectFoot: "Plus besoin de demander son numéro.",
   wippConnectFootEm: "Demande son WIPP.",
 
   chatsEmpty: "Aucune conversation pour le moment.",

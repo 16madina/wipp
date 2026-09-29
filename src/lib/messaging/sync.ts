@@ -25,6 +25,7 @@ import {
 } from "./client";
 import type { WippChatSummary, WippMessage } from "./types";
 import { isPrivateChat } from "@/lib/private-vault";
+import { isSeedDemoChat } from "@/lib/seed";
 import type { Chat, Message, User } from "@/lib/types";
 
 const SRV = "srv:";
@@ -144,16 +145,28 @@ export function applyMediaEnvelope(m: Message, media: ParsedMedia, label: string
         ? "sticker"
         : m.type;
   const withBlob = kind === "voice" || kind === "image" || kind === "video" || kind === "file" || kind === "gif";
+  const album = media.album?.length
+    ? media.album.map((p) => ({
+        type: p.kind === "video" ? ("video" as const) : ("image" as const),
+        url: "",
+        duration: p.durationMs ? Math.round(p.durationMs / 1000) : undefined,
+        attachmentId: p.id,
+        mediaKey: p.fileKey,
+        mediaChunks: p.chunks,
+        mime: p.mime,
+      }))
+    : m.album;
   return {
     ...m,
     type,
-    text: withBlob ? (media.caption ?? "") : label,
+    text: withBlob ? (media.caption ?? "") : media.album?.length ? `${media.album.length} médias` : label,
     stickerId: media.stickerId ?? m.stickerId,
     viewOnce: media.viewOnce ?? m.viewOnce,
     attachmentId: media.id ?? m.attachmentId,
     mediaKey: media.fileKey ?? m.mediaKey,
     mediaChunks: media.chunks ?? m.mediaChunks,
     mediaMime: media.mime ?? m.mediaMime,
+    album,
     file: kind === "file" ? (m.file ?? { name: media.name ?? "Document", size: media.size ?? 0, mime: media.mime ?? "", url: "" }) : m.file,
     contactCard: media.contact ?? m.contactCard,
     geo: media.location ?? m.geo,
@@ -268,10 +281,14 @@ export function mergeServerChatsIntoState(
   }
   const chats = [
     ...Array.from(byId.values()).filter((c) => isServerChatId(c.id)),
-    ...state.chats.filter((c) => !isServerChatId(c.id)),
+    ...state.chats.filter((c) => !isServerChatId(c.id) && !isSeedDemoChat(c.id)),
   ].sort((a, b) => (b.lastAt ?? 0) - (a.lastAt ?? 0));
+  const messages = { ...state.messages };
+  for (const id of Object.keys(messages)) {
+    if (isSeedDemoChat(id)) delete messages[id];
+  }
   void meServerId;
-  return { users, chats, peerPublicKeys };
+  return { users, chats, messages, peerPublicKeys };
 }
 
 export function mergeServerMessagesIntoState(

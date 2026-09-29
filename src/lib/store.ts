@@ -36,7 +36,9 @@ import {
   seedShops,
   seedStories,
   seedUsers,
+  seedFictionalInbox,
   withGroupMeta,
+  isSeedDemoChat,
 } from "./seed";
 import { sixDigit, uid } from "./utils";
 import { fingerprintOf, generateBundle, type KeyBundle } from "./crypto";
@@ -200,6 +202,7 @@ type Store = {
   applyLiveEvent: (event: LiveEvent) => Promise<void>;
   loadOlderMessages: (chatId: string) => Promise<boolean>;
   openOrCreateDm: (userId: string, asRequest?: boolean) => string;
+  forwardMessage: (targetChatId: string, source: Message) => void;
   connectWith: (userId: string) => void;
   acceptRequest: (id: string) => void;
   ignoreRequest: (id: string) => void;
@@ -257,6 +260,7 @@ function fresh(): Omit<
   | "applyLiveEvent"
   | "loadOlderMessages"
   | "openOrCreateDm"
+  | "forwardMessage"
   | "connectWith"
   | "acceptRequest"
   | "ignoreRequest"
@@ -344,12 +348,21 @@ export const useWippStore = create<Store>((set, get) => ({
   },
   resetDemo: () => set({ ...fresh(), language: get().language, stack: [{ name: "onboarding" }] }),
   completeSetup: (data, freshAccount = false) => {
+    const fict = seedFictionalInbox();
     set((s) => ({
       onboarded: true,
       me: { ...s.me, ...s.pendingSignup, ...data, id: "me", online: true },
       stack: [{ name: "chats" }],
       ...(freshAccount
-        ? { chats: [], messages: {}, requests: [], intros: [], stories: [], calls: [], users: { ...s.users } }
+        ? {
+            chats: fict.chats,
+            messages: fict.messages,
+            requests: [],
+            intros: [],
+            stories: [],
+            calls: [],
+            users: { ...s.users },
+          }
         : {}),
     }));
     void get().ensureCrypto();
@@ -583,6 +596,11 @@ export const useWippStore = create<Store>((set, get) => ({
     }
     return message.id;
   },
+  forwardMessage: (targetChatId, source) => {
+    void import("./messaging/forward").then(({ forwardMessageToChat }) =>
+      forwardMessageToChat(targetChatId, source).catch((err) => console.warn("[wipp] forward failed", err)),
+    );
+  },
   retryMessage: (chatId, messageId) => {
     const msg = (get().messages[chatId] ?? []).find((m) => m.id === messageId);
     if (!msg) return;
@@ -753,12 +771,19 @@ export const useWippStore = create<Store>((set, get) => ({
         username: me.username || "user",
         displayName: me.displayName || `${me.firstName} ${me.lastName}`.trim() || "WIPP",
       });
-      set((st) => ({
-        ...mergeServerChatsIntoState(st, chats, profile.id),
-        serverProfileId: profile.id,
-        serverUsername: profile.username,
-        serverConnected: true,
-      }));
+      set((st) => {
+        const merged = mergeServerChatsIntoState(st, chats, profile.id);
+        const onSeed = st.stack.some(
+          (s) => s.name === "conversation" && "chatId" in s && isSeedDemoChat(s.chatId),
+        );
+        return {
+          ...merged,
+          serverProfileId: profile.id,
+          serverUsername: profile.username,
+          serverConnected: true,
+          stack: onSeed ? ([{ name: "chats" }] as Screen[]) : st.stack,
+        };
+      });
       void get().syncBusinessContexts();
       const { flushAllOutbox } = await import("./messaging/flush-outbox");
       await flushAllOutbox(get as never, set as never);

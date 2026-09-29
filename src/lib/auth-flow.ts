@@ -2,6 +2,13 @@ import { confirmSmsCode, explainSmsError, hasPendingSms, sendSmsCode, toE164 } f
 
 export type AuthMode = "signup" | "signin";
 
+/** Mot de passe temporaire pour construire / tester l’app, sans SMS ni réseau. */
+export const TEST_SIGNIN_PASSWORD = "160184";
+
+export function isTestSigninPassword(code: string) {
+  return code.replace(/\s/g, "") === TEST_SIGNIN_PASSWORD;
+}
+
 type Pending = {
   phone: string;
   mode: AuthMode;
@@ -20,7 +27,7 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return "Numéro invalide. Vérifie l'indicatif et le numéro.";
-  // Connexion test : le serveur vérifie le code admin, sans attendre Firebase.
+  // Connexion : on n’envoie pas de SMS. Le mot de passe de test suffit.
   if (mode === "signin") {
     pending = { phone, mode };
     return null;
@@ -49,12 +56,17 @@ export function pendingMode(): AuthMode | null {
 
 export async function verifyPhoneCode(code: string): Promise<{ idToken: string; phone: string } | { error: string }> {
   if (!pending) return { error: "Code expiré. Renvoie un nouveau code." };
-  if (!hasPendingSms()) return { error: "Code incorrect ou expiré." };
+  if (!hasPendingSms()) {
+    return {
+      error:
+        "Aucun SMS n’a été envoyé. Ce n’est pas ton code WIPP (QR / 6 chiffres pour te connecter à quelqu’un). Demande un texto, puis entre le code reçu.",
+    };
+  }
   try {
     const idToken = await confirmSmsCode(code);
     return { idToken, phone: pending.phone };
   } catch {
-    return { error: "Code incorrect ou expiré." };
+    return { error: "Code SMS incorrect ou expiré. Utilise le dernier texto reçu — pas ton code WIPP." };
   }
 }
 

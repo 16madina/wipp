@@ -35,6 +35,7 @@ import {
 import { formatChatTime, formatRemainShort } from "../lib/format";
 import { SHOP_CAT_KEYS } from "../lib/i18n";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
+import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
 import { colors, layout } from "../theme";
 import { useDeviceLayout } from "../lib/device-layout";
@@ -49,6 +50,7 @@ export function ChatsScreen() {
   const me = useWippStore((s) => s.me);
   const users = useWippStore((s) => s.users);
   const chats = useWippStore((s) => s.chats);
+  const serverConnected = useWippStore((s) => s.serverConnected);
   const shops = useWippStore((s) => s.shops);
   const stories = useWippStore((s) => s.stories);
   const viewed = useWippStore((s) => s.viewedStories);
@@ -73,6 +75,7 @@ export function ChatsScreen() {
 
   const visible = chats
     .filter((c) => !c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id))
+    .filter((c) => !serverConnected || !isSeedDemoChat(c.id))
     .filter((c) => {
       if (c.type === "dm") {
         const other = c.participantIds.find((id) => id !== "me");
@@ -87,6 +90,7 @@ export function ChatsScreen() {
 
   const shopUnread = chats
     .filter((c) => c.shopId && !c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id))
+    .filter((c) => !serverConnected || !isSeedDemoChat(c.id))
     .reduce((n, c) => n + (c.unread || 0), 0);
 
   const storyUsers = useMemo(

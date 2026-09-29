@@ -298,7 +298,15 @@ export type GroupAudience = "all" | "admins";
 export type GroupPerms = { editInfo: GroupAudience; send: GroupAudience; addMembers: GroupAudience; everyone: boolean };
 export const defaultGroupPerms: GroupPerms = { editInfo: "admins", send: "all", addMembers: "all", everyone: true };
 
-export type MediaItem = { type: "image" | "video"; url: string; duration?: number };
+export type MediaItem = {
+  type: "image" | "video";
+  url: string;
+  duration?: number;
+  attachmentId?: string;
+  mediaKey?: string;
+  mediaChunks?: { i: number; iv: string; sha256: string }[];
+  mime?: string;
+};
 
 export type Message = {
   id: string;
