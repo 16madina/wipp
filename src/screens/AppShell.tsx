@@ -82,6 +82,7 @@ import {
 } from "./extra";
 import { useEffect, useState } from "react";
 import { AppState, Platform, View } from "react-native";
+import * as Linking from "expo-linking";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
 import { IntroSplash } from "./intro";
 import { useDeviceLayout } from "../lib/device-layout";
@@ -147,7 +148,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "my-qr":
       return <MyQrScreen />;
     case "scanner":
-      return <ScannerScreen />;
+      return <ScannerScreen error={screen.error} />;
     case "search-user":
       return <SearchUserScreen />;
     case "nearby":
@@ -283,9 +284,18 @@ export function AppShell() {
         void useWippStore.getState().syncServerInbox();
       }
     });
+    function handleUrl(url: string) {
+      if (!url || url.startsWith("exp+")) return;
+      void import("../lib/deep-links").then(({ openResolvedQr }) => openResolvedQr(url));
+    }
+    void Linking.getInitialURL().then((url) => {
+      if (url) handleUrl(url);
+    });
+    const linkSub = Linking.addEventListener("url", (e) => handleUrl(e.url));
     return () => {
       stop();
       sub.remove();
+      linkSub.remove();
     };
   }, [onboarded]);
 

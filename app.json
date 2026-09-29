@@ -22,7 +22,7 @@
       "bundleIdentifier": "com.wipp.app",
       "associatedDomains": ["applinks:wippapp.com"],
       "infoPlist": {
-        "NSCameraUsageDescription": "WIPP utilise la caméra pour prendre une photo ou une vidéo à envoyer.",
+        "NSCameraUsageDescription": "WIPP utilise la caméra pour scanner un QR WIPP ou envoyer une photo.",
         "NSMicrophoneUsageDescription": "WIPP utilise le micro pour enregistrer un message vocal.",
         "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
         "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque."
@@ -51,7 +51,12 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "wippapp.com", "pathPrefix": "/t/" }],
+          "data": [
+            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/@" },
+            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/t/" },
+            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/g/" },
+            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/b/" }
+          ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
@@ -61,6 +66,13 @@
       "expo-dev-client",
       "expo-font",
       "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "WIPP utilise la caméra pour scanner un QR WIPP.",
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-image-picker",
         {

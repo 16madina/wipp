@@ -77,6 +77,7 @@ function previewOf(message: Message, lang: Lang = "fr") {
   if (message.type === "gif") return "GIF";
   if (message.type === "video") return lang === "fr" ? "Vidéo" : "Video";
   if (message.type === "sticker") return stickerById(message.stickerId ?? "")?.labelFr ?? "Sticker";
+  if (message.type === "shop") return message.text ? `🏪 ${message.text}` : "Carte professionnelle";
   return message.text ?? "";
 }
 
@@ -203,9 +204,12 @@ type Store = {
   loadOlderMessages: (chatId: string) => Promise<boolean>;
   openOrCreateDm: (userId: string, asRequest?: boolean) => string;
   forwardMessage: (targetChatId: string, source: Message) => void;
-  connectWith: (userId: string) => void;
+  connectWith: (userId: string, via?: FoundVia) => void;
   acceptRequest: (id: string) => void;
   ignoreRequest: (id: string) => void;
+  declineRequest: (id: string) => void;
+  blockUser: (userId: string) => void;
+  refreshIncomingRequests: () => Promise<void>;
   viewStory: (userId: string) => void;
   createGroup: (name: string, participantIds: string[]) => void;
   ensureMyCode: () => LiveCode;
@@ -264,6 +268,9 @@ function fresh(): Omit<
   | "connectWith"
   | "acceptRequest"
   | "ignoreRequest"
+  | "declineRequest"
+  | "blockUser"
+  | "refreshIncomingRequests"
   | "viewStory"
   | "createGroup"
   | "ensureMyCode"
@@ -594,6 +601,33 @@ export const useWippStore = create<Store>((set, get) => ({
         }
       })();
     }
+
+    if (message.type === "shop" && message.shopId) {
+      void (async () => {
+        try {
+          const { isServerChatId, sendViaServer } = await import("./messaging/sync");
+          if (!isServerChatId(chatId)) return;
+          const publicId = message.shopId!.replace(/^business:/, "");
+          const shop = get().shops.find((s) => s.id === message.shopId || s.handle === publicId);
+          const st = get();
+          await sendViaServer(chatId, message.text || shop?.name || "Carte professionnelle", message.id, {
+            identity: st.identity,
+            peerPublicJwk: peerPubOf(st, chatId),
+            vault: isPrivateChat(chatId),
+            shop: {
+              publicId,
+              name: shop?.name || message.text || "Carte professionnelle",
+              category: shop?.tags?.[0] || shop?.category || "",
+              city: shop?.city,
+              address: shop?.address || undefined,
+              image: shop?.logo || shop?.image || undefined,
+            },
+          });
+        } catch (err) {
+          console.warn("[wipp] shop card send failed", err);
+        }
+      })();
+    }
     return message.id;
   },
   forwardMessage: (targetChatId, source) => {
@@ -771,6 +805,7 @@ export const useWippStore = create<Store>((set, get) => ({
         username: me.username || "user",
         displayName: me.displayName || `${me.firstName} ${me.lastName}`.trim() || "WIPP",
       });
+      const [firstName, ...rest] = (profile.displayName || me.displayName).split(" ");
       set((st) => {
         const merged = mergeServerChatsIntoState(st, chats, profile.id);
         const onSeed = st.stack.some(
@@ -782,9 +817,21 @@ export const useWippStore = create<Store>((set, get) => ({
           serverUsername: profile.username,
           serverConnected: true,
           stack: onSeed ? ([{ name: "chats" }] as Screen[]) : st.stack,
+          me: {
+            ...st.me,
+            username: profile.username || st.me.username,
+            displayName: profile.displayName || st.me.displayName,
+            firstName: firstName || st.me.firstName,
+            lastName: rest.join(" ") || st.me.lastName,
+            avatar: profile.avatarUrl || st.me.avatar,
+            bio: profile.bio || st.me.bio,
+          },
+          requests: [],
+          intros: [],
         };
       });
       void get().syncBusinessContexts();
+      void get().refreshIncomingRequests();
       const { flushAllOutbox } = await import("./messaging/flush-outbox");
       await flushAllOutbox(get as never, set as never);
     } catch (err) {
@@ -960,23 +1007,53 @@ export const useWippStore = create<Store>((set, get) => ({
     get().push({ name: "conversation", chatId: chat.id });
     return chat.id;
   },
-  connectWith: (userId) => {
+  connectWith: (userId, via) => {
     const user = get().users[userId];
     if (!user) return;
     if (user.connected) {
       get().openOrCreateDm(userId);
       return;
     }
-    if (user.username && get().serverConnected) {
-      void get().openServerDm(user.username);
-      return;
-    }
     if (get().sentRequestIds.includes(userId)) return;
     set((s) => ({ sentRequestIds: [...s.sentRequestIds, userId] }));
+    if (user.username && get().serverConnected) {
+      void (async () => {
+        const { sendRequest, STATUS_FR } = await import("./connections");
+        const channel = via === "qr" ? "qr" : "request";
+        const status = await sendRequest(user.username, channel);
+        if (status === "already_connected" || status === "accepted_existing" || status === "accepted") {
+          set((s) => ({
+            users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
+            sentRequestIds: s.sentRequestIds.filter((id) => id !== userId),
+          }));
+          return;
+        }
+        if (status === "sent" || status === "already_pending") return;
+        set((s) => ({ sentRequestIds: s.sentRequestIds.filter((id) => id !== userId) }));
+        console.warn("[wipp] connection request", STATUS_FR[status] ?? status);
+      })();
+    }
   },
   acceptRequest: (id) => {
     const req = get().requests.find((r) => r.id === id);
     if (!req) return;
+    if (get().serverConnected) {
+      void (async () => {
+        const { respondRequest } = await import("./connections");
+        const status = await respondRequest(id, "accept");
+        if (status === "accepted" || status === "already_handled") {
+          set((s) => ({
+            requests: s.requests.filter((r) => r.id !== id),
+            users: {
+              ...s.users,
+              [req.fromId]: s.users[req.fromId] ? { ...s.users[req.fromId], connected: true } : s.users[req.fromId],
+            },
+          }));
+          await get().refreshIncomingRequests();
+        }
+      })();
+      return;
+    }
     set((s) => ({
       requests: s.requests.map((r) => (r.id === id ? { ...r, status: "accepted" } : r)),
       users: {
@@ -985,6 +1062,78 @@ export const useWippStore = create<Store>((set, get) => ({
       },
     }));
     get().openOrCreateDm(req.fromId);
+  },
+  ignoreRequest: (id) => {
+    if (get().serverConnected) {
+      void (async () => {
+        const { respondRequest } = await import("./connections");
+        await respondRequest(id, "ignore");
+        set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
+        await get().refreshIncomingRequests();
+      })();
+      return;
+    }
+    set((s) => ({
+      requests: s.requests.map((r) => (r.id === id ? { ...r, status: "ignored" } : r)),
+    }));
+  },
+  declineRequest: (id) => {
+    if (!get().serverConnected) {
+      get().ignoreRequest(id);
+      return;
+    }
+    void (async () => {
+      const { respondRequest } = await import("./connections");
+      await respondRequest(id, "decline");
+      set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
+      await get().refreshIncomingRequests();
+    })();
+  },
+  blockUser: (userId) => {
+    const profileId = userId.startsWith("srvuser:") ? userId.slice("srvuser:".length) : userId;
+    void (async () => {
+      const { blockProfile } = await import("./connections");
+      await blockProfile(profileId);
+    })();
+    set((s) => ({
+      blockedIds: [...new Set([...s.blockedIds, userId, profileId])],
+      chats: s.chats.filter((c) => !(c.type === "dm" && c.participantIds.includes(userId))),
+      requests: s.requests.filter((r) => r.fromId !== userId),
+    }));
+    void get().refreshIncomingRequests();
+  },
+  refreshIncomingRequests: async () => {
+    if (!get().serverConnected) return;
+    try {
+      const { listIncomingRequests } = await import("./connections");
+      const { srvUserId, userFromPublic } = await import("./public-profiles");
+      const items = await listIncomingRequests();
+      set((s) => {
+        const users = { ...s.users };
+        const requests = items.map((r) => {
+          const id = srvUserId(r.sender.id);
+          users[id] = userFromPublic(
+            {
+              id: r.sender.id,
+              username: r.sender.username,
+              displayName: r.sender.displayName,
+              avatarUrl: r.sender.avatarUrl,
+            },
+            false,
+          );
+          return {
+            id: r.id,
+            fromId: id,
+            preview: "veut se connecter avec toi",
+            createdAt: Date.parse(r.createdAt) || Date.now(),
+            status: "pending" as const,
+          };
+        });
+        return { users, requests, intros: [] };
+      });
+    } catch (err) {
+      console.warn("[wipp] incoming requests failed", err);
+    }
   },
   ensureMyCode: () => {
     const existing = get().codes.find((c) => c.ownerId === "me" && c.expiresAt > Date.now());
@@ -1125,10 +1274,6 @@ export const useWippStore = create<Store>((set, get) => ({
       .chats.filter((c) => c.ephemeral && !c.sealed && c.expiresAt && c.expiresAt <= now)
       .forEach((c) => get().sealChat(c.id));
   },
-  ignoreRequest: (id) =>
-    set((s) => ({
-      requests: s.requests.map((r) => (r.id === id ? { ...r, status: "ignored" } : r)),
-    })),
   viewStory: (userId) =>
     set((s) => ({ viewedStories: { ...s.viewedStories, [userId]: Date.now() } })),
   createGroup: (name, participantIds) => {

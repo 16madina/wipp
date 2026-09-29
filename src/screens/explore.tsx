@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image } from "expo-image";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { Calendar, ChevronLeft, Cross, Plus, Store, Tag } from "lucide-react-native";
@@ -8,6 +8,7 @@ import { useDeviceLayout } from "../lib/device-layout";
 import { formatMeters, metersBetween } from "../lib/format";
 import { SHOP_CAT_KEYS } from "../lib/i18n";
 import { useT, useWippStore } from "../lib/store";
+import { cardToShop, listPublicBusinessCards } from "../lib/business-card";
 import type { Listing, Shop, ShopCategory } from "../lib/types";
 import { colors, layout } from "../theme";
 
@@ -27,6 +28,20 @@ export function ExploreScreen() {
   const [q, setQ] = useState("");
   const query = q.trim();
   const searching = query.length >= 2;
+  useEffect(() => {
+    if (hub !== "shops") return;
+    void (async () => {
+      try {
+        const cards = await listPublicBusinessCards();
+        const mapped = cards.map((c) => cardToShop(c));
+        useWippStore.setState((s) => ({
+          shops: [...s.shops.filter((x) => !x.id.startsWith("business:")), ...mapped],
+        }));
+      } catch {
+        /* offline */
+      }
+    })();
+  }, [hub]);
   const destTitle =
     hub === "listings" ? t("hubListings") : hub === "utilities" ? t("hubServices") : hub === "shops" ? t("hubShops") : hub === "lifestyle" ? t("hubEvents") : t("exploreTitle");
   return (
@@ -67,7 +82,8 @@ export function ExploreScreen() {
             ))}
           </ScrollView>
         ) : null}
-        {searching ? <ExploreSearch q={query} /> : null}
+        {searching && hub === "shops" ? <ShopSearch q={query} /> : null}
+        {searching && hub !== "shops" ? <ExploreSearch q={query} /> : null}
         {!searching && hub === "home" ? <ExploreHome go={setHub} /> : null}
         {!searching && hub === "listings" ? <ListingsPane cat={cat} /> : null}
         {!searching && hub === "utilities" ? <UtilitiesPane /> : null}
@@ -84,7 +100,9 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
   const hubW = tile(2, 16, 12);
   const lang = useWippStore((s) => s.language);
   const listings = useWippStore((s) => s.listings);
-  const shops = useWippStore((s) => s.shops);
+  const allShops = useWippStore((s) => s.shops);
+  const realShops = allShops.filter((s) => s.id.startsWith("business:"));
+  const shops = realShops.length ? realShops : allShops;
   const events = useWippStore((s) => s.lifestyle);
   const pharmacies = useWippStore((s) => s.pharmacies);
   const push = useWippStore((s) => s.push);
@@ -95,7 +113,12 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
       title: s.name,
       sub: shopCatLabel(s.category, t),
       image: s.image,
-      onPress: () => push({ name: "shop" as const, shopId: s.id }),
+      onPress: () =>
+        push(
+          s.id.startsWith("business:")
+            ? { name: "business-card-view" as const, publicId: s.handle }
+            : { name: "shop" as const, shopId: s.id },
+        ),
     })),
     ...events.map((e) => ({
       key: `e-${e.id}`,
@@ -217,12 +240,35 @@ function UtilitiesPane() {
   );
 }
 
+function fold(s: string) {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function ShopSearch({ q }: { q: string }) {
+  const cards = useWippStore((s) => s.shops.filter((x) => x.id.startsWith("business:")));
+  const toks = fold(q).split(/[^a-z0-9]+/).filter((t) => t.length >= 2);
+  const hits = cards.filter((s) => {
+    const blob = fold(`${s.name} ${s.category} ${s.bio} ${s.city} ${(s.tags ?? []).join(" ")}`);
+    return toks.every((t) => blob.includes(t)) || toks.some((t) => blob.includes(t));
+  });
+  return (
+    <View style={{ paddingHorizontal: 16 }}>
+      {hits.map((s) => <ShopRow key={s.id} shop={s} />)}
+      {hits.length === 0 ? <Empty title="Aucun résultat" /> : null}
+    </View>
+  );
+}
+
 function ShopRow({ shop }: { shop: Shop }) {
   const t = useT();
   const push = useWippStore((s) => s.push);
-  const src = wippSrc(shop.image);
+  const src = shop.image?.startsWith("http") ? { uri: shop.image } : wippSrc(shop.image);
+  const publicId = shop.id.startsWith("business:") ? shop.handle : shop.id;
   return (
-    <Press onPress={() => push({ name: "shop", shopId: shop.id })} style={{ flexDirection: "row", gap: 12, paddingVertical: 10 }}>
+    <Press
+      onPress={() => push(shop.id.startsWith("business:") ? { name: "business-card-view", publicId } : { name: "shop", shopId: shop.id })}
+      style={{ flexDirection: "row", gap: 12, paddingVertical: 10 }}
+    >
       {src ? <Image source={src} style={{ width: 64, height: 64, borderRadius: 10 }} contentFit="cover" /> : <View style={{ width: 64, height: 64, borderRadius: 10, backgroundColor: colors.navy }} />}
       <View style={{ flex: 1 }}>
         <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{shop.name}</Text>
@@ -233,13 +279,46 @@ function ShopRow({ shop }: { shop: Shop }) {
 }
 
 function ShopsPane() {
-  const shops = useWippStore((s) => s.shops);
+  const t = useT();
   const push = useWippStore((s) => s.push);
+  const [cat, setCat] = useState<ShopCategory | "all">("all");
+  const shops = useWippStore((s) => s.shops.filter((x) => x.id.startsWith("business:")));
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const cards = await listPublicBusinessCards();
+        const mapped = cards.map((c) => cardToShop(c));
+        useWippStore.setState((s) => ({
+          shops: [...s.shops.filter((x) => !x.id.startsWith("business:")), ...mapped],
+        }));
+      } catch {
+        /* offline */
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+  const shown = shops.filter((s) => cat === "all" || s.category === cat);
+  const cats: { id: ShopCategory | "all"; label: string }[] = [
+    { id: "all", label: t("all") },
+    { id: "nails", label: t("shopCatNails") },
+    { id: "restaurant", label: t("shopCatRestaurant") },
+    { id: "hair", label: t("shopCatHair") },
+    { id: "beauty", label: t("shopCatBeauty") },
+    { id: "cafe", label: t("shopCatCafe") },
+    { id: "services", label: t("shopCatServices") },
+  ];
   return (
     <View style={{ paddingHorizontal: 16 }}>
-      <PendingNote label="Cartes professionnelles publiques (Supabase)" />
-      <Btn label="Créer une boutique" onPress={() => push({ name: "create-shop" })} style={{ marginBottom: 12 }} />
-      {shops.map((s) => <ShopRow key={s.id} shop={s} />)}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+        {cats.map((c) => (
+          <Chip key={c.id} label={c.label} active={cat === c.id} onPress={() => setCat(c.id)} />
+        ))}
+      </ScrollView>
+      <Btn label="Créer ma carte professionnelle" onPress={() => push({ name: "business-card" })} style={{ marginBottom: 12 }} />
+      {shown.map((s) => <ShopRow key={s.id} shop={s} />)}
+      {loaded && shown.length === 0 ? <Empty title="Aucune boutique pour le moment" /> : null}
     </View>
   );
 }
@@ -328,7 +407,7 @@ export function ShopScreen({ shopId }: { shopId: string }) {
           <Text style={{ marginTop: 8, color: colors.fg }}>{shop.bio}</Text>
           <Text style={{ marginTop: 8, color: colors.muted }}>{shop.hours}</Text>
           <Btn
-            label="Écrire à la boutique"
+            label="Écrire sur WIPP"
             onPress={() => {
               if (shop.id.startsWith("business:")) {
                 void useWippStore.getState().openBusinessChat(shop.handle);
@@ -338,7 +417,12 @@ export function ShopScreen({ shopId }: { shopId: string }) {
             }}
             style={{ marginTop: 20 }}
           />
-          <Btn label="Carte professionnelle" variant="secondary" onPress={() => push({ name: "business-card-view", publicId: shop.id })} style={{ marginTop: 8 }} />
+          <Btn
+            label="Carte professionnelle"
+            variant="secondary"
+            onPress={() => push({ name: "business-card-view", publicId: shop.id.startsWith("business:") ? shop.handle : shop.id })}
+            style={{ marginTop: 8 }}
+          />
         </View>
       </ScrollView>
     </ScreenRoot>

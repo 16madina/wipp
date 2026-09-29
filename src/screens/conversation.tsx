@@ -18,7 +18,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Sticker, Video, X } from "lucide-react-native";
+import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Sticker, Store, Video, X } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { MediaViewer } from "../components/MediaViewer";
 import { MessageMenu } from "../components/MessageMenu";
@@ -281,14 +281,20 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   }
   const peer = chatPeer(chat, users);
   const sealed = isChatSealed(chat);
-  const title = chat.type === "group" ? chat.name : shop && shop.ownerId !== "me" ? shop.name : peer?.displayName;
+  const mineShop = Boolean(shop && shop.ownerId === "me");
+  const shopFace = shop ? { displayName: shop.name, avatar: shop.logo || shop.image, online: true } : undefined;
+  const title = chat.type === "group" ? chat.name : shop && !mineShop ? shop.name : peer?.displayName;
   const subtitle = typing
     ? "écrit…"
     : chat.type === "group"
       ? `${chat.participantIds.length} personnes`
-      : peer
-        ? formatLastSeen(peer.lastSeen, peer.online, useWippStore.getState().language)
-        : undefined;
+      : shop
+        ? mineShop
+          ? `${shop.name} · Professionnel`
+          : "Professionnel"
+        : peer
+          ? formatLastSeen(peer.lastSeen, peer.online, useWippStore.getState().language)
+          : undefined;
   const canCall = Boolean(peer) && !sealed;
   const chats = useWippStore
     .getState()
@@ -501,6 +507,11 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 void openViewOnce(m);
                 return;
               }
+              if (m.type === "shop" && m.shopId) {
+                const publicId = m.shopId.replace(/^business:/, "");
+                push({ name: "business-card-view", publicId });
+                return;
+              }
               if (m.type === "sticker" && m.stickerId) {
                 playMoment(m.stickerId);
                 return;
@@ -566,7 +577,19 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 </View>
               ) : null}
               {m.type === "scratch" ? <SurpriseReveal surprise={surpriseFromMessage(m)} onReveal={() => useWippStore.getState().markScratch(chatId, m.id)} /> : null}
-              {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.text ? (
+              {m.type === "shop" ? (
+                <View style={{ width: 220 }}>
+                  {m.imageUrl ? <Image source={{ uri: m.imageUrl }} style={{ width: "100%", height: 110, borderRadius: 10, marginBottom: 8 }} contentFit="cover" /> : (
+                    <View style={{ height: 72, borderRadius: 10, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+                      <Store size={28} color={colors.accent} />
+                    </View>
+                  )}
+                  <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{m.text}</Text>
+                  <Text style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>Carte professionnelle</Text>
+                  <Text style={{ marginTop: 8, color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
+                </View>
+              ) : null}
+              {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.type !== "shop" && m.text ? (
                 <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : m.text}</Text>
               ) : null}
               {m.encFailed && !m.text ? <Text style={{ color: colors.muted }}>🔒 Message chiffré</Text> : null}
@@ -608,7 +631,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 {chat.type === "group" ? (
                   <GroupAvatar users={chat.participantIds.filter((id) => id !== "me").map((id) => users[id])} size={32} fallback={chat.avatar} />
                 ) : (
-                  <Avatar user={peer} size={32} />
+                  <Avatar user={shop && !mineShop && shopFace ? shopFace : peer} size={32} />
                 )}
                 <View style={{ minWidth: 0, flexShrink: 1, flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4, minWidth: 0 }}>
@@ -648,13 +671,6 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           }
         />
       </GlassHeader>
-      {shop ? (
-        <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 999, backgroundColor: colors.navy, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Text style={{ fontSize: 11, color: colors.accent }}>
-            {shop.ownerId === "me" ? `${peer?.displayName ?? "Client"} · ${shop.name}` : `${shop.name} · Professionnel`}
-          </Text>
-        </View>
-      ) : null}
       {pinned.length ? (
         <Press onPress={() => jumpTo(pinned[0]!.id)} style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 10, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 8 }}>
           <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 13 }}>

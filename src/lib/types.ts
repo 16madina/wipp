@@ -189,7 +189,7 @@ export type Screen =
   | { name: "call-link" }
   | { name: "connect" }
   | { name: "my-qr" }
-  | { name: "scanner" }
+  | { name: "scanner"; error?: string }
   | { name: "search-user" }
   | { name: "nearby" }
   | { name: "found-profile"; userId: string; via?: FoundVia }

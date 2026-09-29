@@ -3,12 +3,16 @@ import { Share, Text, View, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
+import { LiveScanner } from "../components/LiveScanner";
 import { WippMark, WippWordmark, TouchHero } from "../components/Logo";
 import { QrCard } from "../components/QrCard";
 import { Btn, Chip, Empty, GlassHeader, Header, PendingNote, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
-import { profileQr } from "../lib/qr-payload";
-import { APP_HOST } from "../lib/utils";
+import { getRelation, type Relation } from "../lib/connections";
+import { openResolvedQr } from "../lib/deep-links";
+import { searchPublicProfiles, upsertRemoteProfile } from "../lib/public-profiles";
+import { profileQr, tempQr } from "../lib/qr-payload";
+import { issueTemp } from "../lib/qr-remote";
 import { useDeviceLayout } from "../lib/device-layout";
 import { useT, useWippStore } from "../lib/store";
 import type { FoundVia, NearbyMode } from "../lib/types";
@@ -106,9 +110,43 @@ export function MyQrScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const me = useWippStore((s) => s.me);
+  const username = useWippStore((s) => s.serverUsername || s.me.username);
   const [copied, setCopied] = useState(false);
-  const qrValue = profileQr(me.username);
-  const link = qrValue.replace(/^https?:\/\//, "");
+  const [temp, setTemp] = useState<{ token: string; expiresAt: number } | null>(null);
+  const [expired, setExpired] = useState(false);
+  const [tempErr, setTempErr] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!temp) return;
+    const id = setInterval(() => {
+      const n = Date.now();
+      setNow(n);
+      if (n >= temp.expiresAt) {
+        setTemp(null);
+        setExpired(true);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [temp]);
+  async function renewTemp() {
+    setExpired(false);
+    setTemp(null);
+    try {
+      const r = await issueTemp();
+      if ("error" in r) {
+        setTempErr(r.error === "no_session" ? "Connecte-toi avec un vrai compte pour un QR temporaire." : "QR temporaire indisponible, réessaie.");
+      } else {
+        setTempErr(null);
+        setTemp(r);
+        setNow(Date.now());
+      }
+    } catch {
+      setTempErr("QR temporaire indisponible, réessaie.");
+    }
+  }
+  const left = temp ? Math.max(0, Math.ceil((temp.expiresAt - now) / 1000)) : 0;
+  const qrValue = temp ? tempQr(temp.token) : profileQr(username);
+  const link = qrValue.replace(/^https?:\/\//, "").replace(/\/t\/.{8}.*/, "/t/…");
   return (
     <View style={{ flex: 1, backgroundColor: colors.navy }}>
       <GlassHeader>
@@ -120,32 +158,48 @@ export function MyQrScreen() {
           <Avatar user={me} size={72} />
         </View>
         <Text style={{ marginTop: 12, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
-        <Text style={{ fontSize: 14, color: "rgba(247,249,252,0.6)" }}>@{me.username}</Text>
-        <View style={{ marginTop: 20 }}>
-          <QrCard value={qrValue} size={220} />
-        </View>
+        <Text style={{ fontSize: 14, color: "rgba(247,249,252,0.6)" }}>@{username}</Text>
+        {expired ? (
+          <View style={{ marginTop: 20, width: "100%", alignItems: "center" }}>
+            <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>QR expiré</Text>
+            <Btn label="Générer un nouveau QR" onPress={() => void renewTemp()} style={{ marginTop: 12, alignSelf: "stretch" }} />
+          </View>
+        ) : (
+          <View style={{ marginTop: 20 }}>
+            <QrCard value={qrValue} size={220} />
+          </View>
+        )}
+        {tempErr && !temp ? <Text style={{ marginTop: 12, color: colors.danger }}>{tempErr}</Text> : null}
+        {temp ? (
+          <Text style={{ marginTop: 12, fontFamily: "Inter_500Medium", color: colors.accent }}>
+            Expire dans {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
+          </Text>
+        ) : null}
         <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: "rgba(247,249,252,0.6)", maxWidth: 280 }}>
-          Ce QR ne contient ni ton numéro, ni ton e-mail.
+          {temp ? "QR temporaire : usage unique." : "Ce QR ne contient ni ton numéro, ni ton e-mail."}
         </Text>
         <Text style={{ marginTop: 4, fontSize: 12, color: "rgba(247,249,252,0.4)" }}>{link}</Text>
         <View style={{ width: "100%", marginTop: 20 }}>
           <Btn
             label={copied ? t("copied") : "Partager mon WIPP"}
             onPress={() => {
-              void Share.share({ message: `@${me.username} https://${APP_HOST}/@${me.username}` });
+              void Share.share({ message: `@${username} https://wippapp.com/@${username}` });
               setCopied(true);
             }}
           />
         </View>
         <View style={{ width: "100%", marginTop: 8, flexDirection: "row", gap: 8 }}>
           <View style={{ flex: 1 }}>
-            <Btn label="Enregistrer" variant="secondary" onPress={() => {}} />
+            <Btn label="Enregistrer" variant="secondary" onPress={() => void Share.share({ message: qrValue })} />
           </View>
           <View style={{ flex: 1 }}>
-            <Btn label="QR temporaire" variant="secondary" onPress={() => {}} />
+            <Btn
+              label={temp ? "QR permanent" : "QR temporaire"}
+              variant="secondary"
+              onPress={() => (temp ? setTemp(null) : void renewTemp())}
+            />
           </View>
         </View>
-        <PendingNote label="QR temporaire serveur" />
         <View style={{ width: "100%", marginTop: 8 }}>
           <Btn label={t("wgoTouch")} variant="secondary" onPress={() => push({ name: "wgo-touch" })} />
         </View>
@@ -154,31 +208,27 @@ export function MyQrScreen() {
   );
 }
 
-export function ScannerScreen() {
+export function ScannerScreen({ error }: { error?: string }) {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
-  const push = useWippStore((s) => s.push);
+  const replace = useWippStore((s) => s.replace);
   const [q, setQ] = useState("");
-  const users = useWippStore((s) => s.users);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("scan")} onBack={pop} />
       </GlassHeader>
-      <View style={{ flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
-        <View style={{ width: 240, height: 240, borderRadius: 16, borderWidth: 2, borderColor: colors.accent }} />
-        <Text style={{ marginTop: 16, color: colors.paper }}>{t("scanSub")}</Text>
-      </View>
-      <PendingNote label="Caméra / décodeur QR natif — Phase 2" />
+      <LiveScanner
+        initialError={error}
+        onFallback={(to) => replace({ name: to === "search" ? "search-user" : "my-qr" })}
+      />
+      <Text style={{ marginTop: 8, textAlign: "center", color: "rgba(247,249,252,0.6)" }}>{t("scanSub")}</Text>
       {__DEV__ ? (
         <View style={{ padding: 16 }}>
-          <SearchField value={q} onChangeText={setQ} placeholder="@username" />
+          <SearchField value={q} onChangeText={setQ} placeholder="https://wippapp.com/@username" />
           <Btn
-            label="Ouvrir le profil"
-            onPress={() => {
-              const u = Object.values(users).find((x) => x.username === q.replace(/^@/, "").toLowerCase());
-              if (u) push({ name: "found-profile", userId: u.id, via: "qr" });
-            }}
+            label="Résoudre (DEV)"
+            onPress={() => void openResolvedQr(q, "replace")}
             style={{ marginTop: 8 }}
           />
         </View>
@@ -191,47 +241,39 @@ export function SearchUserScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
+  const serverConnected = useWippStore((s) => s.serverConnected);
+  const blocked = useWippStore((s) => s.blockedIds);
   const users = useWippStore((s) => s.users);
   const [q, setQ] = useState("");
-  const needle = q.replace(/^@/, "").toLowerCase();
-  const localHits = Object.values(users).filter((u) => needle.length >= 2 && (u.username.includes(needle) || u.displayName.toLowerCase().includes(needle)));
+  const [hits, setHits] = useState<string[]>([]);
+  const needle = q.replace(/^@/, "").toLowerCase().trim();
   useEffect(() => {
-    if (needle.length < 2) return;
+    if (needle.length < 2) {
+      setHits([]);
+      return;
+    }
     const tmr = setTimeout(() => {
-      void import("../lib/messaging/client").then(async ({ searchUsers }) => {
+      void (async () => {
         try {
-          const found = await searchUsers(needle);
-          useWippStore.setState((s) => {
-            const next = { ...s.users };
-            const keys = { ...s.peerPublicKeys };
-            for (const p of found) {
-              const id = `srvuser:${p.id}`;
-              next[id] = {
-                id,
-                username: p.username,
-                firstName: p.displayName.split(" ")[0] ?? p.displayName,
-                lastName: p.displayName.split(" ").slice(1).join(" ") || "",
-                displayName: p.displayName,
-                avatar: p.avatarUrl || "",
-                bio: p.bio || "",
-                online: true,
-                connected: true,
-                city: "",
-              };
-              if (p.e2ePublicJwk) {
-                keys[id] = p.e2ePublicJwk;
-                keys[p.id] = p.e2ePublicJwk;
-              }
-            }
-            return { users: next, peerPublicKeys: keys };
-          });
+          const found = await searchPublicProfiles(needle);
+          const ids: string[] = [];
+          for (const p of found) {
+            ids.push(upsertRemoteProfile(p, false));
+          }
+          setHits(ids.filter((id) => !blocked.includes(id)));
         } catch {
-          /* offline */
+          if (!serverConnected) {
+            setHits(
+              Object.values(useWippStore.getState().users)
+                .filter((u) => u.username.includes(needle) || u.displayName.toLowerCase().includes(needle))
+                .map((u) => u.id),
+            );
+          }
         }
-      });
+      })();
     }, 280);
     return () => clearTimeout(tmr);
-  }, [needle]);
+  }, [needle, blocked, serverConnected]);
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -241,15 +283,20 @@ export function SearchUserScreen() {
         <SearchField value={q} onChangeText={setQ} placeholder="@username" />
       </View>
       <ScrollView>
-        {localHits.map((u) => (
-          <Press key={u.id} onPress={() => push({ name: "found-profile", userId: u.id, via: "username" })} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16 }}>
-            <Avatar user={u} size={48} />
-            <View>
-              <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
-              <Text style={{ color: colors.muted }}>@{u.username}</Text>
-            </View>
-          </Press>
-        ))}
+        {hits.map((id) => {
+          const u = users[id];
+          if (!u) return null;
+          return (
+            <Press key={id} onPress={() => push({ name: "found-profile", userId: id, via: "username" })} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16 }}>
+              <Avatar user={u} size={48} />
+              <View>
+                <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
+                <Text style={{ color: colors.muted }}>@{u.username}</Text>
+              </View>
+            </Press>
+          );
+        })}
+        {needle.length >= 2 && hits.length === 0 ? <Empty title={t("noResults")} /> : null}
       </ScrollView>
     </ScreenRoot>
   );
@@ -317,9 +364,24 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
   const pop = useWippStore((s) => s.pop);
   const user = useWippStore((s) => s.users[userId]);
   const sent = useWippStore((s) => s.sentRequestIds.includes(userId));
+  const blocked = useWippStore((s) => s.blockedIds.includes(userId));
   const connectWith = useWippStore((s) => s.connectWith);
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
+  const blockUser = useWippStore((s) => s.blockUser);
   const src = wippSrc(user?.avatar);
+  const [relation, setRelation] = useState<Relation>(user?.connected ? "connected" : sent ? "pending_out" : "none");
+  useEffect(() => {
+    const raw = userId.startsWith("srvuser:") ? userId.slice(8) : userId;
+    if (!raw.startsWith("p_") && !userId.startsWith("srvuser:")) return;
+    void getRelation(raw).then((r) => {
+      setRelation(r);
+      if (r === "connected") {
+        useWippStore.setState((s) => ({
+          users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
+        }));
+      }
+    });
+  }, [userId]);
   const viaLabel =
     via === "code"
       ? t("foundViaCode")
@@ -342,7 +404,9 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
       </ScreenRoot>
     );
   }
-  const connected = user.connected;
+  const connected = relation === "connected" || user.connected;
+  const pending = relation === "pending_out" || (sent && !connected);
+  const cta = blocked ? "Bloqué" : connected ? t("message") : pending ? t("requestSent") : t("connectWith");
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -356,11 +420,13 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
         <Text style={{ marginTop: 12, textAlign: "center", color: colors.muted }}>{user.bio}</Text>
         <View style={{ width: "100%", marginTop: 24, gap: 8 }}>
           <Btn
-            disabled={sent && !connected}
-            label={connected ? t("message") : sent ? t("requestSent") : t("connectWith")}
-            onPress={() => (connected ? openOrCreateDm(user.id) : connectWith(user.id))}
+            disabled={(pending && !connected) || blocked || relation === "self"}
+            label={cta}
+            onPress={() => (connected ? openOrCreateDm(user.id) : connectWith(user.id, via))}
           />
-          {!connected ? <Btn label={t("message")} variant="secondary" onPress={() => openOrCreateDm(user.id, true)} /> : null}
+          {!connected && !blocked ? (
+            <Btn label="Bloquer" variant="danger" onPress={() => { blockUser(user.id); pop(); }} />
+          ) : null}
         </View>
       </ScrollView>
     </ScreenRoot>
@@ -430,10 +496,28 @@ export function TouchIncomingScreen() {
 }
 
 export function QrProfileScreen({ handoffKey }: { handoffKey: string }) {
-  const usersById = useWippStore((s) => s.users);
-  const users = Object.values(usersById);
-  const u = users.find((x) => x.username === handoffKey) ?? users[0];
-  return <FoundProfileScreen userId={u?.id ?? "maya"} via="qr" />;
+  const [userId, setUserId] = useState<string | null>(null);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    void (async () => {
+      const { findPublicByUsername, upsertRemoteProfile } = await import("../lib/public-profiles");
+      const p = await findPublicByUsername(handoffKey);
+      if (!p) {
+        setMissing(true);
+        return;
+      }
+      setUserId(upsertRemoteProfile(p, false));
+    })();
+  }, [handoffKey]);
+  if (missing) {
+    return (
+      <ScreenRoot>
+        <Empty title="Profil introuvable" />
+      </ScreenRoot>
+    );
+  }
+  if (!userId) return <ScreenRoot><View /></ScreenRoot>;
+  return <FoundProfileScreen userId={userId} via="qr" />;
 }
 
 export function QrGroupScreen({ handoffKey }: { handoffKey: string }) {
@@ -444,7 +528,10 @@ export function QrGroupScreen({ handoffKey }: { handoffKey: string }) {
       <GlassHeader>
         <Header title="Groupe" onBack={pop} />
       </GlassHeader>
-      <PendingNote label={`Invitation ${handoffKey}`} />
+      <PendingNote label={`Invitation reconnue · ${handoffKey.slice(0, 8)}…`} />
+      <Text style={{ paddingHorizontal: 16, color: colors.muted, fontSize: 13 }}>
+        Les groupes restent partiels dans cette version. Le QR a bien été reconnu.
+      </Text>
       <Btn label="Ouvrir l’invitation" onPress={() => push({ name: "group-invite", token: handoffKey })} style={{ margin: 16 }} />
     </ScreenRoot>
   );

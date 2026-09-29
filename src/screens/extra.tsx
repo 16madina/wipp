@@ -7,7 +7,8 @@ import { QrCard } from "../components/QrCard";
 import { Btn, Chip, GlassHeader, Header, PendingNote, Press, ScreenRoot } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { isStoryLive } from "../lib/types";
-import { profileQr } from "../lib/qr-payload";
+import { tempQr } from "../lib/qr-payload";
+import { issueTemp } from "../lib/qr-remote";
 import { useT, useWippStore } from "../lib/store";
 import { colors } from "../theme";
 
@@ -346,14 +347,61 @@ export function LiveCodeScreen() {
 
 export function OneTimeQrScreen() {
   const pop = useWippStore((s) => s.pop);
-  const me = useWippStore((s) => s.me);
+  const [temp, setTemp] = useState<{ token: string; expiresAt: number } | null>(null);
+  const [expired, setExpired] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  async function issue() {
+    setExpired(false);
+    try {
+      const r = await issueTemp();
+      if ("error" in r) setErr(r.error === "no_session" ? "Connecte-toi avec un vrai compte." : "QR temporaire indisponible.");
+      else {
+        setErr(null);
+        setTemp(r);
+        setNow(Date.now());
+      }
+    } catch {
+      setErr("QR temporaire indisponible.");
+    }
+  }
+  useEffect(() => {
+    void issue();
+  }, []);
+  useEffect(() => {
+    if (!temp) return;
+    const id = setInterval(() => {
+      const n = Date.now();
+      setNow(n);
+      if (n >= temp.expiresAt) {
+        setTemp(null);
+        setExpired(true);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [temp]);
+  const left = temp ? Math.max(0, Math.ceil((temp.expiresAt - now) / 1000)) : 0;
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="QR unique" onBack={pop} />
       </GlassHeader>
       <View style={{ alignItems: "center", padding: 24 }}>
-        <QrCard value={profileQr(me.username)} size={200} />
+        {expired ? (
+          <>
+            <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>QR expiré</Text>
+            <Btn label="Générer un nouveau QR" onPress={() => void issue()} style={{ marginTop: 16, alignSelf: "stretch" }} />
+          </>
+        ) : temp ? (
+          <>
+            <QrCard value={tempQr(temp.token)} size={200} />
+            <Text style={{ marginTop: 12, color: colors.accent }}>
+              Expire dans {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
+            </Text>
+          </>
+        ) : (
+          <Text style={{ color: colors.muted }}>{err ?? "Génération…"}</Text>
+        )}
       </View>
     </ScreenRoot>
   );

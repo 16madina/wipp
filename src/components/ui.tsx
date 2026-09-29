@@ -375,11 +375,17 @@ export function Field({
   value,
   onChangeText,
   placeholder,
+  multiline,
+  keyboardType,
+  autoCapitalize,
 }: {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
+  multiline?: boolean;
+  keyboardType?: "default" | "phone-pad" | "url" | "email-address";
+  autoCapitalize?: "none" | "sentences" | "words";
 }) {
   return (
     <View>
@@ -389,14 +395,19 @@ export function Field({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.muted}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
         style={{
-          height: 48,
+          minHeight: multiline ? 88 : 48,
           borderRadius: 8,
           paddingHorizontal: 16,
+          paddingVertical: multiline ? 12 : 0,
           fontSize: 15,
           color: colors.fg,
           backgroundColor: colors.surface2,
           fontFamily: "Inter_400Regular",
+          textAlignVertical: multiline ? "top" : "center",
         }}
       />
     </View>

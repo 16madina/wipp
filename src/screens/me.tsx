@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Alert, ScrollView, Share, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Share, Text, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import {
   BadgeCheck,
   Bell,
@@ -7,10 +8,12 @@ import {
   CalendarDays,
   Camera,
   ChevronRight,
+  Clock,
   FileText,
   Globe,
   Hand,
   HelpCircle,
+  ImagePlus,
   Lock,
   LogOut,
   MapPin,
@@ -23,14 +26,30 @@ import {
   Shield,
   Smartphone,
   Sparkles,
+  Store,
   Tag,
   User,
   UserPlus,
 } from "lucide-react-native";
+import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
 import { WippWordmark } from "../components/Logo";
-import { Btn, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, Section, Toggle } from "../components/ui";
+import { QrCard } from "../components/QrCard";
+import { Btn, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
 import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
+import { COUNTRIES } from "../lib/countries";
+import {
+  CARD_CATEGORIES,
+  cardLink,
+  cardToShop,
+  getMyBusinessCard,
+  getPublicBusinessCard,
+  saveMyBusinessCard,
+  uploadBusinessImage,
+  type BusinessCardView,
+  type CardInput,
+} from "../lib/business-card";
+import { businessQr } from "../lib/qr-payload";
 import { TAKEN_USERNAMES } from "../lib/seed";
 import { APP_HOST } from "../lib/utils";
 import { useT, useWippStore } from "../lib/store";
@@ -476,53 +495,467 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
 export function BusinessCardScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
-  const me = useWippStore((s) => s.me);
+  const [card, setCard] = useState<BusinessCardView | null | undefined>(undefined);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    void (async () => {
+      try {
+        const result = await getMyBusinessCard();
+        setCard(result.card);
+      } catch {
+        setCard(null);
+        setError("Connecte-toi pour créer ta carte professionnelle.");
+      }
+    })();
+  }, []);
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Ma carte de visite" onBack={pop} />
+        <Header title={card?.name || "Ma carte de visite"} onBack={pop} />
       </GlassHeader>
-      <View style={{ padding: 16, alignItems: "center" }}>
-        <Avatar user={me} size={72} />
-        <Text style={{ marginTop: 12, fontSize: 20, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{me.displayName}</Text>
-        <Text style={{ color: colors.muted }}>{me.bio}</Text>
-        <Btn label="Modifier" onPress={() => push({ name: "business-card-editor" })} style={{ marginTop: 20, alignSelf: "stretch" }} />
-      </View>
+      {card === undefined ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      ) : card ? (
+        <BusinessCardBody card={card} owner onEdit={() => push({ name: "business-card-editor" })} />
+      ) : (
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, paddingTop: 28 }}>
+          <View style={{ alignSelf: "center", width: 80, height: 80, borderRadius: 16, backgroundColor: "rgba(255,216,77,0.1)", alignItems: "center", justifyContent: "center" }}>
+            <Store size={40} color={colors.accent} />
+          </View>
+          <Text style={{ marginTop: 28, fontSize: 29, fontFamily: "Inter_600SemiBold", color: colors.fg, lineHeight: 32 }}>
+            Crée ta carte{"\n"}
+            <Text style={{ color: colors.accent }}>professionnelle</Text>
+          </Text>
+          <Text style={{ marginTop: 16, fontSize: 15, lineHeight: 22, color: "rgba(249,250,251,0.6)" }}>
+            Fais découvrir ton activité sur WIPP et permets aux gens de te contacter sans partager ton numéro personnel.
+          </Text>
+          {[
+            ["Présente ton activité", "Photos, description, horaires…"],
+            ["Partage ton QR professionnel", "À imprimer ou à partager sur WIPP."],
+            ["Reçois des messages sur WIPP", "Les personnes te contactent directement."],
+          ].map(([title, sub]) => (
+            <View key={title} style={{ marginTop: 12, flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.navy }}>
+              <View>
+                <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{title}</Text>
+                <Text style={{ marginTop: 2, fontSize: 12, color: "rgba(249,250,251,0.5)" }}>{sub}</Text>
+              </View>
+            </View>
+          ))}
+          {error ? <Text style={{ marginTop: 12, color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
+          <Btn label="Créer ma carte de visite →" onPress={() => push({ name: "business-card-editor" })} style={{ marginTop: 20 }} />
+        </ScrollView>
+      )}
     </ScreenRoot>
   );
 }
 
+type Draft = CardInput & { coverUrl: string | null; logoUrl: string | null; photoUrls: string[] };
+const emptyDraft: Draft = {
+  name: "",
+  category: "Mode & accessoires",
+  description: "",
+  country: "Canada",
+  city: "",
+  address: null,
+  showAddress: false,
+  hours: null,
+  businessPhone: null,
+  website: null,
+  coverPath: null,
+  logoPath: null,
+  photoPaths: [],
+  coverUrl: null,
+  logoUrl: null,
+  photoUrls: [],
+};
+
 export function BusinessCardEditorScreen() {
   const pop = useWippStore((s) => s.pop);
+  const replace = useWippStore((s) => s.replace);
+  const [profileId, setProfileId] = useState("");
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState("");
+  const [countryOpen, setCountryOpen] = useState(false);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await getMyBusinessCard();
+        setProfileId(r.profileId);
+        if (r.userCountry && !r.card) setDraft((d) => ({ ...d, country: r.userCountry! }));
+        if (r.card) {
+          setDraft({
+            name: r.card.name,
+            category: r.card.category,
+            description: r.card.description,
+            country: r.card.country,
+            city: r.card.city,
+            address: r.card.address,
+            showAddress: r.card.showAddress,
+            hours: r.card.hours,
+            businessPhone: r.card.businessPhone,
+            website: r.card.website,
+            coverPath: r.card.coverPath,
+            logoPath: r.card.logoPath,
+            photoPaths: r.card.photoPaths,
+            coverUrl: r.card.coverUrl,
+            logoUrl: r.card.logoUrl,
+            photoUrls: r.card.photoUrls,
+          });
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erreur");
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, []);
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  async function pick(role: "cover" | "logo" | "photo") {
+    if (!profileId) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, base64: true });
+    if (res.canceled || !res.assets[0]?.base64) return;
+    setBusy(true);
+    try {
+      const b64 = res.assets[0].base64;
+      const bin = typeof atob === "function" ? atob(b64) : Buffer.from(b64, "base64").toString("binary");
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const mime = res.assets[0].mimeType ?? "image/jpeg";
+      const media = await uploadBusinessImage(profileId, bytes, mime, role);
+      if (role === "cover") {
+        set("coverPath", media.path);
+        set("coverUrl", media.url);
+      } else if (role === "logo") {
+        set("logoPath", media.path);
+        set("logoUrl", media.url);
+      } else {
+        set("photoPaths", [...draft.photoPaths, media.path].slice(0, 8));
+        set("photoUrls", [...draft.photoUrls, media.url].slice(0, 8));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function save() {
+    setBusy(true);
+    setError("");
+    try {
+      await saveMyBusinessCard({
+        name: draft.name,
+        category: draft.category,
+        description: draft.description,
+        country: draft.country,
+        city: draft.city,
+        address: draft.address,
+        showAddress: draft.showAddress,
+        hours: draft.hours,
+        businessPhone: draft.businessPhone,
+        website: draft.website,
+        coverPath: draft.coverPath,
+        logoPath: draft.logoPath,
+        photoPaths: draft.photoPaths,
+      });
+      replace({ name: "business-card" });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Enregistrement impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (busy && !profileId) {
+    return (
+      <ScreenRoot>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      </ScreenRoot>
+    );
+  }
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Carte professionnelle" onBack={pop} />
+        <Header title="Modifier ma carte" onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Cartes publiques serveur" />
-      <View style={{ padding: 16 }}>
-        <Btn label="Enregistrer" onPress={pop} />
-      </View>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+        <Press onPress={() => void pick("cover")} style={{ height: 144, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+          {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <ImagePlus size={28} color={colors.accent} />}
+          <Text style={{ position: "absolute", bottom: 8, color: colors.paper, fontSize: 10 }}>Photo de couverture</Text>
+        </Press>
+        <Press onPress={() => void pick("logo")} style={{ marginTop: 16, width: 80, height: 80, borderRadius: 40, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+          {draft.logoUrl ? <Image source={{ uri: draft.logoUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <ImagePlus size={24} color={colors.accent} />}
+        </Press>
+        <View style={{ marginTop: 16, gap: 12 }}>
+          <Field label="Nom de l’activité *" value={draft.name} onChangeText={(v) => set("name", v)} />
+          <Text style={{ fontSize: 12, color: colors.muted }}>Catégorie *</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {CARD_CATEGORIES.map((c) => (
+              <Press
+                key={c}
+                onPress={() => set("category", c)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: draft.category === c ? colors.accent : colors.navy,
+                }}
+              >
+                <Text style={{ color: draft.category === c ? colors.accentFg : colors.fg, fontSize: 13 }}>{c}</Text>
+              </Press>
+            ))}
+          </ScrollView>
+          <Field label="Description" value={draft.description} onChangeText={(v) => set("description", v)} multiline />
+          <Press onPress={() => setCountryOpen(true)} style={{ borderRadius: 8, backgroundColor: colors.navy, padding: 16 }}>
+            <Text style={{ fontSize: 12, color: colors.muted }}>Pays *</Text>
+            <Text style={{ marginTop: 4, color: colors.fg }}>{draft.country}</Text>
+          </Press>
+          <Field label="Ville *" value={draft.city} onChangeText={(v) => set("city", v)} />
+          <Field label="Adresse (facultative)" value={draft.address ?? ""} onChangeText={(v) => set("address", v || null)} />
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 8 }}>
+            <Text style={{ color: colors.fg, fontSize: 13 }}>Publier l’adresse précise</Text>
+            <Toggle value={draft.showAddress} onChange={(v) => set("showAddress", v)} />
+          </View>
+          <Field label="Horaires (facultatifs)" value={draft.hours ?? ""} placeholder="Lun–Sam · 10 h–19 h" onChangeText={(v) => set("hours", v || null)} />
+          <Field label="Téléphone professionnel (facultatif)" value={draft.businessPhone ?? ""} keyboardType="phone-pad" onChangeText={(v) => set("businessPhone", v || null)} />
+          <Text style={{ fontSize: 11, color: "rgba(249,250,251,0.45)" }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
+          <Field label="Site web (facultatif)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
+        </View>
+        <Text style={{ marginTop: 20, marginBottom: 8, fontSize: 12, color: colors.muted }}>Photos de l’activité · {draft.photoUrls.length}/8</Text>
+        <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
+          {draft.photoUrls.map((url) => (
+            <Image key={url} source={{ uri: url }} style={{ width: 96, height: 80, borderRadius: 12 }} contentFit="cover" />
+          ))}
+          {draft.photoUrls.length < 8 ? (
+            <Press onPress={() => void pick("photo")} style={{ width: 80, height: 80, borderRadius: 12, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+              <ImagePlus size={22} color={colors.accent} />
+            </Press>
+          ) : null}
+        </ScrollView>
+        {error ? <Text style={{ marginTop: 16, color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
+        <Btn label={busy ? "Enregistrement…" : "Enregistrer"} disabled={busy || !draft.name.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
+      </ScrollView>
+      <Modal visible={countryOpen} transparent animationType="slide" onRequestClose={() => setCountryOpen(false)}>
+        <Press onPress={() => setCountryOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
+          <Press onPress={() => undefined} style={{ maxHeight: "70%", backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>Choisir un pays</Text>
+            <ScrollView>
+              {COUNTRIES.map((c) => (
+                <Press
+                  key={c.id}
+                  onPress={() => {
+                    set("country", c.fr);
+                    setCountryOpen(false);
+                  }}
+                  style={{ paddingVertical: 12 }}
+                >
+                  <Text style={{ color: colors.fg }}>{c.fr}</Text>
+                </Press>
+              ))}
+            </ScrollView>
+          </Press>
+        </Press>
+      </Modal>
     </ScreenRoot>
   );
 }
 
 export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
   const pop = useWippStore((s) => s.pop);
-  const shop = useWippStore((s) => s.shops.find((s) => s.id === publicId || s.handle === publicId || s.id === `business:${publicId}`));
+  const [card, setCard] = useState<BusinessCardView | null | undefined>();
+  useEffect(() => {
+    void getPublicBusinessCard(publicId.replace(/^business:/, "")).then(setCard).catch(() => setCard(null));
+  }, [publicId]);
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={shop?.name ?? "Carte"} onBack={pop} />
+        <Header title={card?.name || "Carte professionnelle"} onBack={pop} />
       </GlassHeader>
-      <Text style={{ padding: 16, color: colors.muted }}>{shop?.bio ?? publicId}</Text>
-      <View style={{ padding: 16 }}>
-        <Btn
-          label="Écrire"
-          onPress={() => void useWippStore.getState().openBusinessChat(shop?.handle ?? publicId)}
-        />
-      </View>
+      {card ? (
+        <BusinessCardBody card={card} />
+      ) : card === null ? (
+        <Text style={{ padding: 24, textAlign: "center", color: colors.muted }}>Cette carte n’est pas disponible.</Text>
+      ) : (
+        <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+      )}
     </ScreenRoot>
+  );
+}
+
+function BusinessCardBody({
+  card,
+  owner,
+  onEdit,
+}: {
+  card: BusinessCardView;
+  owner?: boolean;
+  onEdit?: () => void;
+}) {
+  const push = useWippStore((s) => s.push);
+  const chats = useWippStore((s) => s.chats);
+  const users = useWippStore((s) => s.users);
+  const sendMessage = useWippStore((s) => s.sendMessage);
+  const [share, setShare] = useState(false);
+  const [q, setQ] = useState("");
+  const [opening, setOpening] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const link = cardLink(card.publicId);
+  const qr = businessQr(card.publicId);
+  const contacts = chats
+    .filter((c) => c.type === "dm" && !c.shopId)
+    .map((c) => {
+      const id = c.participantIds.find((x) => x !== "me");
+      return id ? { chat: c, user: users[id] } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x?.user))
+    .filter((x) => `${x.user.displayName} ${x.user.username}`.toLowerCase().includes(q.toLowerCase()))
+    .slice(0, 8);
+  async function writeOnWipp() {
+    setOpening(true);
+    setActionError("");
+    try {
+      await useWippStore.getState().openBusinessChat(card.publicId);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Impossible d’ouvrir la conversation");
+    } finally {
+      setOpening(false);
+    }
+  }
+  function shareTo(chatId: string) {
+    const shop = cardToShop(card);
+    useWippStore.setState((s) => ({
+      shops: s.shops.some((x) => x.id === shop.id) ? s.shops : [...s.shops, shop],
+    }));
+    sendMessage(chatId, { type: "shop", text: card.name, shopId: shop.id, imageUrl: shop.logo || shop.image });
+    setShare(false);
+    push({ name: "conversation", chatId });
+  }
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView>
+        <View style={{ height: 160, backgroundColor: colors.navy }}>
+          {card.coverUrl ? <Image source={{ uri: card.coverUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Store size={48} color="rgba(255,216,77,0.6)" />
+            </View>
+          )}
+        </View>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
+          <View style={{ marginTop: -24, flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
+            {card.logoUrl ? (
+              <Image source={{ uri: card.logoUrl }} style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: colors.accent }} />
+            ) : (
+              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.navy, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: colors.accent, fontSize: 20, fontFamily: "Inter_600SemiBold" }}>{card.name.slice(0, 2).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1, paddingBottom: 4 }}>
+              <Text style={{ fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{card.name}</Text>
+              <Text style={{ fontSize: 12, color: "rgba(249,250,251,0.55)" }}>{card.category}</Text>
+            </View>
+          </View>
+          <View style={{ marginTop: 20, gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <MapPin size={16} color={colors.accent} />
+              <Text style={{ color: "rgba(249,250,251,0.75)", fontSize: 12, flex: 1 }}>
+                {card.address ? `${card.address}\n${card.city}, ${card.country}` : `${card.city}, ${card.country}`}
+              </Text>
+            </View>
+            {card.hours ? (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Clock size={16} color={colors.accent} />
+                <Text style={{ color: "rgba(249,250,251,0.75)", fontSize: 12 }}>{card.hours}</Text>
+              </View>
+            ) : null}
+            {card.website ? (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Globe size={16} color={colors.accent} />
+                <Text style={{ color: "rgba(249,250,251,0.75)", fontSize: 12 }}>{card.website}</Text>
+              </View>
+            ) : null}
+          </View>
+          {card.description ? <Text style={{ marginTop: 16, fontSize: 13, lineHeight: 20, color: "rgba(249,250,251,0.8)" }}>{card.description}</Text> : null}
+          {card.photoUrls.length ? (
+            <ScrollView horizontal style={{ marginTop: 16 }} contentContainerStyle={{ gap: 8 }}>
+              {card.photoUrls.map((url) => (
+                <Image key={url} source={{ uri: url }} style={{ width: 96, height: 80, borderRadius: 8 }} contentFit="cover" />
+              ))}
+            </ScrollView>
+          ) : null}
+          {owner ? (
+            <View style={{ marginTop: 20, flexDirection: "row", gap: 12, alignItems: "center", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", paddingTop: 16 }}>
+              <QrCard value={qr} size={124} pad={5} />
+              <Text style={{ flex: 1, fontSize: 13, color: colors.fg }}>Scanner pour découvrir ma carte sur WIPP.</Text>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
+      <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", padding: 16, paddingBottom: 20, backgroundColor: colors.ink }}>
+        {actionError ? <Text style={{ marginBottom: 8, color: colors.danger, fontSize: 12 }}>{actionError}</Text> : null}
+        {owner ? (
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Btn label="Modifier" variant="secondary" onPress={onEdit} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Btn label="Partager" variant="secondary" onPress={() => setShare(true)} />
+            </View>
+          </View>
+        ) : (
+          <View style={{ gap: 8 }}>
+            <Btn label={opening ? "Ouverture…" : "Écrire sur WIPP"} disabled={opening} onPress={() => void writeOnWipp()} />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {card.businessPhone ? (
+                <View style={{ flex: 1 }}>
+                  <Btn label="Appeler" variant="secondary" onPress={() => void Linking.openURL(`tel:${card.businessPhone}`)} />
+                </View>
+              ) : null}
+              {card.address || card.city ? (
+                <View style={{ flex: 1 }}>
+                  <Btn
+                    label="Itinéraire"
+                    variant="secondary"
+                    onPress={() => void Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent([card.address, card.city, card.country].filter(Boolean).join(", "))}`)}
+                  />
+                </View>
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <Btn label="Partager" variant="secondary" onPress={() => setShare(true)} />
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+      <Modal visible={share} transparent animationType="slide" onRequestClose={() => setShare(false)}>
+        <Press onPress={() => setShare(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
+          <Press onPress={() => undefined} style={{ maxHeight: "70%", backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>Partager ma carte professionnelle</Text>
+            <SearchField value={q} onChangeText={setQ} placeholder="Rechercher un contact" />
+            <ScrollView horizontal contentContainerStyle={{ gap: 12, marginTop: 12 }}>
+              {contacts.map(({ chat, user }) => (
+                <Press key={chat.id} onPress={() => shareTo(chat.id)} style={{ width: 56, alignItems: "center" }}>
+                  <Avatar user={user} size={46} />
+                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 10, color: colors.fg }}>{user.firstName}</Text>
+                </Press>
+              ))}
+            </ScrollView>
+            <Press onPress={() => void Share.share({ message: `Découvre ${card.name} sur WIPP ${link}` })} style={{ marginTop: 16, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Share2 size={20} color={colors.accent} />
+              <Text style={{ color: colors.fg }}>Partager le lien professionnel</Text>
+            </Press>
+            <Press onPress={() => void Share.share({ message: qr })} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <QrCode size={20} color={colors.accent} />
+              <Text style={{ color: colors.fg }}>Partager le QR</Text>
+            </Press>
+          </Press>
+        </Press>
+      </Modal>
+    </View>
   );
 }
 
