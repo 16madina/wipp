@@ -448,7 +448,7 @@ export function ShareSurpriseSheet({
                             style={{
                               flex: 1,
                               minWidth: 0,
-                              height: layout.surpriseOptionHeight,
+                              minHeight: 168,
                               borderRadius: 12,
                               padding: 10,
                               backgroundColor: colors.shareTile,
@@ -460,7 +460,7 @@ export function ShareSurpriseSheet({
                             <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, alignItems: "center", justifyContent: "center" }}>
                               <item.Icon size={16} color={colors.surpriseBright} />
                             </View>
-                            {art ? <Image source={art} style={{ width: "100%", height: layout.surpriseArtworkHeight, alignSelf: "center" }} contentFit="contain" /> : null}
+                            {art ? <Image source={art} style={{ width: "100%", height: 64, alignSelf: "center" }} contentFit="contain" /> : null}
                             <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }} numberOfLines={1}>
                               {item.title}
                             </Text>
