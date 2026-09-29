@@ -4,9 +4,10 @@ import { Text, View } from "react-native";
 import { Sparkles } from "lucide-react-native";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, findDesign, surpriseKindArt, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
-import { colors, layout } from "../theme";
+import { colors } from "../theme";
 import { Press } from "./ui";
 import { ScratchFoil } from "./ScratchFoil";
+import { GiftParcel } from "./GiftParcel";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 
 const MOTIFS: Record<string, string> = {
@@ -38,13 +39,12 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
   const started = useRef(false);
   const finish = useCallback(() => setPlaying(false), []);
   const art = wippSrc(surpriseKindArt[surprise.surpriseType]);
-  const gift = wippSrc("fx/surprise/cadeau.jpg");
   const design = findDesign(surprise.surpriseType, surprise.designId);
   const foil = wippSrc(design?.art) ?? wippSrc("fx/surprise/carte.jpg");
   const anim = findAnimation(surprise.animationId);
   const animSrc = anim ? wippSrc(anim.art) : undefined;
-  const cardW = layout.surpriseCardWidth;
-  const cardH = layout.surpriseCardHeight;
+  const cardW = 214;
+  const cardH = 248;
   const [box, setBox] = useState({ w: cardW, h: cardH });
 
   function playChosenAnimation() {
@@ -112,37 +112,25 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
         ) : null}
 
         {phase === "sealed" ? (
-          <Press onPress={() => (scratch ? setPhase("scratch") : showMessage())} style={{ flex: 1 }}>
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              {scratch && gift ? (
-                <Image source={gift} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="cover" />
-              ) : art ? (
-                <Image source={art} style={{ width: 96, height: 96 }} contentFit="contain" />
-              ) : (
-                <Sparkles size={36} color={colors.surpriseBright} />
-              )}
-              <Text
-                style={{
-                  fontFamily: "GreatVibes_400Regular",
-                  fontSize: 42,
-                  color: colors.surprisePaper,
-                  textShadowColor: "rgba(0,0,0,0.55)",
-                  textShadowRadius: 8,
-                }}
-              >
-                Surprise
-              </Text>
-              {surprise.surpriseType === "countdown" ? (
-                <Text style={{ marginTop: 4, fontSize: 22, fontFamily: "Inter_700Bold", color: colors.surpriseBright }}>
-                  {left >= 3600
-                    ? `${Math.floor(left / 3600)}:${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`
-                    : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`}
-                </Text>
-              ) : (
-                <Text style={{ marginTop: 2, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.surprisePaper }}>{hint}</Text>
-              )}
-            </View>
-          </Press>
+          scratch ? (
+            <GiftParcel onPress={() => setPhase("scratch")} />
+          ) : (
+            <Press onPress={showMessage} style={{ flex: 1 }}>
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                {art ? <Image source={art} style={{ width: 96, height: 96 }} contentFit="contain" /> : <Sparkles size={36} color={colors.surpriseBright} />}
+                <Text style={{ marginTop: 8, fontFamily: "GreatVibes_400Regular", fontSize: 34, color: colors.surpriseBright }}>Surprise</Text>
+                {surprise.surpriseType === "countdown" ? (
+                  <Text style={{ marginTop: 4, fontSize: 22, fontFamily: "Inter_700Bold", color: colors.surpriseBright }}>
+                    {left >= 3600
+                      ? `${Math.floor(left / 3600)}:${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`
+                      : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`}
+                  </Text>
+                ) : (
+                  <Text style={{ marginTop: 2, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.surprisePaper }}>{hint}</Text>
+                )}
+              </View>
+            </Press>
+          )
         ) : null}
       </View>
       {phase === "open" && surprise.animationId ? (
