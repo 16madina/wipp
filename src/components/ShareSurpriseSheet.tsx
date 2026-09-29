@@ -155,7 +155,6 @@ export function ShareSurpriseSheet({
   const [tone, setTone] = useState<(typeof TONES)[number]>("Tendre");
   const gift = wippSrc("fx/surprise/cadeau.jpg");
   const shareW = tile(3, 16, 8);
-  const kindW = tile(2, 16, 8);
   const picker = designPicker[kind];
   const PickerIcon = picker.icon;
   const selectedAnim = findAnimation(animation);
@@ -231,6 +230,7 @@ export function ShareSurpriseSheet({
         <View
           style={{
             maxHeight: "92%",
+            flexGrow: 0,
             backgroundColor: stage === "compose" ? colors.surprisePanel : "#121722",
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
@@ -326,8 +326,12 @@ export function ShareSurpriseSheet({
           ) : null}
 
           {stage === "compose" ? (
-            <View style={{ maxHeight: 640 }}>
-              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 }}>
+            <View>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                style={{ flexGrow: 0, maxHeight: 720 }}
+                contentContainerStyle={{ flexGrow: 0, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 }}
+              >
                 <View style={{ minHeight: 62, alignItems: "center", justifyContent: "center" }}>
                   <Press onPress={close} style={{ position: "absolute", left: 0, width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}>
                     <X size={18} color={colors.fg} />
@@ -431,36 +435,43 @@ export function ShareSurpriseSheet({
                 </View>
                 <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Choisis le type de surprise</Text>
                 <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Comment veux-tu révéler ton message ?</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {KINDS.map((item) => {
-                    const art = wippSrc(surpriseKindArt[item.id]);
-                    const on = kind === item.id;
-                    return (
-                      <Press
-                        key={item.id}
-                        onPress={() => chooseKind(item.id)}
-                        style={{
-                          width: kindW,
-                          height: layout.surpriseOptionHeight,
-                          borderRadius: 12,
-                          padding: 10,
-                          backgroundColor: colors.shareTile,
-                          borderWidth: on ? 1.5 : 1,
-                          borderColor: on ? colors.surpriseGold : colors.shareTileBorder,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, alignItems: "center", justifyContent: "center" }}>
-                          <item.Icon size={16} color={colors.surpriseBright} />
-                        </View>
-                        {art ? <Image source={art} style={{ width: "90%", height: layout.surpriseArtworkHeight, alignSelf: "center" }} contentFit="contain" /> : null}
-                        <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{item.title}</Text>
-                        <Text style={{ marginTop: 2, fontSize: 11, color: colors.surpriseSecondary }} numberOfLines={2}>
-                          {item.description}
-                        </Text>
-                      </Press>
-                    );
-                  })}
+                <View style={{ gap: 8 }}>
+                  {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
+                    <View key={row[0]!.id} style={{ flexDirection: "row", gap: 8 }}>
+                      {row.map((item) => {
+                        const art = wippSrc(surpriseKindArt[item.id]);
+                        const on = kind === item.id;
+                        return (
+                          <Press
+                            key={item.id}
+                            onPress={() => chooseKind(item.id)}
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              height: layout.surpriseOptionHeight,
+                              borderRadius: 12,
+                              padding: 10,
+                              backgroundColor: colors.shareTile,
+                              borderWidth: on ? 1.5 : 1,
+                              borderColor: on ? colors.surpriseGold : colors.shareTileBorder,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, alignItems: "center", justifyContent: "center" }}>
+                              <item.Icon size={16} color={colors.surpriseBright} />
+                            </View>
+                            {art ? <Image source={art} style={{ width: "100%", height: layout.surpriseArtworkHeight, alignSelf: "center" }} contentFit="contain" /> : null}
+                            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }} numberOfLines={1}>
+                              {item.title}
+                            </Text>
+                            <Text style={{ marginTop: 2, fontSize: 11, color: colors.surpriseSecondary }} numberOfLines={2}>
+                              {item.description}
+                            </Text>
+                          </Press>
+                        );
+                      })}
+                    </View>
+                  ))}
                 </View>
                 {selectedAnim ? (
                   <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -470,7 +481,7 @@ export function ShareSurpriseSheet({
                 ) : null}
                 <Press
                   onPress={() => setPreview(true)}
-                  style={{ marginTop: 14, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.surpriseLine, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+                  style={{ marginTop: 10, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.surpriseLine, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
                   <Eye size={18} color={colors.surpriseBright} />
                   <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }}>Aperçu</Text>
