@@ -14,7 +14,16 @@ export type Surprise = {
 };
 
 export type SurpriseDesignItem = { id: string; label: string; mark: string; art?: string };
-export type SurpriseAnimationItem = { id: string; label: string; art: string };
+export type SurpriseEnter = "bottom" | "left" | "right" | "pop";
+export type SurpriseAnimationItem = {
+  id: string;
+  label: string;
+  art: string;
+  /** Keyed transparent animation (webp/gif). When set, plays full-screen after the card is revealed. */
+  anim?: string;
+  enter?: SurpriseEnter;
+  durationMs?: number;
+};
 export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: string };
 
 export const designPicker: Record<SurpriseType, { label: string; icon: LucideIcon }> = {
@@ -60,8 +69,16 @@ export const countdownChoices = [
 ];
 
 export const amourAnimations: SurpriseAnimationItem[] = [
-  { id: "amour-monstre", label: "Petit monstre", art: "fx/surprise/anims/amour-monstre.png" },
-  { id: "love-hearts", label: "Cœurs", art: "fx/love/love_hearts.png" },
+  {
+    id: "amour-bisous",
+    label: "Bisous",
+    art: "fx/surprise/anims/amour-bisous.png",
+    anim: "fx/surprise/anims/amour-bisous.webp",
+    enter: "bottom",
+    durationMs: 3200,
+  },
+  { id: "amour-monstre", label: "Petit monstre", art: "fx/surprise/anims/amour-monstre.png", enter: "pop" },
+  { id: "love-hearts", label: "Cœurs", art: "fx/love/love_hearts.png", enter: "bottom" },
   { id: "love-balloons", label: "Ballons", art: "fx/love/love_balloons.png" },
   { id: "love-bouquet", label: "Bouquet", art: "fx/love/love_bouquet.png" },
   { id: "love-envelope", label: "Enveloppe", art: "fx/love/love_envelope.png" },
@@ -131,8 +148,8 @@ export const surpriseAnimations: SurpriseAnimationItem[] = [
   ...surpriseAnimationCategories.filter((item) => !item.collection),
 ];
 
-export const SURPRISE_ANIMATION_MS = 4400;
-export const SURPRISE_REVEAL_PAUSE_MS = 275;
+export const SURPRISE_ANIMATION_MS = 3200;
+export const SURPRISE_REVEAL_PAUSE_MS = 620;
 
 export const findAnimation = (id: string | null) => surpriseAnimations.find((a) => a.id === id) ?? null;
 export const findDesign = (type: SurpriseType, id: string | null) =>

@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { Animated, Modal, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Sparkles } from "lucide-react-native";
 import { wippSrc } from "../lib/assets";
-import {
-  findAnimation,
-  findDesign,
-  surpriseKindArt,
-  SURPRISE_ANIMATION_MS,
-  SURPRISE_REVEAL_PAUSE_MS,
-  type Surprise,
-} from "../lib/surprise";
+import { findAnimation, findDesign, surpriseKindArt, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
 import { colors, layout } from "../theme";
 import { Press } from "./ui";
+import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 
 const MOTIFS: Record<string, string> = {
   heart: "♥",
@@ -32,47 +26,11 @@ const MOTIFS: Record<string, string> = {
   vip: "♔",
 };
 
-function AnimationOverlay({ animationId, onDone }: { animationId: string | null; onDone: () => void }) {
-  const item = findAnimation(animationId);
-  const src = item ? wippSrc(item.art) : undefined;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.35)).current;
-  const done = useRef(onDone);
-  done.current = onDone;
-
-  useEffect(() => {
-    if (!item) return;
-    opacity.setValue(0);
-    scale.setValue(0.35);
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 420, useNativeDriver: true }),
-        Animated.delay(Math.max(0, SURPRISE_ANIMATION_MS - 1020)),
-        Animated.timing(opacity, { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 6 }),
-    ]).start();
-    const t = setTimeout(() => done.current(), SURPRISE_ANIMATION_MS + 80);
-    return () => clearTimeout(t);
-  }, [item?.id, opacity, scale]);
-
-  if (!item || !src) return null;
-
-  return (
-    <Modal visible transparent animationType="none" statusBarTranslucent>
-      <View pointerEvents="none" style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Animated.View style={{ opacity, transform: [{ scale }], width: 280, height: 280 }}>
-          <Image source={src} style={{ width: "100%", height: "100%" }} contentFit="contain" />
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
 export function SurpriseReveal({ surprise, demo = false, onReveal }: { surprise: Surprise; demo?: boolean; onReveal?: () => void }) {
   const [open, setOpen] = useState(demo);
   const [left, setLeft] = useState(surprise.surpriseOptions.countdown?.seconds ?? 10);
   const [playing, setPlaying] = useState(false);
+  const [playKey, setPlayKey] = useState(0);
   const started = useRef(false);
   const finish = useCallback(() => setPlaying(false), []);
   const art = wippSrc(surpriseKindArt[surprise.surpriseType]);
@@ -84,7 +42,10 @@ export function SurpriseReveal({ surprise, demo = false, onReveal }: { surprise:
   function playChosenAnimation() {
     if (!surprise.animationId || started.current) return;
     started.current = true;
-    setTimeout(() => setPlaying(true), SURPRISE_REVEAL_PAUSE_MS);
+    setTimeout(() => {
+      setPlayKey((n) => n + 1);
+      setPlaying(true);
+    }, SURPRISE_REVEAL_PAUSE_MS);
   }
 
   function reveal() {
@@ -163,6 +124,7 @@ export function SurpriseReveal({ surprise, demo = false, onReveal }: { surprise:
         <Press
           onPress={() => {
             if (playing) return;
+            setPlayKey((n) => n + 1);
             setPlaying(true);
           }}
           style={{ marginTop: 4, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
@@ -176,7 +138,7 @@ export function SurpriseReveal({ surprise, demo = false, onReveal }: { surprise:
           <Text style={{ color: colors.surpriseBright, fontSize: 12 }}>Animation : {anim?.label}</Text>
         </View>
       ) : null}
-      <AnimationOverlay animationId={playing ? surprise.animationId : null} onDone={finish} />
+      <SurpriseAnimOverlay animationId={playing ? surprise.animationId : null} playKey={playKey} onDone={finish} />
     </View>
   );
 }
