@@ -190,10 +190,15 @@ export async function listMessages(chatId: string, before?: number): Promise<Wip
   const me = await meId();
   let q = db.from("wipp_messages").select(MSG_COLS).eq("chat_id", chatId).order("created_at", { ascending: false }).limit(80);
   if (before) q = q.lt("created_at", new Date(before).toISOString());
-  const { data, error } = await q;
+  const [{ data, error }, { data: hides }] = await Promise.all([
+    q,
+    db.from("wipp_message_hides").select("message_id").eq("profile_id", me),
+  ]);
   if (error) throw new Error(error.message);
-  const list = ((data ?? []) as any[]).map((r) => mapMessage(r, me)).sort((a, b) => a.createdAt - b.createdAt);
-  const undelivered = (data ?? [])
+  const hideSet = new Set(((hides ?? []) as { message_id: string }[]).map((h) => h.message_id));
+  const visible = ((data ?? []) as any[]).filter((r) => !hideSet.has(r.id));
+  const list = visible.map((r) => mapMessage(r, me)).sort((a, b) => a.createdAt - b.createdAt);
+  const undelivered = visible
     .filter(
       (r: any) =>
         r.sender_id !== me &&
