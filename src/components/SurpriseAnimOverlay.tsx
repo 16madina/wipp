@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Image } from "expo-image";
-import { Animated, Modal, StyleSheet, View } from "react-native";
+import { Animated, Modal, StyleSheet, Text, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import {
   findAnimation,
@@ -18,10 +18,12 @@ function enterOffset(enter: SurpriseAnimationItem["enter"]) {
 export function SurpriseAnimOverlay({
   animationId,
   playKey = 0,
+  message,
   onDone,
 }: {
   animationId: string | null;
   playKey?: number;
+  message?: string;
   onDone: () => void;
 }) {
   const item = findAnimation(animationId);
@@ -30,6 +32,7 @@ export function SurpriseAnimOverlay({
   const translateY = useRef(new Animated.Value(520)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.72)).current;
+  const caption = useRef(new Animated.Value(0)).current;
   const done = useRef(onDone);
   done.current = onDone;
 
@@ -38,6 +41,7 @@ export function SurpriseAnimOverlay({
     const hold = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
     const from = enterOffset(item.enter);
     opacity.setValue(0);
+    caption.setValue(0);
     translateX.setValue(from.x);
     translateY.setValue(from.y);
     scale.setValue(item.enter === "pop" ? 0.2 : 0.86);
@@ -47,15 +51,19 @@ export function SurpriseAnimOverlay({
       Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 7, tension: 62 }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 6, tension: 72 }),
     ]).start();
+    const write = setTimeout(() => {
+      Animated.timing(caption, { toValue: 1, duration: 520, useNativeDriver: true }).start();
+    }, 420);
     const fadeAt = setTimeout(() => {
       Animated.timing(opacity, { toValue: 0, duration: 420, useNativeDriver: true }).start();
     }, hold);
     const end = setTimeout(() => done.current(), hold + 460);
     return () => {
+      clearTimeout(write);
       clearTimeout(fadeAt);
       clearTimeout(end);
     };
-  }, [item?.id, playKey, opacity, translateX, translateY, scale, src]);
+  }, [item?.id, playKey, opacity, caption, translateX, translateY, scale, src]);
 
   if (!item || !src) return null;
 
@@ -72,6 +80,11 @@ export function SurpriseAnimOverlay({
           ]}
         >
           <Image source={src} style={styles.anim} contentFit="contain" autoplay allowDownscaling={false} />
+          {message ? (
+            <Animated.View style={[styles.caption, { opacity: caption }]}>
+              <Text style={styles.captionText}>{message}</Text>
+            </Animated.View>
+          ) : null}
         </Animated.View>
       </View>
     </Modal>
@@ -92,5 +105,22 @@ const styles = StyleSheet.create({
   anim: {
     width: "100%",
     height: "100%",
+  },
+  caption: {
+    position: "absolute",
+    left: 28,
+    right: 28,
+    bottom: "18%",
+    alignItems: "center",
+  },
+  captionText: {
+    color: "#fffaf0",
+    fontFamily: "GreatVibes_400Regular",
+    fontSize: 42,
+    lineHeight: 48,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
 });

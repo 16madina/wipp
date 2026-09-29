@@ -491,6 +491,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       <View style={{ marginBottom: 8, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "82%", opacity: jumpId === m.id ? 0.7 : 1 }}>
         <SwipeableBubble enabled={!m.deletedForAll} onReply={() => setReply(m)}>
           <Press
+            disabled={m.type === "scratch"}
             onPress={() => {
               if (m.status === "failed" && mine) {
                 useWippStore.getState().retryMessage(chatId, m.id);
