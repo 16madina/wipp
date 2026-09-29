@@ -488,7 +488,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           ? [{ type: "video", url: m.videoUrl }]
           : [];
     return (
-      <View style={{ marginBottom: 8, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "82%", opacity: jumpId === m.id ? 0.7 : 1 }}>
+      <View style={{ marginBottom: 8, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: m.type === "scratch" ? "96%" : "82%", opacity: jumpId === m.id ? 0.7 : 1 }}>
         <SwipeableBubble enabled={!m.deletedForAll} onReply={() => setReply(m)}>
           <Press
             disabled={m.type === "scratch"}

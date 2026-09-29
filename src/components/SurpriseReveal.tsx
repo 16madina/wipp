@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { Text, View } from "react-native";
+import { Text, useWindowDimensions, View } from "react-native";
 import { Sparkles } from "lucide-react-native";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, findDesign, surpriseKindArt, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
@@ -45,7 +45,13 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
   const animSrc = anim ? wippSrc(anim.art) : undefined;
   const cardW = 214;
   const cardH = 248;
-  const [box, setBox] = useState({ w: cardW, h: cardH });
+  const { width: windowW } = useWindowDimensions();
+  // Les visuels de carte sont au format paysage (~1584×993). Un cadre carré les recadre et coupe le ruban.
+  const foilRatio = surprise.designId === "vip" ? 1536 / 1024 : 1584 / 993;
+  const landscape = scratch && phase !== "sealed";
+  const frame = Math.min(windowW, 430);
+  const openW = Math.max(260, Math.round((frame - 36) * 0.94));
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
 
   function playChosenAnimation() {
     if (!surprise.animationId || started.current) return;
@@ -80,10 +86,10 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
     <View style={{ alignItems: "center", width: "100%" }}>
       <View
         style={{
-          width: cardW,
-          maxWidth: "100%",
-          height: cardH,
-          borderRadius: 17,
+          width: landscape ? openW : cardW,
+          maxWidth: landscape ? undefined : "100%",
+          height: landscape ? openW / foilRatio : cardH,
+          borderRadius: 18,
           overflow: "hidden",
           borderWidth: 1,
           borderColor: colors.surpriseLine,
@@ -92,7 +98,7 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
         onLayout={(e) => {
           const w = e.nativeEvent.layout.width;
           const h = e.nativeEvent.layout.height;
-          if (w > 0 && h > 0) setBox({ w, h });
+          if (w > 8 && h > 8) setBox((prev) => (prev && Math.abs(prev.w - w) < 1 && Math.abs(prev.h - h) < 1 ? prev : { w, h }));
         }}
       >
         {phase === "open" || (phase === "scratch" && scratch) ? (
@@ -107,13 +113,18 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
           </View>
         ) : null}
 
-        {phase === "scratch" && scratch && foil ? (
+        {phase === "scratch" && scratch && foil && box ? (
           <ScratchFoil source={foil} width={box.w} height={box.h} onCleared={showMessage} />
         ) : null}
 
         {phase === "sealed" ? (
           scratch ? (
-            <GiftParcel onPress={() => setPhase("scratch")} />
+            <GiftParcel
+              onPress={() => {
+                setBox(null);
+                setPhase("scratch");
+              }}
+            />
           ) : (
             <Press onPress={showMessage} style={{ flex: 1 }}>
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

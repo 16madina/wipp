@@ -113,10 +113,10 @@ export function ScratchFoil({
         );
       })}
       {hint ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 14, alignItems: "center" }}>
-          <Text style={{ color: colors.surprisePaper, fontFamily: "Inter_600SemiBold", fontSize: 13, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6 }}>
-            Gratte avec le doigt
-          </Text>
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+          <View style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(8,6,4,0.42)" }}>
+            <Text style={{ color: colors.surprisePaper, fontFamily: "Inter_700Bold", fontSize: 14 }}>Gratte avec le doigt</Text>
+          </View>
         </View>
       ) : null}
     </View>
