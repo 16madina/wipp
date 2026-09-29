@@ -128,6 +128,20 @@ run("ffmpeg", [
   poster,
 ]);
 
+// ffmpeg writes an opaque white canvas. Mojis use a transparent one, otherwise the chat shows a plate.
+const webp = fs.readFileSync(out);
+let cursor = 12;
+while (cursor + 8 < webp.length) {
+  const tag = webp.toString("ascii", cursor, cursor + 4);
+  const size = webp.readUInt32LE(cursor + 4);
+  if (tag === "ANIM") {
+    webp.fill(0, cursor + 8, cursor + 14);
+    break;
+  }
+  cursor += 8 + size + (size & 1);
+}
+fs.writeFileSync(out, webp);
+
 const dur = run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", input]);
 console.log(`wrote ${out} poster ${poster} duration ${dur.stdout.trim()}s`);
 fs.rmSync(tmp, { recursive: true, force: true });

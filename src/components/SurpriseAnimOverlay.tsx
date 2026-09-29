@@ -1,20 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Image } from "expo-image";
-import { Animated, Modal, StyleSheet, Text, View } from "react-native";
+import { Animated, Text, View } from "react-native";
 import { wippSrc } from "../lib/assets";
-import {
-  findAnimation,
-  SURPRISE_ANIMATION_MS,
-  type SurpriseAnimationItem,
-} from "../lib/surprise";
+import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
-function enterOffset(enter: SurpriseAnimationItem["enter"]) {
-  if (enter === "left") return { x: -280, y: 40 };
-  if (enter === "right") return { x: 280, y: 40 };
-  if (enter === "pop") return { x: 0, y: 0 };
-  return { x: 0, y: 520 };
-}
-
+/** Plays in the message, like a moji: no plate, no full-screen cover. */
 export function SurpriseAnimOverlay({
   animationId,
   playKey = 0,
@@ -29,9 +19,7 @@ export function SurpriseAnimOverlay({
   const item = findAnimation(animationId);
   const src = item ? wippSrc(item.anim ?? item.art) : undefined;
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(520)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.72)).current;
+  const scale = useRef(new Animated.Value(0.82)).current;
   const caption = useRef(new Animated.Value(0)).current;
   const done = useRef(onDone);
   done.current = onDone;
@@ -39,88 +27,55 @@ export function SurpriseAnimOverlay({
   useEffect(() => {
     if (!item || !src) return;
     const hold = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
-    const from = enterOffset(item.enter);
     opacity.setValue(0);
     caption.setValue(0);
-    translateX.setValue(from.x);
-    translateY.setValue(from.y);
-    scale.setValue(item.enter === "pop" ? 0.2 : 0.86);
+    scale.setValue(0.82);
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 280, useNativeDriver: true }),
-      Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 7, tension: 68 }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 7, tension: 62 }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 6, tension: 72 }),
+      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 7, tension: 80 }),
     ]).start();
     const write = setTimeout(() => {
-      Animated.timing(caption, { toValue: 1, duration: 520, useNativeDriver: true }).start();
-    }, 420);
+      Animated.timing(caption, { toValue: 1, duration: 420, useNativeDriver: true }).start();
+    }, 280);
     const fadeAt = setTimeout(() => {
-      Animated.timing(opacity, { toValue: 0, duration: 420, useNativeDriver: true }).start();
+      Animated.timing(opacity, { toValue: 0, duration: 320, useNativeDriver: true }).start();
     }, hold);
-    const end = setTimeout(() => done.current(), hold + 460);
+    const end = setTimeout(() => done.current(), hold + 360);
     return () => {
       clearTimeout(write);
       clearTimeout(fadeAt);
       clearTimeout(end);
     };
-  }, [item?.id, playKey, opacity, caption, translateX, translateY, scale, src]);
+  }, [item?.id, playKey, opacity, caption, scale, src]);
 
   if (!item || !src) return null;
 
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent>
-      <View pointerEvents="none" style={styles.layer}>
-        <Animated.View
-          style={[
-            styles.stage,
-            {
-              opacity,
-              transform: [{ translateX }, { translateY }, { scale }],
-            },
-          ]}
+    <View pointerEvents="none" style={{ marginTop: 8, width: "100%", alignItems: "center", backgroundColor: "transparent" }}>
+      <Animated.View style={{ width: 200, height: 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
+        <Image
+          source={src}
+          style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
+          contentFit="contain"
+          autoplay
+          allowDownscaling={false}
+        />
+      </Animated.View>
+      {message ? (
+        <Animated.Text
+          style={{
+            marginTop: 2,
+            color: "#fffaf0",
+            fontFamily: "GreatVibes_400Regular",
+            fontSize: 28,
+            lineHeight: 34,
+            textAlign: "center",
+            opacity: caption,
+          }}
         >
-          <Image source={src} style={styles.anim} contentFit="contain" autoplay allowDownscaling={false} />
-          {message ? (
-            <Animated.View style={[styles.caption, { opacity: caption }]}>
-              <Text style={styles.captionText}>{message}</Text>
-            </Animated.View>
-          ) : null}
-        </Animated.View>
-      </View>
-    </Modal>
+          {message}
+        </Animated.Text>
+      ) : null}
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  layer: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  stage: {
-    width: "100%",
-    height: "88%",
-  },
-  anim: {
-    width: "100%",
-    height: "100%",
-  },
-  caption: {
-    position: "absolute",
-    left: 28,
-    right: 28,
-    bottom: "18%",
-    alignItems: "center",
-  },
-  captionText: {
-    color: "#fffaf0",
-    fontFamily: "GreatVibes_400Regular",
-    fontSize: 42,
-    lineHeight: 48,
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.85)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-});

@@ -86,6 +86,7 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
     <View style={{ alignItems: "center", width: "100%" }}>
       <View
         style={{
+          display: playing ? "none" : "flex",
           width: landscape ? openW : cardW,
           maxWidth: landscape ? undefined : "100%",
           height: landscape ? openW / foilRatio : cardH,

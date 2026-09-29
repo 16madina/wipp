@@ -19,7 +19,7 @@ export type SurpriseAnimationItem = {
   id: string;
   label: string;
   art: string;
-  /** Keyed transparent animation (webp/gif). When set, plays full-screen after the card is revealed. */
+  /** Transparent animation, played in the message like a moji. */
   anim?: string;
   enter?: SurpriseEnter;
   durationMs?: number;
