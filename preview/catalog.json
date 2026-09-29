@@ -1,0 +1,5620 @@
+{
+  "count": 799,
+  "folders": {
+    "__grok": 8,
+    "auth": 3,
+    "avatars": 26,
+    "brand": 8,
+    "calls": 13,
+    "demo": 2,
+    "favicon.png": 1,
+    "favicon.svg": 1,
+    "firebase-messaging-sw.js": 1,
+    "flags": 271,
+    "fx": 62,
+    "fx2": 1,
+    "media": 32,
+    "music": 8,
+    "og.jpg": 1,
+    "onboarding": 24,
+    "robots.txt": 1,
+    "src": 17,
+    "stickers": 315,
+    "stories": 4
+  },
+  "items": [
+    {
+      "rel": "wipp/__grok/icon-180.png",
+      "folder": "__grok",
+      "name": "icon-180.png",
+      "kind": "image",
+      "bytes": 2100
+    },
+    {
+      "rel": "wipp/__grok/install/assets/homescreen/glass-puzzle.svg",
+      "folder": "__grok",
+      "name": "glass-puzzle.svg",
+      "kind": "image",
+      "bytes": 1824
+    },
+    {
+      "rel": "wipp/__grok/install/assets/homescreen/glass-share.svg",
+      "folder": "__grok",
+      "name": "glass-share.svg",
+      "kind": "image",
+      "bytes": 2398
+    },
+    {
+      "rel": "wipp/__grok/install/assets/homescreen/logo-grok.svg",
+      "folder": "__grok",
+      "name": "logo-grok.svg",
+      "kind": "image",
+      "bytes": 1065
+    },
+    {
+      "rel": "wipp/__grok/install/assets/homescreen/ob-ipad.png",
+      "folder": "__grok",
+      "name": "ob-ipad.png",
+      "kind": "image",
+      "bytes": 101843
+    },
+    {
+      "rel": "wipp/__grok/install/assets/homescreen/ob-phone.png",
+      "folder": "__grok",
+      "name": "ob-phone.png",
+      "kind": "image",
+      "bytes": 103612
+    },
+    {
+      "rel": "wipp/__grok/install/assets/homescreen/plus.svg",
+      "folder": "__grok",
+      "name": "plus.svg",
+      "kind": "image",
+      "bytes": 2407
+    },
+    {
+      "rel": "wipp/__grok/install/styles.css",
+      "folder": "__grok",
+      "name": "styles.css",
+      "kind": "file",
+      "bytes": 7092
+    },
+    {
+      "rel": "auth/wipp-auth-login.png",
+      "folder": "auth",
+      "name": "wipp-auth-login.png",
+      "kind": "image",
+      "bytes": 1282496
+    },
+    {
+      "rel": "auth/wipp-auth-profile-no-password.png",
+      "folder": "auth",
+      "name": "wipp-auth-profile-no-password.png",
+      "kind": "image",
+      "bytes": 1538181
+    },
+    {
+      "rel": "auth/wipp-auth-sms-clean2.png",
+      "folder": "auth",
+      "name": "wipp-auth-sms-clean2.png",
+      "kind": "image",
+      "bytes": 1279782
+    },
+    {
+      "rel": "wipp/avatars/adama.jpg",
+      "folder": "avatars",
+      "name": "adama.jpg",
+      "kind": "image",
+      "bytes": 28527
+    },
+    {
+      "rel": "wipp/avatars/adama.webp",
+      "folder": "avatars",
+      "name": "adama.webp",
+      "kind": "image",
+      "bytes": 13792
+    },
+    {
+      "rel": "wipp/avatars/aisha.jpg",
+      "folder": "avatars",
+      "name": "aisha.jpg",
+      "kind": "image",
+      "bytes": 23402
+    },
+    {
+      "rel": "wipp/avatars/aisha.webp",
+      "folder": "avatars",
+      "name": "aisha.webp",
+      "kind": "image",
+      "bytes": 9760
+    },
+    {
+      "rel": "wipp/avatars/alex.jpg",
+      "folder": "avatars",
+      "name": "alex.jpg",
+      "kind": "image",
+      "bytes": 25462
+    },
+    {
+      "rel": "wipp/avatars/alex.webp",
+      "folder": "avatars",
+      "name": "alex.webp",
+      "kind": "image",
+      "bytes": 10932
+    },
+    {
+      "rel": "wipp/avatars/deena.jpg",
+      "folder": "avatars",
+      "name": "deena.jpg",
+      "kind": "image",
+      "bytes": 26774
+    },
+    {
+      "rel": "wipp/avatars/deena.webp",
+      "folder": "avatars",
+      "name": "deena.webp",
+      "kind": "image",
+      "bytes": 12630
+    },
+    {
+      "rel": "wipp/avatars/ines.jpg",
+      "folder": "avatars",
+      "name": "ines.jpg",
+      "kind": "image",
+      "bytes": 26859
+    },
+    {
+      "rel": "wipp/avatars/ines.webp",
+      "folder": "avatars",
+      "name": "ines.webp",
+      "kind": "image",
+      "bytes": 12108
+    },
+    {
+      "rel": "wipp/avatars/julien.jpg",
+      "folder": "avatars",
+      "name": "julien.jpg",
+      "kind": "image",
+      "bytes": 25535
+    },
+    {
+      "rel": "wipp/avatars/julien.webp",
+      "folder": "avatars",
+      "name": "julien.webp",
+      "kind": "image",
+      "bytes": 10332
+    },
+    {
+      "rel": "wipp/avatars/karim.jpg",
+      "folder": "avatars",
+      "name": "karim.jpg",
+      "kind": "image",
+      "bytes": 18290
+    },
+    {
+      "rel": "wipp/avatars/karim.webp",
+      "folder": "avatars",
+      "name": "karim.webp",
+      "kind": "image",
+      "bytes": 7074
+    },
+    {
+      "rel": "wipp/avatars/lea.jpg",
+      "folder": "avatars",
+      "name": "lea.jpg",
+      "kind": "image",
+      "bytes": 37700
+    },
+    {
+      "rel": "wipp/avatars/lea.webp",
+      "folder": "avatars",
+      "name": "lea.webp",
+      "kind": "image",
+      "bytes": 21358
+    },
+    {
+      "rel": "wipp/avatars/malik.jpg",
+      "folder": "avatars",
+      "name": "malik.jpg",
+      "kind": "image",
+      "bytes": 21146
+    },
+    {
+      "rel": "wipp/avatars/malik.webp",
+      "folder": "avatars",
+      "name": "malik.webp",
+      "kind": "image",
+      "bytes": 8592
+    },
+    {
+      "rel": "wipp/avatars/maya.jpg",
+      "folder": "avatars",
+      "name": "maya.jpg",
+      "kind": "image",
+      "bytes": 14823
+    },
+    {
+      "rel": "wipp/avatars/maya.webp",
+      "folder": "avatars",
+      "name": "maya.webp",
+      "kind": "image",
+      "bytes": 4846
+    },
+    {
+      "rel": "wipp/avatars/noah.jpg",
+      "folder": "avatars",
+      "name": "noah.jpg",
+      "kind": "image",
+      "bytes": 23856
+    },
+    {
+      "rel": "wipp/avatars/noah.webp",
+      "folder": "avatars",
+      "name": "noah.webp",
+      "kind": "image",
+      "bytes": 9256
+    },
+    {
+      "rel": "wipp/avatars/samira.jpg",
+      "folder": "avatars",
+      "name": "samira.jpg",
+      "kind": "image",
+      "bytes": 23832
+    },
+    {
+      "rel": "wipp/avatars/samira.webp",
+      "folder": "avatars",
+      "name": "samira.webp",
+      "kind": "image",
+      "bytes": 9094
+    },
+    {
+      "rel": "wipp/avatars/sofia.jpg",
+      "folder": "avatars",
+      "name": "sofia.jpg",
+      "kind": "image",
+      "bytes": 39022
+    },
+    {
+      "rel": "wipp/avatars/sofia.webp",
+      "folder": "avatars",
+      "name": "sofia.webp",
+      "kind": "image",
+      "bytes": 19368
+    },
+    {
+      "rel": "wipp/brand/wipp-boot.jpg",
+      "folder": "brand",
+      "name": "wipp-boot.jpg",
+      "kind": "image",
+      "bytes": 26014
+    },
+    {
+      "rel": "wipp/brand/wipp-boot.mp4",
+      "folder": "brand",
+      "name": "wipp-boot.mp4",
+      "kind": "video",
+      "bytes": 639824
+    },
+    {
+      "rel": "wipp/brand/wipp-boot.webp",
+      "folder": "brand",
+      "name": "wipp-boot.webp",
+      "kind": "image",
+      "bytes": 11746
+    },
+    {
+      "rel": "wipp/brand/wipp-logo.jpg",
+      "folder": "brand",
+      "name": "wipp-logo.jpg",
+      "kind": "image",
+      "bytes": 26916
+    },
+    {
+      "rel": "wipp/brand/wipp-logo.webp",
+      "folder": "brand",
+      "name": "wipp-logo.webp",
+      "kind": "image",
+      "bytes": 12710
+    },
+    {
+      "rel": "wipp/brand/wipp-official.png",
+      "folder": "brand",
+      "name": "wipp-official.png",
+      "kind": "image",
+      "bytes": 375371
+    },
+    {
+      "rel": "wipp/brand/wipp-wordmark.jpg",
+      "folder": "brand",
+      "name": "wipp-wordmark.jpg",
+      "kind": "image",
+      "bytes": 68850
+    },
+    {
+      "rel": "wipp/brand/wipp-wordmark.webp",
+      "folder": "brand",
+      "name": "wipp-wordmark.webp",
+      "kind": "image",
+      "bytes": 31476
+    },
+    {
+      "rel": "wipp/calls/adama.mp4",
+      "folder": "calls",
+      "name": "adama.mp4",
+      "kind": "video",
+      "bytes": 296955
+    },
+    {
+      "rel": "wipp/calls/aisha.mp4",
+      "folder": "calls",
+      "name": "aisha.mp4",
+      "kind": "video",
+      "bytes": 258813
+    },
+    {
+      "rel": "wipp/calls/alex.mp4",
+      "folder": "calls",
+      "name": "alex.mp4",
+      "kind": "video",
+      "bytes": 220762
+    },
+    {
+      "rel": "wipp/calls/deena.mp4",
+      "folder": "calls",
+      "name": "deena.mp4",
+      "kind": "video",
+      "bytes": 241969
+    },
+    {
+      "rel": "wipp/calls/ines.mp4",
+      "folder": "calls",
+      "name": "ines.mp4",
+      "kind": "video",
+      "bytes": 275322
+    },
+    {
+      "rel": "wipp/calls/julien.mp4",
+      "folder": "calls",
+      "name": "julien.mp4",
+      "kind": "video",
+      "bytes": 249241
+    },
+    {
+      "rel": "wipp/calls/karim.mp4",
+      "folder": "calls",
+      "name": "karim.mp4",
+      "kind": "video",
+      "bytes": 212704
+    },
+    {
+      "rel": "wipp/calls/lea.mp4",
+      "folder": "calls",
+      "name": "lea.mp4",
+      "kind": "video",
+      "bytes": 257201
+    },
+    {
+      "rel": "wipp/calls/malik.mp4",
+      "folder": "calls",
+      "name": "malik.mp4",
+      "kind": "video",
+      "bytes": 228794
+    },
+    {
+      "rel": "wipp/calls/maya.mp4",
+      "folder": "calls",
+      "name": "maya.mp4",
+      "kind": "video",
+      "bytes": 224205
+    },
+    {
+      "rel": "wipp/calls/noah.mp4",
+      "folder": "calls",
+      "name": "noah.mp4",
+      "kind": "video",
+      "bytes": 247131
+    },
+    {
+      "rel": "wipp/calls/samira.mp4",
+      "folder": "calls",
+      "name": "samira.mp4",
+      "kind": "video",
+      "bytes": 240729
+    },
+    {
+      "rel": "wipp/calls/sofia.mp4",
+      "folder": "calls",
+      "name": "sofia.mp4",
+      "kind": "video",
+      "bytes": 238934
+    },
+    {
+      "rel": "wipp/demo/Programme-soiree.pdf",
+      "folder": "demo",
+      "name": "Programme-soiree.pdf",
+      "kind": "file",
+      "bytes": 400
+    },
+    {
+      "rel": "wipp/demo/wipp.gif",
+      "folder": "demo",
+      "name": "wipp.gif",
+      "kind": "image",
+      "bytes": 12777
+    },
+    {
+      "rel": "wipp/favicon.png",
+      "folder": "favicon.png",
+      "name": "favicon.png",
+      "kind": "image",
+      "bytes": 6295
+    },
+    {
+      "rel": "wipp/favicon.svg",
+      "folder": "favicon.svg",
+      "name": "favicon.svg",
+      "kind": "image",
+      "bytes": 414
+    },
+    {
+      "rel": "wipp/firebase-messaging-sw.js",
+      "folder": "firebase-messaging-sw.js",
+      "name": "firebase-messaging-sw.js",
+      "kind": "file",
+      "bytes": 1333
+    },
+    {
+      "rel": "wipp/flags/ad.svg",
+      "folder": "flags",
+      "name": "ad.svg",
+      "kind": "image",
+      "bytes": 30660
+    },
+    {
+      "rel": "wipp/flags/ae.svg",
+      "folder": "flags",
+      "name": "ae.svg",
+      "kind": "image",
+      "bytes": 272
+    },
+    {
+      "rel": "wipp/flags/af.svg",
+      "folder": "flags",
+      "name": "af.svg",
+      "kind": "image",
+      "bytes": 19273
+    },
+    {
+      "rel": "wipp/flags/ag.svg",
+      "folder": "flags",
+      "name": "ag.svg",
+      "kind": "image",
+      "bytes": 757
+    },
+    {
+      "rel": "wipp/flags/ai.svg",
+      "folder": "flags",
+      "name": "ai.svg",
+      "kind": "image",
+      "bytes": 2333
+    },
+    {
+      "rel": "wipp/flags/al.svg",
+      "folder": "flags",
+      "name": "al.svg",
+      "kind": "image",
+      "bytes": 3131
+    },
+    {
+      "rel": "wipp/flags/am.svg",
+      "folder": "flags",
+      "name": "am.svg",
+      "kind": "image",
+      "bytes": 233
+    },
+    {
+      "rel": "wipp/flags/ao.svg",
+      "folder": "flags",
+      "name": "ao.svg",
+      "kind": "image",
+      "bytes": 1615
+    },
+    {
+      "rel": "wipp/flags/aq.svg",
+      "folder": "flags",
+      "name": "aq.svg",
+      "kind": "image",
+      "bytes": 2787
+    },
+    {
+      "rel": "wipp/flags/ar.svg",
+      "folder": "flags",
+      "name": "ar.svg",
+      "kind": "image",
+      "bytes": 3493
+    },
+    {
+      "rel": "wipp/flags/arab.svg",
+      "folder": "flags",
+      "name": "arab.svg",
+      "kind": "image",
+      "bytes": 24538
+    },
+    {
+      "rel": "wipp/flags/as.svg",
+      "folder": "flags",
+      "name": "as.svg",
+      "kind": "image",
+      "bytes": 30521
+    },
+    {
+      "rel": "wipp/flags/asean.svg",
+      "folder": "flags",
+      "name": "asean.svg",
+      "kind": "image",
+      "bytes": 1078
+    },
+    {
+      "rel": "wipp/flags/at.svg",
+      "folder": "flags",
+      "name": "at.svg",
+      "kind": "image",
+      "bytes": 199
+    },
+    {
+      "rel": "wipp/flags/au.svg",
+      "folder": "flags",
+      "name": "au.svg",
+      "kind": "image",
+      "bytes": 1304
+    },
+    {
+      "rel": "wipp/flags/aw.svg",
+      "folder": "flags",
+      "name": "aw.svg",
+      "kind": "image",
+      "bytes": 9189
+    },
+    {
+      "rel": "wipp/flags/ax.svg",
+      "folder": "flags",
+      "name": "ax.svg",
+      "kind": "image",
+      "bytes": 574
+    },
+    {
+      "rel": "wipp/flags/az.svg",
+      "folder": "flags",
+      "name": "az.svg",
+      "kind": "image",
+      "bytes": 509
+    },
+    {
+      "rel": "wipp/flags/ba.svg",
+      "folder": "flags",
+      "name": "ba.svg",
+      "kind": "image",
+      "bytes": 1252
+    },
+    {
+      "rel": "wipp/flags/bb.svg",
+      "folder": "flags",
+      "name": "bb.svg",
+      "kind": "image",
+      "bytes": 634
+    },
+    {
+      "rel": "wipp/flags/bd.svg",
+      "folder": "flags",
+      "name": "bd.svg",
+      "kind": "image",
+      "bytes": 191
+    },
+    {
+      "rel": "wipp/flags/be.svg",
+      "folder": "flags",
+      "name": "be.svg",
+      "kind": "image",
+      "bytes": 309
+    },
+    {
+      "rel": "wipp/flags/bf.svg",
+      "folder": "flags",
+      "name": "bf.svg",
+      "kind": "image",
+      "bytes": 360
+    },
+    {
+      "rel": "wipp/flags/bg.svg",
+      "folder": "flags",
+      "name": "bg.svg",
+      "kind": "image",
+      "bytes": 230
+    },
+    {
+      "rel": "wipp/flags/bh.svg",
+      "folder": "flags",
+      "name": "bh.svg",
+      "kind": "image",
+      "bytes": 256
+    },
+    {
+      "rel": "wipp/flags/bi.svg",
+      "folder": "flags",
+      "name": "bi.svg",
+      "kind": "image",
+      "bytes": 1093
+    },
+    {
+      "rel": "wipp/flags/bj.svg",
+      "folder": "flags",
+      "name": "bj.svg",
+      "kind": "image",
+      "bytes": 513
+    },
+    {
+      "rel": "wipp/flags/bl.svg",
+      "folder": "flags",
+      "name": "bl.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/bm.svg",
+      "folder": "flags",
+      "name": "bm.svg",
+      "kind": "image",
+      "bytes": 22561
+    },
+    {
+      "rel": "wipp/flags/bn.svg",
+      "folder": "flags",
+      "name": "bn.svg",
+      "kind": "image",
+      "bytes": 13376
+    },
+    {
+      "rel": "wipp/flags/bo.svg",
+      "folder": "flags",
+      "name": "bo.svg",
+      "kind": "image",
+      "bytes": 103553
+    },
+    {
+      "rel": "wipp/flags/bq.svg",
+      "folder": "flags",
+      "name": "bq.svg",
+      "kind": "image",
+      "bytes": 226
+    },
+    {
+      "rel": "wipp/flags/br.svg",
+      "folder": "flags",
+      "name": "br.svg",
+      "kind": "image",
+      "bytes": 7185
+    },
+    {
+      "rel": "wipp/flags/bs.svg",
+      "folder": "flags",
+      "name": "bs.svg",
+      "kind": "image",
+      "bytes": 570
+    },
+    {
+      "rel": "wipp/flags/bt.svg",
+      "folder": "flags",
+      "name": "bt.svg",
+      "kind": "image",
+      "bytes": 24873
+    },
+    {
+      "rel": "wipp/flags/bv.svg",
+      "folder": "flags",
+      "name": "bv.svg",
+      "kind": "image",
+      "bytes": 595
+    },
+    {
+      "rel": "wipp/flags/bw.svg",
+      "folder": "flags",
+      "name": "bw.svg",
+      "kind": "image",
+      "bytes": 271
+    },
+    {
+      "rel": "wipp/flags/by.svg",
+      "folder": "flags",
+      "name": "by.svg",
+      "kind": "image",
+      "bytes": 2096
+    },
+    {
+      "rel": "wipp/flags/bz.svg",
+      "folder": "flags",
+      "name": "bz.svg",
+      "kind": "image",
+      "bytes": 42650
+    },
+    {
+      "rel": "wipp/flags/ca.svg",
+      "folder": "flags",
+      "name": "ca.svg",
+      "kind": "image",
+      "bytes": 629
+    },
+    {
+      "rel": "wipp/flags/cc.svg",
+      "folder": "flags",
+      "name": "cc.svg",
+      "kind": "image",
+      "bytes": 3138
+    },
+    {
+      "rel": "wipp/flags/cd.svg",
+      "folder": "flags",
+      "name": "cd.svg",
+      "kind": "image",
+      "bytes": 339
+    },
+    {
+      "rel": "wipp/flags/cefta.svg",
+      "folder": "flags",
+      "name": "cefta.svg",
+      "kind": "image",
+      "bytes": 923
+    },
+    {
+      "rel": "wipp/flags/cf.svg",
+      "folder": "flags",
+      "name": "cf.svg",
+      "kind": "image",
+      "bytes": 702
+    },
+    {
+      "rel": "wipp/flags/cg.svg",
+      "folder": "flags",
+      "name": "cg.svg",
+      "kind": "image",
+      "bytes": 482
+    },
+    {
+      "rel": "wipp/flags/ch.svg",
+      "folder": "flags",
+      "name": "ch.svg",
+      "kind": "image",
+      "bytes": 299
+    },
+    {
+      "rel": "wipp/flags/ci.svg",
+      "folder": "flags",
+      "name": "ci.svg",
+      "kind": "image",
+      "bytes": 284
+    },
+    {
+      "rel": "wipp/flags/ck.svg",
+      "folder": "flags",
+      "name": "ck.svg",
+      "kind": "image",
+      "bytes": 1907
+    },
+    {
+      "rel": "wipp/flags/cl.svg",
+      "folder": "flags",
+      "name": "cl.svg",
+      "kind": "image",
+      "bytes": 565
+    },
+    {
+      "rel": "wipp/flags/cm.svg",
+      "folder": "flags",
+      "name": "cm.svg",
+      "kind": "image",
+      "bytes": 855
+    },
+    {
+      "rel": "wipp/flags/cn.svg",
+      "folder": "flags",
+      "name": "cn.svg",
+      "kind": "image",
+      "bytes": 824
+    },
+    {
+      "rel": "wipp/flags/co.svg",
+      "folder": "flags",
+      "name": "co.svg",
+      "kind": "image",
+      "bytes": 293
+    },
+    {
+      "rel": "wipp/flags/cp.svg",
+      "folder": "flags",
+      "name": "cp.svg",
+      "kind": "image",
+      "bytes": 296
+    },
+    {
+      "rel": "wipp/flags/cr.svg",
+      "folder": "flags",
+      "name": "cr.svg",
+      "kind": "image",
+      "bytes": 297
+    },
+    {
+      "rel": "wipp/flags/cu.svg",
+      "folder": "flags",
+      "name": "cu.svg",
+      "kind": "image",
+      "bytes": 623
+    },
+    {
+      "rel": "wipp/flags/cv.svg",
+      "folder": "flags",
+      "name": "cv.svg",
+      "kind": "image",
+      "bytes": 1424
+    },
+    {
+      "rel": "wipp/flags/cw.svg",
+      "folder": "flags",
+      "name": "cw.svg",
+      "kind": "image",
+      "bytes": 701
+    },
+    {
+      "rel": "wipp/flags/cx.svg",
+      "folder": "flags",
+      "name": "cx.svg",
+      "kind": "image",
+      "bytes": 2469
+    },
+    {
+      "rel": "wipp/flags/cy.svg",
+      "folder": "flags",
+      "name": "cy.svg",
+      "kind": "image",
+      "bytes": 5472
+    },
+    {
+      "rel": "wipp/flags/cz.svg",
+      "folder": "flags",
+      "name": "cz.svg",
+      "kind": "image",
+      "bytes": 230
+    },
+    {
+      "rel": "wipp/flags/de.svg",
+      "folder": "flags",
+      "name": "de.svg",
+      "kind": "image",
+      "bytes": 226
+    },
+    {
+      "rel": "wipp/flags/dg.svg",
+      "folder": "flags",
+      "name": "dg.svg",
+      "kind": "image",
+      "bytes": 23154
+    },
+    {
+      "rel": "wipp/flags/dj.svg",
+      "folder": "flags",
+      "name": "dj.svg",
+      "kind": "image",
+      "bytes": 598
+    },
+    {
+      "rel": "wipp/flags/dk.svg",
+      "folder": "flags",
+      "name": "dk.svg",
+      "kind": "image",
+      "bytes": 241
+    },
+    {
+      "rel": "wipp/flags/dm.svg",
+      "folder": "flags",
+      "name": "dm.svg",
+      "kind": "image",
+      "bytes": 15939
+    },
+    {
+      "rel": "wipp/flags/do.svg",
+      "folder": "flags",
+      "name": "do.svg",
+      "kind": "image",
+      "bytes": 40467
+    },
+    {
+      "rel": "wipp/flags/dz.svg",
+      "folder": "flags",
+      "name": "dz.svg",
+      "kind": "image",
+      "bytes": 299
+    },
+    {
+      "rel": "wipp/flags/eac.svg",
+      "folder": "flags",
+      "name": "eac.svg",
+      "kind": "image",
+      "bytes": 13679
+    },
+    {
+      "rel": "wipp/flags/ec.svg",
+      "folder": "flags",
+      "name": "ec.svg",
+      "kind": "image",
+      "bytes": 28915
+    },
+    {
+      "rel": "wipp/flags/ee.svg",
+      "folder": "flags",
+      "name": "ee.svg",
+      "kind": "image",
+      "bytes": 230
+    },
+    {
+      "rel": "wipp/flags/eg.svg",
+      "folder": "flags",
+      "name": "eg.svg",
+      "kind": "image",
+      "bytes": 8764
+    },
+    {
+      "rel": "wipp/flags/eh.svg",
+      "folder": "flags",
+      "name": "eh.svg",
+      "kind": "image",
+      "bytes": 820
+    },
+    {
+      "rel": "wipp/flags/er.svg",
+      "folder": "flags",
+      "name": "er.svg",
+      "kind": "image",
+      "bytes": 3166
+    },
+    {
+      "rel": "wipp/flags/es-ct.svg",
+      "folder": "flags",
+      "name": "es-ct.svg",
+      "kind": "image",
+      "bytes": 259
+    },
+    {
+      "rel": "wipp/flags/es-ga.svg",
+      "folder": "flags",
+      "name": "es-ga.svg",
+      "kind": "image",
+      "bytes": 28398
+    },
+    {
+      "rel": "wipp/flags/es-pv.svg",
+      "folder": "flags",
+      "name": "es-pv.svg",
+      "kind": "image",
+      "bytes": 429
+    },
+    {
+      "rel": "wipp/flags/es.svg",
+      "folder": "flags",
+      "name": "es.svg",
+      "kind": "image",
+      "bytes": 81502
+    },
+    {
+      "rel": "wipp/flags/et.svg",
+      "folder": "flags",
+      "name": "et.svg",
+      "kind": "image",
+      "bytes": 1159
+    },
+    {
+      "rel": "wipp/flags/eu.svg",
+      "folder": "flags",
+      "name": "eu.svg",
+      "kind": "image",
+      "bytes": 1323
+    },
+    {
+      "rel": "wipp/flags/fi.svg",
+      "folder": "flags",
+      "name": "fi.svg",
+      "kind": "image",
+      "bytes": 239
+    },
+    {
+      "rel": "wipp/flags/fj.svg",
+      "folder": "flags",
+      "name": "fj.svg",
+      "kind": "image",
+      "bytes": 24220
+    },
+    {
+      "rel": "wipp/flags/fk.svg",
+      "folder": "flags",
+      "name": "fk.svg",
+      "kind": "image",
+      "bytes": 28827
+    },
+    {
+      "rel": "wipp/flags/fm.svg",
+      "folder": "flags",
+      "name": "fm.svg",
+      "kind": "image",
+      "bytes": 782
+    },
+    {
+      "rel": "wipp/flags/fo.svg",
+      "folder": "flags",
+      "name": "fo.svg",
+      "kind": "image",
+      "bytes": 567
+    },
+    {
+      "rel": "wipp/flags/fr.svg",
+      "folder": "flags",
+      "name": "fr.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/ga.svg",
+      "folder": "flags",
+      "name": "ga.svg",
+      "kind": "image",
+      "bytes": 278
+    },
+    {
+      "rel": "wipp/flags/gb-eng.svg",
+      "folder": "flags",
+      "name": "gb-eng.svg",
+      "kind": "image",
+      "bytes": 244
+    },
+    {
+      "rel": "wipp/flags/gb-nir.svg",
+      "folder": "flags",
+      "name": "gb-nir.svg",
+      "kind": "image",
+      "bytes": 22410
+    },
+    {
+      "rel": "wipp/flags/gb-sct.svg",
+      "folder": "flags",
+      "name": "gb-sct.svg",
+      "kind": "image",
+      "bytes": 232
+    },
+    {
+      "rel": "wipp/flags/gb-wls.svg",
+      "folder": "flags",
+      "name": "gb-wls.svg",
+      "kind": "image",
+      "bytes": 9105
+    },
+    {
+      "rel": "wipp/flags/gb.svg",
+      "folder": "flags",
+      "name": "gb.svg",
+      "kind": "image",
+      "bytes": 511
+    },
+    {
+      "rel": "wipp/flags/gd.svg",
+      "folder": "flags",
+      "name": "gd.svg",
+      "kind": "image",
+      "bytes": 1739
+    },
+    {
+      "rel": "wipp/flags/ge.svg",
+      "folder": "flags",
+      "name": "ge.svg",
+      "kind": "image",
+      "bytes": 1319
+    },
+    {
+      "rel": "wipp/flags/gf.svg",
+      "folder": "flags",
+      "name": "gf.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/gg.svg",
+      "folder": "flags",
+      "name": "gg.svg",
+      "kind": "image",
+      "bytes": 613
+    },
+    {
+      "rel": "wipp/flags/gh.svg",
+      "folder": "flags",
+      "name": "gh.svg",
+      "kind": "image",
+      "bytes": 299
+    },
+    {
+      "rel": "wipp/flags/gi.svg",
+      "folder": "flags",
+      "name": "gi.svg",
+      "kind": "image",
+      "bytes": 2921
+    },
+    {
+      "rel": "wipp/flags/gl.svg",
+      "folder": "flags",
+      "name": "gl.svg",
+      "kind": "image",
+      "bytes": 227
+    },
+    {
+      "rel": "wipp/flags/gm.svg",
+      "folder": "flags",
+      "name": "gm.svg",
+      "kind": "image",
+      "bytes": 557
+    },
+    {
+      "rel": "wipp/flags/gn.svg",
+      "folder": "flags",
+      "name": "gn.svg",
+      "kind": "image",
+      "bytes": 299
+    },
+    {
+      "rel": "wipp/flags/gp.svg",
+      "folder": "flags",
+      "name": "gp.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/gq.svg",
+      "folder": "flags",
+      "name": "gq.svg",
+      "kind": "image",
+      "bytes": 4964
+    },
+    {
+      "rel": "wipp/flags/gr.svg",
+      "folder": "flags",
+      "name": "gr.svg",
+      "kind": "image",
+      "bytes": 884
+    },
+    {
+      "rel": "wipp/flags/gs.svg",
+      "folder": "flags",
+      "name": "gs.svg",
+      "kind": "image",
+      "bytes": 31635
+    },
+    {
+      "rel": "wipp/flags/gt.svg",
+      "folder": "flags",
+      "name": "gt.svg",
+      "kind": "image",
+      "bytes": 31556
+    },
+    {
+      "rel": "wipp/flags/gu.svg",
+      "folder": "flags",
+      "name": "gu.svg",
+      "kind": "image",
+      "bytes": 4346
+    },
+    {
+      "rel": "wipp/flags/gw.svg",
+      "folder": "flags",
+      "name": "gw.svg",
+      "kind": "image",
+      "bytes": 859
+    },
+    {
+      "rel": "wipp/flags/gy.svg",
+      "folder": "flags",
+      "name": "gy.svg",
+      "kind": "image",
+      "bytes": 502
+    },
+    {
+      "rel": "wipp/flags/hk.svg",
+      "folder": "flags",
+      "name": "hk.svg",
+      "kind": "image",
+      "bytes": 735
+    },
+    {
+      "rel": "wipp/flags/hm.svg",
+      "folder": "flags",
+      "name": "hm.svg",
+      "kind": "image",
+      "bytes": 1304
+    },
+    {
+      "rel": "wipp/flags/hn.svg",
+      "folder": "flags",
+      "name": "hn.svg",
+      "kind": "image",
+      "bytes": 1162
+    },
+    {
+      "rel": "wipp/flags/hr.svg",
+      "folder": "flags",
+      "name": "hr.svg",
+      "kind": "image",
+      "bytes": 30790
+    },
+    {
+      "rel": "wipp/flags/ht.svg",
+      "folder": "flags",
+      "name": "ht.svg",
+      "kind": "image",
+      "bytes": 13417
+    },
+    {
+      "rel": "wipp/flags/hu.svg",
+      "folder": "flags",
+      "name": "hu.svg",
+      "kind": "image",
+      "bytes": 278
+    },
+    {
+      "rel": "wipp/flags/ic.svg",
+      "folder": "flags",
+      "name": "ic.svg",
+      "kind": "image",
+      "bytes": 293
+    },
+    {
+      "rel": "wipp/flags/id.svg",
+      "folder": "flags",
+      "name": "id.svg",
+      "kind": "image",
+      "bytes": 182
+    },
+    {
+      "rel": "wipp/flags/ie.svg",
+      "folder": "flags",
+      "name": "ie.svg",
+      "kind": "image",
+      "bytes": 296
+    },
+    {
+      "rel": "wipp/flags/il.svg",
+      "folder": "flags",
+      "name": "il.svg",
+      "kind": "image",
+      "bytes": 848
+    },
+    {
+      "rel": "wipp/flags/im.svg",
+      "folder": "flags",
+      "name": "im.svg",
+      "kind": "image",
+      "bytes": 9166
+    },
+    {
+      "rel": "wipp/flags/in.svg",
+      "folder": "flags",
+      "name": "in.svg",
+      "kind": "image",
+      "bytes": 1115
+    },
+    {
+      "rel": "wipp/flags/io.svg",
+      "folder": "flags",
+      "name": "io.svg",
+      "kind": "image",
+      "bytes": 23154
+    },
+    {
+      "rel": "wipp/flags/iq.svg",
+      "folder": "flags",
+      "name": "iq.svg",
+      "kind": "image",
+      "bytes": 1430
+    },
+    {
+      "rel": "wipp/flags/ir.svg",
+      "folder": "flags",
+      "name": "ir.svg",
+      "kind": "image",
+      "bytes": 15616
+    },
+    {
+      "rel": "wipp/flags/is.svg",
+      "folder": "flags",
+      "name": "is.svg",
+      "kind": "image",
+      "bytes": 521
+    },
+    {
+      "rel": "wipp/flags/it.svg",
+      "folder": "flags",
+      "name": "it.svg",
+      "kind": "image",
+      "bytes": 296
+    },
+    {
+      "rel": "wipp/flags/je.svg",
+      "folder": "flags",
+      "name": "je.svg",
+      "kind": "image",
+      "bytes": 34254
+    },
+    {
+      "rel": "wipp/flags/jm.svg",
+      "folder": "flags",
+      "name": "jm.svg",
+      "kind": "image",
+      "bytes": 409
+    },
+    {
+      "rel": "wipp/flags/jo.svg",
+      "folder": "flags",
+      "name": "jo.svg",
+      "kind": "image",
+      "bytes": 743
+    },
+    {
+      "rel": "wipp/flags/jp.svg",
+      "folder": "flags",
+      "name": "jp.svg",
+      "kind": "image",
+      "bytes": 481
+    },
+    {
+      "rel": "wipp/flags/ke.svg",
+      "folder": "flags",
+      "name": "ke.svg",
+      "kind": "image",
+      "bytes": 1444
+    },
+    {
+      "rel": "wipp/flags/kg.svg",
+      "folder": "flags",
+      "name": "kg.svg",
+      "kind": "image",
+      "bytes": 4747
+    },
+    {
+      "rel": "wipp/flags/kh.svg",
+      "folder": "flags",
+      "name": "kh.svg",
+      "kind": "image",
+      "bytes": 7183
+    },
+    {
+      "rel": "wipp/flags/ki.svg",
+      "folder": "flags",
+      "name": "ki.svg",
+      "kind": "image",
+      "bytes": 5663
+    },
+    {
+      "rel": "wipp/flags/km.svg",
+      "folder": "flags",
+      "name": "km.svg",
+      "kind": "image",
+      "bytes": 1069
+    },
+    {
+      "rel": "wipp/flags/kn.svg",
+      "folder": "flags",
+      "name": "kn.svg",
+      "kind": "image",
+      "bytes": 810
+    },
+    {
+      "rel": "wipp/flags/kp.svg",
+      "folder": "flags",
+      "name": "kp.svg",
+      "kind": "image",
+      "bytes": 798
+    },
+    {
+      "rel": "wipp/flags/kr.svg",
+      "folder": "flags",
+      "name": "kr.svg",
+      "kind": "image",
+      "bytes": 1085
+    },
+    {
+      "rel": "wipp/flags/kw.svg",
+      "folder": "flags",
+      "name": "kw.svg",
+      "kind": "image",
+      "bytes": 530
+    },
+    {
+      "rel": "wipp/flags/ky.svg",
+      "folder": "flags",
+      "name": "ky.svg",
+      "kind": "image",
+      "bytes": 23489
+    },
+    {
+      "rel": "wipp/flags/kz.svg",
+      "folder": "flags",
+      "name": "kz.svg",
+      "kind": "image",
+      "bytes": 7130
+    },
+    {
+      "rel": "wipp/flags/la.svg",
+      "folder": "flags",
+      "name": "la.svg",
+      "kind": "image",
+      "bytes": 468
+    },
+    {
+      "rel": "wipp/flags/lb.svg",
+      "folder": "flags",
+      "name": "lb.svg",
+      "kind": "image",
+      "bytes": 2785
+    },
+    {
+      "rel": "wipp/flags/lc.svg",
+      "folder": "flags",
+      "name": "lc.svg",
+      "kind": "image",
+      "bytes": 360
+    },
+    {
+      "rel": "wipp/flags/li.svg",
+      "folder": "flags",
+      "name": "li.svg",
+      "kind": "image",
+      "bytes": 7361
+    },
+    {
+      "rel": "wipp/flags/lk.svg",
+      "folder": "flags",
+      "name": "lk.svg",
+      "kind": "image",
+      "bytes": 10746
+    },
+    {
+      "rel": "wipp/flags/lr.svg",
+      "folder": "flags",
+      "name": "lr.svg",
+      "kind": "image",
+      "bytes": 727
+    },
+    {
+      "rel": "wipp/flags/ls.svg",
+      "folder": "flags",
+      "name": "ls.svg",
+      "kind": "image",
+      "bytes": 1141
+    },
+    {
+      "rel": "wipp/flags/lt.svg",
+      "folder": "flags",
+      "name": "lt.svg",
+      "kind": "image",
+      "bytes": 446
+    },
+    {
+      "rel": "wipp/flags/lu.svg",
+      "folder": "flags",
+      "name": "lu.svg",
+      "kind": "image",
+      "bytes": 230
+    },
+    {
+      "rel": "wipp/flags/lv.svg",
+      "folder": "flags",
+      "name": "lv.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/ly.svg",
+      "folder": "flags",
+      "name": "ly.svg",
+      "kind": "image",
+      "bytes": 562
+    },
+    {
+      "rel": "wipp/flags/ma.svg",
+      "folder": "flags",
+      "name": "ma.svg",
+      "kind": "image",
+      "bytes": 251
+    },
+    {
+      "rel": "wipp/flags/mc.svg",
+      "folder": "flags",
+      "name": "mc.svg",
+      "kind": "image",
+      "bytes": 240
+    },
+    {
+      "rel": "wipp/flags/md.svg",
+      "folder": "flags",
+      "name": "md.svg",
+      "kind": "image",
+      "bytes": 11196
+    },
+    {
+      "rel": "wipp/flags/me.svg",
+      "folder": "flags",
+      "name": "me.svg",
+      "kind": "image",
+      "bytes": 56488
+    },
+    {
+      "rel": "wipp/flags/mf.svg",
+      "folder": "flags",
+      "name": "mf.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/mg.svg",
+      "folder": "flags",
+      "name": "mg.svg",
+      "kind": "image",
+      "bytes": 306
+    },
+    {
+      "rel": "wipp/flags/mh.svg",
+      "folder": "flags",
+      "name": "mh.svg",
+      "kind": "image",
+      "bytes": 736
+    },
+    {
+      "rel": "wipp/flags/mk.svg",
+      "folder": "flags",
+      "name": "mk.svg",
+      "kind": "image",
+      "bytes": 384
+    },
+    {
+      "rel": "wipp/flags/ml.svg",
+      "folder": "flags",
+      "name": "ml.svg",
+      "kind": "image",
+      "bytes": 280
+    },
+    {
+      "rel": "wipp/flags/mm.svg",
+      "folder": "flags",
+      "name": "mm.svg",
+      "kind": "image",
+      "bytes": 722
+    },
+    {
+      "rel": "wipp/flags/mn.svg",
+      "folder": "flags",
+      "name": "mn.svg",
+      "kind": "image",
+      "bytes": 1411
+    },
+    {
+      "rel": "wipp/flags/mo.svg",
+      "folder": "flags",
+      "name": "mo.svg",
+      "kind": "image",
+      "bytes": 1379
+    },
+    {
+      "rel": "wipp/flags/mp.svg",
+      "folder": "flags",
+      "name": "mp.svg",
+      "kind": "image",
+      "bytes": 22654
+    },
+    {
+      "rel": "wipp/flags/mq.svg",
+      "folder": "flags",
+      "name": "mq.svg",
+      "kind": "image",
+      "bytes": 233
+    },
+    {
+      "rel": "wipp/flags/mr.svg",
+      "folder": "flags",
+      "name": "mr.svg",
+      "kind": "image",
+      "bytes": 443
+    },
+    {
+      "rel": "wipp/flags/ms.svg",
+      "folder": "flags",
+      "name": "ms.svg",
+      "kind": "image",
+      "bytes": 5861
+    },
+    {
+      "rel": "wipp/flags/mt.svg",
+      "folder": "flags",
+      "name": "mt.svg",
+      "kind": "image",
+      "bytes": 13983
+    },
+    {
+      "rel": "wipp/flags/mu.svg",
+      "folder": "flags",
+      "name": "mu.svg",
+      "kind": "image",
+      "bytes": 324
+    },
+    {
+      "rel": "wipp/flags/mv.svg",
+      "folder": "flags",
+      "name": "mv.svg",
+      "kind": "image",
+      "bytes": 292
+    },
+    {
+      "rel": "wipp/flags/mw.svg",
+      "folder": "flags",
+      "name": "mw.svg",
+      "kind": "image",
+      "bytes": 3573
+    },
+    {
+      "rel": "wipp/flags/mx.svg",
+      "folder": "flags",
+      "name": "mx.svg",
+      "kind": "image",
+      "bytes": 85135
+    },
+    {
+      "rel": "wipp/flags/my.svg",
+      "folder": "flags",
+      "name": "my.svg",
+      "kind": "image",
+      "bytes": 1404
+    },
+    {
+      "rel": "wipp/flags/mz.svg",
+      "folder": "flags",
+      "name": "mz.svg",
+      "kind": "image",
+      "bytes": 2584
+    },
+    {
+      "rel": "wipp/flags/na.svg",
+      "folder": "flags",
+      "name": "na.svg",
+      "kind": "image",
+      "bytes": 1009
+    },
+    {
+      "rel": "wipp/flags/nc.svg",
+      "folder": "flags",
+      "name": "nc.svg",
+      "kind": "image",
+      "bytes": 1341
+    },
+    {
+      "rel": "wipp/flags/ne.svg",
+      "folder": "flags",
+      "name": "ne.svg",
+      "kind": "image",
+      "bytes": 279
+    },
+    {
+      "rel": "wipp/flags/nf.svg",
+      "folder": "flags",
+      "name": "nf.svg",
+      "kind": "image",
+      "bytes": 5572
+    },
+    {
+      "rel": "wipp/flags/ng.svg",
+      "folder": "flags",
+      "name": "ng.svg",
+      "kind": "image",
+      "bytes": 263
+    },
+    {
+      "rel": "wipp/flags/ni.svg",
+      "folder": "flags",
+      "name": "ni.svg",
+      "kind": "image",
+      "bytes": 17378
+    },
+    {
+      "rel": "wipp/flags/nl.svg",
+      "folder": "flags",
+      "name": "nl.svg",
+      "kind": "image",
+      "bytes": 230
+    },
+    {
+      "rel": "wipp/flags/no.svg",
+      "folder": "flags",
+      "name": "no.svg",
+      "kind": "image",
+      "bytes": 325
+    },
+    {
+      "rel": "wipp/flags/np.svg",
+      "folder": "flags",
+      "name": "np.svg",
+      "kind": "image",
+      "bytes": 1018
+    },
+    {
+      "rel": "wipp/flags/nr.svg",
+      "folder": "flags",
+      "name": "nr.svg",
+      "kind": "image",
+      "bytes": 658
+    },
+    {
+      "rel": "wipp/flags/nu.svg",
+      "folder": "flags",
+      "name": "nu.svg",
+      "kind": "image",
+      "bytes": 874
+    },
+    {
+      "rel": "wipp/flags/nz.svg",
+      "folder": "flags",
+      "name": "nz.svg",
+      "kind": "image",
+      "bytes": 2208
+    },
+    {
+      "rel": "wipp/flags/om.svg",
+      "folder": "flags",
+      "name": "om.svg",
+      "kind": "image",
+      "bytes": 22338
+    },
+    {
+      "rel": "wipp/flags/pa.svg",
+      "folder": "flags",
+      "name": "pa.svg",
+      "kind": "image",
+      "bytes": 758
+    },
+    {
+      "rel": "wipp/flags/pc.svg",
+      "folder": "flags",
+      "name": "pc.svg",
+      "kind": "image",
+      "bytes": 3867
+    },
+    {
+      "rel": "wipp/flags/pe.svg",
+      "folder": "flags",
+      "name": "pe.svg",
+      "kind": "image",
+      "bytes": 190
+    },
+    {
+      "rel": "wipp/flags/pf.svg",
+      "folder": "flags",
+      "name": "pf.svg",
+      "kind": "image",
+      "bytes": 4049
+    },
+    {
+      "rel": "wipp/flags/pg.svg",
+      "folder": "flags",
+      "name": "pg.svg",
+      "kind": "image",
+      "bytes": 1617
+    },
+    {
+      "rel": "wipp/flags/ph.svg",
+      "folder": "flags",
+      "name": "ph.svg",
+      "kind": "image",
+      "bytes": 1388
+    },
+    {
+      "rel": "wipp/flags/pk.svg",
+      "folder": "flags",
+      "name": "pk.svg",
+      "kind": "image",
+      "bytes": 740
+    },
+    {
+      "rel": "wipp/flags/pl.svg",
+      "folder": "flags",
+      "name": "pl.svg",
+      "kind": "image",
+      "bytes": 225
+    },
+    {
+      "rel": "wipp/flags/pm.svg",
+      "folder": "flags",
+      "name": "pm.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/pn.svg",
+      "folder": "flags",
+      "name": "pn.svg",
+      "kind": "image",
+      "bytes": 13524
+    },
+    {
+      "rel": "wipp/flags/pr.svg",
+      "folder": "flags",
+      "name": "pr.svg",
+      "kind": "image",
+      "bytes": 638
+    },
+    {
+      "rel": "wipp/flags/ps.svg",
+      "folder": "flags",
+      "name": "ps.svg",
+      "kind": "image",
+      "bytes": 282
+    },
+    {
+      "rel": "wipp/flags/pt.svg",
+      "folder": "flags",
+      "name": "pt.svg",
+      "kind": "image",
+      "bytes": 8058
+    },
+    {
+      "rel": "wipp/flags/pw.svg",
+      "folder": "flags",
+      "name": "pw.svg",
+      "kind": "image",
+      "bytes": 477
+    },
+    {
+      "rel": "wipp/flags/py.svg",
+      "folder": "flags",
+      "name": "py.svg",
+      "kind": "image",
+      "bytes": 16341
+    },
+    {
+      "rel": "wipp/flags/qa.svg",
+      "folder": "flags",
+      "name": "qa.svg",
+      "kind": "image",
+      "bytes": 358
+    },
+    {
+      "rel": "wipp/flags/re.svg",
+      "folder": "flags",
+      "name": "re.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/ro.svg",
+      "folder": "flags",
+      "name": "ro.svg",
+      "kind": "image",
+      "bytes": 309
+    },
+    {
+      "rel": "wipp/flags/rs.svg",
+      "folder": "flags",
+      "name": "rs.svg",
+      "kind": "image",
+      "bytes": 181926
+    },
+    {
+      "rel": "wipp/flags/ru.svg",
+      "folder": "flags",
+      "name": "ru.svg",
+      "kind": "image",
+      "bytes": 230
+    },
+    {
+      "rel": "wipp/flags/rw.svg",
+      "folder": "flags",
+      "name": "rw.svg",
+      "kind": "image",
+      "bytes": 768
+    },
+    {
+      "rel": "wipp/flags/sa.svg",
+      "folder": "flags",
+      "name": "sa.svg",
+      "kind": "image",
+      "bytes": 9993
+    },
+    {
+      "rel": "wipp/flags/sb.svg",
+      "folder": "flags",
+      "name": "sb.svg",
+      "kind": "image",
+      "bytes": 953
+    },
+    {
+      "rel": "wipp/flags/sc.svg",
+      "folder": "flags",
+      "name": "sc.svg",
+      "kind": "image",
+      "bytes": 324
+    },
+    {
+      "rel": "wipp/flags/sd.svg",
+      "folder": "flags",
+      "name": "sd.svg",
+      "kind": "image",
+      "bytes": 518
+    },
+    {
+      "rel": "wipp/flags/se.svg",
+      "folder": "flags",
+      "name": "se.svg",
+      "kind": "image",
+      "bytes": 213
+    },
+    {
+      "rel": "wipp/flags/sg.svg",
+      "folder": "flags",
+      "name": "sg.svg",
+      "kind": "image",
+      "bytes": 902
+    },
+    {
+      "rel": "wipp/flags/sh-ac.svg",
+      "folder": "flags",
+      "name": "sh-ac.svg",
+      "kind": "image",
+      "bytes": 144062
+    },
+    {
+      "rel": "wipp/flags/sh-hl.svg",
+      "folder": "flags",
+      "name": "sh-hl.svg",
+      "kind": "image",
+      "bytes": 35591
+    },
+    {
+      "rel": "wipp/flags/sh-ta.svg",
+      "folder": "flags",
+      "name": "sh-ta.svg",
+      "kind": "image",
+      "bytes": 28851
+    },
+    {
+      "rel": "wipp/flags/sh.svg",
+      "folder": "flags",
+      "name": "sh.svg",
+      "kind": "image",
+      "bytes": 511
+    },
+    {
+      "rel": "wipp/flags/si.svg",
+      "folder": "flags",
+      "name": "si.svg",
+      "kind": "image",
+      "bytes": 2011
+    },
+    {
+      "rel": "wipp/flags/sj.svg",
+      "folder": "flags",
+      "name": "sj.svg",
+      "kind": "image",
+      "bytes": 325
+    },
+    {
+      "rel": "wipp/flags/sk.svg",
+      "folder": "flags",
+      "name": "sk.svg",
+      "kind": "image",
+      "bytes": 1191
+    },
+    {
+      "rel": "wipp/flags/sl.svg",
+      "folder": "flags",
+      "name": "sl.svg",
+      "kind": "image",
+      "bytes": 279
+    },
+    {
+      "rel": "wipp/flags/sm.svg",
+      "folder": "flags",
+      "name": "sm.svg",
+      "kind": "image",
+      "bytes": 15758
+    },
+    {
+      "rel": "wipp/flags/sn.svg",
+      "folder": "flags",
+      "name": "sn.svg",
+      "kind": "image",
+      "bytes": 429
+    },
+    {
+      "rel": "wipp/flags/so.svg",
+      "folder": "flags",
+      "name": "so.svg",
+      "kind": "image",
+      "bytes": 494
+    },
+    {
+      "rel": "wipp/flags/sr.svg",
+      "folder": "flags",
+      "name": "sr.svg",
+      "kind": "image",
+      "bytes": 318
+    },
+    {
+      "rel": "wipp/flags/ss.svg",
+      "folder": "flags",
+      "name": "ss.svg",
+      "kind": "image",
+      "bytes": 406
+    },
+    {
+      "rel": "wipp/flags/st.svg",
+      "folder": "flags",
+      "name": "st.svg",
+      "kind": "image",
+      "bytes": 970
+    },
+    {
+      "rel": "wipp/flags/sv.svg",
+      "folder": "flags",
+      "name": "sv.svg",
+      "kind": "image",
+      "bytes": 77866
+    },
+    {
+      "rel": "wipp/flags/sx.svg",
+      "folder": "flags",
+      "name": "sx.svg",
+      "kind": "image",
+      "bytes": 12270
+    },
+    {
+      "rel": "wipp/flags/sy.svg",
+      "folder": "flags",
+      "name": "sy.svg",
+      "kind": "image",
+      "bytes": 372
+    },
+    {
+      "rel": "wipp/flags/sz.svg",
+      "folder": "flags",
+      "name": "sz.svg",
+      "kind": "image",
+      "bytes": 4697
+    },
+    {
+      "rel": "wipp/flags/tc.svg",
+      "folder": "flags",
+      "name": "tc.svg",
+      "kind": "image",
+      "bytes": 7167
+    },
+    {
+      "rel": "wipp/flags/td.svg",
+      "folder": "flags",
+      "name": "td.svg",
+      "kind": "image",
+      "bytes": 278
+    },
+    {
+      "rel": "wipp/flags/tf.svg",
+      "folder": "flags",
+      "name": "tf.svg",
+      "kind": "image",
+      "bytes": 1114
+    },
+    {
+      "rel": "wipp/flags/tg.svg",
+      "folder": "flags",
+      "name": "tg.svg",
+      "kind": "image",
+      "bytes": 722
+    },
+    {
+      "rel": "wipp/flags/th.svg",
+      "folder": "flags",
+      "name": "th.svg",
+      "kind": "image",
+      "bytes": 291
+    },
+    {
+      "rel": "wipp/flags/tj.svg",
+      "folder": "flags",
+      "name": "tj.svg",
+      "kind": "image",
+      "bytes": 1865
+    },
+    {
+      "rel": "wipp/flags/tk.svg",
+      "folder": "flags",
+      "name": "tk.svg",
+      "kind": "image",
+      "bytes": 766
+    },
+    {
+      "rel": "wipp/flags/tl.svg",
+      "folder": "flags",
+      "name": "tl.svg",
+      "kind": "image",
+      "bytes": 624
+    },
+    {
+      "rel": "wipp/flags/tm.svg",
+      "folder": "flags",
+      "name": "tm.svg",
+      "kind": "image",
+      "bytes": 38553
+    },
+    {
+      "rel": "wipp/flags/tn.svg",
+      "folder": "flags",
+      "name": "tn.svg",
+      "kind": "image",
+      "bytes": 347
+    },
+    {
+      "rel": "wipp/flags/to.svg",
+      "folder": "flags",
+      "name": "to.svg",
+      "kind": "image",
+      "bytes": 362
+    },
+    {
+      "rel": "wipp/flags/tr.svg",
+      "folder": "flags",
+      "name": "tr.svg",
+      "kind": "image",
+      "bytes": 557
+    },
+    {
+      "rel": "wipp/flags/tt.svg",
+      "folder": "flags",
+      "name": "tt.svg",
+      "kind": "image",
+      "bytes": 309
+    },
+    {
+      "rel": "wipp/flags/tv.svg",
+      "folder": "flags",
+      "name": "tv.svg",
+      "kind": "image",
+      "bytes": 1436
+    },
+    {
+      "rel": "wipp/flags/tw.svg",
+      "folder": "flags",
+      "name": "tw.svg",
+      "kind": "image",
+      "bytes": 2533
+    },
+    {
+      "rel": "wipp/flags/tz.svg",
+      "folder": "flags",
+      "name": "tz.svg",
+      "kind": "image",
+      "bytes": 561
+    },
+    {
+      "rel": "wipp/flags/ua.svg",
+      "folder": "flags",
+      "name": "ua.svg",
+      "kind": "image",
+      "bytes": 238
+    },
+    {
+      "rel": "wipp/flags/ug.svg",
+      "folder": "flags",
+      "name": "ug.svg",
+      "kind": "image",
+      "bytes": 3959
+    },
+    {
+      "rel": "wipp/flags/um.svg",
+      "folder": "flags",
+      "name": "um.svg",
+      "kind": "image",
+      "bytes": 657
+    },
+    {
+      "rel": "wipp/flags/un.svg",
+      "folder": "flags",
+      "name": "un.svg",
+      "kind": "image",
+      "bytes": 18718
+    },
+    {
+      "rel": "wipp/flags/us.svg",
+      "folder": "flags",
+      "name": "us.svg",
+      "kind": "image",
+      "bytes": 657
+    },
+    {
+      "rel": "wipp/flags/uy.svg",
+      "folder": "flags",
+      "name": "uy.svg",
+      "kind": "image",
+      "bytes": 1752
+    },
+    {
+      "rel": "wipp/flags/uz.svg",
+      "folder": "flags",
+      "name": "uz.svg",
+      "kind": "image",
+      "bytes": 1528
+    },
+    {
+      "rel": "wipp/flags/va.svg",
+      "folder": "flags",
+      "name": "va.svg",
+      "kind": "image",
+      "bytes": 28910
+    },
+    {
+      "rel": "wipp/flags/vc.svg",
+      "folder": "flags",
+      "name": "vc.svg",
+      "kind": "image",
+      "bytes": 437
+    },
+    {
+      "rel": "wipp/flags/ve.svg",
+      "folder": "flags",
+      "name": "ve.svg",
+      "kind": "image",
+      "bytes": 1232
+    },
+    {
+      "rel": "wipp/flags/vg.svg",
+      "folder": "flags",
+      "name": "vg.svg",
+      "kind": "image",
+      "bytes": 10077
+    },
+    {
+      "rel": "wipp/flags/vi.svg",
+      "folder": "flags",
+      "name": "vi.svg",
+      "kind": "image",
+      "bytes": 8546
+    },
+    {
+      "rel": "wipp/flags/vn.svg",
+      "folder": "flags",
+      "name": "vn.svg",
+      "kind": "image",
+      "bytes": 501
+    },
+    {
+      "rel": "wipp/flags/vu.svg",
+      "folder": "flags",
+      "name": "vu.svg",
+      "kind": "image",
+      "bytes": 2027
+    },
+    {
+      "rel": "wipp/flags/wf.svg",
+      "folder": "flags",
+      "name": "wf.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/ws.svg",
+      "folder": "flags",
+      "name": "ws.svg",
+      "kind": "image",
+      "bytes": 694
+    },
+    {
+      "rel": "wipp/flags/xk.svg",
+      "folder": "flags",
+      "name": "xk.svg",
+      "kind": "image",
+      "bytes": 8272
+    },
+    {
+      "rel": "wipp/flags/xx.svg",
+      "folder": "flags",
+      "name": "xx.svg",
+      "kind": "image",
+      "bytes": 287
+    },
+    {
+      "rel": "wipp/flags/ye.svg",
+      "folder": "flags",
+      "name": "ye.svg",
+      "kind": "image",
+      "bytes": 294
+    },
+    {
+      "rel": "wipp/flags/yt.svg",
+      "folder": "flags",
+      "name": "yt.svg",
+      "kind": "image",
+      "bytes": 236
+    },
+    {
+      "rel": "wipp/flags/za.svg",
+      "folder": "flags",
+      "name": "za.svg",
+      "kind": "image",
+      "bytes": 877
+    },
+    {
+      "rel": "wipp/flags/zm.svg",
+      "folder": "flags",
+      "name": "zm.svg",
+      "kind": "image",
+      "bytes": 5448
+    },
+    {
+      "rel": "wipp/flags/zw.svg",
+      "folder": "flags",
+      "name": "zw.svg",
+      "kind": "image",
+      "bytes": 6207
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_balloons.png",
+      "folder": "fx",
+      "name": "birthday_balloons.png",
+      "kind": "image",
+      "bytes": 285237
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_cake.png",
+      "folder": "fx",
+      "name": "birthday_cake.png",
+      "kind": "image",
+      "bytes": 2237388
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_champagne.png",
+      "folder": "fx",
+      "name": "birthday_champagne.png",
+      "kind": "image",
+      "bytes": 267979
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_confetti.png",
+      "folder": "fx",
+      "name": "birthday_confetti.png",
+      "kind": "image",
+      "bytes": 318183
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_fireworks.png",
+      "folder": "fx",
+      "name": "birthday_fireworks.png",
+      "kind": "image",
+      "bytes": 351830
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_gift_explosion.png",
+      "folder": "fx",
+      "name": "birthday_gift_explosion.png",
+      "kind": "image",
+      "bytes": 276406
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_gift_rain.png",
+      "folder": "fx",
+      "name": "birthday_gift_rain.png",
+      "kind": "image",
+      "bytes": 243126
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_lanterns.png",
+      "folder": "fx",
+      "name": "birthday_lanterns.png",
+      "kind": "image",
+      "bytes": 195413
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_star_balloons.png",
+      "folder": "fx",
+      "name": "birthday_star_balloons.png",
+      "kind": "image",
+      "bytes": 247232
+    },
+    {
+      "rel": "wipp/fx/anniv/birthday_teddy.png",
+      "folder": "fx",
+      "name": "birthday_teddy.png",
+      "kind": "image",
+      "bytes": 240620
+    },
+    {
+      "rel": "wipp/fx/jour/day_alarm.png",
+      "folder": "fx",
+      "name": "day_alarm.png",
+      "kind": "image",
+      "bytes": 318615
+    },
+    {
+      "rel": "wipp/fx/jour/day_balloons.png",
+      "folder": "fx",
+      "name": "day_balloons.png",
+      "kind": "image",
+      "bytes": 246332
+    },
+    {
+      "rel": "wipp/fx/jour/day_bird.png",
+      "folder": "fx",
+      "name": "day_bird.png",
+      "kind": "image",
+      "bytes": 300284
+    },
+    {
+      "rel": "wipp/fx/jour/day_butterflies.png",
+      "folder": "fx",
+      "name": "day_butterflies.png",
+      "kind": "image",
+      "bytes": 295669
+    },
+    {
+      "rel": "wipp/fx/jour/day_cloud_heart.png",
+      "folder": "fx",
+      "name": "day_cloud_heart.png",
+      "kind": "image",
+      "bytes": 301384
+    },
+    {
+      "rel": "wipp/fx/jour/day_coffee.png",
+      "folder": "fx",
+      "name": "day_coffee.png",
+      "kind": "image",
+      "bytes": 282577
+    },
+    {
+      "rel": "wipp/fx/jour/day_flower_arch.png",
+      "folder": "fx",
+      "name": "day_flower_arch.png",
+      "kind": "image",
+      "bytes": 394206
+    },
+    {
+      "rel": "wipp/fx/jour/day_hummingbird.png",
+      "folder": "fx",
+      "name": "day_hummingbird.png",
+      "kind": "image",
+      "bytes": 309506
+    },
+    {
+      "rel": "wipp/fx/jour/day_orange.png",
+      "folder": "fx",
+      "name": "day_orange.png",
+      "kind": "image",
+      "bytes": 284302
+    },
+    {
+      "rel": "wipp/fx/jour/day_sun.png",
+      "folder": "fx",
+      "name": "day_sun.png",
+      "kind": "image",
+      "bytes": 260150
+    },
+    {
+      "rel": "wipp/fx/jour/day_sunflowers.png",
+      "folder": "fx",
+      "name": "day_sunflowers.png",
+      "kind": "image",
+      "bytes": 369592
+    },
+    {
+      "rel": "wipp/fx/jour/day_sunrise.png",
+      "folder": "fx",
+      "name": "day_sunrise.png",
+      "kind": "image",
+      "bytes": 329002
+    },
+    {
+      "rel": "wipp/fx/love/love_balloons.png",
+      "folder": "fx",
+      "name": "love_balloons.png",
+      "kind": "image",
+      "bytes": 295197
+    },
+    {
+      "rel": "wipp/fx/love/love_bouquet.png",
+      "folder": "fx",
+      "name": "love_bouquet.png",
+      "kind": "image",
+      "bytes": 294378
+    },
+    {
+      "rel": "wipp/fx/love/love_envelope.png",
+      "folder": "fx",
+      "name": "love_envelope.png",
+      "kind": "image",
+      "bytes": 298745
+    },
+    {
+      "rel": "wipp/fx/love/love_fireworks.png",
+      "folder": "fx",
+      "name": "love_fireworks.png",
+      "kind": "image",
+      "bytes": 289210
+    },
+    {
+      "rel": "wipp/fx/love/love_gift.png",
+      "folder": "fx",
+      "name": "love_gift.png",
+      "kind": "image",
+      "bytes": 256354
+    },
+    {
+      "rel": "wipp/fx/love/love_hearts.png",
+      "folder": "fx",
+      "name": "love_hearts.png",
+      "kind": "image",
+      "bytes": 289077
+    },
+    {
+      "rel": "wipp/fx/love/love_petals.png",
+      "folder": "fx",
+      "name": "love_petals.png",
+      "kind": "image",
+      "bytes": 229958
+    },
+    {
+      "rel": "wipp/fx/love/love_rain.png",
+      "folder": "fx",
+      "name": "love_rain.png",
+      "kind": "image",
+      "bytes": 349214
+    },
+    {
+      "rel": "wipp/fx/love/love_teddy.png",
+      "folder": "fx",
+      "name": "love_teddy.png",
+      "kind": "image",
+      "bytes": 236507
+    },
+    {
+      "rel": "wipp/fx/love/love_toast.png",
+      "folder": "fx",
+      "name": "love_toast.png",
+      "kind": "image",
+      "bytes": 218370
+    },
+    {
+      "rel": "wipp/fx/nuit/night_galaxy.png",
+      "folder": "fx",
+      "name": "night_galaxy.png",
+      "kind": "image",
+      "bytes": 279585
+    },
+    {
+      "rel": "wipp/fx/nuit/night_lantern.png",
+      "folder": "fx",
+      "name": "night_lantern.png",
+      "kind": "image",
+      "bytes": 358251
+    },
+    {
+      "rel": "wipp/fx/nuit/night_moon.png",
+      "folder": "fx",
+      "name": "night_moon.png",
+      "kind": "image",
+      "bytes": 298993
+    },
+    {
+      "rel": "wipp/fx/nuit/night_shooting_stars.png",
+      "folder": "fx",
+      "name": "night_shooting_stars.png",
+      "kind": "image",
+      "bytes": 277642
+    },
+    {
+      "rel": "wipp/fx/nuit/night_sky_lanterns.png",
+      "folder": "fx",
+      "name": "night_sky_lanterns.png",
+      "kind": "image",
+      "bytes": 126181
+    },
+    {
+      "rel": "wipp/fx/nuit/night_sleeping_bear.png",
+      "folder": "fx",
+      "name": "night_sleeping_bear.png",
+      "kind": "image",
+      "bytes": 448141
+    },
+    {
+      "rel": "wipp/fx/nuit/night_sleepy_cloud.png",
+      "folder": "fx",
+      "name": "night_sleepy_cloud.png",
+      "kind": "image",
+      "bytes": 247457
+    },
+    {
+      "rel": "wipp/fx/nuit/night_star_balloons.png",
+      "folder": "fx",
+      "name": "night_star_balloons.png",
+      "kind": "image",
+      "bytes": 298884
+    },
+    {
+      "rel": "wipp/fx/nuit/night_star_cloud.png",
+      "folder": "fx",
+      "name": "night_star_cloud.png",
+      "kind": "image",
+      "bytes": 261597
+    },
+    {
+      "rel": "wipp/fx/nuit/night_star_jar.png",
+      "folder": "fx",
+      "name": "night_star_jar.png",
+      "kind": "image",
+      "bytes": 280393
+    },
+    {
+      "rel": "wipp/fx/nuit/night_window.png",
+      "folder": "fx",
+      "name": "night_window.png",
+      "kind": "image",
+      "bytes": 398184
+    },
+    {
+      "rel": "wipp/fx/surprise/cadeau.jpg",
+      "folder": "fx",
+      "name": "cadeau.jpg",
+      "kind": "image",
+      "bytes": 51131
+    },
+    {
+      "rel": "wipp/fx/surprise/card-love.jpg",
+      "folder": "fx",
+      "name": "card-love.jpg",
+      "kind": "image",
+      "bytes": 245552
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/.gitkeep",
+      "folder": "fx",
+      "name": ".gitkeep",
+      "kind": "file",
+      "bytes": 0
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-amour.jpg",
+      "folder": "fx",
+      "name": "wipp-amour.jpg",
+      "kind": "image",
+      "bytes": 631979
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-bff.jpg",
+      "folder": "fx",
+      "name": "wipp-bff.jpg",
+      "kind": "image",
+      "bytes": 788059
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-crew.jpg",
+      "folder": "fx",
+      "name": "wipp-crew.jpg",
+      "kind": "image",
+      "bytes": 812322
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-fete.jpg",
+      "folder": "fx",
+      "name": "wipp-fete.jpg",
+      "kind": "image",
+      "bytes": 544872
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-gold.jpg",
+      "folder": "fx",
+      "name": "wipp-gold.jpg",
+      "kind": "image",
+      "bytes": 699083
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-marbre.jpg",
+      "folder": "fx",
+      "name": "wipp-marbre.jpg",
+      "kind": "image",
+      "bytes": 536285
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-mood.jpg",
+      "folder": "fx",
+      "name": "wipp-mood.jpg",
+      "kind": "image",
+      "bytes": 782750
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-prestige.jpg",
+      "folder": "fx",
+      "name": "wipp-prestige.jpg",
+      "kind": "image",
+      "bytes": 785921
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-rose.jpg",
+      "folder": "fx",
+      "name": "wipp-rose.jpg",
+      "kind": "image",
+      "bytes": 614454
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-vip.jpg",
+      "folder": "fx",
+      "name": "wipp-vip.jpg",
+      "kind": "image",
+      "bytes": 1013637
+    },
+    {
+      "rel": "wipp/fx/surprise/cards/wipp-voyage.jpg",
+      "folder": "fx",
+      "name": "wipp-voyage.jpg",
+      "kind": "image",
+      "bytes": 700079
+    },
+    {
+      "rel": "wipp/fx/surprise/carte.jpg",
+      "folder": "fx",
+      "name": "carte.jpg",
+      "kind": "image",
+      "bytes": 49921
+    },
+    {
+      "rel": "wipp/fx/surprise/compose-preview.jpg",
+      "folder": "fx",
+      "name": "compose-preview.jpg",
+      "kind": "image",
+      "bytes": 245552
+    },
+    {
+      "rel": "wipp/fx/surprise/confetti.jpg",
+      "folder": "fx",
+      "name": "confetti.jpg",
+      "kind": "image",
+      "bytes": 49854
+    },
+    {
+      "rel": "wipp/fx/surprise/hero-scratch.jpg",
+      "folder": "fx",
+      "name": "hero-scratch.jpg",
+      "kind": "image",
+      "bytes": 156958
+    },
+    {
+      "rel": "wipp/fx/surprise/timer.jpg",
+      "folder": "fx",
+      "name": "timer.jpg",
+      "kind": "image",
+      "bytes": 42918
+    },
+    {
+      "rel": "wipp/fx2/birthday_teddy.png",
+      "folder": "fx2",
+      "name": "birthday_teddy.png",
+      "kind": "image",
+      "bytes": 240620
+    },
+    {
+      "rel": "wipp/media/apt.jpg",
+      "folder": "media",
+      "name": "apt.jpg",
+      "kind": "image",
+      "bytes": 91928
+    },
+    {
+      "rel": "wipp/media/apt.webp",
+      "folder": "media",
+      "name": "apt.webp",
+      "kind": "image",
+      "bytes": 47780
+    },
+    {
+      "rel": "wipp/media/chair.jpg",
+      "folder": "media",
+      "name": "chair.jpg",
+      "kind": "image",
+      "bytes": 108169
+    },
+    {
+      "rel": "wipp/media/chair.webp",
+      "folder": "media",
+      "name": "chair.webp",
+      "kind": "image",
+      "bytes": 63868
+    },
+    {
+      "rel": "wipp/media/civic.jpg",
+      "folder": "media",
+      "name": "civic.jpg",
+      "kind": "image",
+      "bytes": 148972
+    },
+    {
+      "rel": "wipp/media/civic.webp",
+      "folder": "media",
+      "name": "civic.webp",
+      "kind": "image",
+      "bytes": 112560
+    },
+    {
+      "rel": "wipp/media/coffee.jpg",
+      "folder": "media",
+      "name": "coffee.jpg",
+      "kind": "image",
+      "bytes": 126253
+    },
+    {
+      "rel": "wipp/media/coffee.webp",
+      "folder": "media",
+      "name": "coffee.webp",
+      "kind": "image",
+      "bytes": 69006
+    },
+    {
+      "rel": "wipp/media/food.jpg",
+      "folder": "media",
+      "name": "food.jpg",
+      "kind": "image",
+      "bytes": 189808
+    },
+    {
+      "rel": "wipp/media/food.webp",
+      "folder": "media",
+      "name": "food.webp",
+      "kind": "image",
+      "bytes": 135206
+    },
+    {
+      "rel": "wipp/media/river.jpg",
+      "folder": "media",
+      "name": "river.jpg",
+      "kind": "image",
+      "bytes": 165218
+    },
+    {
+      "rel": "wipp/media/river.webp",
+      "folder": "media",
+      "name": "river.webp",
+      "kind": "image",
+      "bytes": 107176
+    },
+    {
+      "rel": "wipp/media/shop-chen-corner.jpg",
+      "folder": "media",
+      "name": "shop-chen-corner.jpg",
+      "kind": "image",
+      "bytes": 87370
+    },
+    {
+      "rel": "wipp/media/shop-chen-corner.webp",
+      "folder": "media",
+      "name": "shop-chen-corner.webp",
+      "kind": "image",
+      "bytes": 46010
+    },
+    {
+      "rel": "wipp/media/shop-chen-hero.jpg",
+      "folder": "media",
+      "name": "shop-chen-hero.jpg",
+      "kind": "image",
+      "bytes": 76716
+    },
+    {
+      "rel": "wipp/media/shop-chen-hero.webp",
+      "folder": "media",
+      "name": "shop-chen-hero.webp",
+      "kind": "image",
+      "bytes": 44474
+    },
+    {
+      "rel": "wipp/media/shop-chen-latte.jpg",
+      "folder": "media",
+      "name": "shop-chen-latte.jpg",
+      "kind": "image",
+      "bytes": 80281
+    },
+    {
+      "rel": "wipp/media/shop-chen-latte.webp",
+      "folder": "media",
+      "name": "shop-chen-latte.webp",
+      "kind": "image",
+      "bytes": 38676
+    },
+    {
+      "rel": "wipp/media/shop-chen-logo.jpg",
+      "folder": "media",
+      "name": "shop-chen-logo.jpg",
+      "kind": "image",
+      "bytes": 19737
+    },
+    {
+      "rel": "wipp/media/shop-chen-logo.webp",
+      "folder": "media",
+      "name": "shop-chen-logo.webp",
+      "kind": "image",
+      "bytes": 10760
+    },
+    {
+      "rel": "wipp/media/shop-nails-art.jpg",
+      "folder": "media",
+      "name": "shop-nails-art.jpg",
+      "kind": "image",
+      "bytes": 73621
+    },
+    {
+      "rel": "wipp/media/shop-nails-art.webp",
+      "folder": "media",
+      "name": "shop-nails-art.webp",
+      "kind": "image",
+      "bytes": 33010
+    },
+    {
+      "rel": "wipp/media/shop-nails-hero.jpg",
+      "folder": "media",
+      "name": "shop-nails-hero.jpg",
+      "kind": "image",
+      "bytes": 79697
+    },
+    {
+      "rel": "wipp/media/shop-nails-hero.webp",
+      "folder": "media",
+      "name": "shop-nails-hero.webp",
+      "kind": "image",
+      "bytes": 41988
+    },
+    {
+      "rel": "wipp/media/shop-nails-logo.jpg",
+      "folder": "media",
+      "name": "shop-nails-logo.jpg",
+      "kind": "image",
+      "bytes": 24144
+    },
+    {
+      "rel": "wipp/media/shop-nails-logo.webp",
+      "folder": "media",
+      "name": "shop-nails-logo.webp",
+      "kind": "image",
+      "bytes": 10784
+    },
+    {
+      "rel": "wipp/media/shop-nails-lounge.jpg",
+      "folder": "media",
+      "name": "shop-nails-lounge.jpg",
+      "kind": "image",
+      "bytes": 96898
+    },
+    {
+      "rel": "wipp/media/shop-nails-lounge.webp",
+      "folder": "media",
+      "name": "shop-nails-lounge.webp",
+      "kind": "image",
+      "bytes": 48850
+    },
+    {
+      "rel": "wipp/media/shop-nails-polish.jpg",
+      "folder": "media",
+      "name": "shop-nails-polish.jpg",
+      "kind": "image",
+      "bytes": 66882
+    },
+    {
+      "rel": "wipp/media/shop-nails-polish.webp",
+      "folder": "media",
+      "name": "shop-nails-polish.webp",
+      "kind": "image",
+      "bytes": 27330
+    },
+    {
+      "rel": "wipp/media/soccer.jpg",
+      "folder": "media",
+      "name": "soccer.jpg",
+      "kind": "image",
+      "bytes": 77289
+    },
+    {
+      "rel": "wipp/media/soccer.webp",
+      "folder": "media",
+      "name": "soccer.webp",
+      "kind": "image",
+      "bytes": 25850
+    },
+    {
+      "rel": "wipp/music/afterglow.mp3",
+      "folder": "music",
+      "name": "afterglow.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/gold-hour.mp3",
+      "folder": "music",
+      "name": "gold-hour.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/heatwave.mp3",
+      "folder": "music",
+      "name": "heatwave.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/minuit.mp3",
+      "folder": "music",
+      "name": "minuit.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/pulse.mp3",
+      "folder": "music",
+      "name": "pulse.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/ralenti.mp3",
+      "folder": "music",
+      "name": "ralenti.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/terrasse.mp3",
+      "folder": "music",
+      "name": "terrasse.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/music/ville-calme.mp3",
+      "folder": "music",
+      "name": "ville-calme.mp3",
+      "kind": "audio",
+      "bytes": 121043
+    },
+    {
+      "rel": "wipp/og.jpg",
+      "folder": "og.jpg",
+      "name": "og.jpg",
+      "kind": "image",
+      "bytes": 53146
+    },
+    {
+      "rel": "wipp/onboarding/01-tap.jpg",
+      "folder": "onboarding",
+      "name": "01-tap.jpg",
+      "kind": "image",
+      "bytes": 192093
+    },
+    {
+      "rel": "wipp/onboarding/01-tap.webp",
+      "folder": "onboarding",
+      "name": "01-tap.webp",
+      "kind": "image",
+      "bytes": 112988
+    },
+    {
+      "rel": "wipp/onboarding/02-privacy.jpg",
+      "folder": "onboarding",
+      "name": "02-privacy.jpg",
+      "kind": "image",
+      "bytes": 163391
+    },
+    {
+      "rel": "wipp/onboarding/02-privacy.webp",
+      "folder": "onboarding",
+      "name": "02-privacy.webp",
+      "kind": "image",
+      "bytes": 89270
+    },
+    {
+      "rel": "wipp/onboarding/03-globe.jpg",
+      "folder": "onboarding",
+      "name": "03-globe.jpg",
+      "kind": "image",
+      "bytes": 179072
+    },
+    {
+      "rel": "wipp/onboarding/03-globe.webp",
+      "folder": "onboarding",
+      "name": "03-globe.webp",
+      "kind": "image",
+      "bytes": 108034
+    },
+    {
+      "rel": "wipp/onboarding/04-together.jpg",
+      "folder": "onboarding",
+      "name": "04-together.jpg",
+      "kind": "image",
+      "bytes": 191483
+    },
+    {
+      "rel": "wipp/onboarding/04-together.webp",
+      "folder": "onboarding",
+      "name": "04-together.webp",
+      "kind": "image",
+      "bytes": 108222
+    },
+    {
+      "rel": "wipp/onboarding/hero-globe.jpg",
+      "folder": "onboarding",
+      "name": "hero-globe.jpg",
+      "kind": "image",
+      "bytes": 305240
+    },
+    {
+      "rel": "wipp/onboarding/hero-globe.webp",
+      "folder": "onboarding",
+      "name": "hero-globe.webp",
+      "kind": "image",
+      "bytes": 144980
+    },
+    {
+      "rel": "wipp/onboarding/hero-privacy.jpg",
+      "folder": "onboarding",
+      "name": "hero-privacy.jpg",
+      "kind": "image",
+      "bytes": 270444
+    },
+    {
+      "rel": "wipp/onboarding/hero-privacy.webp",
+      "folder": "onboarding",
+      "name": "hero-privacy.webp",
+      "kind": "image",
+      "bytes": 124236
+    },
+    {
+      "rel": "wipp/onboarding/hero-tap.jpg",
+      "folder": "onboarding",
+      "name": "hero-tap.jpg",
+      "kind": "image",
+      "bytes": 277248
+    },
+    {
+      "rel": "wipp/onboarding/hero-tap.webp",
+      "folder": "onboarding",
+      "name": "hero-tap.webp",
+      "kind": "image",
+      "bytes": 137714
+    },
+    {
+      "rel": "wipp/onboarding/hero-together.jpg",
+      "folder": "onboarding",
+      "name": "hero-together.jpg",
+      "kind": "image",
+      "bytes": 254610
+    },
+    {
+      "rel": "wipp/onboarding/hero-together.webp",
+      "folder": "onboarding",
+      "name": "hero-together.webp",
+      "kind": "image",
+      "bytes": 113412
+    },
+    {
+      "rel": "wipp/onboarding/sprites/abj.jpg",
+      "folder": "onboarding",
+      "name": "abj.jpg",
+      "kind": "image",
+      "bytes": 11408
+    },
+    {
+      "rel": "wipp/onboarding/sprites/abj.png",
+      "folder": "onboarding",
+      "name": "abj.png",
+      "kind": "image",
+      "bytes": 57309
+    },
+    {
+      "rel": "wipp/onboarding/sprites/mtl.jpg",
+      "folder": "onboarding",
+      "name": "mtl.jpg",
+      "kind": "image",
+      "bytes": 11021
+    },
+    {
+      "rel": "wipp/onboarding/sprites/mtl.png",
+      "folder": "onboarding",
+      "name": "mtl.png",
+      "kind": "image",
+      "bytes": 44224
+    },
+    {
+      "rel": "wipp/onboarding/sprites/nyc.jpg",
+      "folder": "onboarding",
+      "name": "nyc.jpg",
+      "kind": "image",
+      "bytes": 10161
+    },
+    {
+      "rel": "wipp/onboarding/sprites/nyc.png",
+      "folder": "onboarding",
+      "name": "nyc.png",
+      "kind": "image",
+      "bytes": 50603
+    },
+    {
+      "rel": "wipp/onboarding/sprites/par.jpg",
+      "folder": "onboarding",
+      "name": "par.jpg",
+      "kind": "image",
+      "bytes": 11369
+    },
+    {
+      "rel": "wipp/onboarding/sprites/par.png",
+      "folder": "onboarding",
+      "name": "par.png",
+      "kind": "image",
+      "bytes": 45433
+    },
+    {
+      "rel": "wipp/robots.txt",
+      "folder": "robots.txt",
+      "name": "robots.txt",
+      "kind": "file",
+      "bytes": 174
+    },
+    {
+      "rel": "src/amour/amour-monstre.png",
+      "folder": "src",
+      "name": "amour-monstre.png",
+      "kind": "image",
+      "bytes": 1733390
+    },
+    {
+      "rel": "src/animation-amitie.jpg",
+      "folder": "src",
+      "name": "animation-amitie.jpg",
+      "kind": "image",
+      "bytes": 61337
+    },
+    {
+      "rel": "src/animation-amour.jpg",
+      "folder": "src",
+      "name": "animation-amour.jpg",
+      "kind": "image",
+      "bytes": 54688
+    },
+    {
+      "rel": "src/animation-beaute.jpg",
+      "folder": "src",
+      "name": "animation-beaute.jpg",
+      "kind": "image",
+      "bytes": 86402
+    },
+    {
+      "rel": "src/animation-journee.jpg",
+      "folder": "src",
+      "name": "animation-journee.jpg",
+      "kind": "image",
+      "bytes": 61827
+    },
+    {
+      "rel": "src/animation-nuit.jpg",
+      "folder": "src",
+      "name": "animation-nuit.jpg",
+      "kind": "image",
+      "bytes": 52585
+    },
+    {
+      "rel": "src/animation-voyage.jpg",
+      "folder": "src",
+      "name": "animation-voyage.jpg",
+      "kind": "image",
+      "bytes": 70038
+    },
+    {
+      "rel": "src/share-gift.png",
+      "folder": "src",
+      "name": "share-gift.png",
+      "kind": "image",
+      "bytes": 723565
+    },
+    {
+      "rel": "src/surprise-card.jpg",
+      "folder": "src",
+      "name": "surprise-card.jpg",
+      "kind": "image",
+      "bytes": 198934
+    },
+    {
+      "rel": "src/surprise-confetti.png",
+      "folder": "src",
+      "name": "surprise-confetti.png",
+      "kind": "image",
+      "bytes": 1276198
+    },
+    {
+      "rel": "src/surprise-gift.png",
+      "folder": "src",
+      "name": "surprise-gift.png",
+      "kind": "image",
+      "bytes": 1292067
+    },
+    {
+      "rel": "src/surprise-hourglass.png",
+      "folder": "src",
+      "name": "surprise-hourglass.png",
+      "kind": "image",
+      "bytes": 863604
+    },
+    {
+      "rel": "src/surprise-scratch.png",
+      "folder": "src",
+      "name": "surprise-scratch.png",
+      "kind": "image",
+      "bytes": 1239399
+    },
+    {
+      "rel": "src/wipp-auth-login.png",
+      "folder": "src",
+      "name": "wipp-auth-login.png",
+      "kind": "image",
+      "bytes": 1282496
+    },
+    {
+      "rel": "src/wipp-auth-profile-no-password.png",
+      "folder": "src",
+      "name": "wipp-auth-profile-no-password.png",
+      "kind": "image",
+      "bytes": 1538181
+    },
+    {
+      "rel": "src/wipp-auth-sms-clean.png",
+      "folder": "src",
+      "name": "wipp-auth-sms-clean.png",
+      "kind": "image",
+      "bytes": 1261475
+    },
+    {
+      "rel": "src/wipp-auth-sms-clean2.png",
+      "folder": "src",
+      "name": "wipp-auth-sms-clean2.png",
+      "kind": "image",
+      "bytes": 1279782
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/bisou-green.mp4",
+      "folder": "stickers",
+      "name": "bisou-green.mp4",
+      "kind": "video",
+      "bytes": 1302694
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/bisou-poster.png",
+      "folder": "stickers",
+      "name": "bisou-poster.png",
+      "kind": "image",
+      "bytes": 757331
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/bisou.webm",
+      "folder": "stickers",
+      "name": "bisou.webm",
+      "kind": "video",
+      "bytes": 2198764
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/stop-body.png",
+      "folder": "stickers",
+      "name": "stop-body.png",
+      "kind": "image",
+      "bytes": 322789
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/stop-full.png",
+      "folder": "stickers",
+      "name": "stop-full.png",
+      "kind": "image",
+      "bytes": 1173748
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/stop-hand.png",
+      "folder": "stickers",
+      "name": "stop-hand.png",
+      "kind": "image",
+      "bytes": 397578
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/stop-head.png",
+      "folder": "stickers",
+      "name": "stop-head.png",
+      "kind": "image",
+      "bytes": 177066
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/stop-slide.png",
+      "folder": "stickers",
+      "name": "stop-slide.png",
+      "kind": "image",
+      "bytes": 687456
+    },
+    {
+      "rel": "wipp/stickers/aniwipp/stop-text.png",
+      "folder": "stickers",
+      "name": "stop-text.png",
+      "kind": "image",
+      "bytes": 533006
+    },
+    {
+      "rel": "wipp/stickers/appelle-moi.mp4",
+      "folder": "stickers",
+      "name": "appelle-moi.mp4",
+      "kind": "video",
+      "bytes": 353329
+    },
+    {
+      "rel": "wipp/stickers/appelle-moi.webp",
+      "folder": "stickers",
+      "name": "appelle-moi.webp",
+      "kind": "image",
+      "bytes": 42570
+    },
+    {
+      "rel": "wipp/stickers/bisous.mp4",
+      "folder": "stickers",
+      "name": "bisous.mp4",
+      "kind": "video",
+      "bytes": 250100
+    },
+    {
+      "rel": "wipp/stickers/bisous.webp",
+      "folder": "stickers",
+      "name": "bisous.webp",
+      "kind": "image",
+      "bytes": 59586
+    },
+    {
+      "rel": "wipp/stickers/bon-matin.mp4",
+      "folder": "stickers",
+      "name": "bon-matin.mp4",
+      "kind": "video",
+      "bytes": 159572
+    },
+    {
+      "rel": "wipp/stickers/bon-matin.webp",
+      "folder": "stickers",
+      "name": "bon-matin.webp",
+      "kind": "image",
+      "bytes": 70330
+    },
+    {
+      "rel": "wipp/stickers/bonne-nuit.mp4",
+      "folder": "stickers",
+      "name": "bonne-nuit.mp4",
+      "kind": "video",
+      "bytes": 75168
+    },
+    {
+      "rel": "wipp/stickers/bonne-nuit.webp",
+      "folder": "stickers",
+      "name": "bonne-nuit.webp",
+      "kind": "image",
+      "bytes": 36356
+    },
+    {
+      "rel": "wipp/stickers/bravo.mp4",
+      "folder": "stickers",
+      "name": "bravo.mp4",
+      "kind": "video",
+      "bytes": 675784
+    },
+    {
+      "rel": "wipp/stickers/bravo.webp",
+      "folder": "stickers",
+      "name": "bravo.webp",
+      "kind": "image",
+      "bytes": 69082
+    },
+    {
+      "rel": "wipp/stickers/ca-wipp.mp4",
+      "folder": "stickers",
+      "name": "ca-wipp.mp4",
+      "kind": "video",
+      "bytes": 308244
+    },
+    {
+      "rel": "wipp/stickers/ca-wipp.webp",
+      "folder": "stickers",
+      "name": "ca-wipp.webp",
+      "kind": "image",
+      "bytes": 37540
+    },
+    {
+      "rel": "wipp/stickers/connecte.mp4",
+      "folder": "stickers",
+      "name": "connecte.mp4",
+      "kind": "video",
+      "bytes": 162376
+    },
+    {
+      "rel": "wipp/stickers/connecte.webp",
+      "folder": "stickers",
+      "name": "connecte.webp",
+      "kind": "image",
+      "bytes": 45014
+    },
+    {
+      "rel": "wipp/stickers/fun/bien-joue.mp4",
+      "folder": "stickers",
+      "name": "bien-joue.mp4",
+      "kind": "video",
+      "bytes": 94766
+    },
+    {
+      "rel": "wipp/stickers/fun/bien-joue.webp",
+      "folder": "stickers",
+      "name": "bien-joue.webp",
+      "kind": "image",
+      "bytes": 33792
+    },
+    {
+      "rel": "wipp/stickers/fun/bisousss.mp4",
+      "folder": "stickers",
+      "name": "bisousss.mp4",
+      "kind": "video",
+      "bytes": 143453
+    },
+    {
+      "rel": "wipp/stickers/fun/bisousss.webp",
+      "folder": "stickers",
+      "name": "bisousss.webp",
+      "kind": "image",
+      "bytes": 62618
+    },
+    {
+      "rel": "wipp/stickers/fun/ca-marche.mp4",
+      "folder": "stickers",
+      "name": "ca-marche.mp4",
+      "kind": "video",
+      "bytes": 291839
+    },
+    {
+      "rel": "wipp/stickers/fun/ca-marche.webp",
+      "folder": "stickers",
+      "name": "ca-marche.webp",
+      "kind": "image",
+      "bytes": 81264
+    },
+    {
+      "rel": "wipp/stickers/fun/cool.mp4",
+      "folder": "stickers",
+      "name": "cool.mp4",
+      "kind": "video",
+      "bytes": 110413
+    },
+    {
+      "rel": "wipp/stickers/fun/cool.webp",
+      "folder": "stickers",
+      "name": "cool.webp",
+      "kind": "image",
+      "bytes": 41222
+    },
+    {
+      "rel": "wipp/stickers/fun/dodo.mp4",
+      "folder": "stickers",
+      "name": "dodo.mp4",
+      "kind": "video",
+      "bytes": 57354
+    },
+    {
+      "rel": "wipp/stickers/fun/dodo.webp",
+      "folder": "stickers",
+      "name": "dodo.webp",
+      "kind": "image",
+      "bytes": 38198
+    },
+    {
+      "rel": "wipp/stickers/fun/ecoute-bien.mp4",
+      "folder": "stickers",
+      "name": "ecoute-bien.mp4",
+      "kind": "video",
+      "bytes": 206496
+    },
+    {
+      "rel": "wipp/stickers/fun/ecoute-bien.webp",
+      "folder": "stickers",
+      "name": "ecoute-bien.webp",
+      "kind": "image",
+      "bytes": 72596
+    },
+    {
+      "rel": "wipp/stickers/fun/focus.mp4",
+      "folder": "stickers",
+      "name": "focus.mp4",
+      "kind": "video",
+      "bytes": 70675
+    },
+    {
+      "rel": "wipp/stickers/fun/focus.webp",
+      "folder": "stickers",
+      "name": "focus.webp",
+      "kind": "image",
+      "bytes": 54576
+    },
+    {
+      "rel": "wipp/stickers/fun/hahaha.mp4",
+      "folder": "stickers",
+      "name": "hahaha.mp4",
+      "kind": "video",
+      "bytes": 351607
+    },
+    {
+      "rel": "wipp/stickers/fun/hahaha.webp",
+      "folder": "stickers",
+      "name": "hahaha.webp",
+      "kind": "image",
+      "bytes": 74560
+    },
+    {
+      "rel": "wipp/stickers/fun/laisse-moi.mp4",
+      "folder": "stickers",
+      "name": "laisse-moi.mp4",
+      "kind": "video",
+      "bytes": 196136
+    },
+    {
+      "rel": "wipp/stickers/fun/laisse-moi.webp",
+      "folder": "stickers",
+      "name": "laisse-moi.webp",
+      "kind": "image",
+      "bytes": 55248
+    },
+    {
+      "rel": "wipp/stickers/fun/le-boss.mp4",
+      "folder": "stickers",
+      "name": "le-boss.mp4",
+      "kind": "video",
+      "bytes": 86870
+    },
+    {
+      "rel": "wipp/stickers/fun/le-boss.webp",
+      "folder": "stickers",
+      "name": "le-boss.webp",
+      "kind": "image",
+      "bytes": 42100
+    },
+    {
+      "rel": "wipp/stickers/fun/nimporte-quoi.mp4",
+      "folder": "stickers",
+      "name": "nimporte-quoi.mp4",
+      "kind": "video",
+      "bytes": 173049
+    },
+    {
+      "rel": "wipp/stickers/fun/nimporte-quoi.webp",
+      "folder": "stickers",
+      "name": "nimporte-quoi.webp",
+      "kind": "image",
+      "bytes": 60284
+    },
+    {
+      "rel": "wipp/stickers/fun/oh-non.mp4",
+      "folder": "stickers",
+      "name": "oh-non.mp4",
+      "kind": "video",
+      "bytes": 122652
+    },
+    {
+      "rel": "wipp/stickers/fun/oh-non.webp",
+      "folder": "stickers",
+      "name": "oh-non.webp",
+      "kind": "image",
+      "bytes": 54908
+    },
+    {
+      "rel": "wipp/stickers/fun/pas-aujourdhui.mp4",
+      "folder": "stickers",
+      "name": "pas-aujourdhui.mp4",
+      "kind": "video",
+      "bytes": 83216
+    },
+    {
+      "rel": "wipp/stickers/fun/pas-aujourdhui.webp",
+      "folder": "stickers",
+      "name": "pas-aujourdhui.webp",
+      "kind": "image",
+      "bytes": 34752
+    },
+    {
+      "rel": "wipp/stickers/fun/stop.mp4",
+      "folder": "stickers",
+      "name": "stop.mp4",
+      "kind": "video",
+      "bytes": 192987
+    },
+    {
+      "rel": "wipp/stickers/fun/stop.webp",
+      "folder": "stickers",
+      "name": "stop.webp",
+      "kind": "image",
+      "bytes": 62646
+    },
+    {
+      "rel": "wipp/stickers/fun/tchip.mp4",
+      "folder": "stickers",
+      "name": "tchip.mp4",
+      "kind": "video",
+      "bytes": 141982
+    },
+    {
+      "rel": "wipp/stickers/fun/tchip.webp",
+      "folder": "stickers",
+      "name": "tchip.webp",
+      "kind": "image",
+      "bytes": 56342
+    },
+    {
+      "rel": "wipp/stickers/fun/trop-tot.mp4",
+      "folder": "stickers",
+      "name": "trop-tot.mp4",
+      "kind": "video",
+      "bytes": 155301
+    },
+    {
+      "rel": "wipp/stickers/fun/trop-tot.webp",
+      "folder": "stickers",
+      "name": "trop-tot.webp",
+      "kind": "image",
+      "bytes": 42786
+    },
+    {
+      "rel": "wipp/stickers/fun/va-la-bas.mp4",
+      "folder": "stickers",
+      "name": "va-la-bas.mp4",
+      "kind": "video",
+      "bytes": 244733
+    },
+    {
+      "rel": "wipp/stickers/fun/va-la-bas.webp",
+      "folder": "stickers",
+      "name": "va-la-bas.webp",
+      "kind": "image",
+      "bytes": 80254
+    },
+    {
+      "rel": "wipp/stickers/fun/valide.mp4",
+      "folder": "stickers",
+      "name": "valide.mp4",
+      "kind": "video",
+      "bytes": 143419
+    },
+    {
+      "rel": "wipp/stickers/fun/valide.webp",
+      "folder": "stickers",
+      "name": "valide.webp",
+      "kind": "image",
+      "bytes": 34818
+    },
+    {
+      "rel": "wipp/stickers/fun/vraiment.mp4",
+      "folder": "stickers",
+      "name": "vraiment.mp4",
+      "kind": "video",
+      "bytes": 73172
+    },
+    {
+      "rel": "wipp/stickers/fun/vraiment.webp",
+      "folder": "stickers",
+      "name": "vraiment.webp",
+      "kind": "image",
+      "bytes": 52860
+    },
+    {
+      "rel": "wipp/stickers/fun/yesss.mp4",
+      "folder": "stickers",
+      "name": "yesss.mp4",
+      "kind": "video",
+      "bytes": 480592
+    },
+    {
+      "rel": "wipp/stickers/fun/yesss.webp",
+      "folder": "stickers",
+      "name": "yesss.webp",
+      "kind": "image",
+      "bytes": 70916
+    },
+    {
+      "rel": "wipp/stickers/fun2/argent-dabord.mp4",
+      "folder": "stickers",
+      "name": "argent-dabord.mp4",
+      "kind": "video",
+      "bytes": 216628
+    },
+    {
+      "rel": "wipp/stickers/fun2/argent-dabord.webp",
+      "folder": "stickers",
+      "name": "argent-dabord.webp",
+      "kind": "image",
+      "bytes": 61532
+    },
+    {
+      "rel": "wipp/stickers/fun2/bye-bye.mp4",
+      "folder": "stickers",
+      "name": "bye-bye.mp4",
+      "kind": "video",
+      "bytes": 145299
+    },
+    {
+      "rel": "wipp/stickers/fun2/bye-bye.webp",
+      "folder": "stickers",
+      "name": "bye-bye.webp",
+      "kind": "image",
+      "bytes": 34840
+    },
+    {
+      "rel": "wipp/stickers/fun2/cest-bon-hein.mp4",
+      "folder": "stickers",
+      "name": "cest-bon-hein.mp4",
+      "kind": "video",
+      "bytes": 257046
+    },
+    {
+      "rel": "wipp/stickers/fun2/cest-bon-hein.webp",
+      "folder": "stickers",
+      "name": "cest-bon-hein.webp",
+      "kind": "image",
+      "bytes": 60604
+    },
+    {
+      "rel": "wipp/stickers/fun2/cours.mp4",
+      "folder": "stickers",
+      "name": "cours.mp4",
+      "kind": "video",
+      "bytes": 397158
+    },
+    {
+      "rel": "wipp/stickers/fun2/cours.webp",
+      "folder": "stickers",
+      "name": "cours.webp",
+      "kind": "image",
+      "bytes": 67784
+    },
+    {
+      "rel": "wipp/stickers/fun2/degage.mp4",
+      "folder": "stickers",
+      "name": "degage.mp4",
+      "kind": "video",
+      "bytes": 168154
+    },
+    {
+      "rel": "wipp/stickers/fun2/degage.webp",
+      "folder": "stickers",
+      "name": "degage.webp",
+      "kind": "image",
+      "bytes": 39946
+    },
+    {
+      "rel": "wipp/stickers/fun2/ecoutez-moi-bien.mp4",
+      "folder": "stickers",
+      "name": "ecoutez-moi-bien.mp4",
+      "kind": "video",
+      "bytes": 219231
+    },
+    {
+      "rel": "wipp/stickers/fun2/ecoutez-moi-bien.webp",
+      "folder": "stickers",
+      "name": "ecoutez-moi-bien.webp",
+      "kind": "image",
+      "bytes": 79254
+    },
+    {
+      "rel": "wipp/stickers/fun2/hahaha.mp4",
+      "folder": "stickers",
+      "name": "hahaha.mp4",
+      "kind": "video",
+      "bytes": 194435
+    },
+    {
+      "rel": "wipp/stickers/fun2/hahaha.webp",
+      "folder": "stickers",
+      "name": "hahaha.webp",
+      "kind": "image",
+      "bytes": 73344
+    },
+    {
+      "rel": "wipp/stickers/fun2/hum.mp4",
+      "folder": "stickers",
+      "name": "hum.mp4",
+      "kind": "video",
+      "bytes": 106071
+    },
+    {
+      "rel": "wipp/stickers/fun2/hum.webp",
+      "folder": "stickers",
+      "name": "hum.webp",
+      "kind": "image",
+      "bytes": 33866
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-ne-sais-pas.mp4",
+      "folder": "stickers",
+      "name": "je-ne-sais-pas.mp4",
+      "kind": "video",
+      "bytes": 162016
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-ne-sais-pas.webp",
+      "folder": "stickers",
+      "name": "je-ne-sais-pas.webp",
+      "kind": "image",
+      "bytes": 58460
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-suis-ko.mp4",
+      "folder": "stickers",
+      "name": "je-suis-ko.mp4",
+      "kind": "video",
+      "bytes": 116715
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-suis-ko.webp",
+      "folder": "stickers",
+      "name": "je-suis-ko.webp",
+      "kind": "image",
+      "bytes": 71844
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-te-vois.mp4",
+      "folder": "stickers",
+      "name": "je-te-vois.mp4",
+      "kind": "video",
+      "bytes": 45346
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-te-vois.webp",
+      "folder": "stickers",
+      "name": "je-te-vois.webp",
+      "kind": "image",
+      "bytes": 34826
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-vais-taper.mp4",
+      "folder": "stickers",
+      "name": "je-vais-taper.mp4",
+      "kind": "video",
+      "bytes": 229921
+    },
+    {
+      "rel": "wipp/stickers/fun2/je-vais-taper.webp",
+      "folder": "stickers",
+      "name": "je-vais-taper.webp",
+      "kind": "image",
+      "bytes": 52166
+    },
+    {
+      "rel": "wipp/stickers/fun2/mdr.mp4",
+      "folder": "stickers",
+      "name": "mdr.mp4",
+      "kind": "video",
+      "bytes": 181956
+    },
+    {
+      "rel": "wipp/stickers/fun2/mdr.webp",
+      "folder": "stickers",
+      "name": "mdr.webp",
+      "kind": "image",
+      "bytes": 42482
+    },
+    {
+      "rel": "wipp/stickers/fun2/nananana.mp4",
+      "folder": "stickers",
+      "name": "nananana.mp4",
+      "kind": "video",
+      "bytes": 175933
+    },
+    {
+      "rel": "wipp/stickers/fun2/nananana.webp",
+      "folder": "stickers",
+      "name": "nananana.webp",
+      "kind": "image",
+      "bytes": 37054
+    },
+    {
+      "rel": "wipp/stickers/fun2/oh-mon-dieu.mp4",
+      "folder": "stickers",
+      "name": "oh-mon-dieu.mp4",
+      "kind": "video",
+      "bytes": 427425
+    },
+    {
+      "rel": "wipp/stickers/fun2/oh-mon-dieu.webp",
+      "folder": "stickers",
+      "name": "oh-mon-dieu.webp",
+      "kind": "image",
+      "bytes": 69504
+    },
+    {
+      "rel": "wipp/stickers/fun2/pas-mon-probleme.mp4",
+      "folder": "stickers",
+      "name": "pas-mon-probleme.mp4",
+      "kind": "video",
+      "bytes": 138029
+    },
+    {
+      "rel": "wipp/stickers/fun2/pas-mon-probleme.webp",
+      "folder": "stickers",
+      "name": "pas-mon-probleme.webp",
+      "kind": "image",
+      "bytes": 42920
+    },
+    {
+      "rel": "wipp/stickers/fun2/toi-la.mp4",
+      "folder": "stickers",
+      "name": "toi-la.mp4",
+      "kind": "video",
+      "bytes": 178487
+    },
+    {
+      "rel": "wipp/stickers/fun2/toi-la.webp",
+      "folder": "stickers",
+      "name": "toi-la.webp",
+      "kind": "image",
+      "bytes": 45412
+    },
+    {
+      "rel": "wipp/stickers/fun2/trop-mange.mp4",
+      "folder": "stickers",
+      "name": "trop-mange.mp4",
+      "kind": "video",
+      "bytes": 161556
+    },
+    {
+      "rel": "wipp/stickers/fun2/trop-mange.webp",
+      "folder": "stickers",
+      "name": "trop-mange.webp",
+      "kind": "image",
+      "bytes": 38856
+    },
+    {
+      "rel": "wipp/stickers/fun2/tu-parles-trop.mp4",
+      "folder": "stickers",
+      "name": "tu-parles-trop.mp4",
+      "kind": "video",
+      "bytes": 109895
+    },
+    {
+      "rel": "wipp/stickers/fun2/tu-parles-trop.webp",
+      "folder": "stickers",
+      "name": "tu-parles-trop.webp",
+      "kind": "image",
+      "bytes": 45198
+    },
+    {
+      "rel": "wipp/stickers/fun2/wesh.mp4",
+      "folder": "stickers",
+      "name": "wesh.mp4",
+      "kind": "video",
+      "bytes": 146936
+    },
+    {
+      "rel": "wipp/stickers/fun2/wesh.webp",
+      "folder": "stickers",
+      "name": "wesh.webp",
+      "kind": "image",
+      "bytes": 45804
+    },
+    {
+      "rel": "wipp/stickers/general/gen-01.png",
+      "folder": "stickers",
+      "name": "gen-01.png",
+      "kind": "image",
+      "bytes": 673396
+    },
+    {
+      "rel": "wipp/stickers/general/gen-02.png",
+      "folder": "stickers",
+      "name": "gen-02.png",
+      "kind": "image",
+      "bytes": 631434
+    },
+    {
+      "rel": "wipp/stickers/general/gen-03.png",
+      "folder": "stickers",
+      "name": "gen-03.png",
+      "kind": "image",
+      "bytes": 687315
+    },
+    {
+      "rel": "wipp/stickers/general/gen-04.png",
+      "folder": "stickers",
+      "name": "gen-04.png",
+      "kind": "image",
+      "bytes": 642234
+    },
+    {
+      "rel": "wipp/stickers/general/gen-05.png",
+      "folder": "stickers",
+      "name": "gen-05.png",
+      "kind": "image",
+      "bytes": 660216
+    },
+    {
+      "rel": "wipp/stickers/general/gen-06.png",
+      "folder": "stickers",
+      "name": "gen-06.png",
+      "kind": "image",
+      "bytes": 670232
+    },
+    {
+      "rel": "wipp/stickers/general/gen-07.png",
+      "folder": "stickers",
+      "name": "gen-07.png",
+      "kind": "image",
+      "bytes": 622260
+    },
+    {
+      "rel": "wipp/stickers/general/gen-08.png",
+      "folder": "stickers",
+      "name": "gen-08.png",
+      "kind": "image",
+      "bytes": 747782
+    },
+    {
+      "rel": "wipp/stickers/general/gen-09.png",
+      "folder": "stickers",
+      "name": "gen-09.png",
+      "kind": "image",
+      "bytes": 622433
+    },
+    {
+      "rel": "wipp/stickers/general/gen-10.png",
+      "folder": "stickers",
+      "name": "gen-10.png",
+      "kind": "image",
+      "bytes": 652221
+    },
+    {
+      "rel": "wipp/stickers/general/gen-11.png",
+      "folder": "stickers",
+      "name": "gen-11.png",
+      "kind": "image",
+      "bytes": 730056
+    },
+    {
+      "rel": "wipp/stickers/general/gen-12.png",
+      "folder": "stickers",
+      "name": "gen-12.png",
+      "kind": "image",
+      "bytes": 612515
+    },
+    {
+      "rel": "wipp/stickers/general/gen-13.png",
+      "folder": "stickers",
+      "name": "gen-13.png",
+      "kind": "image",
+      "bytes": 702108
+    },
+    {
+      "rel": "wipp/stickers/general/gen-14.png",
+      "folder": "stickers",
+      "name": "gen-14.png",
+      "kind": "image",
+      "bytes": 704777
+    },
+    {
+      "rel": "wipp/stickers/general/gen-15.png",
+      "folder": "stickers",
+      "name": "gen-15.png",
+      "kind": "image",
+      "bytes": 585216
+    },
+    {
+      "rel": "wipp/stickers/general/gen-16.png",
+      "folder": "stickers",
+      "name": "gen-16.png",
+      "kind": "image",
+      "bytes": 631220
+    },
+    {
+      "rel": "wipp/stickers/general/gen-17.png",
+      "folder": "stickers",
+      "name": "gen-17.png",
+      "kind": "image",
+      "bytes": 700091
+    },
+    {
+      "rel": "wipp/stickers/general/gen-18.png",
+      "folder": "stickers",
+      "name": "gen-18.png",
+      "kind": "image",
+      "bytes": 692119
+    },
+    {
+      "rel": "wipp/stickers/general/gen-19.png",
+      "folder": "stickers",
+      "name": "gen-19.png",
+      "kind": "image",
+      "bytes": 929935
+    },
+    {
+      "rel": "wipp/stickers/general/gen-20.png",
+      "folder": "stickers",
+      "name": "gen-20.png",
+      "kind": "image",
+      "bytes": 828755
+    },
+    {
+      "rel": "wipp/stickers/hmm.mp4",
+      "folder": "stickers",
+      "name": "hmm.mp4",
+      "kind": "video",
+      "bytes": 135722
+    },
+    {
+      "rel": "wipp/stickers/hmm.webp",
+      "folder": "stickers",
+      "name": "hmm.webp",
+      "kind": "image",
+      "bytes": 62042
+    },
+    {
+      "rel": "wipp/stickers/j-arrive.mp4",
+      "folder": "stickers",
+      "name": "j-arrive.mp4",
+      "kind": "video",
+      "bytes": 169801
+    },
+    {
+      "rel": "wipp/stickers/j-arrive.webp",
+      "folder": "stickers",
+      "name": "j-arrive.webp",
+      "kind": "image",
+      "bytes": 33472
+    },
+    {
+      "rel": "wipp/stickers/laisse-tomber.mp4",
+      "folder": "stickers",
+      "name": "laisse-tomber.mp4",
+      "kind": "video",
+      "bytes": 273737
+    },
+    {
+      "rel": "wipp/stickers/laisse-tomber.webp",
+      "folder": "stickers",
+      "name": "laisse-tomber.webp",
+      "kind": "image",
+      "bytes": 54688
+    },
+    {
+      "rel": "wipp/stickers/lui/appelle-moi.mp4",
+      "folder": "stickers",
+      "name": "appelle-moi.mp4",
+      "kind": "video",
+      "bytes": 121722
+    },
+    {
+      "rel": "wipp/stickers/lui/appelle-moi.webp",
+      "folder": "stickers",
+      "name": "appelle-moi.webp",
+      "kind": "image",
+      "bytes": 42864
+    },
+    {
+      "rel": "wipp/stickers/lui/bisous.mp4",
+      "folder": "stickers",
+      "name": "bisous.mp4",
+      "kind": "video",
+      "bytes": 118038
+    },
+    {
+      "rel": "wipp/stickers/lui/bisous.webp",
+      "folder": "stickers",
+      "name": "bisous.webp",
+      "kind": "image",
+      "bytes": 32834
+    },
+    {
+      "rel": "wipp/stickers/lui/bon-matin.mp4",
+      "folder": "stickers",
+      "name": "bon-matin.mp4",
+      "kind": "video",
+      "bytes": 146396
+    },
+    {
+      "rel": "wipp/stickers/lui/bon-matin.webp",
+      "folder": "stickers",
+      "name": "bon-matin.webp",
+      "kind": "image",
+      "bytes": 38172
+    },
+    {
+      "rel": "wipp/stickers/lui/bonne-nuit.mp4",
+      "folder": "stickers",
+      "name": "bonne-nuit.mp4",
+      "kind": "video",
+      "bytes": 66688
+    },
+    {
+      "rel": "wipp/stickers/lui/bonne-nuit.webp",
+      "folder": "stickers",
+      "name": "bonne-nuit.webp",
+      "kind": "image",
+      "bytes": 35526
+    },
+    {
+      "rel": "wipp/stickers/lui/bravo.mp4",
+      "folder": "stickers",
+      "name": "bravo.mp4",
+      "kind": "video",
+      "bytes": 413656
+    },
+    {
+      "rel": "wipp/stickers/lui/bravo.webp",
+      "folder": "stickers",
+      "name": "bravo.webp",
+      "kind": "image",
+      "bytes": 42986
+    },
+    {
+      "rel": "wipp/stickers/lui/ca-wipp.mp4",
+      "folder": "stickers",
+      "name": "ca-wipp.mp4",
+      "kind": "video",
+      "bytes": 375295
+    },
+    {
+      "rel": "wipp/stickers/lui/ca-wipp.webp",
+      "folder": "stickers",
+      "name": "ca-wipp.webp",
+      "kind": "image",
+      "bytes": 63188
+    },
+    {
+      "rel": "wipp/stickers/lui/connecte.mp4",
+      "folder": "stickers",
+      "name": "connecte.mp4",
+      "kind": "video",
+      "bytes": 342607
+    },
+    {
+      "rel": "wipp/stickers/lui/connecte.webp",
+      "folder": "stickers",
+      "name": "connecte.webp",
+      "kind": "image",
+      "bytes": 61974
+    },
+    {
+      "rel": "wipp/stickers/lui/hmm.mp4",
+      "folder": "stickers",
+      "name": "hmm.mp4",
+      "kind": "video",
+      "bytes": 88752
+    },
+    {
+      "rel": "wipp/stickers/lui/hmm.webp",
+      "folder": "stickers",
+      "name": "hmm.webp",
+      "kind": "image",
+      "bytes": 34722
+    },
+    {
+      "rel": "wipp/stickers/lui/j-arrive.mp4",
+      "folder": "stickers",
+      "name": "j-arrive.mp4",
+      "kind": "video",
+      "bytes": 322483
+    },
+    {
+      "rel": "wipp/stickers/lui/j-arrive.webp",
+      "folder": "stickers",
+      "name": "j-arrive.webp",
+      "kind": "image",
+      "bytes": 69122
+    },
+    {
+      "rel": "wipp/stickers/lui/laisse-tomber.mp4",
+      "folder": "stickers",
+      "name": "laisse-tomber.mp4",
+      "kind": "video",
+      "bytes": 205063
+    },
+    {
+      "rel": "wipp/stickers/lui/laisse-tomber.webp",
+      "folder": "stickers",
+      "name": "laisse-tomber.webp",
+      "kind": "image",
+      "bytes": 61128
+    },
+    {
+      "rel": "wipp/stickers/lui/mdr.mp4",
+      "folder": "stickers",
+      "name": "mdr.mp4",
+      "kind": "video",
+      "bytes": 206961
+    },
+    {
+      "rel": "wipp/stickers/lui/mdr.webp",
+      "folder": "stickers",
+      "name": "mdr.webp",
+      "kind": "image",
+      "bytes": 39616
+    },
+    {
+      "rel": "wipp/stickers/lui/no-way.mp4",
+      "folder": "stickers",
+      "name": "no-way.mp4",
+      "kind": "video",
+      "bytes": 269195
+    },
+    {
+      "rel": "wipp/stickers/lui/no-way.webp",
+      "folder": "stickers",
+      "name": "no-way.webp",
+      "kind": "image",
+      "bytes": 58364
+    },
+    {
+      "rel": "wipp/stickers/lui/on-se-capte.mp4",
+      "folder": "stickers",
+      "name": "on-se-capte.mp4",
+      "kind": "video",
+      "bytes": 159053
+    },
+    {
+      "rel": "wipp/stickers/lui/on-se-capte.webp",
+      "folder": "stickers",
+      "name": "on-se-capte.webp",
+      "kind": "image",
+      "bytes": 39732
+    },
+    {
+      "rel": "wipp/stickers/lui/respect.mp4",
+      "folder": "stickers",
+      "name": "respect.mp4",
+      "kind": "video",
+      "bytes": 290438
+    },
+    {
+      "rel": "wipp/stickers/lui/respect.webp",
+      "folder": "stickers",
+      "name": "respect.webp",
+      "kind": "image",
+      "bytes": 42556
+    },
+    {
+      "rel": "wipp/stickers/lui/valide.mp4",
+      "folder": "stickers",
+      "name": "valide.mp4",
+      "kind": "video",
+      "bytes": 127749
+    },
+    {
+      "rel": "wipp/stickers/lui/valide.webp",
+      "folder": "stickers",
+      "name": "valide.webp",
+      "kind": "image",
+      "bytes": 65900
+    },
+    {
+      "rel": "wipp/stickers/lui/wippe-moi.mp4",
+      "folder": "stickers",
+      "name": "wippe-moi.mp4",
+      "kind": "video",
+      "bytes": 135880
+    },
+    {
+      "rel": "wipp/stickers/lui/wippe-moi.webp",
+      "folder": "stickers",
+      "name": "wippe-moi.webp",
+      "kind": "image",
+      "bytes": 74776
+    },
+    {
+      "rel": "wipp/stickers/mdr.mp4",
+      "folder": "stickers",
+      "name": "mdr.mp4",
+      "kind": "video",
+      "bytes": 246801
+    },
+    {
+      "rel": "wipp/stickers/mdr.webp",
+      "folder": "stickers",
+      "name": "mdr.webp",
+      "kind": "image",
+      "bytes": 31974
+    },
+    {
+      "rel": "wipp/stickers/merci.mp4",
+      "folder": "stickers",
+      "name": "merci.mp4",
+      "kind": "video",
+      "bytes": 125419
+    },
+    {
+      "rel": "wipp/stickers/merci.webp",
+      "folder": "stickers",
+      "name": "merci.webp",
+      "kind": "image",
+      "bytes": 30442
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-01.webp",
+      "folder": "stickers",
+      "name": "moji-01.webp",
+      "kind": "image",
+      "bytes": 857492
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-02.webp",
+      "folder": "stickers",
+      "name": "moji-02.webp",
+      "kind": "image",
+      "bytes": 1335536
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-03.webp",
+      "folder": "stickers",
+      "name": "moji-03.webp",
+      "kind": "image",
+      "bytes": 675742
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-04.webp",
+      "folder": "stickers",
+      "name": "moji-04.webp",
+      "kind": "image",
+      "bytes": 931540
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-05.webp",
+      "folder": "stickers",
+      "name": "moji-05.webp",
+      "kind": "image",
+      "bytes": 942988
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-06.webp",
+      "folder": "stickers",
+      "name": "moji-06.webp",
+      "kind": "image",
+      "bytes": 918282
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-07.webp",
+      "folder": "stickers",
+      "name": "moji-07.webp",
+      "kind": "image",
+      "bytes": 1115312
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-08.webp",
+      "folder": "stickers",
+      "name": "moji-08.webp",
+      "kind": "image",
+      "bytes": 909134
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-09.webp",
+      "folder": "stickers",
+      "name": "moji-09.webp",
+      "kind": "image",
+      "bytes": 911142
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-10.webp",
+      "folder": "stickers",
+      "name": "moji-10.webp",
+      "kind": "image",
+      "bytes": 832410
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-11.webp",
+      "folder": "stickers",
+      "name": "moji-11.webp",
+      "kind": "image",
+      "bytes": 435778
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-12.webp",
+      "folder": "stickers",
+      "name": "moji-12.webp",
+      "kind": "image",
+      "bytes": 522440
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-13.webp",
+      "folder": "stickers",
+      "name": "moji-13.webp",
+      "kind": "image",
+      "bytes": 468602
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-14.webp",
+      "folder": "stickers",
+      "name": "moji-14.webp",
+      "kind": "image",
+      "bytes": 349614
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-15.webp",
+      "folder": "stickers",
+      "name": "moji-15.webp",
+      "kind": "image",
+      "bytes": 342088
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-16.webp",
+      "folder": "stickers",
+      "name": "moji-16.webp",
+      "kind": "image",
+      "bytes": 431730
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-17.webp",
+      "folder": "stickers",
+      "name": "moji-17.webp",
+      "kind": "image",
+      "bytes": 318744
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-18.webp",
+      "folder": "stickers",
+      "name": "moji-18.webp",
+      "kind": "image",
+      "bytes": 368266
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-19.webp",
+      "folder": "stickers",
+      "name": "moji-19.webp",
+      "kind": "image",
+      "bytes": 360902
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-20.webp",
+      "folder": "stickers",
+      "name": "moji-20.webp",
+      "kind": "image",
+      "bytes": 287558
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-21.webp",
+      "folder": "stickers",
+      "name": "moji-21.webp",
+      "kind": "image",
+      "bytes": 1176472
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-22.webp",
+      "folder": "stickers",
+      "name": "moji-22.webp",
+      "kind": "image",
+      "bytes": 773942
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-23.webp",
+      "folder": "stickers",
+      "name": "moji-23.webp",
+      "kind": "image",
+      "bytes": 929138
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-24.webp",
+      "folder": "stickers",
+      "name": "moji-24.webp",
+      "kind": "image",
+      "bytes": 790884
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-25.webp",
+      "folder": "stickers",
+      "name": "moji-25.webp",
+      "kind": "image",
+      "bytes": 1493830
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-26.webp",
+      "folder": "stickers",
+      "name": "moji-26.webp",
+      "kind": "image",
+      "bytes": 665330
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-27.webp",
+      "folder": "stickers",
+      "name": "moji-27.webp",
+      "kind": "image",
+      "bytes": 979274
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-28.webp",
+      "folder": "stickers",
+      "name": "moji-28.webp",
+      "kind": "image",
+      "bytes": 1195344
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-29.webp",
+      "folder": "stickers",
+      "name": "moji-29.webp",
+      "kind": "image",
+      "bytes": 782802
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-30.webp",
+      "folder": "stickers",
+      "name": "moji-30.webp",
+      "kind": "image",
+      "bytes": 831604
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-31.webp",
+      "folder": "stickers",
+      "name": "moji-31.webp",
+      "kind": "image",
+      "bytes": 752082
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-32.webp",
+      "folder": "stickers",
+      "name": "moji-32.webp",
+      "kind": "image",
+      "bytes": 887150
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-33.webp",
+      "folder": "stickers",
+      "name": "moji-33.webp",
+      "kind": "image",
+      "bytes": 886434
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-34.webp",
+      "folder": "stickers",
+      "name": "moji-34.webp",
+      "kind": "image",
+      "bytes": 720852
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-35.webp",
+      "folder": "stickers",
+      "name": "moji-35.webp",
+      "kind": "image",
+      "bytes": 1157588
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-36.webp",
+      "folder": "stickers",
+      "name": "moji-36.webp",
+      "kind": "image",
+      "bytes": 872828
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-37.webp",
+      "folder": "stickers",
+      "name": "moji-37.webp",
+      "kind": "image",
+      "bytes": 691096
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-38.webp",
+      "folder": "stickers",
+      "name": "moji-38.webp",
+      "kind": "image",
+      "bytes": 1241170
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-39.webp",
+      "folder": "stickers",
+      "name": "moji-39.webp",
+      "kind": "image",
+      "bytes": 923862
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-40.webp",
+      "folder": "stickers",
+      "name": "moji-40.webp",
+      "kind": "image",
+      "bytes": 556308
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-41.webp",
+      "folder": "stickers",
+      "name": "moji-41.webp",
+      "kind": "image",
+      "bytes": 646826
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-42.webp",
+      "folder": "stickers",
+      "name": "moji-42.webp",
+      "kind": "image",
+      "bytes": 761592
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-43.webp",
+      "folder": "stickers",
+      "name": "moji-43.webp",
+      "kind": "image",
+      "bytes": 2047422
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-44.webp",
+      "folder": "stickers",
+      "name": "moji-44.webp",
+      "kind": "image",
+      "bytes": 893954
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-45.webp",
+      "folder": "stickers",
+      "name": "moji-45.webp",
+      "kind": "image",
+      "bytes": 1023152
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-46.webp",
+      "folder": "stickers",
+      "name": "moji-46.webp",
+      "kind": "image",
+      "bytes": 730760
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-47.webp",
+      "folder": "stickers",
+      "name": "moji-47.webp",
+      "kind": "image",
+      "bytes": 932094
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-48.webp",
+      "folder": "stickers",
+      "name": "moji-48.webp",
+      "kind": "image",
+      "bytes": 659336
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-49.webp",
+      "folder": "stickers",
+      "name": "moji-49.webp",
+      "kind": "image",
+      "bytes": 699614
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-50.webp",
+      "folder": "stickers",
+      "name": "moji-50.webp",
+      "kind": "image",
+      "bytes": 1143960
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-51.webp",
+      "folder": "stickers",
+      "name": "moji-51.webp",
+      "kind": "image",
+      "bytes": 744306
+    },
+    {
+      "rel": "wipp/stickers/moji-v/moji-52.webp",
+      "folder": "stickers",
+      "name": "moji-52.webp",
+      "kind": "image",
+      "bytes": 801312
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-01.png",
+      "folder": "stickers",
+      "name": "moji-01.png",
+      "kind": "image",
+      "bytes": 84670
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-02.png",
+      "folder": "stickers",
+      "name": "moji-02.png",
+      "kind": "image",
+      "bytes": 73937
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-03.png",
+      "folder": "stickers",
+      "name": "moji-03.png",
+      "kind": "image",
+      "bytes": 64797
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-04.png",
+      "folder": "stickers",
+      "name": "moji-04.png",
+      "kind": "image",
+      "bytes": 71876
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-05.png",
+      "folder": "stickers",
+      "name": "moji-05.png",
+      "kind": "image",
+      "bytes": 78963
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-06.png",
+      "folder": "stickers",
+      "name": "moji-06.png",
+      "kind": "image",
+      "bytes": 74904
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-07.png",
+      "folder": "stickers",
+      "name": "moji-07.png",
+      "kind": "image",
+      "bytes": 78840
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-08.png",
+      "folder": "stickers",
+      "name": "moji-08.png",
+      "kind": "image",
+      "bytes": 75015
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-09.png",
+      "folder": "stickers",
+      "name": "moji-09.png",
+      "kind": "image",
+      "bytes": 60805
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-10.png",
+      "folder": "stickers",
+      "name": "moji-10.png",
+      "kind": "image",
+      "bytes": 62938
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-11.png",
+      "folder": "stickers",
+      "name": "moji-11.png",
+      "kind": "image",
+      "bytes": 68015
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-12.png",
+      "folder": "stickers",
+      "name": "moji-12.png",
+      "kind": "image",
+      "bytes": 73095
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-13.png",
+      "folder": "stickers",
+      "name": "moji-13.png",
+      "kind": "image",
+      "bytes": 74114
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-14.png",
+      "folder": "stickers",
+      "name": "moji-14.png",
+      "kind": "image",
+      "bytes": 53550
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-15.png",
+      "folder": "stickers",
+      "name": "moji-15.png",
+      "kind": "image",
+      "bytes": 55188
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-16.png",
+      "folder": "stickers",
+      "name": "moji-16.png",
+      "kind": "image",
+      "bytes": 61522
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-17.png",
+      "folder": "stickers",
+      "name": "moji-17.png",
+      "kind": "image",
+      "bytes": 60708
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-18.png",
+      "folder": "stickers",
+      "name": "moji-18.png",
+      "kind": "image",
+      "bytes": 64411
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-19.png",
+      "folder": "stickers",
+      "name": "moji-19.png",
+      "kind": "image",
+      "bytes": 70096
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-20.png",
+      "folder": "stickers",
+      "name": "moji-20.png",
+      "kind": "image",
+      "bytes": 83658
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-21.png",
+      "folder": "stickers",
+      "name": "moji-21.png",
+      "kind": "image",
+      "bytes": 74392
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-22.png",
+      "folder": "stickers",
+      "name": "moji-22.png",
+      "kind": "image",
+      "bytes": 61513
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-23.png",
+      "folder": "stickers",
+      "name": "moji-23.png",
+      "kind": "image",
+      "bytes": 66692
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-24.png",
+      "folder": "stickers",
+      "name": "moji-24.png",
+      "kind": "image",
+      "bytes": 61347
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-25.png",
+      "folder": "stickers",
+      "name": "moji-25.png",
+      "kind": "image",
+      "bytes": 76231
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-26.png",
+      "folder": "stickers",
+      "name": "moji-26.png",
+      "kind": "image",
+      "bytes": 81349
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-27.png",
+      "folder": "stickers",
+      "name": "moji-27.png",
+      "kind": "image",
+      "bytes": 70586
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-28.png",
+      "folder": "stickers",
+      "name": "moji-28.png",
+      "kind": "image",
+      "bytes": 76110
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-29.png",
+      "folder": "stickers",
+      "name": "moji-29.png",
+      "kind": "image",
+      "bytes": 85232
+    },
+    {
+      "rel": "wipp/stickers/moji/moji-30.png",
+      "folder": "stickers",
+      "name": "moji-30.png",
+      "kind": "image",
+      "bytes": 71597
+    },
+    {
+      "rel": "wipp/stickers/no-way.mp4",
+      "folder": "stickers",
+      "name": "no-way.mp4",
+      "kind": "video",
+      "bytes": 187023
+    },
+    {
+      "rel": "wipp/stickers/no-way.webp",
+      "folder": "stickers",
+      "name": "no-way.webp",
+      "kind": "image",
+      "bytes": 31178
+    },
+    {
+      "rel": "wipp/stickers/on-se-capte.mp4",
+      "folder": "stickers",
+      "name": "on-se-capte.mp4",
+      "kind": "video",
+      "bytes": 127511
+    },
+    {
+      "rel": "wipp/stickers/on-se-capte.webp",
+      "folder": "stickers",
+      "name": "on-se-capte.webp",
+      "kind": "image",
+      "bytes": 33534
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-01.png",
+      "folder": "stickers",
+      "name": "scene-01.png",
+      "kind": "image",
+      "bytes": 101506
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-02.png",
+      "folder": "stickers",
+      "name": "scene-02.png",
+      "kind": "image",
+      "bytes": 100056
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-03.png",
+      "folder": "stickers",
+      "name": "scene-03.png",
+      "kind": "image",
+      "bytes": 106183
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-04.png",
+      "folder": "stickers",
+      "name": "scene-04.png",
+      "kind": "image",
+      "bytes": 93978
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-05.png",
+      "folder": "stickers",
+      "name": "scene-05.png",
+      "kind": "image",
+      "bytes": 90736
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-06.png",
+      "folder": "stickers",
+      "name": "scene-06.png",
+      "kind": "image",
+      "bytes": 113580
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-07.png",
+      "folder": "stickers",
+      "name": "scene-07.png",
+      "kind": "image",
+      "bytes": 98518
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-08.png",
+      "folder": "stickers",
+      "name": "scene-08.png",
+      "kind": "image",
+      "bytes": 103197
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-09.png",
+      "folder": "stickers",
+      "name": "scene-09.png",
+      "kind": "image",
+      "bytes": 99203
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-10.png",
+      "folder": "stickers",
+      "name": "scene-10.png",
+      "kind": "image",
+      "bytes": 95370
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-11.png",
+      "folder": "stickers",
+      "name": "scene-11.png",
+      "kind": "image",
+      "bytes": 102609
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-12.png",
+      "folder": "stickers",
+      "name": "scene-12.png",
+      "kind": "image",
+      "bytes": 92770
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-13.png",
+      "folder": "stickers",
+      "name": "scene-13.png",
+      "kind": "image",
+      "bytes": 92787
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-14.png",
+      "folder": "stickers",
+      "name": "scene-14.png",
+      "kind": "image",
+      "bytes": 90876
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-15.png",
+      "folder": "stickers",
+      "name": "scene-15.png",
+      "kind": "image",
+      "bytes": 88104
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-16.png",
+      "folder": "stickers",
+      "name": "scene-16.png",
+      "kind": "image",
+      "bytes": 83133
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-17.png",
+      "folder": "stickers",
+      "name": "scene-17.png",
+      "kind": "image",
+      "bytes": 100541
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-18.png",
+      "folder": "stickers",
+      "name": "scene-18.png",
+      "kind": "image",
+      "bytes": 87321
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-19.png",
+      "folder": "stickers",
+      "name": "scene-19.png",
+      "kind": "image",
+      "bytes": 91550
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-20.png",
+      "folder": "stickers",
+      "name": "scene-20.png",
+      "kind": "image",
+      "bytes": 91797
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-21.png",
+      "folder": "stickers",
+      "name": "scene-21.png",
+      "kind": "image",
+      "bytes": 92742
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-22.png",
+      "folder": "stickers",
+      "name": "scene-22.png",
+      "kind": "image",
+      "bytes": 84449
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-23.png",
+      "folder": "stickers",
+      "name": "scene-23.png",
+      "kind": "image",
+      "bytes": 94220
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-24.png",
+      "folder": "stickers",
+      "name": "scene-24.png",
+      "kind": "image",
+      "bytes": 80829
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-25.png",
+      "folder": "stickers",
+      "name": "scene-25.png",
+      "kind": "image",
+      "bytes": 93990
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-26.png",
+      "folder": "stickers",
+      "name": "scene-26.png",
+      "kind": "image",
+      "bytes": 85865
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-27.png",
+      "folder": "stickers",
+      "name": "scene-27.png",
+      "kind": "image",
+      "bytes": 82074
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-28.png",
+      "folder": "stickers",
+      "name": "scene-28.png",
+      "kind": "image",
+      "bytes": 99586
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-29.png",
+      "folder": "stickers",
+      "name": "scene-29.png",
+      "kind": "image",
+      "bytes": 84418
+    },
+    {
+      "rel": "wipp/stickers/scene/scene-30.png",
+      "folder": "stickers",
+      "name": "scene-30.png",
+      "kind": "image",
+      "bytes": 84263
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-appelle.png",
+      "folder": "stickers",
+      "name": "sig-appelle.png",
+      "kind": "image",
+      "bytes": 62374
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-bisous.png",
+      "folder": "stickers",
+      "name": "sig-bisous.png",
+      "kind": "image",
+      "bytes": 94451
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-bonne-idee.png",
+      "folder": "stickers",
+      "name": "sig-bonne-idee.png",
+      "kind": "image",
+      "bytes": 61591
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-bonne-nuit.png",
+      "folder": "stickers",
+      "name": "sig-bonne-nuit.png",
+      "kind": "image",
+      "bytes": 76861
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-ca-paye.png",
+      "folder": "stickers",
+      "name": "sig-ca-paye.png",
+      "kind": "image",
+      "bytes": 59344
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-ca-wipp.png",
+      "folder": "stickers",
+      "name": "sig-ca-wipp.png",
+      "kind": "image",
+      "bytes": 79284
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-cafe.png",
+      "folder": "stickers",
+      "name": "sig-cafe.png",
+      "kind": "image",
+      "bytes": 56695
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-chill.png",
+      "folder": "stickers",
+      "name": "sig-chill.png",
+      "kind": "image",
+      "bytes": 57141
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-coucou.png",
+      "folder": "stickers",
+      "name": "sig-coucou.png",
+      "kind": "image",
+      "bytes": 83561
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-debout.png",
+      "folder": "stickers",
+      "name": "sig-debout.png",
+      "kind": "image",
+      "bytes": 73374
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-en-route.png",
+      "folder": "stickers",
+      "name": "sig-en-route.png",
+      "kind": "image",
+      "bytes": 70645
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-faim.png",
+      "folder": "stickers",
+      "name": "sig-faim.png",
+      "kind": "image",
+      "bytes": 69420
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-hmm.png",
+      "folder": "stickers",
+      "name": "sig-hmm.png",
+      "kind": "image",
+      "bytes": 68497
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-jarrive.png",
+      "folder": "stickers",
+      "name": "sig-jarrive.png",
+      "kind": "image",
+      "bytes": 73978
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-je-regarde.png",
+      "folder": "stickers",
+      "name": "sig-je-regarde.png",
+      "kind": "image",
+      "bytes": 54017
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-laisse-tomber.png",
+      "folder": "stickers",
+      "name": "sig-laisse-tomber.png",
+      "kind": "image",
+      "bytes": 46229
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-ma-vibe.png",
+      "folder": "stickers",
+      "name": "sig-ma-vibe.png",
+      "kind": "image",
+      "bytes": 75050
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-mdrrr.png",
+      "folder": "stickers",
+      "name": "sig-mdrrr.png",
+      "kind": "image",
+      "bytes": 79450
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-motive.png",
+      "folder": "stickers",
+      "name": "sig-motive.png",
+      "kind": "image",
+      "bytes": 57481
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-on-regarde.png",
+      "folder": "stickers",
+      "name": "sig-on-regarde.png",
+      "kind": "image",
+      "bytes": 68783
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-on-se-capte.png",
+      "folder": "stickers",
+      "name": "sig-on-se-capte.png",
+      "kind": "image",
+      "bytes": 71110
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-raconte.png",
+      "folder": "stickers",
+      "name": "sig-raconte.png",
+      "kind": "image",
+      "bytes": 48119
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-self-care.png",
+      "folder": "stickers",
+      "name": "sig-self-care.png",
+      "kind": "image",
+      "bytes": 72852
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-shopping.png",
+      "folder": "stickers",
+      "name": "sig-shopping.png",
+      "kind": "image",
+      "bytes": 73343
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-tes-la.png",
+      "folder": "stickers",
+      "name": "sig-tes-la.png",
+      "kind": "image",
+      "bytes": 70558
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-toujours.png",
+      "folder": "stickers",
+      "name": "sig-toujours.png",
+      "kind": "image",
+      "bytes": 58397
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-tu-mens.png",
+      "folder": "stickers",
+      "name": "sig-tu-mens.png",
+      "kind": "image",
+      "bytes": 55224
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-valide.png",
+      "folder": "stickers",
+      "name": "sig-valide.png",
+      "kind": "image",
+      "bytes": 70026
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-voyage.png",
+      "folder": "stickers",
+      "name": "sig-voyage.png",
+      "kind": "image",
+      "bytes": 79475
+    },
+    {
+      "rel": "wipp/stickers/sig/sig-waaah.png",
+      "folder": "stickers",
+      "name": "sig-waaah.png",
+      "kind": "image",
+      "bytes": 73018
+    },
+    {
+      "rel": "wipp/stickers/valide.mp4",
+      "folder": "stickers",
+      "name": "valide.mp4",
+      "kind": "video",
+      "bytes": 173750
+    },
+    {
+      "rel": "wipp/stickers/valide.webp",
+      "folder": "stickers",
+      "name": "valide.webp",
+      "kind": "image",
+      "bytes": 34324
+    },
+    {
+      "rel": "wipp/stickers/wippe-moi.mp4",
+      "folder": "stickers",
+      "name": "wippe-moi.mp4",
+      "kind": "video",
+      "bytes": 226082
+    },
+    {
+      "rel": "wipp/stickers/wippe-moi.webp",
+      "folder": "stickers",
+      "name": "wippe-moi.webp",
+      "kind": "image",
+      "bytes": 75166
+    },
+    {
+      "rel": "wipp/stories/city.mp4",
+      "folder": "stories",
+      "name": "city.mp4",
+      "kind": "video",
+      "bytes": 398675
+    },
+    {
+      "rel": "wipp/stories/food.mp4",
+      "folder": "stories",
+      "name": "food.mp4",
+      "kind": "video",
+      "bytes": 596901
+    },
+    {
+      "rel": "wipp/stories/river.mp4",
+      "folder": "stories",
+      "name": "river.mp4",
+      "kind": "video",
+      "bytes": 533510
+    },
+    {
+      "rel": "wipp/stories/soccer.mp4",
+      "folder": "stories",
+      "name": "soccer.mp4",
+      "kind": "video",
+      "bytes": 297919
+    }
+  ]
+}

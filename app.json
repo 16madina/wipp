@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "WIPP",
+    "slug": "wipp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/icon-1024.png",
+    "scheme": "wipp",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "notification": {
+      "icon": "./assets/brand/notification-icon.png",
+      "color": "#FFD84D"
+    },
+    "splash": {
+      "image": "./assets/wipp/brand/wipp-official.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#02081e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wipp.app",
+      "associatedDomains": ["applinks:wippapp.com"],
+      "infoPlist": {
+        "NSCameraUsageDescription": "WIPP utilise la caméra pour prendre une photo ou une vidéo à envoyer.",
+        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour enregistrer un message vocal.",
+        "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
+        "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque."
+      },
+      "icon": {
+        "light": "./assets/brand/icon-1024.png",
+        "dark": "./assets/brand/icon-1024.png",
+        "tinted": "./assets/brand/adaptive-monochrome.png"
+      }
+    },
+    "android": {
+      "package": "com.wipp.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-foreground.png",
+        "backgroundColor": "#0B1220",
+        "monochromeImage": "./assets/brand/adaptive-monochrome.png"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "wippapp.com", "pathPrefix": "/t/" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "expo-font",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
+          "cameraPermission": "WIPP utilise la caméra pour prendre une photo ou une vidéo à envoyer.",
+          "microphonePermission": "WIPP utilise le micro pour les messages vocaux et les vidéos."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "WIPP utilise le micro pour enregistrer un message vocal."
+        }
+      ],
+      "expo-document-picker",
+      "expo-secure-store"
+    ],
+    "web": {
+      "favicon": "./assets/brand/favicon-48.png"
+    },
+    "experiments": { "typedRoutes": false },
+    "extra": {
+      "eas": { "projectId": "ea523c90-fa59-41f1-af9e-fde9a68b360e" }
+    }
+  }
+}
