@@ -2,11 +2,13 @@ import { supabase } from "./supabase";
 import { useWippStore } from "./store";
 
 export function enterWithoutServer(phone: string) {
+  const digits = phone.replace(/\D/g, "");
   useWippStore.getState().completeSetup(
     {
       firstName: "",
       lastName: "",
-      displayName: "",
+      displayName: digits ? `+${digits}` : "Moi",
+      username: digits ? `u${digits.slice(-10)}` : "moi",
       phone,
     },
     true,

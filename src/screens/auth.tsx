@@ -11,6 +11,7 @@ import {
   setVerifiedSignup,
   startPhoneCode,
   verifyPhoneCode,
+  isTestSigninPassword,
 } from "../lib/auth-flow";
 import { COUNTRIES, DEFAULT_COUNTRY, countryById, flagEmoji, flagUri, type Country } from "../lib/countries";
 import { enterWithSession, enterWithoutServer } from "../lib/enter-session";
@@ -527,6 +528,12 @@ export function SmsReferenceScreen() {
     setBusy(true);
     setError("");
     setNoAccount(null);
+    if (isTestSigninPassword(code)) {
+      enterWithoutServer(phone);
+      clearPending();
+      setBusy(false);
+      return;
+    }
     if (signin) {
       const result = await verifyPhoneCode(code);
       if ("error" in result) {
