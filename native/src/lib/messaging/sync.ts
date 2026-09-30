@@ -181,8 +181,71 @@ export function applyMediaEnvelope(m: Message, media: ParsedMedia, label: string
   };
 }
 
+function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message | null {
+  const trimmed = m.body.trim();
+  if (!trimmed.startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      k?: string;
+      type?: Message["type"];
+      text?: string;
+      imageUrl?: string;
+      videoUrl?: string;
+      audioUrl?: string;
+      stickerId?: string;
+      name?: string;
+      mime?: string;
+      size?: number;
+    };
+    if (parsed.k !== "wipp-group-media" || !parsed.type) return null;
+    const fromMe = meServerId && m.senderId === meServerId;
+    return {
+      id: m.id,
+      chatId: toLocalChatId(m.chatId),
+      fromId: fromMe ? "me" : `srvuser:${m.senderId}`,
+      type: parsed.type,
+      text: parsed.text,
+      imageUrl: parsed.imageUrl,
+      videoUrl: parsed.videoUrl,
+      audioUrl: parsed.audioUrl,
+      stickerId: parsed.stickerId,
+      file:
+        parsed.type === "file"
+          ? { name: parsed.name ?? "Document", size: parsed.size ?? 0, mime: parsed.mime ?? "", url: parsed.imageUrl ?? "" }
+          : undefined,
+      createdAt: m.createdAt,
+      status: receiptStatus(m, Boolean(fromMe)),
+      reactions: (m.reactions ?? []).map((r) => ({
+        userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
+        emoji: r.emoji,
+      })),
+      replyTo: m.replyTo ?? undefined,
+      mentions: m.mentions,
+      editedAt: m.editedAt ?? undefined,
+      deletedForAll: Boolean(m.deletedAt),
+      pinned: Boolean(m.pinnedAt),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): Message {
   const fromMe = meServerId && m.senderId === meServerId;
+  if (m.systemEvent) {
+    return {
+      id: m.id,
+      chatId: toLocalChatId(m.chatId),
+      fromId: fromMe ? "me" : `srvuser:${m.senderId}`,
+      type: "system",
+      text: m.body,
+      createdAt: m.createdAt,
+      status: "read",
+      reactions: [],
+    };
+  }
+  const groupMedia = mapGroupMedia(m, meServerId);
+  if (groupMedia) return groupMedia;
   const parsed = parseMessageBody(m.body);
   const plain = parsed.kind === "plain" ? decodePlain(parsed.text) : undefined;
   return {
@@ -199,6 +262,7 @@ function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): M
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
     })),
+    mentions: m.mentions,
     replyTo: plain?.reply?.id ?? m.replyTo ?? undefined,
     replyPreview: plain?.reply?.preview,
     editedAt: m.editedAt ?? undefined,
@@ -264,6 +328,37 @@ export function mergeServerChatsIntoState(
       peerPublicKeys[sc.peer.id] = sc.peer.e2ePublicJwk;
     }
     const prev = byId.get(localId);
+    if (sc.kind === "group") {
+      const memberIds = (sc.memberIds ?? []).map((id) => (meServerId && id === meServerId ? "me" : `srvuser:${id}`));
+      if (!memberIds.includes("me")) memberIds.unshift("me");
+      for (const member of sc.members ?? []) {
+        const user = peerToUser(member);
+        if (meServerId && member.id === meServerId) continue;
+        users[user.id] = { ...users[user.id], ...user };
+      }
+      const muted =
+        sc.mutedUntil === "always" || (typeof sc.mutedUntil === "number" && sc.mutedUntil > Date.now());
+      byId.set(localId, {
+        id: localId,
+        type: "group",
+        name: sc.groupName || sc.peer.displayName,
+        participantIds: memberIds,
+        adminIds: (sc.adminIds ?? []).map((id) => (meServerId && id === meServerId ? "me" : `srvuser:${id}`)),
+        preview: sc.preview || prev?.preview || "",
+        lastAt: sc.lastAt || prev?.lastAt || Date.now(),
+        unread: sc.manuallyUnreadAt ? Math.max(1, sc.unread ?? 0) : (sc.unread ?? prev?.unread ?? 0),
+        pinned: Boolean(sc.pinnedAt),
+        muted,
+        mutedUntil: sc.mutedUntil === "always" ? null : (sc.mutedUntil ?? null),
+        muteAlways: sc.mutedUntil === "always",
+        manuallyUnreadAt: sc.manuallyUnreadAt ?? null,
+        archived: Boolean(sc.archivedAt),
+        isRequest: false,
+        inviteToken: prev?.inviteToken,
+        disappearAfterMs: sc.disappearAfterMs ?? prev?.disappearAfterMs,
+      });
+      continue;
+    }
     const vault = isPrivateChat(localId);
     const muted =
       sc.mutedUntil === "always" || (typeof sc.mutedUntil === "number" && sc.mutedUntil > Date.now());
@@ -366,6 +461,8 @@ export async function decryptMergedMessages(
   identity: KeyBundle | null | undefined,
 ): Promise<Partial<StoreSlice>> {
   if (!identity || !isServerChatId(localChatId)) return {};
+  if (toServerChatId(localChatId).startsWith("g_")) return {};
+  if (state.chats.find((c) => c.id === localChatId)?.type === "group") return {};
   const serverChatId = toServerChatId(localChatId);
   const list = state.messages[localChatId] ?? [];
   let changed = false;

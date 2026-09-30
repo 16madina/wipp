@@ -3,7 +3,7 @@ import { Platform, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Btn } from "./ui";
 import { colors } from "../theme";
-import { openResolvedQr } from "../lib/deep-links";
+import { openWippLink } from "../lib/deep-links";
 
 export function LiveScanner({
   onFallback,
@@ -32,7 +32,7 @@ export function LiveScanner({
     busy.current = true;
     setLive(false);
     try {
-      const dest = await openResolvedQr(data, "replace");
+      const dest = await openWippLink(data, "replace");
       if (!dest.ok) setFail(dest.error);
     } catch {
       setFail("Impossible de vérifier le QR");

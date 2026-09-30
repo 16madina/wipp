@@ -21,11 +21,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.wipp.app",
       "associatedDomains": ["applinks:wippapp.com"],
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "WIPP utilise la caméra pour scanner un QR WIPP ou envoyer une photo.",
         "NSMicrophoneUsageDescription": "WIPP utilise le micro pour enregistrer un message vocal.",
         "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
-        "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque."
+        "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque.",
+        "NSBluetoothAlwaysUsageDescription": "WIPP Touch utilise le Bluetooth pour détecter un téléphone WIPP tout près, sans numéro ni e-mail.",
+        "NSBluetoothPeripheralUsageDescription": "WIPP Touch utilise le Bluetooth pour partager un identifiant temporaire à proximité.",
+        "NFCReaderUsageDescription": "WIPP peut lire une puce NFC WIPP comme complément à la proximité physique.",
+        "NSFaceIDUsageDescription": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil."
       },
       "icon": {
         "light": "./assets/brand/icon-1024.png",
@@ -35,6 +40,7 @@
     },
     "android": {
       "package": "com.wipp.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/adaptive-foreground.png",
         "backgroundColor": "#0B1220",
@@ -45,7 +51,15 @@
         "RECORD_AUDIO",
         "READ_MEDIA_IMAGES",
         "READ_MEDIA_VIDEO",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_ADVERTISE",
+        "BLUETOOTH_CONNECT",
+        "NFC",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED"
       ],
       "intentFilters": [
         {
@@ -88,7 +102,23 @@
         }
       ],
       "expo-document-picker",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/brand/notification-icon.png",
+          "color": "#FFD84D",
+          "defaultChannel": "messages",
+          "enableBackgroundRemoteNotifications": true
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil."
+        }
+      ],
+      "./plugins/withWippTouchNative"
     ],
     "web": {
       "favicon": "./assets/brand/favicon-48.png"

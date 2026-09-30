@@ -36,6 +36,7 @@ export async function setChatPrefs(
     archived?: boolean;
     mute?: MuteChoice;
     manuallyUnread?: boolean;
+    genericNotify?: boolean;
   },
 ) {
   await assertMember(meId, chatId);
@@ -74,6 +75,17 @@ export async function setChatPrefs(
       set manually_unread_at = ${patch.manuallyUnread ? new Date().toISOString() : null}
       where chat_id = ${chatId} and profile_id = ${meId}
     `;
+  }
+  if (patch.genericNotify !== undefined) {
+    try {
+      await sql`
+        update wipp_chat_members
+        set generic_notify = ${Boolean(patch.genericNotify)}
+        where chat_id = ${chatId} and profile_id = ${meId}
+      `;
+    } catch {
+      /* column not applied yet */
+    }
   }
   return readChatPrefs(meId, chatId);
 }

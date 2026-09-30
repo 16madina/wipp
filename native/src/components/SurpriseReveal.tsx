@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { Text, useWindowDimensions, View } from "react-native";
 import { Sparkles } from "lucide-react-native";
 import { wippSrc } from "../lib/assets";
-import { findAnimation, findDesign, surpriseKindArt, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
+import { findDesign, surpriseKindArt, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
 import { colors } from "../theme";
 import { Press } from "./ui";
 import { ScratchFoil } from "./ScratchFoil";
@@ -41,8 +41,6 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
   const art = wippSrc(surpriseKindArt[surprise.surpriseType]);
   const design = findDesign(surprise.surpriseType, surprise.designId);
   const foil = wippSrc(design?.art) ?? wippSrc("fx/surprise/carte.jpg");
-  const anim = findAnimation(surprise.animationId);
-  const animSrc = anim ? wippSrc(anim.art) : undefined;
   const cardW = 214;
   const cardH = 248;
   const { width: windowW } = useWindowDimensions();
@@ -86,7 +84,6 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
     <View style={{ alignItems: "center", width: "100%" }}>
       <View
         style={{
-          display: playing ? "none" : "flex",
           width: landscape ? openW : cardW,
           maxWidth: landscape ? undefined : "100%",
           height: landscape ? openW / foilRatio : cardH,
@@ -157,16 +154,9 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
           <Sparkles size={19} color={colors.surpriseGold} />
         </Press>
       ) : null}
-      {phase === "open" && animSrc && !playing ? (
-        <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Image source={animSrc} style={{ width: 32, height: 32, borderRadius: 16 }} contentFit="cover" />
-          <Text style={{ color: colors.surpriseBright, fontSize: 12 }}>Animation : {anim?.label}</Text>
-        </View>
-      ) : null}
       <SurpriseAnimOverlay
         animationId={playing ? surprise.animationId : null}
         playKey={playKey}
-        message={surprise.message}
         onDone={finish}
       />
     </View>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Share, Text, View, ScrollView } from "react-native";
+import { Text, View, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
@@ -8,12 +8,18 @@ import { WippMark, WippWordmark, TouchHero } from "../components/Logo";
 import { QrCard } from "../components/QrCard";
 import { Btn, Chip, Empty, GlassHeader, Header, PendingNote, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
-import { getRelation, type Relation } from "../lib/connections";
-import { openResolvedQr } from "../lib/deep-links";
+import { getRelation, sendRequest, type Relation } from "../lib/connections";
+import { openWippLink } from "../lib/deep-links";
 import { searchPublicProfiles, upsertRemoteProfile } from "../lib/public-profiles";
 import { profileQr, tempQr } from "../lib/qr-payload";
 import { issueTemp } from "../lib/qr-remote";
 import { useDeviceLayout } from "../lib/device-layout";
+import { useWippTouch } from "../lib/proximity/use-wipp-touch";
+import { applyNearbyMode } from "../lib/proximity/nearby-visibility";
+import { startNearbyScan, stopNearbyScan } from "../lib/proximity/nearby-scan";
+import { getLastTouchMatch } from "../lib/proximity/match-bus";
+import { rejectTouchCode } from "../lib/proximity/touch-api";
+import { shareWippPublic } from "../lib/share-public";
 import { useT, useWippStore } from "../lib/store";
 import type { FoundVia, NearbyMode } from "../lib/types";
 import { colors, layout } from "../theme";
@@ -183,14 +189,14 @@ export function MyQrScreen() {
           <Btn
             label={copied ? t("copied") : "Partager mon WIPP"}
             onPress={() => {
-              void Share.share({ message: `@${username} https://wippapp.com/@${username}` });
+              void shareWippPublic(`@${username} https://wippapp.com/@${username}`);
               setCopied(true);
             }}
           />
         </View>
         <View style={{ width: "100%", marginTop: 8, flexDirection: "row", gap: 8 }}>
           <View style={{ flex: 1 }}>
-            <Btn label="Enregistrer" variant="secondary" onPress={() => void Share.share({ message: qrValue })} />
+            <Btn label="Enregistrer" variant="secondary" onPress={() => void shareWippPublic(qrValue)} />
           </View>
           <View style={{ flex: 1 }}>
             <Btn
@@ -228,7 +234,7 @@ export function ScannerScreen({ error }: { error?: string }) {
           <SearchField value={q} onChangeText={setQ} placeholder="https://wippapp.com/@username" />
           <Btn
             label="Résoudre (DEV)"
-            onPress={() => void openResolvedQr(q, "replace")}
+            onPress={() => void openWippLink(q, "replace")}
             style={{ marginTop: 8 }}
           />
         </View>
@@ -312,7 +318,27 @@ export function NearbyScreen() {
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
   const push = useWippStore((s) => s.push);
   const visible = nearby !== 0;
-  const found = visible ? Object.values(users).filter((u) => u.connected).slice(0, 6) : [];
+  const [foundIds, setFoundIds] = useState<string[]>([]);
+  const [scanHint, setScanHint] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const res = await startNearbyScan((ids) => {
+        if (alive) setFoundIds(ids);
+      });
+      if (!alive) return;
+      if (!res.ok) {
+        setScanHint(
+          res.reason === "bluetooth_off" ? t("touchNeedBt") : res.reason === "bluetooth_permission" ? t("touchPermTitle") : null,
+        );
+      }
+    })();
+    return () => {
+      alive = false;
+      void stopNearbyScan();
+    };
+  }, [t]);
+  const found = foundIds.map((id) => users[id]).filter(Boolean);
   const modes: { v: NearbyMode; label: string }[] = [
     { v: 15, label: "15 min" },
     { v: 60, label: "60 min" },
@@ -324,36 +350,52 @@ export function NearbyScreen() {
       <GlassHeader>
         <Header title="Personnes à proximité" onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Découverte locale simulée — BLE natif Phase 2" />
+      {__DEV__ ? <PendingNote label="DEV · BLE À proximité" /> : null}
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>Uniquement avec consentement. Jamais de distance ni de numéro.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
           {modes.map((m) => (
-            <Chip key={String(m.v)} label={m.label} active={nearby === m.v} onPress={() => setNearby(m.v)} />
+            <Chip
+              key={String(m.v)}
+              label={m.label}
+              active={nearby === m.v}
+              onPress={() => {
+                setNearby(m.v);
+                void applyNearbyMode(m.v);
+              }}
+            />
           ))}
         </View>
-        {!visible ? <Empty title="Tu es invisible" body="Choisis une durée pour apparaître." /> : found.map((u) => (
-          <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <Press onPress={() => push({ name: "found-profile", userId: u.id, via: "nearby" })} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Avatar user={u} size={48} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
-                <Text style={{ color: colors.muted, fontSize: 13 }}>@{u.username}</Text>
-              </View>
-            </Press>
-            <Btn
-              label={u.connected ? t("message") : "WIPP"}
-              onPress={() => {
-                if (u.connected) openOrCreateDm(u.id);
-                else {
-                  connectWith(u.id);
-                  push({ name: "found-profile", userId: u.id, via: "nearby" });
-                }
-              }}
-              style={{ height: 36, paddingHorizontal: 12 }}
-            />
-          </View>
-        ))}
+        {scanHint ? <Text style={{ color: colors.accent, marginBottom: 12 }}>{scanHint}</Text> : null}
+        {!visible ? (
+          <Empty title="Tu es invisible" body="Choisis une durée pour apparaître." />
+        ) : found.length === 0 ? (
+          <Empty title={t("nearbyPeople")} body={t("nearbyHint")} />
+        ) : (
+          found.map((u) => (
+            <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <Press onPress={() => push({ name: "found-profile", userId: u.id, via: "nearby" })} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Avatar user={u} size={48} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13 }}>@{u.username}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>{t("nearby")}</Text>
+                </View>
+              </Press>
+              <Btn
+                label={u.connected ? t("message") : t("connectWith")}
+                onPress={() => {
+                  if (u.connected) openOrCreateDm(u.id);
+                  else {
+                    connectWith(u.id, "nearby");
+                    push({ name: "found-profile", userId: u.id, via: "nearby" });
+                  }
+                }}
+                style={{ height: 36, paddingHorizontal: 12 }}
+              />
+            </View>
+          ))
+        )}
       </ScrollView>
     </ScreenRoot>
   );
@@ -438,32 +480,75 @@ export function WgoTouchScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const me = useWippStore((s) => s.me);
-  const [phase, setPhase] = useState<"idle" | "reaching" | "waiting">("idle");
-  useEffect(() => {
-    if (phase !== "reaching") return;
-    const id = setTimeout(() => setPhase("waiting"), 1200);
-    return () => clearTimeout(id);
-  }, [phase]);
+  const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
+  const touch = useWippTouch();
+  const users = useWippStore((s) => s.users);
+  const peerUser = touch.peerId ? users[touch.peerId] : undefined;
+  const searching = touch.state === "searching";
+  const detected = touch.state === "detected" || touch.state === "confirming";
+  const failed = touch.state === "failed" || touch.state === "expired" || touch.state === "declined";
+  const title =
+    touch.state === "searching"
+      ? t("touchSearching")
+      : detected
+        ? t("touchDetected")
+        : touch.state === "multiple_devices"
+          ? t("touchPick")
+          : touch.state === "request_sent"
+            ? t("touchWaiting")
+            : touch.state === "accepted"
+              ? t("touchConnected")
+              : failed
+                ? t("touchNobody")
+                : t("wgoTouch");
+  const sub =
+    touch.hint === "bluetooth_off"
+      ? t("touchNeedBt")
+      : touch.hint === "permission"
+        ? t("touchPermBody")
+        : touch.state === "accepted"
+          ? t("touchBothOk")
+          : failed
+            ? t("touchFail")
+            : t("wgoTouchSub");
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("wgoTouch")} onBack={pop} />
       </GlassHeader>
-      <PendingNote label="BLE / NFC / choc — Phase 2. UI simulée comme le web." />
+      {__DEV__ ? <PendingNote label={`DEV · ${touch.state}${touch.devRssi != null ? ` · RSSI ${touch.devRssi}` : ""}`} /> : null}
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
         <TouchHero width={140} height={110} />
-        <Text style={{ marginTop: 16, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{t("wgoTouch")}</Text>
-        <Text style={{ marginTop: 6, textAlign: "center", color: colors.muted }}>{t("wgoTouchSub")}</Text>
+        <Text style={{ marginTop: 16, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{title}</Text>
+        <Text style={{ marginTop: 6, textAlign: "center", color: colors.muted }}>{sub}</Text>
         <View style={{ marginTop: 24, flexDirection: "row", gap: 24 }}>
           <Avatar user={me} size={56} />
-          <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: colors.accent }}>?</Text>
-          </View>
+          {peerUser ? (
+            <Avatar user={peerUser} size={56} />
+          ) : (
+            <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: colors.accent }}>?</Text>
+            </View>
+          )}
         </View>
+        {peerUser && detected ? (
+          <Text style={{ marginTop: 8, color: colors.fg, fontFamily: "Inter_500Medium" }}>{peerUser.displayName}</Text>
+        ) : null}
         <View style={{ width: "100%", marginTop: 28, gap: 8 }}>
-          <Btn label={phase === "idle" ? "Rapprocher les téléphones" : "En recherche…"} onPress={() => setPhase("reaching")} />
-          <Btn label={t("scan")} variant="secondary" onPress={() => push({ name: "scanner" })} />
-          <Btn label={t("myQr")} variant="secondary" onPress={() => push({ name: "my-qr" })} />
+          {touch.state === "ready" ? <Btn label="Rapprocher les téléphones" onPress={() => void touch.startSearch()} /> : null}
+          {searching ? <Btn label="En recherche…" onPress={() => undefined} /> : null}
+          {detected ? <Btn label={t("connectWith")} onPress={() => void touch.sendConnect()} /> : null}
+          {touch.state === "request_sent" ? <Btn label={t("touchWaiting")} onPress={() => undefined} /> : null}
+          {touch.state === "accepted" && touch.peerId ? (
+            <>
+              <Btn label={t("write")} onPress={() => openOrCreateDm(touch.peerId!)} />
+              <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: touch.peerId!, via: "touch" })} />
+            </>
+          ) : null}
+          {touch.state === "multiple_devices" ? <Btn label={t("touchRetry")} onPress={() => void touch.retry()} /> : null}
+          {failed ? <Btn label={t("touchRetry")} onPress={() => void touch.retry()} /> : null}
+          <Btn label={t("touchScanQr")} variant="secondary" onPress={() => push({ name: "scanner" })} />
+          <Btn label={t("touchShowQr")} variant="secondary" onPress={() => push({ name: "my-qr" })} />
         </View>
       </View>
     </ScreenRoot>
@@ -471,24 +556,57 @@ export function WgoTouchScreen() {
 }
 
 export function TouchIncomingScreen() {
+  const t = useT();
   const pop = useWippStore((s) => s.pop);
+  const push = useWippStore((s) => s.push);
+  const match = getLastTouchMatch();
   const users = useWippStore((s) => s.users);
-  const demo = Object.values(users)[0];
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!match) return;
+    setUserId(
+      upsertRemoteProfile({
+        id: match.senderId,
+        username: match.senderUsername,
+        displayName: match.senderName,
+        avatarUrl: null,
+        bio: "",
+      }),
+    );
+  }, [match]);
+  const user = userId ? users[userId] : undefined;
+  const demo = !match && __DEV__ ? Object.values(users)[0] : undefined;
+  const shown = user ?? demo;
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="WIPP Touch" onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 24, alignItems: "center" }}>
-        <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 4, marginBottom: 16 }}>
-          <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
-        </View>
-        <Avatar user={demo} size={72} />
-        <Text style={{ marginTop: 12, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{demo?.displayName}</Text>
-        <Text style={{ color: colors.muted }}>souhaite se connecter</Text>
+        {__DEV__ && !match ? (
+          <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 4, marginBottom: 16 }}>
+            <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
+          </View>
+        ) : null}
+        {shown ? <Avatar user={shown} size={72} /> : null}
+        <Text style={{ marginTop: 12, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{shown?.displayName}</Text>
+        <Text style={{ color: colors.muted }}>{t("touchWantsShare")}</Text>
         <View style={{ width: "100%", marginTop: 24, gap: 8 }}>
-          <Btn label="Accepter" onPress={() => { if (demo) useWippStore.getState().openOrCreateDm(demo.id); }} />
-          <Btn label="Refuser" variant="secondary" onPress={pop} />
+          <Btn
+            label={t("connectWith")}
+            onPress={() => {
+              if (shown?.username) void sendRequest(shown.username, "touch");
+              if (userId) push({ name: "found-profile", userId, via: "touch" });
+            }}
+          />
+          <Btn
+            label={t("touchRefuse")}
+            variant="secondary"
+            onPress={() => {
+              if (match?.code) void rejectTouchCode(match.code).catch(() => undefined);
+              pop();
+            }}
+          />
         </View>
       </View>
     </ScreenRoot>

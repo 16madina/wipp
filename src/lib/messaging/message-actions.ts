@@ -4,13 +4,10 @@
  */
 import { createHash } from "node:crypto";
 import { getSql } from "@/lib/db";
-import { listPushTokens } from "@/lib/messaging/calls";
-import { sendExpoPush } from "@/lib/push/expo";
 import { EDIT_WINDOW_MS } from "@/lib/messaging/plain";
-import { assertChatUnblocked, ensureMessagingReady, isBlocked, WippHttpError } from "@/lib/messaging/server";
+import { assertChatUnblocked, ensureMessagingReady, WippHttpError } from "@/lib/messaging/server";
 import type { WippMessage } from "@/lib/messaging/types";
 import {
-  isPresent,
   nextEventId,
   notePresence,
   noteTyping,
@@ -143,7 +140,28 @@ export async function afterMessageStored(
   opts?: { vault?: boolean },
 ) {
   await emit(message.chatId, "message", { message });
-  await notifyPeers(meId, message.chatId, Boolean(opts?.vault));
+  const { notifyChatMessage } = await import("@/lib/push/notify");
+  await notifyChatMessage({
+    senderId: meId,
+    chatId: message.chatId,
+    messageId: message.id,
+    vault: Boolean(opts?.vault),
+  });
+}
+
+export async function notifyStoredMessage(meId: string, chatId: string, messageId: string, vault: boolean) {
+  await ensureMessagingReady();
+  await assertMember(meId, chatId);
+  const sql = await getSql();
+  const rows = await sql<{ sender_id: string }>`
+    select sender_id from wipp_messages where id = ${messageId} and chat_id = ${chatId} limit 1
+  `;
+  if (!rows[0] || rows[0].sender_id !== meId) {
+    throw new WippHttpError(404, "not_found", "Message introuvable.");
+  }
+  const { notifyChatMessage } = await import("@/lib/push/notify");
+  await notifyChatMessage({ senderId: meId, chatId, messageId, vault });
+  return { ok: true as const };
 }
 
 export async function editMessage(meId: string, chatId: string, messageId: string, body: string) {
@@ -328,32 +346,3 @@ export async function validateReply(chatId: string, replyTo: string) {
   if (!rows.length) throw new WippHttpError(400, "bad_reply", "Le message cité n'est pas dans cette conversation.");
 }
 
-async function notifyPeers(meId: string, chatId: string, vault: boolean) {
-  const sql = await getSql();
-  const peers = await sql<{ profile_id: string }>`
-    select profile_id from wipp_chat_members where chat_id = ${chatId} and profile_id <> ${meId}
-  `;
-  const me = await sql<{ display_name: string }>`
-    select display_name from wipp_profiles where id = ${meId} limit 1
-  `;
-  for (const peer of peers) {
-    if (isPresent(chatId, peer.profile_id)) continue;
-    const { peerIsMuted } = await import("./chat-prefs");
-    if (await peerIsMuted(chatId, peer.profile_id)) continue;
-    if (await isBlocked(meId, peer.profile_id)) continue;
-    const tokens = await listPushTokens(peer.profile_id);
-    const expo = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
-    if (!expo.length) continue;
-    await sendExpoPush(expo, vault
-      ? {
-          title: "WIPP",
-          body: "Nouveau message",
-          data: { type: "message", private: true, chatId },
-        }
-      : {
-          title: me[0]?.display_name || "WIPP",
-          body: "Nouveau message",
-          data: { type: "message", chatId },
-        });
-  }
-}

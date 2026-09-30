@@ -142,6 +142,25 @@ export async function resolveWippQr(raw: string): Promise<QrDestination> {
   if (id.kind === "group") {
     if (isServerToken(id.value)) {
       try {
+        const { peekGroupInvite } = await import("./lot7/api");
+        const peeked = await peekGroupInvite(id.value);
+        if (peeked.status === "ok" || peeked.status === "already_member") {
+          return {
+            ok: true,
+            kind: "remote-group",
+            token: id.value,
+            name: peeked.name ?? "",
+            members: peeked.members ?? 0,
+            member: peeked.status === "already_member",
+          };
+        }
+        if (peeked.status && peeked.status !== "invalid") {
+          return { ok: false, error: GROUP_FR[peeked.status] ?? QR_ERRORS.unverifiable };
+        }
+      } catch {
+        /* older invite RPC below */
+      }
+      try {
         const r = await groupInviteCall(id.value, false);
         if (r.status === "ok" || r.status === "already_member") {
           return {

@@ -19,7 +19,7 @@ export type SurpriseAnimationItem = {
   id: string;
   label: string;
   art: string;
-  /** Transparent animation, played in the message like a moji. */
+  /** Transparent full-screen animation, played like a WIPP Moment. */
   anim?: string;
   enter?: SurpriseEnter;
   durationMs?: number;

@@ -108,6 +108,7 @@ export async function registerPushToken(input: {
   token: string;
   platform?: string;
   kind?: string;
+  installationId?: string;
 }) {
   await ensureMessagingReady();
   const token = input.token.trim();
@@ -118,25 +119,121 @@ export async function registerPushToken(input: {
   const id = uid("pt");
   const platform = (input.platform || "unknown").slice(0, 32);
   const kind = (input.kind || "expo").slice(0, 32);
-  await sql`
-    insert into wipp_push_tokens (id, profile_id, token, platform, kind, updated_at)
-    values (${id}, ${input.profileId}, ${token}, ${platform}, ${kind}, now())
-    on conflict (profile_id, token) do update
-      set platform = excluded.platform,
-          kind = excluded.kind,
-          updated_at = now()
-  `;
+  const installationId = (input.installationId || "").trim().slice(0, 64) || null;
+
+  try {
+    await sql`
+      update wipp_push_tokens
+      set disabled_at = now()
+      where token = ${token} and profile_id <> ${input.profileId} and disabled_at is null
+    `;
+  } catch {
+    /* schema without disabled_at */
+  }
+  if (installationId) {
+    try {
+      await sql`
+        update wipp_push_tokens
+        set disabled_at = now()
+        where profile_id = ${input.profileId}
+          and installation_id = ${installationId}
+          and token <> ${token}
+          and disabled_at is null
+      `;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  try {
+    await sql`
+      insert into wipp_push_tokens (id, profile_id, token, platform, kind, installation_id, disabled_at, updated_at)
+      values (${id}, ${input.profileId}, ${token}, ${platform}, ${kind}, ${installationId}, null, now())
+      on conflict (profile_id, token) do update
+        set platform = excluded.platform,
+            kind = excluded.kind,
+            installation_id = excluded.installation_id,
+            disabled_at = null,
+            updated_at = now()
+    `;
+  } catch {
+    await sql`
+      insert into wipp_push_tokens (id, profile_id, token, platform, kind, updated_at)
+      values (${id}, ${input.profileId}, ${token}, ${platform}, ${kind}, now())
+      on conflict (profile_id, token) do update
+        set platform = excluded.platform,
+            kind = excluded.kind,
+            updated_at = now()
+    `;
+  }
   return { ok: true as const };
+}
+
+export async function unregisterPushToken(input: {
+  profileId: string;
+  token?: string;
+  installationId?: string;
+}) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const token = input.token?.trim() ?? "";
+  const installationId = input.installationId?.trim() ?? "";
+  try {
+    if (token) {
+      await sql`
+        update wipp_push_tokens
+        set disabled_at = now()
+        where profile_id = ${input.profileId} and token = ${token} and disabled_at is null
+      `;
+    } else if (installationId) {
+      await sql`
+        update wipp_push_tokens
+        set disabled_at = now()
+        where profile_id = ${input.profileId} and installation_id = ${installationId} and disabled_at is null
+      `;
+    }
+  } catch {
+    if (token) {
+      await sql`delete from wipp_push_tokens where profile_id = ${input.profileId} and token = ${token}`;
+    }
+  }
+  return { ok: true as const };
+}
+
+export async function disablePushTokens(tokens: string[]) {
+  const unique = [...new Set(tokens.filter(Boolean))];
+  if (!unique.length) return;
+  await ensureMessagingReady();
+  const sql = await getSql();
+  for (const token of unique) {
+    try {
+      await sql`
+        update wipp_push_tokens
+        set disabled_at = now()
+        where token = ${token} and disabled_at is null
+      `;
+    } catch {
+      await sql`delete from wipp_push_tokens where token = ${token}`;
+    }
+  }
 }
 
 export async function listPushTokens(profileId: string) {
   await ensureMessagingReady();
   const sql = await getSql();
-  return sql<{ token: string; platform: string; kind: string }>`
-    select token, platform, kind from wipp_push_tokens
-    where profile_id = ${profileId}
-    order by updated_at desc
-  `;
+  try {
+    return await sql<{ token: string; platform: string; kind: string }>`
+      select token, platform, kind from wipp_push_tokens
+      where profile_id = ${profileId} and disabled_at is null
+      order by updated_at desc
+    `;
+  } catch {
+    return sql<{ token: string; platform: string; kind: string }>`
+      select token, platform, kind from wipp_push_tokens
+      where profile_id = ${profileId}
+      order by updated_at desc
+    `;
+  }
 }
 
 export async function createCallInvite(input: {
@@ -351,12 +448,40 @@ export async function hangupCallInvite(input: { meId: string; callId: string }):
       : "ended";
   await sql`
     update wipp_call_invites
-    set status = ${next}, answered_at = coalesce(answered_at, now())
+    set status = ${next}, answered_at = coalesce(answered_at, now()), ended_at = now()
     where id = ${input.callId}
   `;
   const updated = await getCallInvite(input.callId);
   if (!updated) throw new WippHttpError(404, "not_found", "Appel introuvable.");
   return updated;
+}
+
+export async function listCallHistory(meId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const rows = await sql<{
+    id: string;
+    caller_id: string;
+    callee_id: string;
+    kind: string;
+    status: string;
+    created_at: string;
+  }>`
+    select id, caller_id, callee_id, kind, status, created_at::text
+    from wipp_call_invites
+    where caller_id = ${meId} or callee_id = ${meId}
+    order by created_at desc
+    limit 40
+  `;
+  return rows.map((row) => ({
+    id: row.id,
+    peerId: row.caller_id === meId ? row.callee_id : row.caller_id,
+    direction: row.caller_id === meId ? "out" : "in",
+    kind: row.kind === "video" ? "video" : "audio",
+    missed: row.status === "missed" || row.status === "expired",
+    status: row.status,
+    at: row.created_at,
+  }));
 }
 
 export async function getOutgoingCallStatus(meId: string, callId: string) {

@@ -241,6 +241,10 @@ export async function resolveTouchCode(
   if (dto.sender.id === meId) {
     throw new WippHttpError(400, "self", "C’est ton propre partage.");
   }
+  const { isBlocked } = await import("@/lib/messaging/server");
+  if (await isBlocked(dto.sender.id, meId)) {
+    throw new WippHttpError(404, "not_found", "Code WIPP introuvable ou expiré.");
+  }
   if (dto.status !== "active") {
     throw new WippHttpError(409, "not_active", `Invitation ${dto.status}.`);
   }
@@ -276,6 +280,10 @@ export async function acceptTouchCode(meId: string, code: string): Promise<Touch
   }
   if (dto.sender.id === meId) {
     throw new WippHttpError(400, "self", "C’est ton propre partage.");
+  }
+  const { isBlocked: blockedPair } = await import("@/lib/messaging/server");
+  if (await blockedPair(dto.sender.id, meId)) {
+    throw new WippHttpError(404, "not_found", "Code WIPP introuvable ou expiré.");
   }
   if (dto.status !== "active") {
     throw new WippHttpError(409, "not_active", `Invitation ${dto.status}.`);

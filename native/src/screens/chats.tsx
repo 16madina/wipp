@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import {
   BellOff,
   ChevronRight,
@@ -33,7 +33,18 @@ import {
   SearchField,
 } from "../components/ui";
 import { formatChatTime, formatRemainShort } from "../lib/format";
+import { haptic } from "../lib/haptics";
 import { SHOP_CAT_KEYS } from "../lib/i18n";
+import { usePrivatePinAsk } from "../components/PrivatePinGate";
+import {
+  authenticatePrivate,
+  isPrivateEnabled,
+  lastPinWaitMs,
+  lockChatPrivate,
+  lockPrivateSession,
+  unlockChatFromPrivate,
+} from "../lib/private-vault";
+import { pushProtect } from "../lib/screen-protection";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
 import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
@@ -52,7 +63,8 @@ export function ChatsScreen() {
   const chats = useWippStore((s) => s.chats);
   const serverConnected = useWippStore((s) => s.serverConnected);
   const shops = useWippStore((s) => s.shops);
-  const stories = useWippStore((s) => s.stories);
+  const storyRows = useWippStore((s) => s.stories);
+  const stories = serverConnected ? storyRows.filter((story) => story.id.startsWith("sty_")) : storyRows;
   const viewed = useWippStore((s) => s.viewedStories);
   const pending = useWippStore(
     (s) =>
@@ -68,6 +80,10 @@ export function ChatsScreen() {
   const [menuChatId, setMenuChatId] = useState<string | null>(null);
   const now = Date.now();
   const drafts = useWippStore((s) => s.drafts);
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  const { askPin, gate } = usePrivatePinAsk();
+  const hold = useRef<{ haptic?: ReturnType<typeof setTimeout>; open?: ReturnType<typeof setTimeout> }>({});
+  void vaultEpoch;
 
   useEffect(() => {
     if (useWippStore.getState().onboarded) void useWippStore.getState().syncServerInbox();
@@ -103,7 +119,36 @@ export function ChatsScreen() {
     <ScreenRoot padBottom>
       <GlassHeader>
         <View style={{ height: layout.navBarHeight, flexDirection: "row", alignItems: "center", paddingHorizontal: 16 }}>
-          <WippWordmark size={compact ? 18 : 22} />
+          <Pressable
+            accessibilityLabel="WIPP"
+            onPressIn={() => {
+              if (!isPrivateEnabled()) return;
+              hold.current.haptic = setTimeout(() => haptic("select"), 2500);
+              hold.current.open = setTimeout(() => {
+                void (async () => {
+                  haptic("select");
+                  const ok = await authenticatePrivate(askPin);
+                  if (ok) {
+                    haptic("success");
+                    push({ name: "wipp-private" });
+                    return;
+                  }
+                  if (lastPinWaitMs() > 0) {
+                    haptic("error");
+                    const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
+                    Alert.alert("WIPP", `Réessaie dans ${secs} s.`);
+                  }
+                })();
+              }, 3000);
+            }}
+            onPressOut={() => {
+              if (hold.current.haptic) clearTimeout(hold.current.haptic);
+              if (hold.current.open) clearTimeout(hold.current.open);
+              hold.current = {};
+            }}
+          >
+            <WippWordmark size={compact ? 18 : 22} />
+          </Pressable>
           <View style={{ flex: 1 }} />
           <IconBtn size={headerIcon} label={t("search")} onPress={() => push({ name: "global-search" })}>
             <Search size={20} color={colors.fg} />
@@ -215,6 +260,40 @@ export function ChatsScreen() {
               ["Réactiver les notifications", () => useWippStore.getState().setMute(menuChatId, "off")],
               ["Marquer lu / non lu", () => useWippStore.getState().toggleUnread(menuChatId)],
               ["Archives", () => push({ name: "archives" })],
+              [
+                "Masquer et verrouiller",
+                () => {
+                  const id = menuChatId;
+                  if (!id) return;
+                  if (!isPrivateEnabled()) {
+                    Alert.alert("WIPP", "Active WIPP Privé dans Confidentialité.");
+                    return;
+                  }
+                  Alert.alert(
+                    "Masquer et verrouiller",
+                    "Cette conversation disparaîtra de Chats. Elle restera uniquement dans WIPP Privé.",
+                    [
+                      { text: "Annuler", style: "cancel" },
+                      {
+                        text: "Masquer",
+                        onPress: () => {
+                          void lockChatPrivate(id, askPin).then((ok) => {
+                            if (ok) {
+                              haptic("success");
+                              return;
+                            }
+                            if (lastPinWaitMs() > 0) {
+                              haptic("error");
+                              const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
+                              Alert.alert("WIPP", `Réessaie dans ${secs} s.`);
+                            }
+                          });
+                        },
+                      },
+                    ],
+                  );
+                },
+              ],
             ].map(([label, fn]) => (
               <Press
                 key={String(label)}
@@ -230,6 +309,7 @@ export function ChatsScreen() {
           </View>
         </Press>
       ) : null}
+      {gate}
     </ScreenRoot>
   );
 }
@@ -385,7 +465,7 @@ export function RequestsScreen() {
         <Header title={t("requests")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
-        {!live ? (
+        {!live && __DEV__ ? (
           <Press onPress={() => push({ name: "touch-incoming" })} style={{ marginBottom: 12, minHeight: 48, borderRadius: 12, backgroundColor: colors.surface, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={{ fontSize: 14, color: colors.fg }}>Demande WIPP Touch reçue</Text>
             <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 2 }}>
@@ -446,10 +526,12 @@ export function GlobalSearchScreen() {
   const push = useWippStore((s) => s.push);
   const users = useWippStore((s) => s.users);
   const chats = useWippStore((s) => s.chats);
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
+  void vaultEpoch;
   const people = Object.values(users).filter((u) => needle.length >= 1 && `${u.displayName} ${u.username}`.toLowerCase().includes(needle));
-  const convos = chats.filter((c) => needle && (c.name ?? c.preview).toLowerCase().includes(needle));
+  const convos = chats.filter((c) => needle && !isPrivateChat(c.id) && (c.name ?? c.preview).toLowerCase().includes(needle));
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -483,7 +565,9 @@ export function ArchivesScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const allChats = useWippStore((s) => s.chats);
-  const chats = allChats.filter((c) => c.archived);
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  void vaultEpoch;
+  const chats = allChats.filter((c) => c.archived && !isPrivateChat(c.id));
   const users = useWippStore((s) => s.users);
   return (
     <ScreenRoot>
@@ -506,7 +590,9 @@ export function MyGroupsScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const allChats = useWippStore((s) => s.chats);
-  const groups = allChats.filter((c) => c.type === "group" && c.participantIds.includes("me"));
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  void vaultEpoch;
+  const groups = allChats.filter((c) => c.type === "group" && c.participantIds.includes("me") && !isPrivateChat(c.id));
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -541,7 +627,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           <Text style={{ color: colors.fg }}>{chat?.type === "group" ? "Informations du groupe" : peer?.bio}</Text>
         </Press>
         <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ padding: 16 }}>
-          <Text style={{ color: colors.fg }}>Chiffrement de bout en bout</Text>
+          <Text style={{ color: colors.fg }}>{chat?.type === "group" ? "Groupe non chiffré de bout en bout" : "Chiffrement de bout en bout"}</Text>
         </Press>
         <Text style={{ paddingHorizontal: 16, paddingTop: 8, color: colors.muted, fontSize: 12 }}>Messages éphémères</Text>
         {[
@@ -563,21 +649,58 @@ export function PrivateChatsScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const allChats = useWippStore((s) => s.chats);
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  void vaultEpoch;
   const chats = allChats.filter((c) => isPrivateChat(c.id));
   const users = useWippStore((s) => s.users);
+  const { askPin, gate } = usePrivatePinAsk();
+  useEffect(() => {
+    const release = pushProtect("private_chat");
+    return () => {
+      release();
+    };
+  }, []);
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="WIPP Privé 🔒" onBack={pop} />
+        <Header
+          title="WIPP Privé 🔒"
+          onBack={() => {
+            lockPrivateSession();
+            pop();
+          }}
+        />
       </GlassHeader>
-      <PendingNote label="Coffre biométrique natif — Phase 2" />
       <ScrollView>
-        {chats.length === 0 ? <Empty title="Aucune conversation privée" /> : chats.map((c) => (
-          <Press key={c.id} onPress={() => push({ name: "conversation", chatId: c.id })} style={{ padding: 16 }}>
-            <Text style={{ color: colors.fg }}>{chatPeer(c, users)?.displayName ?? c.name}</Text>
-          </Press>
-        ))}
+        {chats.length === 0 ? (
+          <Empty title="Aucune conversation privée" />
+        ) : (
+          chats.map((c) => (
+            <Press
+              key={c.id}
+              onPress={() => push({ name: "conversation", chatId: c.id })}
+              onLongPress={() => {
+                Alert.alert("WIPP Privé", "Retirer de WIPP Privé ?", [
+                  { text: "Annuler", style: "cancel" },
+                  {
+                    text: "Retirer",
+                    onPress: () => {
+                      void unlockChatFromPrivate(c.id, askPin);
+                    },
+                  },
+                ]);
+              }}
+              style={{ padding: 16 }}
+            >
+              <Text style={{ color: colors.fg }}>{chatPeer(c, users)?.displayName ?? c.name}</Text>
+              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
+                {c.preview}
+              </Text>
+            </Press>
+          ))
+        )}
       </ScrollView>
+      {gate}
     </ScreenRoot>
   );
 }

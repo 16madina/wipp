@@ -12,6 +12,7 @@ import type {
   MeProfile,
   Message,
   NearbyMode,
+  NotifSettings,
   Pharmacy,
   RedeemResult,
   Screen,
@@ -39,11 +40,12 @@ import {
   seedFictionalInbox,
   withGroupMeta,
   isSeedDemoChat,
+  defaultNotifs,
 } from "./seed";
 import { sixDigit, uid } from "./utils";
 import { fingerprintOf, generateBundle, type KeyBundle } from "./crypto";
 import { loadIdentity, saveIdentity } from "./messaging/identity";
-import { isPrivateChat as isVaultChat } from "./private-vault";
+import { isPrivateChat as isVaultChat, subscribePrivateVault } from "./private-vault";
 import type { LiveEvent } from "./messaging/message-live";
 import { stickerById } from "./stickers";
 import type { SurprisePlain } from "./messaging/plain";
@@ -57,7 +59,7 @@ export function isTabScreen(name: Screen["name"]) {
 }
 
 export function isPrivateChat(id: string) {
-  return id.startsWith("priv-") || isVaultChat(id);
+  return isVaultChat(id);
 }
 
 export function isChatSealed(chat: Chat, now = Date.now()) {
@@ -142,6 +144,7 @@ type Store = {
   calls: CallLog[];
   callsSeenAt: number;
   listings: Listing[];
+  saves: { kind: "listing" | "event" | "business"; id: string }[];
   shops: Shop[];
   lifestyle: LifestyleItem[];
   pharmacies: Pharmacy[];
@@ -151,6 +154,7 @@ type Store = {
   verifiedIds: string[];
   sentRequestIds: string[];
   nearby: NearbyMode;
+  vaultEpoch: number;
   setNearby: (nearby: NearbyMode) => void;
   codes: LiveCode[];
   codeChatTtl: number;
@@ -166,6 +170,12 @@ type Store = {
   serverConnected: boolean;
   cryptoReady: boolean;
   privacy: { readReceipts: boolean };
+  notifs: NotifSettings;
+  pushMaster: boolean;
+  pushGranted: boolean;
+  setNotif: (key: keyof NotifSettings, value: boolean) => void;
+  setPushMaster: (on: boolean) => void;
+  setPushGranted: (on: boolean) => void;
   setLanguage: (language: Lang) => void;
   push: (screen: Screen) => void;
   pop: () => void;
@@ -282,6 +292,9 @@ function fresh(): Omit<
   | "openEphemeralChat"
   | "sealChat"
   | "sealExpired"
+  | "setNotif"
+  | "setPushMaster"
+  | "setPushGranted"
 > {
   return {
     onboarded: false,
@@ -295,6 +308,7 @@ function fresh(): Omit<
     calls: seedCalls(),
     callsSeenAt: 0,
     listings: seedListings(),
+    saves: [],
     shops: seedShops(),
     lifestyle: seedLifestyle(),
     pharmacies: seedPharmacies(),
@@ -304,6 +318,7 @@ function fresh(): Omit<
     verifiedIds: ["maya", "alex"],
     sentRequestIds: [],
     nearby: 0,
+    vaultEpoch: 0,
     codes: seedCodes(),
     codeChatTtl: 60 * 60_000,
     pendingSignup: { country: "CA" },
@@ -318,6 +333,9 @@ function fresh(): Omit<
     serverConnected: false,
     cryptoReady: false,
     privacy: { readReceipts: true },
+    notifs: { ...defaultNotifs },
+    pushMaster: false,
+    pushGranted: false,
   };
 }
 
@@ -338,6 +356,20 @@ export const useWippStore = create<Store>((set, get) => ({
   language: "fr",
   ...fresh(),
   setLanguage: (language) => set({ language }),
+  setNotif: (key, value) => {
+    set((s) => {
+      const notifs = { ...s.notifs, [key]: value };
+      void import("./push/prefs").then(({ saveNotifPrefs }) => saveNotifPrefs({ notifs, pushMaster: s.pushMaster }));
+      return { notifs };
+    });
+  },
+  setPushMaster: (on) => {
+    set((s) => {
+      void import("./push/prefs").then(({ saveNotifPrefs }) => saveNotifPrefs({ notifs: s.notifs, pushMaster: on }));
+      return { pushMaster: on };
+    });
+  },
+  setPushGranted: (on) => set({ pushGranted: on }),
   push: (screen) => set((s) => ({ stack: [...s.stack, screen] })),
   pop: () =>
     set((s) => ({
@@ -352,6 +384,7 @@ export const useWippStore = create<Store>((set, get) => ({
   openDemo: () => {
     set({ ...fresh(), onboarded: true, stack: [{ name: "chats" }] });
     void get().ensureCrypto();
+    void import("./push").then(({ onSessionReady }) => onSessionReady());
   },
   resetDemo: () => set({ ...fresh(), language: get().language, stack: [{ name: "onboarding" }] }),
   completeSetup: (data, freshAccount = false) => {
@@ -374,10 +407,16 @@ export const useWippStore = create<Store>((set, get) => ({
     }));
     void get().ensureCrypto();
     void get().syncServerInbox();
+    void import("./push").then(({ onSessionReady }) => onSessionReady());
   },
   updateMe: (data) => set((s) => ({ me: { ...s.me, ...data } })),
   changeAvatar: (avatar) => set((s) => ({ me: { ...s.me, avatar } })),
-  signOut: () => get().resetDemo(),
+  signOut: () => {
+    void import("./push").then(({ unregisterThisInstall }) => unregisterThisInstall());
+    void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
+    void import("./proximity/lifecycle").then(({ syncProximityLifecycle }) => syncProximityLifecycle("splash", "background"));
+    get().resetDemo();
+  },
   pinChat: (chatId, pinned) => {
     set((s) => ({ chats: s.chats.map((c) => (c.id === chatId ? { ...c, pinned } : c)) }));
     if (chatId.startsWith("srv:") && !isPrivateChat(chatId)) {
@@ -427,6 +466,7 @@ export const useWippStore = create<Store>((set, get) => ({
     set((s) => ({
       chats: s.chats.map((c) => (c.id === chatId ? { ...c, unread: 0, manuallyUnreadAt: null } : c)),
     }));
+    void import("./push").then(({ syncAppBadge }) => syncAppBadge());
     if (!chatId.startsWith("srv:")) return;
     void import("./messaging/client").then(({ postChatPrefs }) =>
       postChatPrefs(chatId.slice(4), { manuallyUnread: false }).catch(() => {}),
@@ -506,7 +546,50 @@ export const useWippStore = create<Store>((set, get) => ({
     }));
     if (!chatId.startsWith("srv:")) pumpReceipt(get, set, chatId, message.id);
 
-    if (chatId.startsWith("srv:") && data.stickerId && message.type === "sticker") {
+    const groupServer = existingChat?.type === "group" && chatId.startsWith("srv:");
+    if (groupServer && (message.type === "text" || message.type === "sticker")) {
+      void (async () => {
+        try {
+          const { postGroupMessage, mentionIdsInText } = await import("./lot7/api");
+          const members = (existingChat?.participantIds ?? [])
+            .filter((id) => id !== "me")
+            .map((id) => ({ id, username: get().users[id]?.username }));
+          const body =
+            message.type === "text" || !message.stickerId
+              ? message.text ?? ""
+              : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });
+          if (!body) return;
+          await postGroupMessage({
+            chatId: chatId.slice(4),
+            body,
+            clientId: message.id,
+            replyTo: message.replyTo ?? null,
+            mentions: mentionIdsInText(message.text ?? "", members),
+          });
+          set((s) => ({
+            messages: {
+              ...s.messages,
+              [chatId]: (s.messages[chatId] ?? []).map((m) => (m.id === message.id ? { ...m, status: "sent" as const } : m)),
+            },
+          }));
+          const { syncChatMessages, mergeServerMessagesIntoState } = await import("./messaging/sync");
+          const synced = await syncChatMessages(chatId);
+          if (synced && "messages" in synced) {
+            set((s) => mergeServerMessagesIntoState(s, chatId.slice(4), synced.messages, synced.meServerId));
+          }
+        } catch (err) {
+          console.warn("[wipp] group send failed", err);
+          set((s) => ({
+            messages: {
+              ...s.messages,
+              [chatId]: (s.messages[chatId] ?? []).map((m) => (m.id === message.id ? { ...m, status: "failed" as const } : m)),
+            },
+          }));
+        }
+      })();
+    }
+
+    if (!groupServer && chatId.startsWith("srv:") && data.stickerId && message.type === "sticker") {
       void (async () => {
         const { describeMedia } = await import("./messaging/media-crypto");
         const { sendViaServer } = await import("./messaging/sync");
@@ -519,7 +602,7 @@ export const useWippStore = create<Store>((set, get) => ({
       })();
     }
 
-    if (message.type === "scratch") {
+    if (!groupServer && message.type === "scratch") {
       void (async () => {
         const { isServerChatId, sendViaServer, syncChatMessages, mergeServerMessagesIntoState, decryptMergedMessages } =
           await import("./messaging/sync");
@@ -546,7 +629,7 @@ export const useWippStore = create<Store>((set, get) => ({
       })();
     }
 
-    if (message.type === "text" && message.text) {
+    if (!groupServer && message.type === "text" && message.text) {
       void (async () => {
         try {
           const {
@@ -602,7 +685,7 @@ export const useWippStore = create<Store>((set, get) => ({
       })();
     }
 
-    if (message.type === "shop" && message.shopId) {
+    if (!groupServer && message.type === "shop" && message.shopId) {
       void (async () => {
         try {
           const { isServerChatId, sendViaServer } = await import("./messaging/sync");
@@ -816,6 +899,13 @@ export const useWippStore = create<Store>((set, get) => ({
           serverProfileId: profile.id,
           serverUsername: profile.username,
           serverConnected: true,
+          stories: [],
+          listings: [],
+          lifestyle: [],
+          pharmacies: [],
+          calls: [],
+          shops: st.shops.filter((shop) => shop.id.startsWith("business:")),
+          saves: [],
           stack: onSeed ? ([{ name: "chats" }] as Screen[]) : st.stack,
           me: {
             ...st.me,
@@ -834,6 +924,19 @@ export const useWippStore = create<Store>((set, get) => ({
       void get().refreshIncomingRequests();
       const { flushAllOutbox } = await import("./messaging/flush-outbox");
       await flushAllOutbox(get as never, set as never);
+      void import("./push").then(({ syncAppBadge }) => syncAppBadge());
+      try {
+        const { fetchStories, fetchListings, fetchEvents, fetchSaves } = await import("./lot7/api");
+        const [stories, listings, lifestyle, saves] = await Promise.all([
+          fetchStories(profile.id),
+          fetchListings(profile.id),
+          fetchEvents(profile.id),
+          fetchSaves(),
+        ]);
+        set({ stories, listings, lifestyle, saves });
+      } catch (err) {
+        console.warn("[wipp] lot7 sync", err);
+      }
     } catch (err) {
       console.warn("[wipp] server sync failed", err);
       set({ serverConnected: false });
@@ -950,6 +1053,7 @@ export const useWippStore = create<Store>((set, get) => ({
         const chats = await fetchServerChats();
         set((st) => mergeServerChatsIntoState(st, chats, get().serverProfileId ?? undefined));
       }
+      void import("./push").then(({ syncAppBadge }) => syncAppBadge());
     } catch (err) {
       console.warn("[wipp] live event failed", err);
     }
@@ -1019,7 +1123,7 @@ export const useWippStore = create<Store>((set, get) => ({
     if (user.username && get().serverConnected) {
       void (async () => {
         const { sendRequest, STATUS_FR } = await import("./connections");
-        const channel = via === "qr" ? "qr" : "request";
+        const channel = via === "qr" ? "qr" : via === "touch" ? "touch" : "request";
         const status = await sendRequest(user.username, channel);
         if (status === "already_connected" || status === "accepted_existing" || status === "accepted") {
           set((s) => ({
@@ -1277,21 +1381,19 @@ export const useWippStore = create<Store>((set, get) => ({
   viewStory: (userId) =>
     set((s) => ({ viewedStories: { ...s.viewedStories, [userId]: Date.now() } })),
   createGroup: (name, participantIds) => {
-    const chat: Chat = {
-      id: uid("g"),
-      type: "group",
-      name: name.trim() || "Groupe",
-      participantIds: ["me", ...participantIds],
-      unread: 0,
-      muted: false,
-      pinned: false,
-      archived: false,
-      isRequest: false,
-      preview: "",
-      lastAt: Date.now(),
-    };
-    set((s) => ({ chats: [chat, ...s.chats], messages: { ...s.messages, [chat.id]: [] } }));
-    get().push({ name: "conversation", chatId: chat.id });
+    const trimmed = name.trim();
+    if (!trimmed || !get().serverConnected) return;
+    void (async () => {
+      const { createServerGroup } = await import("./lot7/api");
+      const id = await createServerGroup(trimmed, participantIds);
+      await get().syncServerInbox();
+      const localId = id.startsWith("srv:") ? id : `srv:${id}`;
+      get().push({ name: "conversation", chatId: localId });
+    })().catch(async (err) => {
+      console.warn("[wipp] group create failed", err);
+      const { Alert } = await import("react-native");
+      Alert.alert("Groupe", err instanceof Error ? err.message : "Création impossible");
+    });
   },
 }));
 
@@ -1304,3 +1406,7 @@ export function chatPeer(chat: Chat, users: Record<string, User>) {
   const id = chat.participantIds.find((x) => x !== "me");
   return id ? users[id] : undefined;
 }
+
+subscribePrivateVault(() => {
+  useWippStore.setState((s) => ({ vaultEpoch: s.vaultEpoch + 1 }));
+});

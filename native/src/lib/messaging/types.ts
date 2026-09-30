@@ -35,6 +35,12 @@ export type WippAdminUser = {
 export type WippChatSummary = {
   id: string;
   peer: WippProfile;
+  kind?: "dm" | "group";
+  groupName?: string;
+  memberIds?: string[];
+  adminIds?: string[];
+  ownerId?: string;
+  members?: WippProfile[];
   preview: string;
   lastAt: number;
   unread: number;
@@ -67,6 +73,8 @@ export type WippMessage = {
   deliveredAt?: number | null;
   readAt?: number | null;
   reactions?: WippReaction[];
+  mentions?: string[];
+  systemEvent?: string | null;
 };
 
 export type WippSessionPayload = {

@@ -64,7 +64,18 @@ export async function fetchServerMessages(chatId: string, before?: number) {
 }
 
 export async function postServerMessage(chatId: string, body: string, clientId: string, opts?: { replyTo?: string | null }) {
-  return S.insertMessage(chatId, body, clientId, opts?.replyTo);
+  const message = await S.insertMessage(chatId, body, clientId, opts?.replyTo);
+  try {
+    const { isPrivateChat } = await import("../private-vault");
+    const { wippApi } = await import("../proximity/wipp-session");
+    await wippApi(`chats/${chatId}/notify`, {
+      method: "POST",
+      body: JSON.stringify({ messageId: message.id, vault: isPrivateChat(`srv:${chatId}`) }),
+    });
+  } catch {
+    /* REST notify is best-effort; Realtime still updates the thread */
+  }
+  return message;
 }
 
 export async function editServerMessage(_chatId: string, messageId: string, body: string) {
@@ -98,13 +109,34 @@ export async function postChatPrefs(
     archived?: boolean;
     mute?: "off" | "1h" | "8h" | "1w" | "always";
     manuallyUnread?: boolean;
+    genericNotify?: boolean;
   },
 ) {
-  return S.updatePrefs(chatId, patch);
+  return S.updatePrefs(chatId, patch).then(async (result) => {
+    try {
+      const { wippApi } = await import("../proximity/wipp-session");
+      await wippApi(`chats/${chatId}/prefs`, {
+        method: "POST",
+        body: JSON.stringify(patch),
+      });
+    } catch {
+      /* REST prefs optional when the session is Supabase-only */
+    }
+    return result;
+  });
 }
 
 export async function postFocus(chatId: string, active: boolean) {
   S.setFocus(chatId, active);
+  try {
+    const { wippApi } = await import("../proximity/wipp-session");
+    await wippApi(`chats/${chatId}/focus`, {
+      method: "POST",
+      body: JSON.stringify({ active }),
+    });
+  } catch {
+    /* in-process presence on the API host is best-effort */
+  }
 }
 
 export async function postTyping(chatId: string, active: boolean) {

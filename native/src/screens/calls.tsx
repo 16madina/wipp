@@ -12,7 +12,8 @@ import { colors, layout } from "../theme";
 export function CallsScreen() {
   const t = useT();
   const lang = useWippStore((s) => s.language);
-  const calls = useWippStore((s) => s.calls);
+  const serverConnected = useWippStore((s) => s.serverConnected);
+  const calls = useWippStore((s) => (serverConnected ? s.calls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("srvcall:")) : s.calls));
   const users = useWippStore((s) => s.users);
   const push = useWippStore((s) => s.push);
   const markCallsSeen = useWippStore((s) => s.markCallsSeen);
@@ -22,6 +23,28 @@ export function CallsScreen() {
   useEffect(() => {
     markCallsSeen();
   }, [markCallsSeen]);
+  useEffect(() => {
+    if (!serverConnected) return;
+    void import("../lib/proximity/wipp-session").then(async ({ wippApi }) => {
+      try {
+        const data = await wippApi<{
+          calls: { id: string; peerId: string; direction: "in" | "out"; kind: "audio" | "video"; missed: boolean; at: string }[];
+        }>("calls/history");
+        useWippStore.setState({
+          calls: (data.calls ?? []).map((c) => ({
+            id: c.id.startsWith("call_") ? c.id : `srvcall:${c.id}`,
+            userId: `srvuser:${c.peerId}`,
+            kind: c.kind,
+            direction: c.direction,
+            missed: c.missed,
+            at: Date.parse(c.at),
+          })),
+        });
+      } catch {
+        /* history stays empty until the call API is deployed */
+      }
+    });
+  }, [serverConnected]);
   const needle = q.trim().replace(/^@/, "").toLowerCase();
   const list = (filter === "missed" ? calls.filter((c) => c.missed) : calls).filter((c) => {
     if (!needle) return true;

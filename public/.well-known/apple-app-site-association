@@ -1,11 +1,6 @@
 {
   "applinks": {
     "apps": [],
-    "details": [
-      {
-        "appID": "TEAMID.com.wipp.app",
-        "paths": ["/t/*"]
-      }
-    ]
+    "details": []
   }
 }

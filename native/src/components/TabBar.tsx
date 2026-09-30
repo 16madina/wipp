@@ -83,9 +83,6 @@ export function TabBar({ active }: { active: string }) {
   function go(name: "wgo-touch" | "scanner" | "my-qr" | "search-user" | "nearby") {
     haptic("select");
     setOpen(false);
-    if (name === "nearby") {
-      useWippStore.getState().setNearby(15);
-    }
     setTimeout(() => push({ name }), 160);
   }
 

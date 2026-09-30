@@ -82,8 +82,10 @@ import {
 } from "./extra";
 import { useEffect, useState } from "react";
 import { AppState, Platform, View } from "react-native";
-import * as Linking from "expo-linking";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
+import { ScreenProtectionHost } from "../components/ScreenProtectionHost";
+import { hydratePrivateVault } from "../lib/private-vault";
+import { bootstrapPush, onSessionReady } from "../lib/push";
 import { IntroSplash } from "./intro";
 import { useDeviceLayout } from "../lib/device-layout";
 
@@ -259,6 +261,15 @@ export function AppShell() {
   const onboarded = useWippStore((s) => s.onboarded);
 
   useEffect(() => {
+    void hydratePrivateVault();
+    void import("../lib/push/prefs").then(async ({ loadNotifPrefs }) => {
+      const prefs = await loadNotifPrefs();
+      useWippStore.setState({ notifs: prefs.notifs, pushMaster: prefs.pushMaster });
+    });
+    return bootstrapPush();
+  }, []);
+
+  useEffect(() => {
     if (!introDone) return;
     const s = useWippStore.getState();
     const name = s.stack.at(-1)?.name;
@@ -273,6 +284,7 @@ export function AppShell() {
     if (!onboarded) return;
     void useWippStore.getState().ensureCrypto();
     void useWippStore.getState().syncServerInbox();
+    void onSessionReady();
     let stop = () => {};
     void import("../lib/messaging/live-client").then(({ startMessageStream }) => {
       stop = startMessageStream((event) => {
@@ -284,20 +296,34 @@ export function AppShell() {
         void useWippStore.getState().syncServerInbox();
       }
     });
-    function handleUrl(url: string) {
-      if (!url || url.startsWith("exp+")) return;
-      void import("../lib/deep-links").then(({ openResolvedQr }) => openResolvedQr(url));
-    }
-    void Linking.getInitialURL().then((url) => {
-      if (url) handleUrl(url);
+    let unbind = () => {};
+    let offMatch = () => {};
+    void import("../lib/proximity/lifecycle").then(({ bindProximityLifecycle, syncProximityLifecycle }) => {
+      unbind = bindProximityLifecycle();
+      void syncProximityLifecycle(useWippStore.getState().stack.at(-1)?.name ?? "chats");
     });
-    const linkSub = Linking.addEventListener("url", (e) => handleUrl(e.url));
+    void import("../lib/proximity/touch-receiver").then(({ onTouchReceiverMatch }) => {
+      offMatch = onTouchReceiverMatch(() => {
+        const name = useWippStore.getState().stack.at(-1)?.name;
+        if (name !== "wgo-touch" && name !== "touch-incoming") {
+          useWippStore.getState().push({ name: "touch-incoming" });
+        }
+      });
+    });
     return () => {
       stop();
       sub.remove();
-      linkSub.remove();
+      unbind();
+      offMatch();
     };
   }, [onboarded]);
+
+  useEffect(() => {
+    if (!onboarded) return;
+    void import("../lib/proximity/lifecycle").then(({ syncProximityLifecycle }) => {
+      void syncProximityLifecycle(top.name);
+    });
+  }, [onboarded, top.name]);
 
   if (!introDone) {
     return <IntroSplash onDone={() => setIntroDone(true)} />;
@@ -323,8 +349,10 @@ export function AppShell() {
         }}
       >
         {Platform.OS === "web" ? <View nativeID="wipp-recaptcha" /> : <RecaptchaHost />}
-        <ScreenSwitch screen={top} />
-        {showTabs ? <TabBar active={top.name} /> : null}
+        <ScreenProtectionHost>
+          <ScreenSwitch screen={top} />
+          {showTabs ? <TabBar active={top.name} /> : null}
+        </ScreenProtectionHost>
       </View>
     </View>
   );

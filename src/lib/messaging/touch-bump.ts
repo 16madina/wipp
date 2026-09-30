@@ -49,6 +49,10 @@ export async function reportTouchDetect(input: DetectInput): Promise<DetectResul
   if (invite.sender.id === input.profileId) {
     throw new WippHttpError(400, "self", "C’est ton propre partage.");
   }
+  const { isBlocked } = await import("@/lib/messaging/server");
+  if (await isBlocked(invite.sender.id, input.profileId)) {
+    throw new WippHttpError(404, "not_found", "Invitation introuvable ou inactive.");
+  }
 
   const channel = input.channel || "ble";
   if (BYPASS.has(channel)) {
@@ -251,6 +255,11 @@ async function runArbitration(inviteId: string, shockAt: number) {
     return { state: "ambiguous" as const, winnerId: null, log };
   }
 
+  const prev = await sql<{ arbitration: string | null; matched_profile_id: string | null }>`
+    select arbitration, matched_profile_id from wipp_touch_invites where id = ${inviteId} limit 1
+  `;
+  const already =
+    prev[0]?.arbitration === "matched" && prev[0]?.matched_profile_id === best.profileId;
   await sql`
     update wipp_touch_invites
     set arbitration = ${"matched"},
@@ -258,6 +267,10 @@ async function runArbitration(inviteId: string, shockAt: number) {
         arbitration_log = ${JSON.stringify(log)}::jsonb
     where id = ${inviteId}
   `;
+  if (!already) {
+    const { notifyTouchIncoming } = await import("@/lib/push/notify");
+    void notifyTouchIncoming({ recipientId: best.profileId, inviteId });
+  }
   return { state: "matched" as const, winnerId: best.profileId, log };
 }
 

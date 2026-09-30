@@ -555,13 +555,11 @@ export function SmsReferenceScreen() {
           setError(res.error);
           return;
         }
-        enterWithoutServer(phone);
-        clearPending();
+        setError("error" in res ? res.error : "Connexion impossible.");
         setBusy(false);
         return;
       } catch {
-        enterWithoutServer(phone);
-        clearPending();
+        setError("Connexion impossible. Réessaie quand le réseau revient.");
         setBusy(false);
         return;
       }

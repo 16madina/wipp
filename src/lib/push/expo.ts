@@ -8,14 +8,23 @@ export type PushPayload = {
   priority?: "default" | "normal" | "high";
   channelId?: string;
   categoryId?: string;
+  collapseId?: string;
+  badge?: number;
+};
+
+export type ExpoTicket = {
+  status?: string;
+  id?: string;
+  message?: string;
+  details?: { error?: string };
 };
 
 export async function sendExpoPush(
   tokens: string[],
   payload: PushPayload,
-): Promise<{ sent: number; tickets: unknown[] }> {
+): Promise<{ sent: number; tickets: ExpoTicket[]; invalidTokens: string[] }> {
   const unique = [...new Set(tokens.filter(Boolean))];
-  if (!unique.length) return { sent: 0, tickets: [] };
+  if (!unique.length) return { sent: 0, tickets: [], invalidTokens: [] };
 
   const messages = unique.map((to) => ({
     to,
@@ -26,14 +35,17 @@ export async function sendExpoPush(
     priority: payload.priority === "high" ? ("high" as const) : ("default" as const),
     channelId: payload.channelId,
     categoryId: payload.categoryId,
+    collapseId: payload.collapseId,
+    badge: payload.badge,
     mutableContent: true,
     _contentAvailable: true,
   }));
 
-  const tickets: unknown[] = [];
-  // Expo accepts batches of up to 100
+  const tickets: ExpoTicket[] = [];
+  const invalidTokens: string[] = [];
   for (let i = 0; i < messages.length; i += 100) {
     const chunk = messages.slice(i, i + 100);
+    const chunkTokens = unique.slice(i, i + 100);
     try {
       const res = await fetch("https://exp.host/--/api/v2/push/send", {
         method: "POST",
@@ -43,12 +55,20 @@ export async function sendExpoPush(
         },
         body: JSON.stringify(chunk),
       });
-      const json = (await res.json().catch(() => ({}))) as { data?: unknown };
-      if (Array.isArray(json.data)) tickets.push(...json.data);
-      else if (json.data) tickets.push(json.data);
+      const json = (await res.json().catch(() => ({}))) as { data?: ExpoTicket | ExpoTicket[] };
+      const rows = Array.isArray(json.data) ? json.data : json.data ? [json.data] : [];
+      tickets.push(...rows);
+      rows.forEach((ticket, idx) => {
+        const err = ticket.details?.error;
+        if (ticket.status === "error" && (err === "DeviceNotRegistered" || err === "InvalidCredentials")) {
+          const tok = chunkTokens[idx];
+          if (tok) invalidTokens.push(tok);
+        }
+      });
     } catch (err) {
-      console.warn("[wipp-push] expo send failed", err);
+      console.warn("[wipp-push] expo send failed");
+      void err;
     }
   }
-  return { sent: unique.length, tickets };
+  return { sent: unique.length, tickets, invalidTokens };
 }

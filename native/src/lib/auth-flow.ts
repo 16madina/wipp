@@ -2,10 +2,11 @@ import { confirmSmsCode, explainSmsError, hasPendingSms, sendSmsCode, toE164 } f
 
 export type AuthMode = "signup" | "signin";
 
-/** Mot de passe temporaire pour construire / tester l’app, sans SMS ni réseau. */
+/** Dev-only bypass. Production always requires the SMS code. */
 export const TEST_SIGNIN_PASSWORD = "160184";
 
 export function isTestSigninPassword(code: string) {
+  if (typeof __DEV__ === "undefined" || !__DEV__) return false;
   return code.replace(/\s/g, "") === TEST_SIGNIN_PASSWORD;
 }
 
@@ -27,11 +28,6 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return "Numéro invalide. Vérifie l'indicatif et le numéro.";
-  // Connexion : on n’envoie pas de SMS. Le mot de passe de test suffit.
-  if (mode === "signin") {
-    pending = { phone, mode };
-    return null;
-  }
   try {
     await sendSmsCode(phone);
     pending = { phone, mode };

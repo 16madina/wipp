@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "385207231117",
+    "project_id": "wipp-61124",
+    "storage_bucket": "wipp-61124.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:385207231117:android:17c91b3f250563fae238c4",
+        "android_client_info": {
+          "package_name": "com.wipp.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYdGZgZ6C4OuaZzbY_RWh0dOSBnIE2wbw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

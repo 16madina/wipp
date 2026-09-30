@@ -378,6 +378,7 @@ export function Field({
   multiline,
   keyboardType,
   autoCapitalize,
+  secureTextEntry,
 }: {
   label: string;
   value: string;
@@ -386,6 +387,7 @@ export function Field({
   multiline?: boolean;
   keyboardType?: "default" | "phone-pad" | "url" | "email-address";
   autoCapitalize?: "none" | "sentences" | "words";
+  secureTextEntry?: boolean;
 }) {
   return (
     <View>
@@ -398,6 +400,7 @@ export function Field({
         multiline={multiline}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
         style={{
           minHeight: multiline ? 88 : 48,
           borderRadius: 8,

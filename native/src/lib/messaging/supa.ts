@@ -8,6 +8,7 @@ import { supabase } from "../supabase";
 import { loadCachedProfileJson, saveCachedProfileJson } from "./identity";
 import type { WippChatSummary, WippMessage, WippProfile } from "./types";
 import { previewFromBody } from "../crypto";
+import { groupPreview } from "../lot7/rules";
 
 const db = supabase as unknown as { from: (t: string) => any; rpc: (n: string) => any };
 let profileMem: WippProfile | null = null;
@@ -118,8 +119,82 @@ export async function listChats(): Promise<WippChatSummary[]> {
   const disappear = new Map(
     ((metas ?? []) as { id: string; disappear_after_ms?: number | null }[]).map((c) => [c.id, c.disappear_after_ms ?? null]),
   );
+  const groupBy = new Map<string, { name: string; owner_id: string }>();
+  const adminBy = new Map<string, string[]>();
+  const membersBy = new Map<string, WippProfile[]>();
+  const { data: groupRows, error: groupErr } = await db.from("wipp_groups").select("chat_id,name,owner_id").in("chat_id", ids);
+  if (!groupErr && groupRows?.length) {
+    for (const g of groupRows as { chat_id: string; name: string; owner_id: string }[]) {
+      groupBy.set(g.chat_id, { name: g.name, owner_id: g.owner_id });
+    }
+    const gids = [...groupBy.keys()];
+    const { data: adminRows } = await db.from("wipp_group_admins").select("chat_id,profile_id").in("chat_id", gids);
+    for (const a of (adminRows ?? []) as { chat_id: string; profile_id: string }[]) {
+      const list = adminBy.get(a.chat_id) ?? [];
+      list.push(a.profile_id);
+      adminBy.set(a.chat_id, list);
+    }
+    const { data: memberRows } = await db
+      .from("wipp_chat_members")
+      .select(`chat_id, wipp_profiles(${PROFILE_COLS})`)
+      .in("chat_id", gids);
+    for (const row of (memberRows ?? []) as { chat_id: string; wipp_profiles: ProfileRow | null }[]) {
+      if (!row.wipp_profiles) continue;
+      const list = membersBy.get(row.chat_id) ?? [];
+      list.push(mapProfile(row.wipp_profiles));
+      membersBy.set(row.chat_id, list);
+    }
+  }
   const out: WippChatSummary[] = [];
   for (const r of rows) {
+    const group = groupBy.get(r.chat_id!);
+    if (group) {
+      const members = membersBy.get(r.chat_id!) ?? [];
+      const { data: last } = await db
+        .from("wipp_messages")
+        .select("body, created_at, deleted_at")
+        .eq("chat_id", r.chat_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const { data: unreadRows } = await db
+        .from("wipp_messages")
+        .select("id, wipp_receipts(profile_id, read_at)")
+        .eq("chat_id", r.chat_id)
+        .neq("sender_id", me)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(99);
+      const unread = ((unreadRows ?? []) as any[]).filter(
+        (m) => !(m.wipp_receipts ?? []).some((x: any) => x.profile_id === me && x.read_at),
+      ).length;
+      const muted = r.muted_until;
+      const admins = new Set(adminBy.get(r.chat_id!) ?? []);
+      admins.add(group.owner_id);
+      out.push({
+        id: r.chat_id!,
+        kind: "group",
+        groupName: group.name,
+        ownerId: group.owner_id,
+        memberIds: members.map((m) => m.id),
+        adminIds: [...admins],
+        members,
+        peer: members.find((m) => m.id !== me) ?? {
+          id: `grp:${r.chat_id}`,
+          username: "",
+          displayName: group.name,
+        },
+        preview: last ? (last.deleted_at ? "Message supprimé" : groupPreview(last.body ?? "")) : "",
+        lastAt: ms(last?.created_at) ?? 0,
+        unread,
+        pinnedAt: ms(r.pinned_at),
+        archivedAt: ms(r.archived_at),
+        mutedUntil: r.muted_forever ? "always" : muted && Date.parse(muted) > Date.now() ? ms(muted) : null,
+        manuallyUnreadAt: ms(r.manually_unread_at),
+        disappearAfterMs: disappear.get(r.chat_id!) ?? null,
+      });
+      continue;
+    }
     const peerRow = (others ?? []).find((o: any) => o.chat_id === r.chat_id)?.wipp_profiles;
     if (!peerRow) continue;
     const { data: last } = await db
@@ -185,12 +260,15 @@ function mapMessage(r: any, me: string): WippMessage {
       emoji: x.emoji,
       createdAt: Date.parse(x.created_at),
     })),
+    mentions: r.mentions ?? [],
+    systemEvent: r.system_event ?? null,
   };
 }
 
 export async function listMessages(chatId: string, before?: number): Promise<WippMessage[]> {
   const me = await meId();
-  let q = db.from("wipp_messages").select(MSG_COLS).eq("chat_id", chatId).order("created_at", { ascending: false }).limit(80);
+  const cols = chatId.startsWith("g_") ? `${MSG_COLS}, mentions, system_event` : MSG_COLS;
+  let q = db.from("wipp_messages").select(cols).eq("chat_id", chatId).order("created_at", { ascending: false }).limit(80);
   if (before) q = q.lt("created_at", new Date(before).toISOString());
   const [{ data, error }, { data: hides }] = await Promise.all([
     q,
@@ -287,7 +365,7 @@ export async function upsertReceipts(ids: string[], kind: "delivered" | "read") 
 
 export async function updatePrefs(
   chatId: string,
-  patch: { pinned?: boolean; archived?: boolean; mute?: string; manuallyUnread?: boolean },
+  patch: { pinned?: boolean; archived?: boolean; mute?: string; manuallyUnread?: boolean; genericNotify?: boolean },
 ) {
   const me = await meId();
   const now = Date.now();
@@ -301,7 +379,12 @@ export async function updatePrefs(
     row.muted_until =
       patch.mute === "off" || patch.mute === "always" ? null : new Date(now + (add[patch.mute] ?? 0)).toISOString();
   }
-  await db.from("wipp_chat_members").update(row).eq("chat_id", chatId).eq("profile_id", me);
+  if (patch.genericNotify !== undefined) row.generic_notify = patch.genericNotify;
+  const { error } = await db.from("wipp_chat_members").update(row).eq("chat_id", chatId).eq("profile_id", me);
+  if (error && patch.genericNotify !== undefined) {
+    delete row.generic_notify;
+    await db.from("wipp_chat_members").update(row).eq("chat_id", chatId).eq("profile_id", me);
+  }
 }
 
 export type LiveKind = "message" | "edit" | "delete" | "reaction" | "pin" | "receipt" | "typing";

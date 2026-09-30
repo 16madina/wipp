@@ -1,0 +1,249 @@
+/**
+ * Server-side WIPP push. Titles/bodies never include ciphertext.
+ * WIPP Privé / generic_notify → generic copy even when the app is killed.
+ */
+import { getSql } from "@/lib/db";
+import { listPushTokens, disablePushTokens } from "@/lib/messaging/calls";
+import { sendExpoPush } from "@/lib/push/expo";
+import { assertNoSensitivePush, sanitizePushData, type PushData } from "@/lib/push/payload";
+
+const PRIVATE_TITLE = "WIPP";
+const PRIVATE_BODY = "Nouveau message";
+
+const recent = new Map<string, number>();
+const DEDUP_MS = 10 * 60_000;
+
+function alreadySent(eventId: string) {
+  const now = Date.now();
+  for (const [id, at] of recent) {
+    if (now - at > DEDUP_MS) recent.delete(id);
+  }
+  if (recent.has(eventId)) return true;
+  recent.set(eventId, now);
+  return false;
+}
+
+/** Memory first, then a durable row so a restart or a second instance does not send twice. */
+async function claimEvent(eventId: string) {
+  if (alreadySent(eventId)) return false;
+  try {
+    const sql = await getSql();
+    const rows = await sql<{ ok: boolean }>`
+      select public.wipp_lot15_claim_push(${eventId}) as ok
+    `;
+    if (rows[0]?.ok === false) return false;
+  } catch {
+    /* migration 0015 not applied yet: in-process dedupe still applies */
+  }
+  return true;
+}
+
+export async function sendProfilePush(input: {
+  profileId: string;
+  title: string;
+  body: string;
+  data: PushData;
+  channelId: "messages" | "requests" | "calls";
+}) {
+  if (!(await claimEvent(input.data.eventId))) return { sent: 0, deduped: true as const };
+  const data = sanitizePushData(input.data as unknown as Record<string, unknown>);
+  assertNoSensitivePush(data, input.title, input.body);
+  const tokens = await listPushTokens(input.profileId);
+  const expo = tokens
+    .filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken"))
+    .map((t) => t.token);
+  if (!expo.length) return { sent: 0, deduped: false as const };
+  const result = await sendExpoPush(expo, {
+    title: input.title,
+    body: input.body,
+    data,
+    channelId: input.channelId,
+    collapseId: input.data.eventId,
+    priority: input.channelId === "calls" ? "high" : "default",
+  });
+  if (result.invalidTokens.length) {
+    await disablePushTokens(result.invalidTokens);
+  }
+  return { sent: result.sent, deduped: false as const };
+}
+
+export function privateCopy() {
+  return { title: PRIVATE_TITLE, body: PRIVATE_BODY };
+}
+
+async function loadBusinessMeta(chatId: string): Promise<{ publicId: string; name: string; ownerId: string } | null> {
+  const sql = await getSql();
+  const tries = [
+    `select bc.public_id as "publicId", bc.name, bc.owner_profile_id as "ownerId"
+     from wipp_business_chats t
+     join wipp_business_cards bc on bc.id = t.card_id
+     where t.chat_id = $1 limit 1`,
+    `select bc.public_id as "publicId", bc.name, bc.owner_profile_id as "ownerId"
+     from wipp_business_chats t
+     join wipp_business_cards bc on bc.id = t.business_card_id
+     where t.chat_id = $1 limit 1`,
+    `select public_id as "publicId", name, owner_profile_id as "ownerId"
+     from wipp_business_cards where chat_id = $1 limit 1`,
+    `select bc.public_id as "publicId", bc.name, bc.owner_profile_id as "ownerId"
+     from wipp_chats c
+     join wipp_business_cards bc on bc.id = c.business_card_id
+     where c.id = $1 limit 1`,
+  ];
+  for (const q of tries) {
+    try {
+      const rows = await sql.query<{ publicId: string; name: string; ownerId: string }>(q, [chatId]);
+      if (rows[0]?.publicId && rows[0].name && rows[0].ownerId) return rows[0];
+    } catch {
+      /* table or column absent on this environment */
+    }
+  }
+  return null;
+}
+
+async function peerFlags(chatId: string, profileId: string) {
+  const sql = await getSql();
+  try {
+    const rows = await sql<{ muted_until: string | null; generic_notify: boolean }>`
+      select muted_until::text, generic_notify
+      from wipp_chat_members
+      where chat_id = ${chatId} and profile_id = ${profileId}
+      limit 1
+    `;
+    return rows[0] ?? { muted_until: null, generic_notify: false };
+  } catch {
+    const rows = await sql<{ muted_until: string | null }>`
+      select muted_until::text
+      from wipp_chat_members
+      where chat_id = ${chatId} and profile_id = ${profileId}
+      limit 1
+    `;
+    return { muted_until: rows[0]?.muted_until ?? null, generic_notify: false };
+  }
+}
+
+export async function notifyChatMessage(input: {
+  senderId: string;
+  chatId: string;
+  messageId: string;
+  vault?: boolean;
+}) {
+  const { muteIsActive } = await import("@/lib/messaging/chat-prefs");
+  const { isPresent } = await import("@/lib/messaging/message-live");
+  const { isBlocked } = await import("@/lib/messaging/server");
+  const sql = await getSql();
+  const peers = await sql<{ profile_id: string }>`
+    select profile_id from wipp_chat_members where chat_id = ${input.chatId} and profile_id <> ${input.senderId}
+  `;
+  const me = await sql<{ display_name: string }>`
+    select display_name from wipp_profiles where id = ${input.senderId} limit 1
+  `;
+  const biz = await loadBusinessMeta(input.chatId);
+  let groupName: string | null = null;
+  try {
+    const groups = await sql<{ name: string }>`
+      select name from wipp_groups where chat_id = ${input.chatId} limit 1
+    `;
+    groupName = groups[0]?.name ?? null;
+  } catch {
+    groupName = null;
+  }
+  for (const peer of peers) {
+    if (isPresent(input.chatId, peer.profile_id)) continue;
+    const flags = await peerFlags(input.chatId, peer.profile_id);
+    if (muteIsActive(flags.muted_until)) continue;
+    if (await isBlocked(input.senderId, peer.profile_id)) continue;
+    const redact = Boolean(input.vault) || Boolean(flags.generic_notify);
+    if (redact) {
+      const copy = privateCopy();
+      await sendProfilePush({
+        profileId: peer.profile_id,
+        title: copy.title,
+        body: copy.body,
+        channelId: "messages",
+        data: {
+          type: "message",
+          eventId: input.messageId,
+          chatId: input.chatId,
+          private: true,
+        },
+      });
+      continue;
+    }
+    if (groupName) {
+      await sendProfilePush({
+        profileId: peer.profile_id,
+        title: groupName.slice(0, 64) || "Groupe",
+        body: "Nouveau message",
+        channelId: "messages",
+        data: {
+          type: "message",
+          eventId: input.messageId,
+          chatId: input.chatId,
+          group: true,
+        },
+      });
+      continue;
+    }
+    if (biz) {
+      const ownerIsPeer = biz.ownerId === peer.profile_id;
+      await sendProfilePush({
+        profileId: peer.profile_id,
+        title: biz.name.slice(0, 64) || "WIPP",
+        body: ownerIsPeer ? "Nouveau message professionnel" : "Nouveau message",
+        channelId: "messages",
+        data: {
+          type: "message",
+          eventId: input.messageId,
+          chatId: input.chatId,
+          business: true,
+          publicId: biz.publicId,
+        },
+      });
+      continue;
+    }
+    await sendProfilePush({
+      profileId: peer.profile_id,
+      title: me[0]?.display_name || "WIPP",
+      body: "Nouveau message",
+      channelId: "messages",
+      data: {
+        type: "message",
+        eventId: input.messageId,
+        chatId: input.chatId,
+      },
+    });
+  }
+}
+
+export async function notifyConnectionRequest(input: {
+  senderId: string;
+  recipientId: string;
+  requestId: string;
+  senderName: string;
+}) {
+  await sendProfilePush({
+    profileId: input.recipientId,
+    title: input.senderName.slice(0, 64) || "WIPP",
+    body: "Demande de connexion",
+    channelId: "requests",
+    data: {
+      type: "request",
+      eventId: input.requestId,
+      requestId: input.requestId,
+    },
+  });
+}
+
+export async function notifyTouchIncoming(input: { recipientId: string; inviteId: string }) {
+  await sendProfilePush({
+    profileId: input.recipientId,
+    title: "WIPP Touch",
+    body: "Quelqu’un veut se connecter près de toi",
+    channelId: "requests",
+    data: {
+      type: "touch",
+      eventId: input.inviteId,
+      inviteId: input.inviteId,
+    },
+  });
+}

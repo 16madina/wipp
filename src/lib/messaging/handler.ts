@@ -17,6 +17,7 @@ import {
 } from "@/lib/messaging/touch-bump";
 import { getTouchBumpConfig } from "@/lib/messaging/touch-config";
 import { TOUCH_RL, touchRateLimit } from "@/lib/messaging/touch-rate-limit";
+import { getNearbyVisibility, resolveNearbyToken, setNearbyVisibility } from "@/lib/messaging/nearby";
 import { liveKitPublicConfig } from "@/lib/livekit/config";
 import { mintCallToken } from "@/lib/livekit/token";
 import {
@@ -26,6 +27,7 @@ import {
   hangupCallInvite,
   listIncomingCalls,
   registerPushToken,
+  unregisterPushToken,
 } from "@/lib/messaging/calls";
 import {
   WippHttpError,
@@ -155,53 +157,105 @@ export async function handleWippApi(request: Request): Promise<Response> {
     }
 
     if (method === "POST" && a === "calls" && b === "token") {
-      // Soft auth: prefer session identity when present, else accept body identity (demo).
-      let identity = "demo";
-      let displayName: string | undefined;
-      try {
-        const me = await resolveSession(bearer(request));
-        identity = me.username || me.id;
-        displayName = me.displayName;
-      } catch {
-        /* demo / offline */
-      }
-      const body = await readBody<{
-        roomName?: string;
-        identity?: string;
-        displayName?: string;
-        video?: boolean;
-        peerId?: string;
-      }>(request);
-      if (body.identity?.trim()) identity = body.identity.trim();
-      if (body.displayName?.trim()) displayName = body.displayName.trim();
-      const roomName =
-        body.roomName?.trim() ||
-        `wipp-${[identity, body.peerId || "peer"].sort().join("-")}`;
-      try {
-        const me = await resolveSession(bearer(request));
-        if (body.peerId) await assertNotBlocked(me.id, body.peerId);
-      } catch (err) {
-        if (err instanceof WippHttpError && err.code === "blocked") throw err;
-      }
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ callId?: string; video?: boolean }>(request);
+      if (!body.callId?.trim()) throw new WippHttpError(400, "call_required", "callId requis");
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      const rows = await sql<{ room_name: string }>`
+        select room_name from wipp_call_invites
+        where id = ${body.callId}
+          and (caller_id = ${me.id} or callee_id = ${me.id})
+        limit 1
+      `;
+      const roomName = rows[0]?.room_name;
+      if (!roomName) throw new WippHttpError(403, "forbidden", "Appel non autorisé");
+      const identity = `p_${me.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40)}`;
       const token = await mintCallToken({
         roomName,
         identity,
-        displayName,
         video: Boolean(body.video),
       });
       return json(token);
     }
 
+    if (method === "POST" && a === "devices" && b === "push" && c === "unregister") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ token?: string; installationId?: string }>(request);
+      return json(
+        await unregisterPushToken({
+          profileId: me.id,
+          token: body.token,
+          installationId: body.installationId,
+        }),
+      );
+    }
+
     if (method === "POST" && a === "devices" && b === "push") {
       const me = await resolveSession(bearer(request));
-      const body = await readBody<{ token?: string; platform?: string; kind?: string }>(request);
+      const body = await readBody<{
+        token?: string;
+        platform?: string;
+        kind?: string;
+        installationId?: string;
+      }>(request);
       const result = await registerPushToken({
         profileId: me.id,
         token: body.token ?? "",
         platform: body.platform,
         kind: body.kind,
+        installationId: body.installationId,
       });
       return json(result);
+    }
+
+    if (method === "POST" && a === "chats" && b && c === "notify" && !d) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ messageId?: string; vault?: boolean }>(request);
+      const { notifyStoredMessage } = await import("./message-actions");
+      return json(await notifyStoredMessage(me.id, b, body.messageId ?? "", Boolean(body.vault)));
+    }
+
+    if (method === "POST" && a === "push" && b === "connection") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string; requestId?: string }>(request);
+      const sql = await import("@/lib/db").then((m) => m.getSql()).then((s) => s);
+      const username = (body.username ?? "").trim().replace(/^@/, "").toLowerCase();
+      try {
+        const rows = body.requestId
+          ? await sql<{ id: string; recipient_id: string; expires_at: string }>`
+              select id, recipient_id, expires_at::text
+              from wipp_connection_requests
+              where id = ${body.requestId} and sender_id = ${me.id} and status = ${"pending"}
+              limit 1
+            `
+          : username
+            ? await sql<{ id: string; recipient_id: string; expires_at: string }>`
+                select r.id, r.recipient_id, r.expires_at::text
+                from wipp_connection_requests r
+                join wipp_profiles p on p.id = r.recipient_id
+                where r.sender_id = ${me.id}
+                  and r.status = ${"pending"}
+                  and lower(p.username) = ${username}
+                order by r.created_at desc
+                limit 1
+              `
+            : [];
+        const row = rows[0];
+        if (!row || Date.parse(row.expires_at) <= Date.now()) {
+          return json({ ok: false, skipped: true });
+        }
+        const { notifyConnectionRequest } = await import("@/lib/push/notify");
+        await notifyConnectionRequest({
+          senderId: me.id,
+          recipientId: row.recipient_id,
+          requestId: row.id,
+          senderName: me.displayName,
+        });
+        return json({ ok: true, requestId: row.id });
+      } catch {
+        return json({ ok: false, skipped: true });
+      }
     }
 
     if (method === "POST" && a === "touch" && b === "share" && c && d === "shock") {
@@ -319,6 +373,25 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (method === "POST" && a === "nearby" && b === "visibility") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ durationMin?: number }>(request);
+      const result = await setNearbyVisibility(me.id, body.durationMin ?? 0);
+      return json(result);
+    }
+
+    if (method === "GET" && a === "nearby" && b === "visibility") {
+      const me = await resolveSession(bearer(request));
+      return json(await getNearbyVisibility(me.id));
+    }
+
+    if (method === "POST" && a === "nearby" && b === "resolve") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ token?: string }>(request);
+      if (!body.token?.trim()) throw new WippHttpError(400, "bad_request", "token requis");
+      return json(await resolveNearbyToken(me.id, body.token));
+    }
+
     if (method === "POST" && a === "calls" && b === "invite") {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{
@@ -333,6 +406,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
         kind: body.kind,
       });
       return json({ invite }, 201);
+    }
+
+    if (method === "GET" && a === "calls" && b === "history") {
+      const me = await resolveSession(bearer(request));
+      const { listCallHistory } = await import("@/lib/messaging/calls");
+      return json({ calls: await listCallHistory(me.id) });
     }
 
     if (method === "GET" && a === "calls" && b === "incoming") {
@@ -575,6 +654,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         archived?: boolean;
         mute?: "off" | "1h" | "8h" | "1w" | "always";
         manuallyUnread?: boolean;
+        genericNotify?: boolean;
       }>(request);
       const { setChatPrefs } = await import("./chat-prefs");
       return json(await setChatPrefs(me.id, b, body));

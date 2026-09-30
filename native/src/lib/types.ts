@@ -378,6 +378,8 @@ export type StoryItem = {
   videoUrl?: string;
   durationMs?: number;
   createdAt: number;
+  /** Server expiry (stories). The feed query also filters expires_at > now(). */
+  expiresAt?: number;
   viewers: StoryViewer[];
   kind?: "status" | "profile";
   ttlMs?: number;
@@ -539,7 +541,8 @@ export function storyTtlMs(story: Pick<StoryItem, "ttlMs">) {
   return story.ttlMs ?? STORY_TTL_24H;
 }
 
-export function isStoryLive(story: Pick<StoryItem, "createdAt" | "ttlMs">, now = Date.now()) {
+export function isStoryLive(story: Pick<StoryItem, "createdAt" | "ttlMs" | "expiresAt">, now = Date.now()) {
+  if (typeof story.expiresAt === "number") return now < story.expiresAt;
   return now - story.createdAt < storyTtlMs(story);
 }
 

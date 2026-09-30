@@ -12,7 +12,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  Share,
   Text,
   TextInput,
   View,
@@ -28,18 +27,22 @@ import { StickerTray } from "../components/StickerTray";
 import { SurpriseReveal } from "../components/SurpriseReveal";
 import { SwipeableBubble } from "../components/SwipeableBubble";
 import { VoiceHoldButton } from "../components/VoiceHoldButton";
+import { mentionIdsInText } from "../lib/lot7/api";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { WippSticker } from "../components/WippSticker";
 import { GlassHeader, Header, IconBtn, Press, ScreenRoot } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { useDeviceLayout } from "../lib/device-layout";
 import { formatClock, formatLastSeen } from "../lib/format";
-import { addLocalGif, GIF_INTEGRATION_PENDING, loadGifs } from "../lib/gifs";
+import { addLocalGif, gifProviderConfigured, GIF_INTEGRATION_PENDING, loadGifs, searchGifs, type LocalGif } from "../lib/gifs";
 import { haptic } from "../lib/haptics";
+import { isPrivateSessionUnlocked } from "../lib/private-vault";
+import { shareWippPublic } from "../lib/share-public";
+import { popProtect, pushProtect } from "../lib/screen-protection";
 import { localBlobs, startAlbumUpload, startUpload } from "../lib/messaging/send-media";
 import { EDIT_WINDOW_MS } from "../lib/messaging/plain";
 import { isServerChatId, toServerChatId } from "../lib/messaging/sync";
-import { chatPeer, isChatSealed, useT, useWippStore } from "../lib/store";
+import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
 import { isSeedDemoChat } from "../lib/seed";
 import { stickerById } from "../lib/stickers";
 import type { Surprise } from "../lib/surprise";
@@ -142,6 +145,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const [gifOpen, setGifOpen] = useState(false);
   const [viewOnce, setViewOnce] = useState(false);
+  const [viewOnceProtect, setViewOnceProtect] = useState(false);
   const [viewer, setViewer] = useState<{ items: MediaItem[]; start: number } | null>(null);
   const [momentPlay, setMomentPlay] = useState<{ id: string; n: number } | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
@@ -180,6 +184,13 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       });
     };
   }, [chatId, markRead]);
+
+  useEffect(() => {
+    if (!isPrivateChat(chatId)) return;
+    const release = pushProtect("private_chat");
+    if (!isPrivateSessionUnlocked()) pop();
+    return () => release();
+  }, [chatId, pop]);
 
   useEffect(() => {
     const last = messages[messages.length - 1];
@@ -302,6 +313,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       (c) =>
         !c.archived &&
         c.id !== chatId &&
+        !isPrivateChat(c.id) &&
         (!useWippStore.getState().serverConnected || !isSeedDemoChat(c.id)),
     );
 
@@ -320,7 +332,18 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       useWippStore.getState().editMessage(chatId, editing.id, value);
       setEditing(null);
     } else {
-      sendText(chatId, value, { replyTo: reply?.id, replyPreview: reply?.text?.slice(0, 80) });
+      const members =
+        chat?.type === "group"
+          ? chat.participantIds.map((id) => ({
+              id,
+              username: id === "me" ? useWippStore.getState().me.username : users[id]?.username,
+            }))
+          : [];
+      sendText(chatId, value, {
+        replyTo: reply?.id,
+        replyPreview: reply?.text?.slice(0, 80),
+        mentions: mentionIdsInText(value, members),
+      });
     }
     setDraftPersist("");
     setReply(null);
@@ -440,6 +463,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
 
   async function openViewOnce(m: Message) {
     if (!m.attachmentId || !m.mediaKey || !m.mediaChunks?.length) return;
+    pushProtect("view_once");
+    setViewOnceProtect(true);
     try {
       const { downloadCipherFile } = await import("../lib/messaging/media-upload");
       const uri = await downloadCipherFile({
@@ -455,7 +480,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         useWippStore.getState().burnViewOnce(chatId, m.id);
       }
     } catch {
-      /* already consumed */
+      popProtect("view_once");
+      setViewOnceProtect(false);
     }
   }
 
@@ -678,10 +704,15 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           </Text>
         </Press>
       ) : null}
-      {!sealed ? (
+      {!sealed && chat?.type !== "group" ? (
         <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4, borderRadius: 12, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", gap: 8 }}>
           <Lock size={14} color={colors.accent} />
           <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: colors.muted }}>{t("e2eBanner")}</Text>
+        </Press>
+      ) : null}
+      {!sealed && chat?.type === "group" ? (
+        <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4, borderRadius: 12, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 10 }}>
+          <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted }}>Groupe non chiffré de bout en bout</Text>
         </Press>
       ) : null}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -722,6 +753,29 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                     <Text style={{ fontSize: 22 }}>{e}</Text>
                   </Press>
                 ))}
+              </ScrollView>
+            ) : null}
+            {chat.type === "group" && /@[\w]*$/.test(draft) ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
+                {chat.participantIds
+                  .filter((id) => id !== "me" && users[id]?.username)
+                  .filter((id) => {
+                    const q = /@([\w]*)$/.exec(draft)?.[1]?.toLowerCase() ?? "";
+                    return users[id].username.toLowerCase().startsWith(q);
+                  })
+                  .slice(0, 8)
+                  .map((id) => (
+                    <Press
+                      key={id}
+                      onPress={() => {
+                        const next = draft.replace(/@[\w]*$/, `@${users[id].username} `);
+                        setDraftPersist(next);
+                      }}
+                      style={{ paddingVertical: 8 }}
+                    >
+                      <Text style={{ color: colors.fg }}>@{users[id].username}</Text>
+                    </Press>
+                  ))}
               </ScrollView>
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: compact ? 2 : 4, paddingHorizontal: compact ? 6 : 8, paddingTop: 6 }}>
@@ -860,8 +914,15 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       <Modal visible={gifOpen} transparent animationType="slide" onRequestClose={() => setGifOpen(false)}>
         <Press onPress={() => setGifOpen(false)} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
           <Press onPress={() => undefined} style={{ backgroundColor: colors.surface, padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-            <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{GIF_INTEGRATION_PENDING}</Text>
-            <Text style={{ color: colors.muted, marginTop: 8, fontSize: 13 }}>Aucun fournisseur GIF (Giphy/Tenor) n’est configuré. Bibliothèque locale uniquement.</Text>
+            <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>
+              {gifProviderConfigured() ? "GIF" : GIF_INTEGRATION_PENDING}
+            </Text>
+            <GifSearch
+              onPick={(gif) => {
+                sendMessage(chatId, { type: "gif", gifUrl: gif.url, imageUrl: gif.url });
+                setGifOpen(false);
+              }}
+            />
             <Btnish
               label="Importer un GIF local"
               onPress={async () => {
@@ -909,7 +970,19 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           </View>
         </Press>
       </Modal>
-      {viewer ? <MediaViewer items={viewer.items} start={viewer.start} onClose={() => setViewer(null)} /> : null}
+      {viewer ? (
+        <MediaViewer
+          items={viewer.items}
+          start={viewer.start}
+          onClose={() => {
+            setViewer(null);
+            if (viewOnceProtect) {
+              popProtect("view_once");
+              setViewOnceProtect(false);
+            }
+          }}
+        />
+      ) : null}
       <MessageMenu
         open={Boolean(picked)}
         onClose={() => setPicked(null)}
@@ -934,7 +1007,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         key: "share",
                         label: "Partager",
                         onSelect: () => {
-                          if (picked.text) void Share.share({ message: picked.text });
+                          if (picked.text) void shareWippPublic(picked.text);
                         },
                       },
                     ]
@@ -976,6 +1049,39 @@ function Btnish({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
+function GifSearch({ onPick }: { onPick: (gif: LocalGif) => void }) {
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<LocalGif[]>(() => loadGifs());
+  const [note, setNote] = useState(gifProviderConfigured() ? "" : "Ajoute EXPO_PUBLIC_GIF_API_KEY pour Tenor. Aucune clé n’est dans l’application.");
+  return (
+    <View>
+      <TextInput
+        value={q}
+        onChangeText={setQ}
+        placeholder="Rechercher un GIF"
+        placeholderTextColor={colors.muted}
+        onSubmitEditing={() => {
+          void searchGifs(q)
+            .then((rows) => {
+              setHits(rows.length ? rows : loadGifs());
+              if (!gifProviderConfigured()) setNote("GIF PROVIDER CREDENTIAL = EXTERNAL BLOCKER");
+            })
+            .catch(() => setNote("Recherche GIF impossible."));
+        }}
+        style={{ marginTop: 8, height: 40, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 10 }}
+      />
+      {note ? <Text style={{ color: colors.muted, marginTop: 8, fontSize: 13 }}>{note}</Text> : null}
+      <ScrollView horizontal style={{ marginTop: 12 }}>
+        {hits.map((g) => (
+          <Press key={g.id} onPress={() => onPick(g)}>
+            <Image source={{ uri: g.url }} style={{ width: 72, height: 72, marginRight: 8, borderRadius: 8 }} />
+          </Press>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export function E2eInfoScreen({ chatId }: { chatId: string }) {
   const pop = useWippStore((s) => s.pop);
   return (
@@ -984,7 +1090,9 @@ export function E2eInfoScreen({ chatId }: { chatId: string }) {
         <Header title="Chiffrement de bout en bout" onBack={pop} />
       </GlassHeader>
       <Text style={{ padding: 16, color: colors.muted, lineHeight: 20 }}>
-        Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. Conversation {chatId}. WIPP ne conserve pas les clés privées de manière à lire ces messages.
+        {chatId.includes(":g_") || chatId.startsWith("g_")
+          ? "Les groupes ne sont pas chiffrés de bout en bout. GROUP E2EE — PENDING. Les messages directs conservent leur chiffrement."
+          : "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages."}
       </Text>
     </ScreenRoot>
   );

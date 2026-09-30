@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Share, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import {
   BadgeCheck,
@@ -50,9 +50,23 @@ import {
   type CardInput,
 } from "../lib/business-card";
 import { businessQr } from "../lib/qr-payload";
+import { usePrivatePinAsk } from "../components/PrivatePinGate";
+import {
+  authenticateBiometric,
+  biometricAvailable,
+  enablePrivateVault,
+  inspectBiometricHardware,
+  isBiometricPreferred,
+  isPrivateEnabled,
+  lastPinWaitMs,
+  replacePrivateCode,
+  setBiometricPreferred,
+  verifyPin,
+} from "../lib/private-vault";
+import { shareWippPublic } from "../lib/share-public";
 import { TAKEN_USERNAMES } from "../lib/seed";
 import { APP_HOST } from "../lib/utils";
-import { useT, useWippStore } from "../lib/store";
+import { isPrivateChat, useT, useWippStore } from "../lib/store";
 import { colors, layout } from "../theme";
 
 export function MeScreen() {
@@ -66,13 +80,15 @@ export function MeScreen() {
   const lifestyle = useWippStore((s) => s.lifestyle);
   const [aboutOpen, setAboutOpen] = useState(false);
   const contacts = Object.values(users).filter((u) => u.connected).length;
-  const groups = chats.filter((c) => c.type === "group" && c.participantIds.includes("me")).length;
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  void vaultEpoch;
+  const groups = chats.filter((c) => c.type === "group" && c.participantIds.includes("me") && !isPrivateChat(c.id)).length;
   const myEvents = lifestyle.filter((e) => e.hostId === "me").length;
   const myListings = listings.filter((l) => l.sellerId === "me").length;
   const country = me.country === "CA" ? "Canada" : me.country;
   async function shareProfile() {
     const link = `https://${APP_HOST}/@${me.username}`;
-    await Share.share({ message: `@${me.username} ${link}` });
+    await shareWippPublic(`@${me.username} ${link}`);
   }
   return (
     <ScreenRoot padBottom>
@@ -184,7 +200,7 @@ export function MeScreen() {
         </View>
         <View style={{ marginTop: 16 }}>
           <Section title={t("devicesHelp")}>
-            <Row icon={<Smartphone size={16} color={colors.fg} />} label={t("devices")} value="1" onPress={() => push({ name: "devices" })} />
+            <Row icon={<Smartphone size={16} color={colors.fg} />} label={t("devices")} onPress={() => push({ name: "devices" })} />
             <Row icon={<HelpCircle size={16} color={colors.fg} />} label={t("help")} onPress={() => push({ name: "help" })} />
             <Row icon={<FileText size={16} color={colors.fg} />} label={t("termsOfUse")} onPress={() => push({ name: "legal", doc: "terms" })} />
             <Row icon={<Shield size={16} color={colors.fg} />} label={t("privacyPolicy")} onPress={() => push({ name: "legal", doc: "privacy" })} />
@@ -283,19 +299,203 @@ function SettingsList({ title, rows }: { title: string; rows: { label: string; v
 
 export function PrivacyScreen() {
   const t = useT();
+  const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
+  const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  const { askPin, gate } = usePrivatePinAsk();
+  const [pane, setPane] = useState<"home" | "prive" | "create" | "confirm">("home");
+  const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState("");
+  const [bioOn, setBioOn] = useState(isBiometricPreferred());
+  const [bioHw, setBioHw] = useState<{ hasHardware: boolean; enrolled: boolean } | null>(null);
+  useEffect(() => {
+    void inspectBiometricHardware().then((hw) => setBioHw({ hasHardware: hw.hasHardware, enrolled: hw.enrolled }));
+    setBioOn(isBiometricPreferred());
+  }, [vaultEpoch]);
+
+  async function finishCreate(code: string) {
+    const existed = isPrivateEnabled();
+    try {
+      if (existed) {
+        await replacePrivateCode(code);
+      } else {
+        await enablePrivateVault(code, false);
+        setBioOn(false);
+      }
+      setPane("prive");
+      setDraft("");
+      setPending("");
+      if (!existed && bioHw?.hasHardware && bioHw.enrolled) {
+        Alert.alert("WIPP Privé", "Utiliser la biométrie de cet appareil pour ouvrir WIPP Privé ?", [
+          {
+            text: "Plus tard",
+            onPress: () => {
+              void setBiometricPreferred(false);
+              setBioOn(false);
+            },
+          },
+          {
+            text: "Activer",
+            onPress: () => {
+              void (async () => {
+                const bio = await authenticateBiometric();
+                const on = bio === "success";
+                await setBiometricPreferred(on);
+                setBioOn(on);
+              })();
+            },
+          },
+        ]);
+      } else {
+        Alert.alert(
+          "WIPP Privé",
+          existed
+            ? "Le code a été modifié. Tes conversations privées sont inchangées."
+            : "Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.",
+        );
+      }
+    } catch {
+      Alert.alert("WIPP Privé", "Le code doit contenir au moins 4 caractères.");
+    }
+  }
+
+  if (pane === "create" || pane === "confirm") {
+    return (
+      <ScreenRoot>
+        <GlassHeader>
+          <Header
+            title="WIPP Privé"
+            onBack={() => {
+              setPane("prive");
+              setDraft("");
+              setPending("");
+            }}
+          />
+        </GlassHeader>
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+          <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+            {pane === "create"
+              ? "Choisis un code WIPP Privé. Il est distinct du code PIN du téléphone."
+              : "Confirme le code WIPP Privé."}
+          </Text>
+          <Field label={pane === "create" ? "Nouveau code" : "Confirmer"} value={draft} onChangeText={setDraft} secureTextEntry autoCapitalize="none" />
+          <Btn
+            label="Continuer"
+            disabled={draft.trim().length < 4}
+            onPress={() => {
+              if (pane === "create") {
+                setPending(draft.trim());
+                setDraft("");
+                setPane("confirm");
+                return;
+              }
+              if (draft.trim() !== pending) {
+                Alert.alert("WIPP Privé", "Les deux codes ne correspondent pas.");
+                setDraft("");
+                setPane("create");
+                return;
+              }
+              void finishCreate(pending);
+            }}
+          />
+        </ScrollView>
+      </ScreenRoot>
+    );
+  }
+
+  if (pane === "prive") {
+    return (
+      <ScreenRoot>
+        <GlassHeader>
+          <Header title="WIPP Privé" onBack={() => setPane("home")} />
+        </GlassHeader>
+        <ScrollView>
+          <Section title="">
+            <Row
+              label={isPrivateEnabled() ? "Modifier le code" : "Créer le code"}
+              onPress={() => {
+                void (async () => {
+                  if (isPrivateEnabled()) {
+                    const old = await askPin();
+                    if (!old) return;
+                    const checked = await verifyPin(old);
+                    if (!checked.ok) {
+                      const secs = Math.max(1, Math.ceil((checked.waitMs || lastPinWaitMs()) / 1000));
+                      Alert.alert("WIPP Privé", `Code incorrect. Réessaie dans ${secs} s.`);
+                      return;
+                    }
+                  }
+                  setPane("create");
+                })();
+              }}
+            />
+            {bioHw?.hasHardware ? (
+              <Row
+                label="Biométrie"
+                value={bioHw.enrolled ? (bioOn ? "Activée" : "Désactivée") : "Non configurée"}
+                trailing={
+                  bioHw.enrolled ? (
+                    <Toggle
+                      value={bioOn}
+                      onChange={(v) => {
+                        void (async () => {
+                          if (v) {
+                            const bio = await authenticateBiometric();
+                            if (bio !== "success") return;
+                          }
+                          await setBiometricPreferred(v);
+                          setBioOn(v);
+                        })();
+                      }}
+                    />
+                  ) : undefined
+                }
+              />
+            ) : null}
+            <Row
+              label="Code oublié ?"
+              onPress={() => {
+                void (async () => {
+                  if (await biometricAvailable()) {
+                    const bio = await authenticateBiometric();
+                    if (bio !== "success") return;
+                    setPane("create");
+                    return;
+                  }
+                  Alert.alert(
+                    "Code oublié",
+                    "Sans biométrie valide, ce code ne peut pas être récupéré. Aucun SMS, e-mail ou copie serveur. Le coffre reste scellé sur cet appareil.",
+                  );
+                })();
+              }}
+            />
+          </Section>
+          <Text style={{ paddingHorizontal: 16, paddingTop: 12, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+            Espace discret. Aucun bouton WIPP Privé sur l’écran Chats. Maintiens le logo WIPP 3 secondes pour l’ouvrir.
+          </Text>
+        </ScrollView>
+        {gate}
+      </ScreenRoot>
+    );
+  }
+
   return (
-    <SettingsList
-      title={t("privacy")}
-      rows={[
-        { label: "WIPP Privé", onPress: () => push({ name: "wipp-private" }) },
-        { label: t("blocked"), onPress: () => push({ name: "blocked" }) },
-        { label: "Photo", value: "Tout le monde" },
-        { label: "Dernière connexion", value: "Contacts" },
-        { label: "Appels", value: "Contacts" },
-        { label: "Stories", value: "Contacts" },
-      ]}
-    />
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title={t("privacy")} onBack={pop} />
+      </GlassHeader>
+      <ScrollView>
+        <Section title="">
+          <Row label={t("nearbyVis")} onPress={() => push({ name: "nearby" })} />
+          <Row label="WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
+          <Row label={t("blocked")} onPress={() => push({ name: "blocked" })} />
+          <Row label="Photo" value="Tout le monde" />
+          <Row label="Dernière connexion" value="Contacts" />
+          <Row label="Appels" value="Contacts" />
+          <Row label="Stories" value="Contacts" />
+        </Section>
+      </ScrollView>
+    </ScreenRoot>
   );
 }
 
@@ -306,10 +506,9 @@ export function SecurityScreen() {
       <GlassHeader>
         <Header title={t("security")} onBack={useWippStore.getState().pop} />
       </GlassHeader>
-      <PendingNote label="Biométrie native — Phase 2" />
       <Section title="">
-        <Row label="Verrouillage de l’app" value="Simulé (web)" />
-        <Row label="Sessions" onPress={() => useWippStore.getState().push({ name: "devices" })} />
+        <Row label="Verrouillage WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} />
+        <Row label="Appareils liés" onPress={() => useWippStore.getState().push({ name: "devices" })} />
         <Row label={t("deleteAccount")} danger onPress={() => useWippStore.getState().push({ name: "delete-account" })} />
       </Section>
     </ScreenRoot>
@@ -318,18 +517,72 @@ export function SecurityScreen() {
 
 export function NotificationsScreen() {
   const t = useT();
-  const [on, setOn] = useState(true);
   const pop = useWippStore((s) => s.pop);
+  const notifs = useWippStore((s) => s.notifs);
+  const setNotif = useWippStore((s) => s.setNotif);
+  const pushMaster = useWippStore((s) => s.pushMaster);
+  const pushGranted = useWippStore((s) => s.pushGranted);
+  const setPushMaster = useWippStore((s) => s.setPushMaster);
+  const setPushGranted = useWippStore((s) => s.setPushGranted);
+  const [denied, setDenied] = useState(false);
+  const rows = [
+    ["messages", "Messages"] as const,
+    ["requests", "Demandes"] as const,
+    ["calls", "Appels"] as const,
+    ["stories", "Stories"] as const,
+  ];
+
+  useEffect(() => {
+    void import("../lib/push").then(({ getPermissionStatus }) =>
+      getPermissionStatus().then((p) => {
+        const granted = p.status === "granted";
+        setPushGranted(granted);
+        if (p.status === "denied") setDenied(true);
+      }),
+    );
+  }, [setPushGranted]);
+
+  async function toggleMaster(on: boolean) {
+    if (!on) {
+      setPushMaster(false);
+      void import("../lib/push").then(({ disablePushFromSettings }) => disablePushFromSettings());
+      return;
+    }
+    const { enablePushFromSettings } = await import("../lib/push");
+    const res = await enablePushFromSettings();
+    setPushGranted(res.granted);
+    setPushMaster(res.granted);
+    setDenied(!res.granted && res.status === "denied");
+  }
+
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("notifications")} onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Push FCM / APNs — Phase 2" />
-      <Row label="Messages" trailing={<Toggle value={on} onChange={setOn} />} />
-      <Row label="Demandes" trailing={<Toggle value={on} onChange={setOn} />} />
-      <Row label="Appels" trailing={<Toggle value={on} onChange={setOn} />} />
-      <Row label="Stories" trailing={<Toggle value={on} onChange={setOn} />} />
+      <Section title={t("pushMaster")}>
+        <Row
+          label={t("pushMaster")}
+          value={pushMaster ? t("pushOn") : t("pushOff")}
+          trailing={<Toggle value={pushMaster} onChange={(v) => void toggleMaster(v)} />}
+        />
+      </Section>
+      <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18, paddingHorizontal: 20, paddingTop: 10 }}>
+        {t("pushMasterHint")}
+      </Text>
+      {denied && !pushGranted ? (
+        <Text style={{ color: colors.danger, fontSize: 13, paddingHorizontal: 20, paddingTop: 8 }}>{t("pushDenied")}</Text>
+      ) : null}
+      <Section title="">
+        {rows.map(([key, label]) => (
+          <Row key={key} label={label} trailing={<Toggle value={notifs[key]} onChange={(v) => setNotif(key, v)} />} />
+        ))}
+      </Section>
+      {__DEV__ ? (
+        <Text style={{ color: colors.muted, fontSize: 11, paddingHorizontal: 20, paddingTop: 12 }}>
+          DEV · permission {pushGranted ? "accordée" : "non accordée"}
+        </Text>
+      ) : null}
     </ScreenRoot>
   );
 }
@@ -389,7 +642,11 @@ export function DevicesScreen() {
       <GlassHeader>
         <Header title={t("devices")} onBack={pop} />
       </GlassHeader>
-      <Row label="Cet appareil" value="Expo" />
+      <PendingNote label="LINKED DEVICES BACKEND — PENDING" />
+      <Row label="Cet appareil" value="WIPP" />
+      <Text style={{ paddingHorizontal: 16, paddingTop: 8, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+        Liste multi-appareils sécurisée non encore branchée. Aucun appareil fictif.
+      </Text>
     </ScreenRoot>
   );
 }
@@ -469,8 +726,11 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
   const push = useWippStore((s) => s.push);
   const allListings = useWippStore((s) => s.listings);
   const allEvents = useWippStore((s) => s.lifestyle);
-  const listings = allListings.filter((l) => l.sellerId === "me");
-  const events = allEvents.filter((e) => e.hostId === "me");
+  const saves = useWippStore((s) => s.saves);
+  const shops = useWippStore((s) => s.shops);
+  const listings = allListings.filter((l) => (kind === "saved" ? saves.some((s) => s.kind === "listing" && s.id === l.id) : l.sellerId === "me"));
+  const events = allEvents.filter((e) => (kind === "saved" ? saves.some((s) => s.kind === "event" && s.id === e.id) : e.hostId === "me"));
+  const savedShops = shops.filter((s) => saves.some((x) => x.kind === "business" && (x.id === s.handle || x.id === s.id)));
   const title = kind === "listings" ? "Mes annonces" : kind === "events" ? "Mes événements" : "Enregistrés";
   return (
     <ScreenRoot>
@@ -478,15 +738,24 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
         <Header title={title} onBack={pop} />
       </GlassHeader>
       <ScrollView>
+        {kind === "saved" ? savedShops.map((s) => (
+          <Press key={s.id} onPress={() => push({ name: "business-card-view", publicId: s.handle })} style={{ padding: 16 }}>
+            <Text style={{ color: colors.fg }}>{s.name}</Text>
+          </Press>
+        )) : null}
         {kind !== "events" ? listings.map((l) => (
           <Press key={l.id} onPress={() => push({ name: "listing", listingId: l.id })} style={{ padding: 16 }}>
             <Text style={{ color: colors.fg }}>{l.title}</Text>
           </Press>
-        )) : events.map((e) => (
+        )) : null}
+        {kind !== "listings" ? events.map((e) => (
           <Press key={e.id} onPress={() => push({ name: "lifestyle", itemId: e.id })} style={{ padding: 16 }}>
             <Text style={{ color: colors.fg }}>{e.title}</Text>
           </Press>
-        ))}
+        )) : null}
+        {kind === "listings" && listings.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Aucune annonce</Text> : null}
+        {kind === "events" && events.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Aucun événement</Text> : null}
+        {kind === "saved" && listings.length + events.length + savedShops.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Rien d’enregistré</Text> : null}
       </ScrollView>
     </ScreenRoot>
   );
@@ -804,6 +1073,7 @@ function BusinessCardBody({
   const [q, setQ] = useState("");
   const [opening, setOpening] = useState(false);
   const [actionError, setActionError] = useState("");
+  const savedBiz = useWippStore((s) => s.saves.some((item) => item.kind === "business" && item.id === card.publicId));
   const link = cardLink(card.publicId);
   const qr = businessQr(card.publicId);
   const contacts = chats
@@ -813,6 +1083,7 @@ function BusinessCardBody({
       return id ? { chat: c, user: users[id] } : null;
     })
     .filter((x): x is NonNullable<typeof x> => Boolean(x?.user))
+    .filter((x) => !isPrivateChat(x.chat.id))
     .filter((x) => `${x.user.displayName} ${x.user.username}`.toLowerCase().includes(q.toLowerCase()))
     .slice(0, 8);
   async function writeOnWipp() {
@@ -909,6 +1180,21 @@ function BusinessCardBody({
         ) : (
           <View style={{ gap: 8 }}>
             <Btn label={opening ? "Ouverture…" : "Écrire sur WIPP"} disabled={opening} onPress={() => void writeOnWipp()} />
+            <Btn
+              label={savedBiz ? "Retirer" : "Enregistrer"}
+              variant="secondary"
+              onPress={() => {
+                const on = savedBiz;
+                void import("../lib/lot7/api").then(async ({ toggleSave }) => {
+                  await toggleSave("business", card.publicId, !on);
+                  useWippStore.setState((s) => ({
+                    saves: on
+                      ? s.saves.filter((x) => !(x.kind === "business" && x.id === card.publicId))
+                      : [...s.saves, { kind: "business", id: card.publicId }],
+                  }));
+                });
+              }}
+            />
             <View style={{ flexDirection: "row", gap: 8 }}>
               {card.businessPhone ? (
                 <View style={{ flex: 1 }}>
@@ -944,11 +1230,11 @@ function BusinessCardBody({
                 </Press>
               ))}
             </ScrollView>
-            <Press onPress={() => void Share.share({ message: `Découvre ${card.name} sur WIPP ${link}` })} style={{ marginTop: 16, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Press onPress={() => void shareWippPublic(`Découvre ${card.name} sur WIPP ${link}`)} style={{ marginTop: 16, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
               <Share2 size={20} color={colors.accent} />
               <Text style={{ color: colors.fg }}>Partager le lien professionnel</Text>
             </Press>
-            <Press onPress={() => void Share.share({ message: qr })} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Press onPress={() => void shareWippPublic(qr)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
               <QrCode size={20} color={colors.accent} />
               <Text style={{ color: colors.fg }}>Partager le QR</Text>
             </Press>

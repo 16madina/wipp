@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { Check, Clock, Delete, Users } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
@@ -9,6 +10,7 @@ import { wippSrc } from "../lib/assets";
 import { isStoryLive } from "../lib/types";
 import { tempQr } from "../lib/qr-payload";
 import { issueTemp } from "../lib/qr-remote";
+import { popProtect, pushProtect } from "../lib/screen-protection";
 import { useT, useWippStore } from "../lib/store";
 import { colors } from "../theme";
 
@@ -21,9 +23,16 @@ export function StoriesScreen({ userId }: { userId: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     viewStory(userId);
+    pushProtect("story");
+    return () => popProtect("story");
   }, [userId, viewStory]);
+  useEffect(() => {
+    const current = stories[i];
+    if (!current || userId === "me" || !current.id.startsWith("sty_")) return;
+    void import("../lib/lot7/api").then(({ markStoryView }) => markStoryView(current.id)).catch(() => {});
+  }, [i, stories, userId]);
   const story = stories[i];
-  const src = wippSrc(story?.imageUrl);
+  const src = story?.imageUrl?.startsWith("http") ? { uri: story.imageUrl } : wippSrc(story?.imageUrl);
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {src ? <Image source={src} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="cover" /> : null}
@@ -44,6 +53,20 @@ export function StoriesScreen({ userId }: { userId: string }) {
         <Avatar user={user} size={32} />
         <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{user?.displayName}</Text>
       </View>
+      {userId === "me" && story?.id.startsWith("sty_") ? (
+        <Press
+          onPress={() => {
+            void import("../lib/lot7/api").then(async ({ deleteServerStory }) => {
+              await deleteServerStory(story.id);
+              useWippStore.setState((s) => ({ stories: s.stories.filter((item) => item.id !== story.id) }));
+              pop();
+            });
+          }}
+          style={{ position: "absolute", bottom: 36, alignSelf: "center", padding: 12 }}
+        >
+          <Text style={{ color: "#fff" }}>Supprimer</Text>
+        </Press>
+      ) : null}
       <Press onPress={() => setI((n) => Math.min(stories.length - 1, n + 1))} style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: "50%" }} />
       <Press onPress={() => setI((n) => Math.max(0, n - 1))} style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: "50%" }} />
     </View>
@@ -53,15 +76,55 @@ export function StoriesScreen({ userId }: { userId: string }) {
 export function NewStoryScreen() {
   const pop = useWippStore((s) => s.pop);
   const [text, setText] = useState("");
+  const [audience, setAudience] = useState<"contacts" | "only_me" | "close">("contacts");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function publish(kind: "text" | "image" | "video", mediaUrl?: string) {
+    setError("");
+    setBusy(true);
+    try {
+      const { publishStory, fetchStories } = await import("../lib/lot7/api");
+      await publishStory({ kind, body: text, mediaUrl, audience });
+      const me = useWippStore.getState().serverProfileId;
+      const stories = await fetchStories(me);
+      useWippStore.setState({ stories });
+      pop();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Publication impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="Nouvelle story" onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Stories locales / seed" />
       <View style={{ padding: 16, gap: 12 }}>
         <TextInput value={text} onChangeText={setText} placeholder="Écris quelque chose…" placeholderTextColor={colors.muted} multiline style={{ minHeight: 120, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, padding: 12 }} />
-        <Btn label="Publier" onPress={pop} />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Chip label="Contacts" active={audience === "contacts"} onPress={() => setAudience("contacts")} />
+          <Chip label="Proches" active={audience === "close"} onPress={() => setAudience("close")} />
+          <Chip label="Moi seul" active={audience === "only_me"} onPress={() => setAudience("only_me")} />
+        </View>
+        {error ? <Text style={{ color: colors.danger }}>{error}</Text> : null}
+        <Btn label={busy ? "Publication…" : "Publier"} onPress={() => void publish("text")} />
+        <Btn
+          label="Photo ou vidéo"
+          onPress={() => {
+            void (async () => {
+              const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.7 });
+              if (picked.canceled || !picked.assets[0]) return;
+              const asset = picked.assets[0];
+              const res = await fetch(asset.uri);
+              const bytes = new Uint8Array(await res.arrayBuffer());
+              const mime = asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg");
+              const { uploadPrivateMedia } = await import("../lib/lot7/api");
+              const url = await uploadPrivateMedia(`stories/${Date.now()}`, bytes, mime);
+              await publish(asset.type === "video" ? "video" : "image", url);
+            })().catch((err) => setError(err instanceof Error ? err.message : "Média impossible"));
+          }}
+        />
       </View>
     </ScreenRoot>
   );
@@ -78,7 +141,6 @@ export function NewGroupFlow() {
       <GlassHeader>
         <Header title="Nouveau groupe" onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Groupes encore partiellement locaux / démo" />
       <View style={{ padding: 16 }}>
         <TextInput value={name} onChangeText={setName} placeholder="Nom du groupe" placeholderTextColor={colors.muted} style={{ height: 48, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }} />
       </View>
@@ -119,7 +181,30 @@ export function GroupInfoFull({ chatId }: { chatId: string }) {
             <Text style={{ color: colors.fg }}>{id === "me" ? "Toi" : users[id]?.displayName}</Text>
           </Press>
         ))}
+        {chat?.id.startsWith("srv:") && (chat.adminIds ?? []).includes("me") ? (
+          <View style={{ paddingHorizontal: 16 }}>
+            {chat.participantIds.filter((id) => id !== "me").map((id) => (
+              <View key={id} style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                <Btn label="Admin" onPress={() => void import("../lib/lot7/api").then(({ setGroupAdmin }) => setGroupAdmin(chat.id.slice(4), id, !(chat.adminIds ?? []).includes(id)).then(() => useWippStore.getState().syncServerInbox()))} />
+                <Btn label="Retirer" onPress={() => void import("../lib/lot7/api").then(({ removeGroupMember }) => removeGroupMember(chat.id.slice(4), id).then(() => useWippStore.getState().syncServerInbox()))} />
+              </View>
+            ))}
+          </View>
+        ) : null}
         <Btn label="QR du groupe" onPress={() => push({ name: "group-qr", chatId })} style={{ margin: 16 }} />
+        {chat?.id.startsWith("srv:") ? (
+          <Btn
+            label="Quitter le groupe"
+            onPress={() => {
+              void import("../lib/lot7/api").then(async ({ leaveServerGroup }) => {
+                await leaveServerGroup(chat.id.slice(4));
+                useWippStore.setState((s) => ({ chats: s.chats.filter((c) => c.id !== chat.id) }));
+                pop();
+              });
+            }}
+            style={{ marginHorizontal: 16 }}
+          />
+        ) : null}
       </ScrollView>
     </ScreenRoot>
   );
@@ -128,7 +213,24 @@ export function GroupInfoFull({ chatId }: { chatId: string }) {
 export function GroupQrScreen({ chatId }: { chatId: string }) {
   const pop = useWippStore((s) => s.pop);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
-  const value = `https://wippapp.com/g/${chat?.inviteToken ?? chatId}`;
+  const [token, setToken] = useState(chat?.inviteToken ?? "");
+  useEffect(() => {
+    if (token || !chatId.startsWith("srv:")) return;
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    let raw = "";
+    for (const b of bytes) raw += String.fromCharCode(b);
+    const next = btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    void import("../lib/lot7/api").then(async ({ createGroupInvite }) => {
+      const status = await createGroupInvite(chatId.slice(4), next);
+      if (status === "ok") {
+        setToken(next);
+        useWippStore.setState((s) => ({
+          chats: s.chats.map((c) => (c.id === chatId ? { ...c, inviteToken: next } : c)),
+        }));
+      }
+    }).catch(() => {});
+  }, [chatId, token]);
+  const value = `https://wippapp.com/g/${token || chat?.inviteToken || ""}`;
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -154,7 +256,19 @@ export function GroupInviteScreen({ token }: { token: string }) {
       <View style={{ padding: 24, alignItems: "center" }}>
         <Users size={40} color={colors.accent} />
         <Text style={{ marginTop: 12, fontSize: 20, color: colors.fg }}>{chat?.name ?? "Groupe WIPP"}</Text>
-        <Btn label="Rejoindre" onPress={() => chat && push({ name: "conversation", chatId: chat.id })} style={{ marginTop: 20, alignSelf: "stretch" }} />
+        <Btn
+          label="Rejoindre"
+          onPress={() => {
+            void import("../lib/lot7/api").then(async ({ joinGroupInvite }) => {
+              const res = await joinGroupInvite(token);
+              if (res.chat_id) {
+                await useWippStore.getState().syncServerInbox();
+                push({ name: "conversation", chatId: `srv:${res.chat_id}` });
+              }
+            });
+          }}
+          style={{ marginTop: 20, alignSelf: "stretch" }}
+        />
       </View>
     </ScreenRoot>
   );

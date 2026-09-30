@@ -1,81 +1,76 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { Animated, Text, View } from "react-native";
+import { Modal, Platform, StyleSheet, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
-/** Plays in the message, like a moji: no plate, no full-screen cover. */
+/** Full-screen surprise animation, like a WIPP Moment: no plate, no dim, no bubble sticker. */
 export function SurpriseAnimOverlay({
   animationId,
   playKey = 0,
-  message,
   onDone,
 }: {
   animationId: string | null;
   playKey?: number;
-  message?: string;
   onDone: () => void;
 }) {
   const item = findAnimation(animationId);
   const src = item ? wippSrc(item.anim ?? item.art) : undefined;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.82)).current;
-  const caption = useRef(new Animated.Value(0)).current;
+  const img = useRef<Image>(null);
+  const [fade, setFade] = useState(false);
   const done = useRef(onDone);
   done.current = onDone;
 
   useEffect(() => {
     if (!item || !src) return;
+    setFade(false);
     const hold = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
-    opacity.setValue(0);
-    caption.setValue(0);
-    scale.setValue(0.82);
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 7, tension: 80 }),
-    ]).start();
-    const write = setTimeout(() => {
-      Animated.timing(caption, { toValue: 1, duration: 420, useNativeDriver: true }).start();
-    }, 280);
-    const fadeAt = setTimeout(() => {
-      Animated.timing(opacity, { toValue: 0, duration: 320, useNativeDriver: true }).start();
-    }, hold);
-    const end = setTimeout(() => done.current(), hold + 360);
+    const kick = setTimeout(() => {
+      if (Platform.OS !== "web") void img.current?.startAnimating();
+    }, 16);
+    const fadeAt = setTimeout(() => setFade(true), hold);
+    const end = setTimeout(() => done.current(), hold + 420);
     return () => {
-      clearTimeout(write);
+      clearTimeout(kick);
       clearTimeout(fadeAt);
       clearTimeout(end);
     };
-  }, [item?.id, playKey, opacity, caption, scale, src]);
+  }, [item?.id, playKey, src]);
 
   if (!item || !src) return null;
 
   return (
-    <View pointerEvents="none" style={{ marginTop: 8, width: "100%", alignItems: "center", backgroundColor: "transparent" }}>
-      <Animated.View style={{ width: 200, height: 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
+    <Modal visible transparent animationType="none" statusBarTranslucent hardwareAccelerated>
+      <View pointerEvents="none" style={[styles.layer, { opacity: fade ? 0 : 1 }]}>
         <Image
+          ref={img}
+          key={`${item.id}-${playKey}`}
           source={src}
-          style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
+          style={styles.anim}
           contentFit="contain"
           autoplay
           allowDownscaling={false}
-        />
-      </Animated.View>
-      {message ? (
-        <Animated.Text
-          style={{
-            marginTop: 2,
-            color: "#fffaf0",
-            fontFamily: "GreatVibes_400Regular",
-            fontSize: 28,
-            lineHeight: 34,
-            textAlign: "center",
-            opacity: caption,
+          cachePolicy="memory-disk"
+          recyclingKey={`${item.id}-${playKey}`}
+          onDisplay={() => {
+            if (Platform.OS !== "web") void img.current?.startAnimating();
           }}
-        >
-          {message}
-        </Animated.Text>
-      ) : null}
-    </View>
+        />
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  layer: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  anim: {
+    width: "100%",
+    height: "92%",
+    backgroundColor: "transparent",
+  },
+});

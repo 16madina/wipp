@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import { stickerById } from "../lib/stickers";
 
@@ -26,7 +26,7 @@ export function WippMomentOverlay({
     setFade(false);
     const ms = row.playMs;
     const kick = setTimeout(() => {
-      void img.current?.startAnimating();
+      if (Platform.OS !== "web") void img.current?.startAnimating();
     }, 16);
     const fadeAt = setTimeout(() => setFade(true), ms);
     const end = setTimeout(() => done.current(), ms + 420);
@@ -55,7 +55,7 @@ export function WippMomentOverlay({
         cachePolicy="memory-disk"
         recyclingKey={`${stickerId}-${playKey}`}
         onDisplay={() => {
-          void img.current?.startAnimating();
+          if (Platform.OS !== "web") void img.current?.startAnimating();
         }}
       />
     </View>

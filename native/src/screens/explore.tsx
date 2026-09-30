@@ -102,7 +102,8 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
   const listings = useWippStore((s) => s.listings);
   const allShops = useWippStore((s) => s.shops);
   const realShops = allShops.filter((s) => s.id.startsWith("business:"));
-  const shops = realShops.length ? realShops : allShops;
+  const serverConnected = useWippStore((s) => s.serverConnected);
+  const shops = serverConnected ? realShops : realShops.length ? realShops : allShops;
   const events = useWippStore((s) => s.lifestyle);
   const pharmacies = useWippStore((s) => s.pharmacies);
   const push = useWippStore((s) => s.push);
@@ -201,15 +202,27 @@ function ListingRow({ listing }: { listing: Listing }) {
 }
 
 function ExploreSearch({ q }: { q: string }) {
+  const serverConnected = useWippStore((s) => s.serverConnected);
   const allListings = useWippStore((s) => s.listings);
   const allShops = useWippStore((s) => s.shops);
-  const listings = allListings.filter((l) => l.title.toLowerCase().includes(q.toLowerCase()));
-  const shops = allShops.filter((s) => s.name.toLowerCase().includes(q.toLowerCase()));
+  const events = useWippStore((s) => s.lifestyle);
+  const needle = q.toLowerCase();
+  const listings = allListings.filter((l) => `${l.title} ${l.description} ${l.city} ${l.category}`.toLowerCase().includes(needle));
+  const shops = (serverConnected ? allShops.filter((s) => s.id.startsWith("business:")) : allShops).filter((s) =>
+    `${s.name} ${s.category} ${s.bio} ${s.city}`.toLowerCase().includes(needle),
+  );
+  const foundEvents = events.filter((e) => `${e.title} ${e.note} ${e.city} ${e.place}`.toLowerCase().includes(needle));
   return (
     <View style={{ paddingHorizontal: 16 }}>
       {listings.map((l) => <ListingRow key={l.id} listing={l} />)}
       {shops.map((s) => <ShopRow key={s.id} shop={s} />)}
-      {listings.length + shops.length === 0 ? <Empty title="Aucun résultat" /> : null}
+      {foundEvents.map((e) => (
+        <Press key={e.id} onPress={() => useWippStore.getState().push({ name: "lifestyle", itemId: e.id })} style={{ paddingVertical: 10 }}>
+          <Text style={{ color: colors.fg }}>{e.title}</Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{e.city}</Text>
+        </Press>
+      ))}
+      {listings.length + shops.length + foundEvents.length === 0 ? <Empty title="Aucun résultat" /> : null}
     </View>
   );
 }
@@ -220,17 +233,35 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
   return (
     <View style={{ paddingHorizontal: 16 }}>
       {listings.map((l) => <ListingRow key={l.id} listing={l} />)}
+      {listings.length === 0 ? <Empty title="Aucune annonce" /> : null}
     </View>
   );
 }
 
 function UtilitiesPane() {
   const pharmacies = useWippStore((s) => s.pharmacies);
+  const serverConnected = useWippStore((s) => s.serverConnected);
   const push = useWippStore((s) => s.push);
+  const [services, setServices] = useState<{ id: string; name: string; address: string; city: string; phone: string; category: string }[]>([]);
+  const shown = serverConnected ? [] : pharmacies;
+  useEffect(() => {
+    if (!serverConnected) return;
+    void import("../lib/lot7/api")
+      .then(({ fetchServices }) => fetchServices(""))
+      .then((rows) => setServices(rows ?? []))
+      .catch(() => setServices([]));
+  }, [serverConnected]);
   return (
     <View style={{ paddingHorizontal: 16 }}>
-      <PendingNote label="Cartes Google / GPS natif" />
-      {pharmacies.map((p) => (
+      <PendingNote label="Services vérifiés uniquement. Aucune source externe branchée." />
+      {serverConnected && services.length === 0 && shown.length === 0 ? <Empty title="Aucun service vérifié" /> : null}
+      {services.map((p) => (
+        <View key={p.id} style={{ paddingVertical: 12 }}>
+          <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{p.name}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13 }}>{p.category} · {p.city}{p.address ? ` · ${p.address}` : ""}</Text>
+        </View>
+      ))}
+      {shown.map((p) => (
         <Press key={p.id} onPress={() => push({ name: "pharmacy", pharmacyId: p.id })} style={{ paddingVertical: 12 }}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{p.name}</Text>
           <Text style={{ color: colors.muted, fontSize: 13 }}>{p.address}{p.onDuty ? " · De garde" : ""}</Text>
@@ -328,6 +359,7 @@ function LifestylePane() {
   const push = useWippStore((s) => s.push);
   return (
     <View style={{ paddingHorizontal: 16 }}>
+      {items.length === 0 ? <Empty title="Aucun événement" /> : null}
       {items.map((e) => {
         const src = wippSrc(e.image);
         return (
@@ -346,11 +378,11 @@ function LifestylePane() {
 
 export function ListingScreen({ listingId }: { listingId: string }) {
   const pop = useWippStore((s) => s.pop);
-  const push = useWippStore((s) => s.push);
   const listing = useWippStore((s) => s.listings.find((l) => l.id === listingId));
   const seller = useWippStore((s) => (listing ? s.users[listing.sellerId] : undefined));
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
-  const src = wippSrc(listing?.image);
+  const saved = useWippStore((s) => s.saves.some((item) => item.kind === "listing" && item.id === listingId));
+  const src = listing?.image?.startsWith("http") ? { uri: listing.image } : wippSrc(listing?.image);
   if (!listing) return <Missing onBack={pop} />;
   return (
     <ScreenRoot>
@@ -364,6 +396,32 @@ export function ListingScreen({ listingId }: { listingId: string }) {
           <Text style={{ marginTop: 8, color: colors.muted }}>{listing.city} · {listing.distance}</Text>
           <Text style={{ marginTop: 12, color: colors.fg, lineHeight: 20 }}>{listing.description}</Text>
           <Btn label="Contacter" onPress={() => seller && openOrCreateDm(seller.id)} style={{ marginTop: 20 }} />
+          <Btn
+            label={saved ? "Retirer des enregistrés" : "Enregistrer"}
+            onPress={() => {
+              const on = saved;
+              void import("../lib/lot7/api").then(async ({ toggleSave }) => {
+                await toggleSave("listing", listing.id, !on);
+                useWippStore.setState((s) => ({
+                  saves: on ? s.saves.filter((x) => !(x.kind === "listing" && x.id === listing.id)) : [...s.saves, { kind: "listing", id: listing.id }],
+                }));
+              });
+            }}
+            style={{ marginTop: 8 }}
+          />
+          {listing.sellerId === "me" ? (
+            <Btn
+              label="Retirer l’annonce"
+              onPress={() => {
+                void import("../lib/lot7/api").then(async ({ removeListing }) => {
+                  await removeListing(listing.id);
+                  useWippStore.setState((s) => ({ listings: s.listings.filter((l) => l.id !== listing.id) }));
+                  pop();
+                });
+              }}
+              style={{ marginTop: 8 }}
+            />
+          ) : null}
         </View>
       </ScrollView>
     </ScreenRoot>
@@ -450,17 +508,52 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
   );
 }
 
+function Field({ value, onChangeText, placeholder }: { value: string; onChangeText: (v: string) => void; placeholder: string }) {
+  return (
+    <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={colors.muted} style={{ height: 48, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12, marginTop: 8 }} />
+  );
+}
+
 function CreateForm({ title, onBack }: { title: string; onBack: () => void }) {
-  const [v, setV] = useState("");
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [city, setCity] = useState("");
+  const [price, setPrice] = useState("");
+  const [error, setError] = useState("");
+  const event = title.toLowerCase().includes("événement");
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={title} onBack={onBack} />
       </GlassHeader>
-      <PendingNote label="Publication locale / seed — pas de nouveau schéma" />
       <View style={{ padding: 16 }}>
-        <TextInput value={v} onChangeText={setV} placeholder="Titre" placeholderTextColor={colors.muted} style={{ height: 48, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }} />
-        <Btn label="Enregistrer" onPress={onBack} style={{ marginTop: 16 }} />
+        <Field value={name} onChangeText={setName} placeholder="Titre" />
+        <Field value={desc} onChangeText={setDesc} placeholder={event ? "Description" : "Description"} />
+        <Field value={city} onChangeText={setCity} placeholder="Ville" />
+        {event ? <Field value={price} onChangeText={setPrice} placeholder="Lieu" /> : <Field value={price} onChangeText={setPrice} placeholder="Prix" />}
+        {error ? <Text style={{ color: colors.danger, marginTop: 8 }}>{error}</Text> : null}
+        <Btn
+          label="Enregistrer"
+          onPress={() => {
+            void (async () => {
+              const me = useWippStore.getState().serverProfileId;
+              if (event) {
+                const { saveEvent, fetchEvents } = await import("../lib/lot7/api");
+                await saveEvent({ title: name, description: desc, city, place: price, starts: "" });
+                useWippStore.setState({ lifestyle: await fetchEvents(me) });
+              } else if (title.toLowerCase().includes("annonce")) {
+                const { saveListing, fetchListings } = await import("../lib/lot7/api");
+                await saveListing({ title: name, description: desc, category: "goods", price, city });
+                useWippStore.setState({ listings: await fetchListings(me) });
+              } else {
+                setError("Les boutiques passent par la carte professionnelle.");
+                return;
+              }
+              onBack();
+            })().catch((err) => setError(err instanceof Error ? err.message : "Enregistrement impossible"));
+          }}
+          style={{ marginTop: 16 }}
+        />
       </View>
     </ScreenRoot>
   );

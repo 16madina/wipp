@@ -497,6 +497,48 @@ async function createSession(profileId: string): Promise<WippSessionPayload> {
   return { token, profile };
 }
 
+async function tryResolveSupabaseAccessToken(token: string): Promise<WippProfile | null> {
+  if (!token.includes(".")) return null;
+  try {
+    const { SUPABASE_ANON_KEY, SUPABASE_URL } = await import("@/lib/supabase/config");
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+    });
+    if (!res.ok) return null;
+    const user = (await res.json()) as { id?: string; phone?: string };
+    if (!user.id) return null;
+    const sql = await getSql();
+    const byFb = await sql<{ id: string }>`
+      select id from wipp_profiles where firebase_uid = ${user.id} limit 1
+    `;
+    if (byFb[0]) return getProfileById(byFb[0].id);
+    const byId = await sql<{ id: string }>`
+      select id from wipp_profiles where id = ${user.id} limit 1
+    `;
+    if (byId[0]) return getProfileById(byId[0].id);
+    if (user.phone) {
+      const byPhone = await sql<{ id: string }>`
+        select id from wipp_profiles where phone_e164 = ${user.phone} limit 1
+      `;
+      if (byPhone[0]) return getProfileById(byPhone[0].id);
+    }
+    try {
+      const byAuth = await sql<{ id: string }>`
+        select id from wipp_profiles where auth_user_id = ${user.id} limit 1
+      `;
+      if (byAuth[0]) return getProfileById(byAuth[0].id);
+    } catch {
+      /* column may not exist */
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export async function resolveSession(token: string | null | undefined): Promise<WippProfile> {
   await ensureMessagingReady();
   if (!token) throw new WippHttpError(401, "unauthorized", "Session requise.");
@@ -507,7 +549,11 @@ export async function resolveSession(token: string | null | undefined): Promise<
     limit 1
   `;
   const profileId = rows[0]?.profile_id;
-  if (!profileId) throw new WippHttpError(401, "unauthorized", "Session expirée.");
+  if (!profileId) {
+    const fromJwt = await tryResolveSupabaseAccessToken(token);
+    if (fromJwt) return fromJwt;
+    throw new WippHttpError(401, "unauthorized", "Session expirée.");
+  }
   // Sliding expiry — rester connecté tant qu’on ouvre l’app (style WhatsApp).
   const expires = new Date(Date.now() + SESSION_DAYS * 86400_000).toISOString();
   await sql`

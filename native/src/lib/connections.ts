@@ -58,10 +58,20 @@ export async function listIncomingRequests(): Promise<RealRequest[]> {
 }
 
 export async function sendRequest(username: string, via: "request" | "qr" | "touch" = "request"): Promise<string> {
+  const clean = username.replace(/^@/, "").trim().toLowerCase();
   const res = await callServerFn<{ status: string }>(FN.sendConnectionRequest, {
-    recipientUsername: username.replace(/^@/, "").trim().toLowerCase(),
+    recipientUsername: clean,
     via,
   });
+  try {
+    const { wippApi } = await import("./proximity/wipp-session");
+    await wippApi("push/connection", {
+      method: "POST",
+      body: JSON.stringify({ username: clean }),
+    });
+  } catch {
+    /* push is server-side; request itself already succeeded */
+  }
   return res.status;
 }
 
