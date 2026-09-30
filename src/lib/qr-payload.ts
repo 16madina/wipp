@@ -11,6 +11,12 @@ export function profileQr(username: string) {
 export function tempQr(token: string) {
   return `https://${QR_HOST}/t/${token}`;
 }
+export function groupQr(token: string) {
+  return `https://${QR_HOST}/g/${token}`;
+}
+export function businessQr(handle: string) {
+  return `https://${QR_HOST}/b/${handle}`;
+}
 
 export function parseWippQr(raw: string): QrParse {
   let url: URL;

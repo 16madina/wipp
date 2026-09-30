@@ -24,24 +24,35 @@ export type SurprisePlain = {
   countdown?: number;
 };
 
+export type ShopPlain = {
+  publicId: string;
+  name: string;
+  category: string;
+  city?: string;
+  address?: string;
+  image?: string;
+};
+
 export type PlainPayload = {
   text: string;
   reply?: ReplyCite;
   forwarded?: boolean;
   surprise?: SurprisePlain;
+  shop?: ShopPlain;
 };
 
 const MARK = "wipp-plain-v2";
 
 export function encodePlain(input: PlainPayload): string {
-  if (!input.reply && !input.forwarded && !input.surprise) return input.text;
+  if (!input.reply && !input.forwarded && !input.surprise && !input.shop) return input.text;
   return JSON.stringify({
     k: MARK,
-    type: "text",
+    type: input.shop ? "shop" : "text",
     text: input.text,
     reply: input.reply,
     forwarded: input.forwarded || undefined,
     surprise: input.surprise,
+    shop: input.shop,
   });
 }
 
@@ -55,6 +66,7 @@ export function decodePlain(value: string): PlainPayload {
         reply?: ReplyCite;
         forwarded?: boolean;
         surprise?: SurprisePlain;
+        shop?: ShopPlain;
       };
       if (parsed.k === MARK && typeof parsed.text === "string") {
         return {
@@ -62,6 +74,7 @@ export function decodePlain(value: string): PlainPayload {
           reply: parsed.reply?.id ? parsed.reply : undefined,
           forwarded: Boolean(parsed.forwarded),
           surprise: parsed.surprise,
+          shop: parsed.shop?.publicId ? parsed.shop : undefined,
         };
       }
     } catch {

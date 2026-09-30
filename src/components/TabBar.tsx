@@ -29,7 +29,7 @@ export function TabBar({ active }: { active: string }) {
   const pending = useWippStore(
     (s) =>
       s.requests.filter((r) => r.status === "pending").length +
-      s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length,
+      (s.serverConnected ? 0 : s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length),
   );
   const [open, setOpen] = useState(false);
   const [shown, setShown] = useState(false);

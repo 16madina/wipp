@@ -12,7 +12,7 @@ import {
   previewFromBody,
   type KeyBundle,
 } from "@/lib/crypto";
-import { decodePlain, encodePlain, type ReplyCite, type SurprisePlain } from "@/lib/messaging/plain";
+import { decodePlain, encodePlain, type ReplyCite, type ShopPlain, type SurprisePlain } from "@/lib/messaging/plain";
 import {
   editServerMessage,
   ensureServerSession,
@@ -83,14 +83,17 @@ export async function mapServerMessageAsync(
   if (parsed.kind === "plain") {
     const plain = decodePlain(parsed.text);
     return applySurprise(
-      {
-        ...base,
-        ...meta,
-        text: m.deletedAt ? "Message supprimé" : plain.text,
-        replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
-        replyPreview: plain.reply?.preview,
-        forwarded: plain.forwarded,
-      },
+      applyShop(
+        {
+          ...base,
+          ...meta,
+          text: m.deletedAt ? "Message supprimé" : plain.text,
+          replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
+          replyPreview: plain.reply?.preview,
+          forwarded: plain.forwarded,
+        },
+        plain.shop,
+      ),
       plain.surprise,
     );
   }
@@ -102,16 +105,19 @@ export async function mapServerMessageAsync(
     const text = await decryptText(key, parsed.envelope);
     const plain = decodePlain(text);
     return applySurprise(
-      {
-        ...base,
-        ...meta,
-        text: m.deletedAt ? "Message supprimé" : plain.text,
-        replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
-        replyPreview: plain.reply?.preview,
-        forwarded: plain.forwarded,
-        enc: parsed.envelope,
-        encFailed: false,
-      },
+      applyShop(
+        {
+          ...base,
+          ...meta,
+          text: m.deletedAt ? "Message supprimé" : plain.text,
+          replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
+          replyPreview: plain.reply?.preview,
+          forwarded: plain.forwarded,
+          enc: parsed.envelope,
+          encFailed: false,
+        },
+        plain.shop,
+      ),
       plain.surprise,
     );
   } catch {
@@ -446,11 +452,12 @@ export async function sendViaServer(
     forwarded?: boolean;
     vault?: boolean;
     surprise?: SurprisePlain;
+    shop?: ShopPlain;
   },
 ) {
   if (!isServerChatId(localChatId)) return null;
   const serverChatId = toServerChatId(localChatId);
-  const plain = encodePlain({ text, reply: opts?.reply, forwarded: opts?.forwarded, surprise: opts?.surprise });
+  const plain = encodePlain({ text, reply: opts?.reply, forwarded: opts?.forwarded, surprise: opts?.surprise, shop: opts?.shop });
   let body = plain;
   if (opts?.identity && opts.peerPublicJwk) {
     const key = await deriveChatKey(opts.identity, opts.peerPublicJwk, serverChatId);
@@ -460,6 +467,17 @@ export async function sendViaServer(
   return postServerMessage(serverChatId, body, clientId, {
     replyTo: opts?.reply?.id,
   });
+}
+
+function applyShop(m: Message, shop: ShopPlain | undefined): Message {
+  if (!shop?.publicId) return m;
+  return {
+    ...m,
+    type: "shop",
+    shopId: `business:${shop.publicId}`,
+    text: shop.name || m.text,
+    imageUrl: shop.image || m.imageUrl,
+  };
 }
 
 function applySurprise(m: Message, surprise: SurprisePlain | undefined): Message {

@@ -1,3 +1,4 @@
+import "../crypto-polyfill";
 /**
  * Messaging data layer on Supabase (anon key + user JWT, RLS as the signed-in user).
  * Bodies are already E2E envelopes when they reach here; nothing is decrypted server-side.
@@ -89,11 +90,12 @@ export async function publishKey(jwk: JsonWebKey) {
 }
 
 export async function searchProfiles(q: string) {
-  const clean = q.replace(/[%,()]/g, "");
+  const clean = q.replace(/^@/, "").replace(/[%_(),]/g, "").trim();
+  if (clean.length < 2) return [];
   const { data } = await db
-    .from("wipp_profiles")
+    .from("wipp_public_profiles")
     .select(PROFILE_COLS)
-    .or(`username.ilike.%${clean}%,display_name.ilike.%${clean}%`)
+    .or(`username.ilike.${clean},username.ilike.${clean}%,display_name.ilike.%${clean}%`)
     .limit(20);
   return ((data ?? []) as ProfileRow[]).map(mapProfile);
 }

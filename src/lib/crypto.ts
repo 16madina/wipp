@@ -1,3 +1,4 @@
+import "./crypto-polyfill";
 /**
  * Wipp DM E2E crypto — ECDH P-256 + HKDF-SHA-256 + AES-256-GCM.
  * Uses @noble so web and React Native share the same wire format.

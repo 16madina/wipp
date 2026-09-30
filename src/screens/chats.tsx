@@ -57,7 +57,7 @@ export function ChatsScreen() {
   const pending = useWippStore(
     (s) =>
       s.requests.filter((r) => r.status === "pending").length +
-      s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length,
+      (s.serverConnected ? 0 : s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length),
   );
   const push = useWippStore((s) => s.push);
   const markRead = useWippStore((s) => s.markRead);
@@ -370,22 +370,29 @@ export function RequestsScreen() {
   const users = useWippStore((s) => s.users);
   const acceptRequest = useWippStore((s) => s.acceptRequest);
   const ignoreRequest = useWippStore((s) => s.ignoreRequest);
+  const declineRequest = useWippStore((s) => s.declineRequest);
+  const blockUser = useWippStore((s) => s.blockUser);
   const blockedIds = useWippStore((s) => s.blockedIds);
+  const live = useWippStore((s) => s.serverConnected);
   const pending = requests.filter((r) => r.status === "pending" && !blockedIds.includes(r.fromId));
-  const pendingIntros = intros.filter((i) => i.recipientId === "me" && i.status === "pending");
+  const pendingIntros = live ? [] : intros.filter((i) => i.recipientId === "me" && i.status === "pending");
+  useEffect(() => {
+    if (live) void useWippStore.getState().refreshIncomingRequests();
+  }, [live]);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("requests")} onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Demandes serveur (profils publics / connexions)" />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
-        <Press onPress={() => push({ name: "touch-incoming" })} style={{ marginBottom: 12, minHeight: 48, borderRadius: 12, backgroundColor: colors.surface, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 14, color: colors.fg }}>Demande WIPP Touch reçue</Text>
-          <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 2 }}>
-            <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
-          </View>
-        </Press>
+        {!live ? (
+          <Press onPress={() => push({ name: "touch-incoming" })} style={{ marginBottom: 12, minHeight: 48, borderRadius: 12, backgroundColor: colors.surface, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 14, color: colors.fg }}>Demande WIPP Touch reçue</Text>
+            <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
+            </View>
+          </Press>
+        ) : null}
         {pendingIntros.length === 0 && pending.length === 0 ? <Empty title={t("noResults")} /> : null}
         {pendingIntros.map((intro) => {
           const from = users[intro.introducerId];
@@ -411,12 +418,18 @@ export function RequestsScreen() {
                   <Text style={{ marginTop: 8, fontSize: 14, color: colors.muted }}>{r.preview}</Text>
                 </View>
               </View>
-              <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
-                <View style={{ flex: 1 }}>
+              <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <View style={{ flexGrow: 1, minWidth: 70 }}>
                   <Btn label={t("accept")} onPress={() => acceptRequest(r.id)} style={{ height: 40 }} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{ flexGrow: 1, minWidth: 70 }}>
+                  <Btn label="Refuser" variant="secondary" onPress={() => declineRequest(r.id)} style={{ height: 40 }} />
+                </View>
+                <View style={{ flexGrow: 1, minWidth: 70 }}>
                   <Btn label={t("ignore")} variant="secondary" onPress={() => ignoreRequest(r.id)} style={{ height: 40 }} />
+                </View>
+                <View style={{ flexGrow: 1, minWidth: 70 }}>
+                  <Btn label="Bloquer" variant="danger" onPress={() => blockUser(r.fromId)} style={{ height: 40 }} />
                 </View>
               </View>
             </View>
