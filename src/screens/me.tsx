@@ -224,8 +224,7 @@ export function MeScreen() {
               </span>
             </div>
             <p className="mt-1.5 text-[12px] leading-snug text-muted">
-              Comptes @username réels + chats 1:1 synchronisés. Mot de passe démo&nbsp;:
-              <span className="text-fg"> wipp-demo</span>
+              Comptes @username réels + chats 1:1 synchronisés.
             </p>
             <div className="mt-3 flex gap-2">
               <button

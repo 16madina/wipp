@@ -18,9 +18,20 @@ function walk(dir) {
 walk(root);
 files.sort();
 
-const lines = files.map(
-  (rel) => `  ${JSON.stringify(rel)}: require("../../assets/wipp/${rel}"),`,
-);
+const rank = { ".png": 0, ".jpg": 1, ".jpeg": 2, ".webp": 3, ".gif": 4 };
+const preferred = new Map();
+for (const rel of files) {
+  const base = rel.replace(/\.[^.]+$/, "");
+  const current = preferred.get(base);
+  if (!current || rank[path.extname(rel).toLowerCase()] < rank[path.extname(current).toLowerCase()]) {
+    preferred.set(base, rel);
+  }
+}
+
+const lines = files.map((rel) => {
+  const source = preferred.get(rel.replace(/\.[^.]+$/, "")) ?? rel;
+  return `  ${JSON.stringify(rel)}: require("../../assets/wipp/${source}"),`;
+});
 
 const out = `/* Generated from assets/wipp. Do not edit. */
 export const raster = {

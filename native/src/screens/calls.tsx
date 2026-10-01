@@ -13,7 +13,7 @@ export function CallsScreen() {
   const t = useT();
   const lang = useWippStore((s) => s.language);
   const serverConnected = useWippStore((s) => s.serverConnected);
-  const calls = useWippStore((s) => (serverConnected ? s.calls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("srvcall:")) : s.calls));
+  const calls = useWippStore((s) => (serverConnected ? s.calls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("gcall_") || c.id.startsWith("srvcall:")) : s.calls));
   const users = useWippStore((s) => s.users);
   const push = useWippStore((s) => s.push);
   const markCallsSeen = useWippStore((s) => s.markCallsSeen);
@@ -28,16 +28,32 @@ export function CallsScreen() {
     void import("../lib/proximity/wipp-session").then(async ({ wippApi }) => {
       try {
         const data = await wippApi<{
-          calls: { id: string; peerId: string; direction: "in" | "out"; kind: "audio" | "video"; missed: boolean; at: string }[];
+          calls: {
+            id: string;
+            peerId: string;
+            direction: "in" | "out";
+            kind: "audio" | "video";
+            missed: boolean;
+            declined?: boolean;
+            status?: string;
+            at: string;
+            duration?: number | null;
+            group?: boolean;
+            chatId?: string | null;
+          }[];
         }>("calls/history");
         useWippStore.setState({
           calls: (data.calls ?? []).map((c) => ({
-            id: c.id.startsWith("call_") ? c.id : `srvcall:${c.id}`,
-            userId: `srvuser:${c.peerId}`,
+            id: c.id.startsWith("call_") || c.id.startsWith("gcall_") ? c.id : `srvcall:${c.id}`,
+            userId: c.group && c.chatId ? `srv:${c.chatId}` : `srvuser:${c.peerId}`,
             kind: c.kind,
             direction: c.direction,
             missed: c.missed,
             at: Date.parse(c.at),
+            duration: c.duration ?? undefined,
+            group: c.group,
+            chatId: c.chatId ?? undefined,
+            outcome: c.declined ? "declined" as const : c.status === "busy" ? "busy" as const : c.missed ? "noAnswer" as const : undefined,
           })),
         });
       } catch {
@@ -81,7 +97,7 @@ export function CallsScreen() {
           return (
             <Press
               key={c.id}
-              onPress={() => push({ name: "active-call", userId: c.userId, kind: c.kind, dir: "out" })}
+              onPress={() => push({ name: "active-call", userId: c.userId, kind: c.kind, dir: "out", group: c.group, chatId: c.chatId })}
               style={{ minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16 }}
             >
               <Avatar user={u} size={48} />
@@ -90,6 +106,8 @@ export function CallsScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Icon size={14} color={c.missed ? colors.danger : colors.muted} />
                   <Text style={{ fontSize: 13, color: colors.muted }}>
+                    {c.group ? "Groupe · " : ""}
+                    {c.outcome === "declined" ? "Refusé · " : c.missed ? "Manqué · " : ""}
                     {c.kind === "video" ? t("videoCall") : t("audioCall")}
                     {c.duration ? ` · ${formatDuration(c.duration)}` : ""}
                   </Text>
@@ -117,39 +135,25 @@ export function CallsScreen() {
   );
 }
 
-export function ActiveCallScreen({ userId, kind, dir }: { userId: string; kind: "audio" | "video"; dir?: "in" | "out" }) {
-  const pop = useWippStore((s) => s.pop);
-  const user = useWippStore((s) => s.users[userId]);
-  const [muted, setMuted] = useState(false);
-  const [camOff, setCamOff] = useState(kind === "audio");
-  const [sec, setSec] = useState(0);
+export function ActiveCallScreen({
+  userId,
+  kind,
+  dir,
+  callId,
+  chatId,
+  group,
+}: {
+  userId: string;
+  kind: "audio" | "video";
+  dir?: "in" | "out";
+  callId?: string;
+  chatId?: string;
+  group?: boolean;
+}) {
   useEffect(() => {
-    const id = setInterval(() => setSec((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.navy, alignItems: "center", justifyContent: "space-between", paddingVertical: 48 }}>
-      <View style={{ alignItems: "center" }}>
-        <Avatar user={user} size={96} />
-        <Text style={{ marginTop: 16, fontSize: 24, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{user?.displayName}</Text>
-        <Text style={{ marginTop: 6, color: "rgba(247,249,252,0.6)" }}>
-          {kind === "video" ? "Appel vidéo" : "Appel audio"} · {dir === "in" ? "entrant" : "sortant"} · {formatDuration(sec)}
-        </Text>
-      </View>
-      <PendingNote label="Média simulé — LiveKit / CallKit Phase 2" />
-      <View style={{ flexDirection: "row", gap: 20, marginBottom: 24 }}>
-        <Press onPress={() => setMuted((v) => !v)} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
-          {muted ? <MicOff size={22} color={colors.fg} /> : <Mic size={22} color={colors.fg} />}
-        </Press>
-        <Press onPress={() => setCamOff((v) => !v)} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
-          {camOff ? <VideoOff size={22} color={colors.fg} /> : <Video size={22} color={colors.fg} />}
-        </Press>
-        <Press onPress={pop} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}>
-          <PhoneOff size={22} color="#fff" />
-        </Press>
-      </View>
-    </View>
-  );
+    void import("../lib/calls/session").then(({ openCall }) => openCall({ userId, kind, dir, callId, chatId, group }));
+  }, [userId, kind, dir, callId, chatId, group]);
+  return <View style={{ flex: 1, backgroundColor: colors.navy }} />;
 }
 
 export function CallLinkScreen() {

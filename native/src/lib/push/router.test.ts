@@ -22,6 +22,13 @@ test("touch opens incoming screen without embedding the code", () => {
   assert.ok(!JSON.stringify(s).includes("code"));
 });
 
+test("call push opens the call with only a routing id", () => {
+  const s = screenFromPushData({ type: "call", eventId: "call_abc", inviteId: "call_abc", group: true, chatId: "g_abcd1234" });
+  assert.equal(s?.name, "active-call");
+  assert.ok(s && "callId" in s && s.callId === "call_abc");
+  assert.ok(!JSON.stringify(s).includes("room"));
+});
+
 test("group and story stay pending", () => {
   assert.equal(screenFromPushData({ type: "group", eventId: "g" }), null);
   assert.equal(screenFromPushData({ type: "story", eventId: "s" }), null);

@@ -109,16 +109,19 @@ function withWippTouchNative(config) {
     set("org.gradle.workers.max", "1");
     set("org.gradle.parallel", "false");
     set("org.gradle.daemon", "false");
+    set("reactNativeArchitectures", "armeabi-v7a,arm64-v8a,x86,x86_64");
     return cfg;
   });
 
   config = withAppBuildGradle(config, (cfg) => {
-    const gradle = cfg.modResults.contents;
-    if (gradle.includes('abiFilters "arm64-v8a"')) return cfg;
-    cfg.modResults.contents = gradle.replace(
-      /buildTypes \{\s*debug \{/,
-      'buildTypes {\n        debug {\n            ndk { abiFilters "arm64-v8a" }',
-    );
+    let gradle = cfg.modResults.contents.replace(/\n\s*ndk \{\s*abiFilters "arm64-v8a"\s*\}/g, "");
+    if (!gradle.includes('debug {\n            ndk { abiFilters "arm64-v8a" }')) {
+      gradle = gradle.replace(
+        /buildTypes \{\s*debug \{/,
+        'buildTypes {\n        debug {\n            ndk { abiFilters "arm64-v8a" }',
+      );
+    }
+    cfg.modResults.contents = gradle;
     return cfg;
   });
 

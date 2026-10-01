@@ -119,9 +119,10 @@ export function NewStoryScreen() {
               const res = await fetch(asset.uri);
               const bytes = new Uint8Array(await res.arrayBuffer());
               const mime = asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg");
-              const { uploadPrivateMedia } = await import("../lib/lot7/api");
-              const url = await uploadPrivateMedia(`stories/${Date.now()}`, bytes, mime);
-              await publish(asset.type === "video" ? "video" : "image", url);
+              const { uploadPrivateMedia, myProfileId } = await import("../lib/lot7/api");
+              const { storyObjectPath } = await import("../lib/calls/rules");
+              const path = await uploadPrivateMedia(storyObjectPath(await myProfileId(), `styup_${Date.now()}`), bytes, mime);
+              await publish(asset.type === "video" ? "video" : "image", path);
             })().catch((err) => setError(err instanceof Error ? err.message : "Média impossible"));
           }}
         />
@@ -390,7 +391,7 @@ export function LiveCodeScreen() {
           </View>
           <Text style={{ marginTop: 12, maxWidth: 280, textAlign: "center", fontSize: 12, lineHeight: 18, color: "rgba(247,249,252,0.5)" }}>{t("codeVsPerm")}</Text>
           <Btn label={t("regenerate")} onPress={() => regenerateMyCode()} style={{ marginTop: 16, alignSelf: "stretch" }} />
-          <Btn label={t("simulateEntered")} variant="ghost" onPress={() => simulateCodeEntered("ines")} style={{ marginTop: 4, alignSelf: "stretch" }} />
+          {__DEV__ ? <Btn label={t("simulateEntered")} variant="ghost" onPress={() => simulateCodeEntered("ines")} style={{ marginTop: 4, alignSelf: "stretch" }} /> : null}
         </ScrollView>
       ) : (
         <View style={{ flex: 1, paddingHorizontal: 24 }}>

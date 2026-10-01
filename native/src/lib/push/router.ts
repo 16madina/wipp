@@ -9,6 +9,19 @@ export function screenFromPushData(data: Record<string, unknown>): Screen | null
   if (type === "group" || type === "story") return null;
   if (type === "request") return { name: "requests" };
   if (type === "touch") return { name: "touch-incoming" };
+  if (type === "call" || type === "incoming_call") {
+    const callId = String(data.eventId || data.inviteId || "");
+    if (!callId) return { name: "calls" };
+    return {
+      name: "active-call",
+      userId: "call",
+      kind: "audio",
+      dir: "in",
+      callId,
+      group: data.group === true,
+      chatId: typeof data.chatId === "string" ? data.chatId : undefined,
+    };
+  }
   if (type === "message") {
     if (typeof data.chatId !== "string" || !data.chatId.trim()) return { name: "chats" };
     return { name: "conversation", chatId: localChatId(data.chatId) };

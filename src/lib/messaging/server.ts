@@ -155,6 +155,7 @@ function messagePreview(body: string) {
 }
 
 async function seedDemoUsers() {
+  if (process.env.NODE_ENV === "production") return;
   const sql = await getSql();
   const existing = await sql<{ c: number }>`select count(*)::int as c from wipp_profiles`;
   if ((existing[0]?.c ?? 0) > 0) return;

@@ -141,7 +141,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({
         ok: true,
         service: "wipp-messaging",
-        demoPassword: "wipp-demo",
+        ...(process.env.NODE_ENV === "production" ? {} : { demoPassword: "wipp-demo" }),
         livekit,
         touch: {
           serviceUuid: WIPP_TOUCH_SERVICE_UUID,
@@ -160,23 +160,30 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ callId?: string; video?: boolean }>(request);
       if (!body.callId?.trim()) throw new WippHttpError(400, "call_required", "callId requis");
-      const { getSql } = await import("@/lib/db");
-      const sql = await getSql();
-      const rows = await sql<{ room_name: string }>`
-        select room_name from wipp_call_invites
-        where id = ${body.callId}
-          and (caller_id = ${me.id} or callee_id = ${me.id})
-        limit 1
-      `;
-      const roomName = rows[0]?.room_name;
-      if (!roomName) throw new WippHttpError(403, "forbidden", "Appel non autorisé");
+      const { authorizeLiveKitJoin } = await import("@/lib/messaging/calls");
+      const allowed = await authorizeLiveKitJoin(me.id, body.callId.trim());
       const identity = `p_${me.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40)}`;
       const token = await mintCallToken({
-        roomName,
+        roomName: allowed.roomName,
         identity,
-        video: Boolean(body.video),
+        video: Boolean(body.video) || allowed.kind === "video",
       });
       return json(token);
+    }
+
+    if (method === "POST" && a === "calls" && b === "group" && !c) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ chatId?: string; kind?: "audio" | "video" }>(request);
+      if (!body.chatId?.trim()) throw new WippHttpError(400, "chat_required", "chatId requis");
+      const { createGroupCall } = await import("@/lib/messaging/calls");
+      return json({ invite: await createGroupCall({ callerId: me.id, chatId: body.chatId, kind: body.kind }) }, 201);
+    }
+
+    if (method === "POST" && a === "calls" && b === "group" && c && d === "state") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ state?: string }>(request);
+      const { setGroupCallState } = await import("@/lib/messaging/calls");
+      return json(await setGroupCallState({ meId: me.id, callId: c, state: body.state ?? "" }));
     }
 
     if (method === "POST" && a === "devices" && b === "push" && c === "unregister") {

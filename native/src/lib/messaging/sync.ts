@@ -189,6 +189,7 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
       k?: string;
       type?: Message["type"];
       text?: string;
+      path?: string;
       imageUrl?: string;
       videoUrl?: string;
       audioUrl?: string;
@@ -198,6 +199,7 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
       size?: number;
     };
     if (parsed.k !== "wipp-group-media" || !parsed.type) return null;
+    const stored = parsed.path || parsed.imageUrl || parsed.videoUrl || parsed.audioUrl;
     const fromMe = meServerId && m.senderId === meServerId;
     return {
       id: m.id,
@@ -205,13 +207,13 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
       fromId: fromMe ? "me" : `srvuser:${m.senderId}`,
       type: parsed.type,
       text: parsed.text,
-      imageUrl: parsed.imageUrl,
-      videoUrl: parsed.videoUrl,
-      audioUrl: parsed.audioUrl,
+      imageUrl: parsed.type === "image" || parsed.type === "file" ? stored : parsed.imageUrl,
+      videoUrl: parsed.type === "video" ? stored : parsed.videoUrl,
+      audioUrl: parsed.type === "voice" ? stored : parsed.audioUrl,
       stickerId: parsed.stickerId,
       file:
         parsed.type === "file"
-          ? { name: parsed.name ?? "Document", size: parsed.size ?? 0, mime: parsed.mime ?? "", url: parsed.imageUrl ?? "" }
+          ? { name: parsed.name ?? "Document", size: parsed.size ?? 0, mime: parsed.mime ?? "", url: stored ?? "" }
           : undefined,
       createdAt: m.createdAt,
       status: receiptStatus(m, Boolean(fromMe)),

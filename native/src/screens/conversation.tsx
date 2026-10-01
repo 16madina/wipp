@@ -209,6 +209,33 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       const { consumeServerAttachment } = await import("../lib/messaging/client");
       void consumeServerAttachment;
       for (const m of messages) {
+        const stored = m.imageUrl || m.videoUrl || m.audioUrl || m.file?.url || "";
+        if (stored.startsWith("groups/") || stored.startsWith("stories/")) {
+          try {
+            const { signPrivateMedia } = await import("../lib/lot7/api");
+            const url = await signPrivateMedia(stored);
+            if (cancelled) return;
+            useWippStore.setState((s) => ({
+              messages: {
+                ...s.messages,
+                [chatId]: (s.messages[chatId] ?? []).map((x) =>
+                  x.id !== m.id
+                    ? x
+                    : {
+                        ...x,
+                        imageUrl: x.imageUrl?.startsWith("groups/") || x.imageUrl?.startsWith("stories/") ? url : x.imageUrl,
+                        videoUrl: x.videoUrl?.startsWith("groups/") || x.videoUrl?.startsWith("stories/") ? url : x.videoUrl,
+                        audioUrl: x.audioUrl?.startsWith("groups/") || x.audioUrl?.startsWith("stories/") ? url : x.audioUrl,
+                        file: x.file?.url?.startsWith("groups/") || x.file?.url?.startsWith("stories/") ? { ...x.file, url } : x.file,
+                      },
+                ),
+              },
+            }));
+          } catch {
+            /* audience refused or offline */
+          }
+          continue;
+        }
         if (m.viewOnce && m.fromId !== "me") continue;
         const pending = (m.album?.length
           ? m.album.filter((a) => a.attachmentId && a.mediaKey && a.mediaChunks?.length && !a.url)
@@ -306,7 +333,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         : peer
           ? formatLastSeen(peer.lastSeen, peer.online, useWippStore.getState().language)
           : undefined;
-  const canCall = Boolean(peer) && !sealed;
+  const canCall = (chat.type === "group" || Boolean(peer)) && !sealed;
   const chats = useWippStore
     .getState()
     .chats.filter(
@@ -679,12 +706,12 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           right={
             <View style={{ flexDirection: "row", flexShrink: 0 }}>
               {canCall ? (
-                <IconBtn size={headerIcon} label={t("audioCall") ?? "Appel"} onPress={() => peer && push({ name: "active-call", userId: peer.id, kind: "audio", dir: "out" })}>
+                <IconBtn size={headerIcon} label={t("audioCall") ?? "Appel"} onPress={() => push({ name: "active-call", userId: chat.type === "group" ? chat.id : peer!.id, kind: "audio", dir: "out", group: chat.type === "group", chatId: chat.type === "group" ? chat.id : undefined })}>
                   <Phone size={20} color={colors.fg} />
                 </IconBtn>
               ) : null}
               {canCall ? (
-                <IconBtn size={headerIcon} label={t("videoCall") ?? "Caméra"} onPress={() => peer && push({ name: "active-call", userId: peer.id, kind: "video", dir: "out" })}>
+                <IconBtn size={headerIcon} label={t("videoCall") ?? "Caméra"} onPress={() => push({ name: "active-call", userId: chat.type === "group" ? chat.id : peer!.id, kind: "video", dir: "out", group: chat.type === "group", chatId: chat.type === "group" ? chat.id : undefined })}>
                   <Video size={20} color={colors.fg} />
                 </IconBtn>
               ) : null}

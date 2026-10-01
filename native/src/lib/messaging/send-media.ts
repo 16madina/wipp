@@ -51,8 +51,10 @@ export async function uploadMedia(job: MediaJob) {
     if (chat?.type === "group" && job.chatId.startsWith("srv:")) {
       const bytes = await readLocalBytes(job.blobUrl);
       patch(job.chatId, job.messageId, { mediaState: "uploading", progress: 0.2 });
-      const { uploadPrivateMedia, postGroupMessage } = await import("../lot7/api");
-      const url = await uploadPrivateMedia(`groups/${job.chatId.slice(4)}/${job.messageId}`, bytes, job.mime || "application/octet-stream");
+      const { uploadPrivateMedia, postGroupMessage, signPrivateMedia } = await import("../lot7/api");
+      const { groupObjectPath } = await import("../calls/rules");
+      const path = await uploadPrivateMedia(groupObjectPath(job.chatId, job.messageId), bytes, job.mime || "application/octet-stream");
+      const url = await signPrivateMedia(path);
       const kind = job.kind === "voice" ? "voice" : job.kind === "video" ? "video" : job.kind === "file" ? "file" : "image";
       await postGroupMessage({
         chatId: job.chatId.slice(4),
@@ -61,9 +63,10 @@ export async function uploadMedia(job: MediaJob) {
           k: "wipp-group-media",
           type: kind,
           text: job.caption || "",
-          imageUrl: kind === "image" || kind === "file" ? url : undefined,
-          videoUrl: kind === "video" ? url : undefined,
-          audioUrl: kind === "voice" ? url : undefined,
+          path,
+          imageUrl: kind === "image" || kind === "file" ? path : undefined,
+          videoUrl: kind === "video" ? path : undefined,
+          audioUrl: kind === "voice" ? path : undefined,
           name: job.name,
           mime: job.mime,
           size: bytes.byteLength,
@@ -142,19 +145,21 @@ export async function uploadAlbum(job: AlbumJob) {
   try {
     const st = useWippStore.getState();
     if (st.chats.find((c) => c.id === job.chatId)?.type === "group") {
-      const { uploadPrivateMedia, postGroupMessage } = await import("../lot7/api");
-      let first = "";
+      const { uploadPrivateMedia, postGroupMessage, signPrivateMedia } = await import("../lot7/api");
+      const { groupObjectPath } = await import("../calls/rules");
+      let firstPath = "";
       for (const [index, item] of job.items.entries()) {
         const bytes = await readLocalBytes(item.blobUrl);
-        const url = await uploadPrivateMedia(`groups/${job.chatId.slice(4)}/${job.messageId}-${index}`, bytes, item.mime || "image/jpeg");
-        if (!first) first = url;
+        const path = await uploadPrivateMedia(groupObjectPath(job.chatId, `${job.messageId}-${index}`), bytes, item.mime || "image/jpeg");
+        if (!firstPath) firstPath = path;
       }
+      const shown = firstPath ? await signPrivateMedia(firstPath) : "";
       await postGroupMessage({
         chatId: job.chatId.slice(4),
         clientId: job.messageId,
-        body: JSON.stringify({ k: "wipp-group-media", type: "image", text: job.caption || "", imageUrl: first }),
+        body: JSON.stringify({ k: "wipp-group-media", type: "image", text: job.caption || "", path: firstPath, imageUrl: firstPath }),
       });
-      patch(job.chatId, job.messageId, { status: "sent", mediaState: "sent", progress: 1, imageUrl: first });
+      patch(job.chatId, job.messageId, { status: "sent", mediaState: "sent", progress: 1, imageUrl: shown });
       return;
     }
     const peer = peerKey(job.chatId);

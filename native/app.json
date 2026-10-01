@@ -20,11 +20,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wipp.app",
-      "associatedDomains": ["applinks:wippapp.com"],
+      "associatedDomains": [
+        "applinks:wippapp.com"
+      ],
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSCameraUsageDescription": "WIPP utilise la caméra pour scanner un QR WIPP ou envoyer une photo.",
-        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour enregistrer un message vocal.",
+        "NSCameraUsageDescription": "WIPP utilise la caméra pour le scan QR, les photos et les appels vidéo.",
+        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les messages vocaux et les appels audio.",
         "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
         "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque.",
         "NSBluetoothAlwaysUsageDescription": "WIPP Touch utilise le Bluetooth pour détecter un téléphone WIPP tout près, sans numéro ni e-mail.",
@@ -40,6 +42,7 @@
     },
     "android": {
       "package": "com.wipp.app",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/adaptive-foreground.png",
@@ -59,19 +62,47 @@
         "BLUETOOTH_CONNECT",
         "NFC",
         "POST_NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "MODIFY_AUDIO_SETTINGS",
+        "WAKE_LOCK",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "FOREGROUND_SERVICE_CAMERA",
+        "FOREGROUND_SERVICE_PHONE_CALL",
+        "USE_FULL_SCREEN_INTENT",
+        "VIBRATE",
+        "MANAGE_OWN_CALLS"
       ],
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/@" },
-            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/t/" },
-            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/g/" },
-            { "scheme": "https", "host": "wippapp.com", "pathPrefix": "/b/" }
+            {
+              "scheme": "https",
+              "host": "wippapp.com",
+              "pathPrefix": "/@"
+            },
+            {
+              "scheme": "https",
+              "host": "wippapp.com",
+              "pathPrefix": "/t/"
+            },
+            {
+              "scheme": "https",
+              "host": "wippapp.com",
+              "pathPrefix": "/g/"
+            },
+            {
+              "scheme": "https",
+              "host": "wippapp.com",
+              "pathPrefix": "/b/"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -98,7 +129,7 @@
       [
         "expo-av",
         {
-          "microphonePermission": "WIPP utilise le micro pour enregistrer un message vocal."
+          "microphonePermission": "WIPP utilise le micro pour les messages vocaux et les appels audio."
         }
       ],
       "expo-document-picker",
@@ -118,14 +149,20 @@
           "faceIDPermission": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil."
         }
       ],
-      "./plugins/withWippTouchNative"
+      "./plugins/withWippTouchNative",
+      "./plugins/withWippCallNative",
+      "@livekit/react-native-expo-plugin"
     ],
     "web": {
       "favicon": "./assets/brand/favicon-48.png"
     },
-    "experiments": { "typedRoutes": false },
+    "experiments": {
+      "typedRoutes": false
+    },
     "extra": {
-      "eas": { "projectId": "ea523c90-fa59-41f1-af9e-fde9a68b360e" }
+      "eas": {
+        "projectId": "ea523c90-fa59-41f1-af9e-fde9a68b360e"
+      }
     }
   }
 }

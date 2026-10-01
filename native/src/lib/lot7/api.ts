@@ -146,7 +146,23 @@ export async function publishStory(input: {
 
 export async function fetchStories(me: string | null) {
   const rows = await rpc<StoryRow[]>("wipp_lot7_stories");
-  return (rows ?? []).map((row) => mapStory(row, me));
+  return Promise.all(
+    (rows ?? []).map(async (row) => {
+      const story = mapStory(row, me);
+      const path = row.media_url && !row.media_url.startsWith("http") ? row.media_url : null;
+      if (!path) return story;
+      try {
+        const url = await signPrivateMedia(path);
+        return {
+          ...story,
+          imageUrl: row.kind === "image" ? url : story.imageUrl,
+          videoUrl: row.kind === "video" ? url : story.videoUrl,
+        };
+      } catch {
+        return { ...story, imageUrl: undefined, videoUrl: undefined };
+      }
+    }),
+  );
 }
 
 export async function markStoryView(id: string) {
@@ -318,17 +334,34 @@ async function uploadBucket(bucket: "wipp-public-media" | "wipp-private-media", 
     upsert: false,
   });
   if (error) throw new Error(error.message);
-  const signed = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
+  return path;
+}
+
+export async function signPrivateMedia(path: string) {
+  const signed = await supabase.storage.from("wipp-private-media").createSignedUrl(path, 10 * 60);
   if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "signed-url");
   return signed.data.signedUrl;
 }
 
-export function uploadPublicMedia(path: string, bytes: Uint8Array, mime: string) {
-  return uploadBucket("wipp-public-media", path, bytes, mime);
+export async function signPublicMedia(path: string) {
+  const signed = await supabase.storage.from("wipp-public-media").createSignedUrl(path, 60 * 60);
+  if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "signed-url");
+  return signed.data.signedUrl;
+}
+
+export async function uploadPublicMedia(path: string, bytes: Uint8Array, mime: string) {
+  const stored = await uploadBucket("wipp-public-media", path, bytes, mime);
+  return signPublicMedia(stored);
 }
 
 export function uploadPrivateMedia(path: string, bytes: Uint8Array, mime: string) {
   return uploadBucket("wipp-private-media", path, bytes, mime);
+}
+
+export async function myProfileId() {
+  const { data, error } = await supabase.rpc("wipp_my_profile_id");
+  if (error || !data) throw new Error(error?.message || "no_session");
+  return String(data);
 }
 
 export async function setCloseFriend(profileId: string, on: boolean) {

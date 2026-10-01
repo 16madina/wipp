@@ -41,11 +41,12 @@ function SupportPage() {
           </li>
         </ul>
 
-        <h2>Compte démo (développement)</h2>
-        <p>
-          En phase de test : <code>@deena</code> / <code>@lea</code> / <code>@samira</code> — mot de
-          passe <code>wipp-demo</code>.
-        </p>
+        {import.meta.env.DEV ? (
+          <>
+            <h2>Compte démo (développement)</h2>
+            <p>Comptes locaux de développement uniquement. Ils ne sont pas proposés en production.</p>
+          </>
+        ) : null}
 
         <h2>Nous écrire</h2>
         <p>

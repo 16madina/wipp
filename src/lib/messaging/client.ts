@@ -246,7 +246,11 @@ export async function ensureServerSession(opts: {
       persistSession(null);
     }
   }
-  const password = opts.password ?? "wipp-demo";
+  const demo = process.env.NODE_ENV !== "production";
+  const password = opts.password ?? (demo ? "wipp-demo" : "");
+  if (!password) {
+    throw new Error("session_required");
+  }
   try {
     return (await loginAccount({ username: opts.username, password })).profile;
   } catch {
@@ -258,8 +262,8 @@ export async function ensureServerSession(opts: {
           displayName: opts.displayName,
         })
       ).profile;
-    } catch {
-      // Username taken with different password — fall back to seeded demo user
+    } catch (err) {
+      if (!demo) throw err;
       return (await loginAccount({ username: "deena", password: "wipp-demo" })).profile;
     }
   }

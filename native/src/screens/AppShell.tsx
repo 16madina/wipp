@@ -37,6 +37,7 @@ import {
   TouchIncomingScreen,
   WgoTouchScreen,
 } from "./connect";
+import { CallOverlay } from "../components/CallOverlay";
 import { ActiveCallScreen, CallLinkScreen, CallsScreen } from "./calls";
 import {
   CreateLifestyleScreen,
@@ -142,7 +143,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "calls":
       return <CallsScreen />;
     case "active-call":
-      return <ActiveCallScreen userId={screen.userId} kind={screen.kind} dir={screen.dir} />;
+      return <ActiveCallScreen userId={screen.userId} kind={screen.kind} dir={screen.dir} callId={screen.callId} chatId={screen.chatId} group={screen.group} />;
     case "call-link":
       return <CallLinkScreen />;
     case "connect":
@@ -352,6 +353,7 @@ export function AppShell() {
         <ScreenProtectionHost>
           <ScreenSwitch screen={top} />
           {showTabs ? <TabBar active={top.name} /> : null}
+          <CallOverlay />
         </ScreenProtectionHost>
       </View>
     </View>

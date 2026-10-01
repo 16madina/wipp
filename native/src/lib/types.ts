@@ -185,7 +185,7 @@ export type Screen =
   | { name: "new-chat" }
   | { name: "requests" }
   | { name: "calls" }
-  | { name: "active-call"; userId: string; kind: "audio" | "video"; dir?: "in" | "out" }
+  | { name: "active-call"; userId: string; kind: "audio" | "video"; dir?: "in" | "out"; callId?: string; chatId?: string; group?: boolean }
   | { name: "call-link" }
   | { name: "connect" }
   | { name: "my-qr" }

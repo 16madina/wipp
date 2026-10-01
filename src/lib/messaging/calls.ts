@@ -249,6 +249,28 @@ export async function createCallInvite(input: {
   }
   await assertNotBlocked(input.callerId, calleeId);
   const kind = input.kind === "video" ? "video" : "audio";
+  const sqlBusy = await getSql();
+  try {
+    const busy = await sqlBusy<{ id: string }>`
+      select id from wipp_call_invites
+      where status = 'accepted' and ended_at is null
+        and (caller_id = ${calleeId} or callee_id = ${calleeId})
+      limit 1
+    `;
+    if (busy[0]) {
+      const id = uid("call");
+      const expiresAt = new Date(Date.now() + 60_000);
+      await sqlBusy`
+        insert into wipp_call_invites (id, caller_id, callee_id, kind, room_name, status, expires_at, ended_at)
+        values (${id}, ${input.callerId}, ${calleeId}, ${kind}, ${roomFor(input.callerId, calleeId)}, ${"busy"}, ${expiresAt.toISOString()}, now())
+      `;
+      const created = await getCallInvite(id);
+      if (!created) throw new WippHttpError(409, "busy", "Correspondant occupé.");
+      return created;
+    }
+  } catch (err) {
+    if (err instanceof WippHttpError) throw err;
+  }
   const roomName = roomFor(input.callerId, calleeId);
   const id = uid("call");
   const expiresAt = new Date(Date.now() + 60_000);
@@ -291,19 +313,15 @@ export async function createCallInvite(input: {
   const expoTokens = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
   if (expoTokens.length) {
     void sendExpoPush(expoTokens, {
-      title: dto.caller.displayName,
-      body: kind === "video" ? "Appel vidéo WIPP" : "Appel audio WIPP",
+      title: "WIPP",
+      body: kind === "video" ? "Appel vidéo" : "Appel audio",
       priority: "high",
       channelId: "incoming_calls",
       categoryId: "incoming_call",
       data: {
-        type: "incoming_call",
-        callId: dto.id,
-        roomName: dto.roomName,
-        kind: dto.kind,
-        fromUsername: dto.caller.username,
-        fromDisplayName: dto.caller.displayName,
-        fromId: dto.caller.id,
+        type: "call",
+        eventId: dto.id,
+        inviteId: dto.id,
       },
     }).catch((err) => console.warn("[wipp-call] push", err));
   }
@@ -421,10 +439,9 @@ export async function answerCallInvite(input: {
       title: "WIPP",
       body: input.accept ? "Appel accepté" : "Appel refusé",
       data: {
-        type: input.accept ? "call_accepted" : "call_rejected",
-        callId: input.callId,
-        roomName: row.room_name,
-        kind: row.kind,
+        type: "call",
+        eventId: input.callId,
+        inviteId: input.callId,
       },
     }).catch(() => undefined);
   }
@@ -459,36 +476,280 @@ export async function hangupCallInvite(input: { meId: string; callId: string }):
 export async function listCallHistory(meId: string) {
   await ensureMessagingReady();
   const sql = await getSql();
-  const rows = await sql<{
+  let rows: {
     id: string;
     caller_id: string;
     callee_id: string;
     kind: string;
     status: string;
     created_at: string;
-  }>`
-    select id, caller_id, callee_id, kind, status, created_at::text
-    from wipp_call_invites
-    where caller_id = ${meId} or callee_id = ${meId}
-    order by created_at desc
-    limit 40
-  `;
-  return rows.map((row) => ({
+    duration_sec: number | null;
+  }[] = [];
+  try {
+    rows = await sql`
+      select id, caller_id, callee_id, kind, status, created_at::text,
+        case
+          when answered_at is not null and ended_at is not null
+          then extract(epoch from (ended_at - answered_at))::int
+          else null
+        end as duration_sec
+      from wipp_call_invites
+      where caller_id = ${meId} or callee_id = ${meId}
+      order by created_at desc
+      limit 40
+    `;
+  } catch {
+    const plain = await sql<{
+      id: string;
+      caller_id: string;
+      callee_id: string;
+      kind: string;
+      status: string;
+      created_at: string;
+    }>`
+      select id, caller_id, callee_id, kind, status, created_at::text
+      from wipp_call_invites
+      where caller_id = ${meId} or callee_id = ${meId}
+      order by created_at desc
+      limit 40
+    `;
+    rows = plain.map((row) => ({ ...row, duration_sec: null }));
+  }
+  const direct = rows.map((row) => ({
     id: row.id,
     peerId: row.caller_id === meId ? row.callee_id : row.caller_id,
-    direction: row.caller_id === meId ? "out" : "in",
-    kind: row.kind === "video" ? "video" : "audio",
+    direction: (row.caller_id === meId ? "out" : "in") as "in" | "out",
+    kind: row.kind === "video" ? ("video" as const) : ("audio" as const),
     missed: row.status === "missed" || row.status === "expired",
+    declined: row.status === "rejected" || row.status === "declined",
     status: row.status,
     at: row.created_at,
+    duration: row.duration_sec,
+    group: false,
+    chatId: null as string | null,
   }));
+  try {
+    const groups = await sql<{
+      id: string;
+      chat_id: string;
+      kind: string;
+      status: string;
+      created_at: string;
+      created_by: string;
+      duration_sec: number | null;
+      state: string;
+    }>`
+      select c.id, c.chat_id, c.kind, c.status, c.created_at::text, c.created_by,
+        case
+          when c.answered_at is not null and c.ended_at is not null
+          then extract(epoch from (c.ended_at - c.answered_at))::int
+          else null
+        end as duration_sec,
+        p.state
+      from wipp_group_calls c
+      join wipp_group_call_members p on p.call_id = c.id and p.profile_id = ${meId}
+      order by c.created_at desc
+      limit 40
+    `;
+    for (const row of groups) {
+      direct.push({
+        id: row.id,
+        peerId: row.chat_id,
+        direction: row.created_by === meId ? "out" : "in",
+        kind: row.kind === "video" ? "video" : "audio",
+        missed: row.state === "ringing" && row.status === "ended",
+        declined: row.state === "declined",
+        status: row.state === "declined" ? "declined" : row.status,
+        at: row.created_at,
+        duration: row.duration_sec,
+        group: true,
+        chatId: row.chat_id,
+      });
+    }
+  } catch {
+    /* group call table not deployed yet */
+  }
+  return direct.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 40);
+}
+
+const LIVE_GROUP_STATES = ["joining", "joined", "reconnecting", "disconnected"];
+
+export async function authorizeLiveKitJoin(meId: string, callId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const direct = await sql<{
+    room_name: string;
+    status: string;
+    kind: string;
+    ended_at: string | null;
+  }>`
+    select room_name, status, kind, ended_at::text
+    from wipp_call_invites
+    where id = ${callId}
+      and (caller_id = ${meId} or callee_id = ${meId})
+    limit 1
+  `;
+  const row = direct[0];
+  if (row) {
+    if (row.ended_at || row.status !== "accepted") {
+      throw new WippHttpError(410, "call_closed", "Cet appel n’est plus joignable.");
+    }
+    return { roomName: row.room_name, kind: row.kind === "video" ? "video" as const : "audio" as const };
+  }
+  const group = await sql<{
+    room_name: string;
+    status: string;
+    kind: string;
+    ended_at: string | null;
+    state: string;
+    chat_id: string;
+  }>`
+    select c.room_name, c.status, c.kind, c.ended_at::text, p.state, c.chat_id
+    from wipp_group_calls c
+    join wipp_group_call_members p on p.call_id = c.id and p.profile_id = ${meId}
+    where c.id = ${callId}
+    limit 1
+  `;
+  const g = group[0];
+  if (!g || g.ended_at || !LIVE_GROUP_STATES.includes(g.state) || g.status === "ended" || g.status === "cancelled") {
+    throw new WippHttpError(403, "forbidden", "Appel non autorisé");
+  }
+  const member = await sql<{ ok: number }>`
+    select 1 as ok from wipp_chat_members
+    where chat_id = ${g.chat_id} and profile_id = ${meId}
+    limit 1
+  `;
+  const banned = await sql<{ ok: number }>`
+    select 1 as ok from wipp_group_bans
+    where chat_id = ${g.chat_id} and profile_id = ${meId}
+    limit 1
+  `;
+  if (!member[0] || banned[0]) throw new WippHttpError(403, "forbidden", "Tu n’es plus membre de ce groupe.");
+  return { roomName: g.room_name, kind: g.kind === "video" ? "video" as const : "audio" as const };
+}
+
+export async function createGroupCall(input: { callerId: string; chatId: string; kind?: "audio" | "video" }) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const chatId = input.chatId.replace(/^srv:/, "");
+  const members = await sql<{ profile_id: string }>`
+    select profile_id from wipp_chat_members where chat_id = ${chatId}
+  `;
+  if (!members.some((m) => m.profile_id === input.callerId)) {
+    throw new WippHttpError(403, "forbidden", "Tu n’es pas membre de ce groupe.");
+  }
+  const banned = await sql`
+    select 1 from wipp_group_bans where chat_id = ${chatId} and profile_id = ${input.callerId} limit 1
+  `;
+  if (banned.length) throw new WippHttpError(403, "forbidden", "Tu es banni de ce groupe.");
+  const kind = input.kind === "video" ? "video" : "audio";
+  const id = uid("gcall");
+  const roomName = `wippg${id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 48)}`;
+  await sql`
+    insert into wipp_group_calls (id, chat_id, kind, room_name, status, created_by)
+    values (${id}, ${chatId}, ${kind}, ${roomName}, ${"ringing"}, ${input.callerId})
+  `;
+  for (const member of members) {
+    const state = member.profile_id === input.callerId ? "joining" : "ringing";
+    await sql`
+      insert into wipp_group_call_members (call_id, profile_id, state)
+      values (${id}, ${member.profile_id}, ${state})
+    `;
+    if (state !== "ringing") continue;
+    const tokens = await listPushTokens(member.profile_id);
+    const expoTokens = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
+    if (!expoTokens.length) continue;
+    void sendExpoPush(expoTokens, {
+      title: "WIPP",
+      body: kind === "video" ? "Appel vidéo de groupe" : "Appel audio de groupe",
+      priority: "high",
+      channelId: "incoming_calls",
+      categoryId: "incoming_call",
+      data: { type: "call", eventId: id, inviteId: id, group: true, chatId },
+    }).catch(() => undefined);
+  }
+  return { id, kind, status: "ringing", group: true as const, chatId };
+}
+
+export async function setGroupCallState(input: { meId: string; callId: string; state: string }) {
+  await ensureMessagingReady();
+  const allowed = ["joining", "joined", "declined", "left", "disconnected", "reconnecting"];
+  if (!allowed.includes(input.state)) throw new WippHttpError(400, "bad_state", "État d’appel inconnu.");
+  const sql = await getSql();
+  const rows = await sql<{ chat_id: string; status: string; ended_at: string | null }>`
+    select chat_id, status, ended_at::text from wipp_group_calls where id = ${input.callId} limit 1
+  `;
+  const call = rows[0];
+  if (!call || call.ended_at) throw new WippHttpError(410, "call_closed", "Cet appel est terminé.");
+  const member = await sql`
+    select 1 from wipp_chat_members where chat_id = ${call.chat_id} and profile_id = ${input.meId} limit 1
+  `;
+  if (!member.length) throw new WippHttpError(403, "forbidden", "Tu n’es pas membre de ce groupe.");
+  await sql`
+    update wipp_group_call_members
+    set state = ${input.state}, updated_at = now()
+    where call_id = ${input.callId} and profile_id = ${input.meId}
+  `;
+  if (input.state === "joining" || input.state === "joined") {
+    await sql`
+      update wipp_group_calls
+      set status = 'accepted', answered_at = coalesce(answered_at, now())
+      where id = ${input.callId}
+    `;
+  }
+  if (input.state === "left" || input.state === "declined") {
+    const still = await sql<{ n: number }>`
+      select count(*)::int as n from wipp_group_call_members
+      where call_id = ${input.callId} and state in ('joining', 'joined', 'reconnecting')
+    `;
+    if ((still[0]?.n ?? 0) === 0) {
+      await sql`
+        update wipp_group_calls set status = 'ended', ended_at = now() where id = ${input.callId}
+      `;
+    }
+  }
+  return { ok: true as const, state: input.state };
 }
 
 export async function getOutgoingCallStatus(meId: string, callId: string) {
   const invite = await getCallInvite(callId);
-  if (!invite) throw new WippHttpError(404, "not_found", "Appel introuvable.");
-  if (invite.caller.id !== meId && invite.callee.id !== meId) {
-    throw new WippHttpError(403, "forbidden", "Cet appel ne te concerne pas.");
+  if (invite) {
+    if (invite.caller.id !== meId && invite.callee.id !== meId) {
+      throw new WippHttpError(403, "forbidden", "Cet appel ne te concerne pas.");
+    }
+    return invite;
   }
-  return invite;
+  const sql = await getSql();
+  const rows = await sql<{
+    id: string;
+    kind: string;
+    status: string;
+    chat_id: string;
+    created_at: string;
+    state: string;
+    created_by: string;
+  }>`
+    select c.id, c.kind, c.status, c.chat_id, c.created_at::text, p.state, c.created_by
+    from wipp_group_calls c
+    join wipp_group_call_members p on p.call_id = c.id and p.profile_id = ${meId}
+    where c.id = ${callId}
+    limit 1
+  `;
+  const row = rows[0];
+  if (!row) throw new WippHttpError(404, "not_found", "Appel introuvable.");
+  const me = await profileRow(meId);
+  const host = await profileRow(row.created_by);
+  if (!me || !host) throw new WippHttpError(404, "not_found", "Appel introuvable.");
+  return {
+    id: row.id,
+    kind: row.kind === "video" ? "video" as const : "audio" as const,
+    roomName: "",
+    status: row.state === "declined" ? "rejected" : row.status === "ended" ? "ended" : row.state === "joining" || row.state === "joined" ? "accepted" : row.status,
+    createdAt: Date.parse(row.created_at),
+    expiresAt: Date.parse(row.created_at) + 60_000,
+    caller: { id: host.id, username: host.username, displayName: host.display_name, avatarUrl: host.avatar_url },
+    callee: { id: me.id, username: me.username, displayName: me.display_name, avatarUrl: me.avatar_url },
+    group: true,
+    chatId: row.chat_id,
+  };
 }
