@@ -5,8 +5,13 @@ export type AuthMode = "signup" | "signin";
 /** Dev-only bypass. Production always requires the SMS code. */
 export const TEST_SIGNIN_PASSWORD = "160184";
 
-export function isTestSigninPassword(code: string) {
+export function isTestPhone(phone: string) {
   if (typeof __DEV__ === "undefined" || !__DEV__) return false;
+  return toE164(phone) === "+18195803940";
+}
+
+export function isTestSigninPassword(code: string, phone: string) {
+  if (!isTestPhone(phone)) return false;
   return code.replace(/\s/g, "") === TEST_SIGNIN_PASSWORD;
 }
 
@@ -28,6 +33,11 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return "Numéro invalide. Vérifie l'indicatif et le numéro.";
+  // Local preview only: never request an SMS or create a server session.
+  if (isTestPhone(phone)) {
+    pending = { phone, mode };
+    return null;
+  }
   try {
     await sendSmsCode(phone);
     pending = { phone, mode };

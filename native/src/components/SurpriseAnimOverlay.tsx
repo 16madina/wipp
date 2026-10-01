@@ -1,76 +1,78 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { Modal, Platform, StyleSheet, View } from "react-native";
+import { AccessibilityInfo, Animated, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
-/** Full-screen surprise animation, like a WIPP Moment: no plate, no dim, no bubble sticker. */
+/** Transparent artwork floats over the chat without intercepting touches. */
 export function SurpriseAnimOverlay({
   animationId,
   playKey = 0,
   onDone,
+  centered = false,
 }: {
   animationId: string | null;
   playKey?: number;
   onDone: () => void;
+  centered?: boolean;
 }) {
+  const { width, height } = useWindowDimensions();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => { if (active) setReduceMotion(value); });
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    return () => { active = false; subscription.remove(); };
+  }, []);
   const item = findAnimation(animationId);
-  const src = item ? wippSrc(item.anim ?? item.art) : undefined;
+  const src = item ? wippSrc(reduceMotion ? item.art : item.anim ?? item.art) : undefined;
   const img = useRef<Image>(null);
-  const [fade, setFade] = useState(false);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.82)).current;
   const done = useRef(onDone);
   done.current = onDone;
 
   useEffect(() => {
     if (!item || !src) return;
-    setFade(false);
-    const hold = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
-    const kick = setTimeout(() => {
-      if (Platform.OS !== "web") void img.current?.startAnimating();
-    }, 16);
-    const fadeAt = setTimeout(() => setFade(true), hold);
-    const end = setTimeout(() => done.current(), hold + 420);
+    const hold = reduceMotion ? 1400 : Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
+    opacity.setValue(0);
+    scale.setValue(reduceMotion ? 1 : 0.82);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
+    const fadeAt = setTimeout(() => {
+      Animated.timing(opacity, { toValue: 0, duration: 320, useNativeDriver: true }).start();
+    }, hold);
+    const end = setTimeout(() => done.current(), hold + 360);
     return () => {
-      clearTimeout(kick);
       clearTimeout(fadeAt);
       clearTimeout(end);
+      opacity.stopAnimation();
+      scale.stopAnimation();
     };
-  }, [item?.id, playKey, src]);
+  }, [item?.id, playKey, opacity, scale, src, reduceMotion]);
 
   if (!item || !src) return null;
 
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent hardwareAccelerated>
-      <View pointerEvents="none" style={[styles.layer, { opacity: fade ? 0 : 1 }]}>
+    <View pointerEvents="none" style={centered ? [StyleSheet.absoluteFillObject, { zIndex: 30, alignItems: "center", justifyContent: "center" }] : { marginTop: 8, width: "100%", alignItems: "center" }}>
+      <Animated.View style={{ width: centered ? Math.min(width - 32, 360) : 200, height: centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
         <Image
           ref={img}
-          key={`${item.id}-${playKey}`}
+          key={`${item.id}:${playKey}`}
           source={src}
-          style={styles.anim}
+          style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
           contentFit="contain"
-          autoplay
+          autoplay={!reduceMotion}
           allowDownscaling={false}
           cachePolicy="memory-disk"
-          recyclingKey={`${item.id}-${playKey}`}
+          recyclingKey={`${item.id}:${playKey}`}
           onDisplay={() => {
-            if (Platform.OS !== "web") void img.current?.startAnimating();
+            if (Platform.OS !== "web" && !reduceMotion) void img.current?.startAnimating();
           }}
         />
-      </View>
-    </Modal>
+      </Animated.View>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  layer: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  anim: {
-    width: "100%",
-    height: "92%",
-    backgroundColor: "transparent",
-  },
-});

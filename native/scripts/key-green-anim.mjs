@@ -18,6 +18,8 @@ function arg(name, fallback) {
 }
 
 const input = process.argv[2];
+const ffmpeg = process.env.WIPP_FFMPEG || "ffmpeg";
+const ffprobe = process.env.WIPP_FFPROBE || "ffprobe";
 if (!input || input.startsWith("-")) {
   console.error("usage: node scripts/key-green-anim.mjs <green.mp4> --out <file.webp>");
   process.exit(1);
@@ -29,6 +31,8 @@ const blend = arg("--blend", "0.1");
 const size = arg("--size", "720");
 const fps = arg("--fps", "16");
 const quality = arg("--q", "58");
+const effort = arg("--effort", "4");
+const posterAt = arg("--poster-at", "0");
 const tmp = fs.mkdtempSync("/tmp/wipp-chroma-");
 
 function run(cmd, args, opts = {}) {
@@ -42,7 +46,7 @@ function run(cmd, args, opts = {}) {
 
 function sampleCorner(x, y) {
   const raw = path.join(tmp, `c-${x}-${y}.rgb`);
-  run("ffmpeg", [
+  run(ffmpeg, [
     "-y",
     "-i",
     input,
@@ -70,7 +74,7 @@ function sampleCorner(x, y) {
   return { r: r / n, g: g / n, b: b / n };
 }
 
-const probe = run("ffprobe", [
+const probe = run(ffprobe, [
   "-v",
   "error",
   "-select_streams",
@@ -94,7 +98,7 @@ const hex = ((1 << 24) + (key.r << 16) + (key.g << 8) + key.b).toString(16).slic
 console.log(`key #${hex} from corners`, corners.map((c) => [Math.round(c.r), Math.round(c.g), Math.round(c.b)]));
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
-run("ffmpeg", [
+run(ffmpeg, [
   "-y",
   "-i",
   input,
@@ -105,7 +109,7 @@ run("ffmpeg", [
   "-lossless",
   "0",
   "-compression_level",
-  "6",
+  effort,
   "-q:v",
   quality,
   "-loop",
@@ -115,8 +119,10 @@ run("ffmpeg", [
 ]);
 
 const poster = out.replace(/\.webp$/i, ".png");
-run("ffmpeg", [
+run(ffmpeg, [
   "-y",
+  "-ss",
+  posterAt,
   "-i",
   input,
   "-vframes",
@@ -135,13 +141,14 @@ while (cursor + 8 < webp.length) {
   const tag = webp.toString("ascii", cursor, cursor + 4);
   const size = webp.readUInt32LE(cursor + 4);
   if (tag === "ANIM") {
-    webp.fill(0, cursor + 8, cursor + 14);
+    // Only clear BGRA; preserve the loop count (one playback).
+    webp.fill(0, cursor + 8, cursor + 12);
     break;
   }
   cursor += 8 + size + (size & 1);
 }
 fs.writeFileSync(out, webp);
 
-const dur = run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", input]);
+const dur = run(ffprobe, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", input]);
 console.log(`wrote ${out} poster ${poster} duration ${dur.stdout.trim()}s`);
 fs.rmSync(tmp, { recursive: true, force: true });

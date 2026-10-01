@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { Keyboard, ScrollView, Text, TextInput, View } from "react-native";
 import { Check, Clock, Delete, Users } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { QrCard } from "../components/QrCard";
@@ -143,7 +143,7 @@ export function NewGroupFlow() {
         <Header title="Nouveau groupe" onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 16 }}>
-        <TextInput value={name} onChangeText={setName} placeholder="Nom du groupe" placeholderTextColor={colors.muted} style={{ height: 48, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }} />
+        <TextInput value={name} onChangeText={setName} placeholder="Nom du groupe" placeholderTextColor={colors.muted} returnKeyType="done" blurOnSubmit onSubmitEditing={() => Keyboard.dismiss()} style={{ height: 48, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }} />
       </View>
       <ScrollView>
         {users.map((u) => {
@@ -533,7 +533,7 @@ export function IntroduceScreen({ toUserId }: { toUserId: string }) {
       </GlassHeader>
       <View style={{ padding: 16, gap: 12 }}>
         <Text style={{ color: colors.fg }}>Présenter {user?.displayName}</Text>
-        <TextInput value={note} onChangeText={setNote} placeholder="Note" placeholderTextColor={colors.muted} style={{ height: 80, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, padding: 12 }} />
+        <TextInput value={note} onChangeText={setNote} placeholder="Note" placeholderTextColor={colors.muted} returnKeyType="done" blurOnSubmit onSubmitEditing={() => Keyboard.dismiss()} style={{ height: 80, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, padding: 12 }} />
         <Btn label="Envoyer" onPress={pop} />
       </View>
     </ScreenRoot>

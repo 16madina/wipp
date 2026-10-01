@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, View, type KeyboardEvent } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
 import { signinOtp, signupPhone, usernameAvailable } from "../lib/auth-api";
 import {
@@ -39,7 +40,62 @@ const ONB: { kind: "tap" | "globe" | "privacy" | "together"; title: I18nKey; acc
   { kind: "together", title: "onb4Title", accent: "onb4Accent", body: "onb4Body" },
 ];
 
-function Artwork({ source, children }: { source: number; children?: ReactNode }) {
+type Measurable = { measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void };
+
+function Artwork({ source, children }: { source: number; children?: ReactNode | ((reveal: (target: Measurable | null) => void) => ReactNode) }) {
+  const insets = useSafeAreaInsets();
+  const active = useRef<Measurable | null>(null);
+  const keyboardTop = useRef<number | null>(null);
+  const currentShift = useRef(0);
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const animateTo = useCallback((next: number, duration = 220) => {
+    currentShift.current = next;
+    Animated.timing(translateY, {
+      toValue: next,
+      duration,
+      useNativeDriver: true,
+    }).start();
+  }, [translateY]);
+
+  const revealActive = useCallback((duration = 220) => {
+    const target = active.current;
+    const top = keyboardTop.current;
+    if (!target || top == null) return;
+    target.measureInWindow((_x, y, _width, height) => {
+      const baseTop = y - currentShift.current;
+      const baseBottom = baseTop + height;
+      const gap = 12;
+      const requiredShift = Math.min(0, top - gap - baseBottom);
+      const safeShift = Math.max(requiredShift, insets.top + gap - baseTop);
+      animateTo(safeShift, duration);
+    });
+  }, [animateTo, insets.top]);
+
+  useEffect(() => {
+    const onFrame = (event: KeyboardEvent) => {
+      keyboardTop.current = event.endCoordinates.screenY;
+      requestAnimationFrame(() => revealActive(event.duration || 220));
+    };
+    const onHide = (event: KeyboardEvent) => {
+      keyboardTop.current = null;
+      animateTo(0, event.duration || 220);
+    };
+    const frameEvent = Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const frameSub = Keyboard.addListener(frameEvent, onFrame);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      frameSub.remove();
+      hideSub.remove();
+    };
+  }, [animateTo, revealActive]);
+
+  const reveal = useCallback((target: Measurable | null) => {
+    active.current = target;
+    requestAnimationFrame(() => revealActive());
+  }, [revealActive]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Image
@@ -48,9 +104,11 @@ function Artwork({ source, children }: { source: number; children?: ReactNode })
         style={{ position: "absolute", zIndex: 0, width: "100%", height: "100%" }}
         contentFit="fill"
       />
-      <View pointerEvents="box-none" style={{ flex: 1, zIndex: 1, elevation: 2 }}>
-        {children}
-      </View>
+      <Animated.View style={{ flex: 1, zIndex: 1, elevation: 2, transform: [{ translateY }] }}>
+        <Pressable onPress={() => Keyboard.dismiss()} style={{ flex: 1 }}>
+          {typeof children === "function" ? children(reveal) : children}
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -136,6 +194,20 @@ function CountrySheet({
 
 function nationalToE164(country: Country, phone: string) {
   return toE164(`${country.dial}${phone.replace(/\D/g, "").replace(/^0+/, "")}`);
+}
+
+/** Keep every auth action reachable while an iOS keyboard is open. */
+function KeyboardDone({ nativeID }: { nativeID: string }) {
+  if (Platform.OS !== "ios") return null;
+  return (
+    <InputAccessoryView nativeID={nativeID}>
+      <View style={{ height: 46, paddingHorizontal: 16, backgroundColor: "#171A22", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.14)", alignItems: "flex-end", justifyContent: "center" }}>
+        <Pressable accessibilityLabel="Fermer le clavier" onPress={() => Keyboard.dismiss()} hitSlop={12}>
+          <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>Terminé</Text>
+        </Pressable>
+      </View>
+    </InputAccessoryView>
+  );
 }
 
 function CheckLine({
@@ -326,8 +398,11 @@ export function PhoneEntryScreen() {
   const [adult, setAdult] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const phoneBlockRef = useRef<View>(null);
+  const phoneAccessoryId = "wipp-phone-entry-keyboard";
 
   async function continueWithPhone() {
+    Keyboard.dismiss();
     if (!legal || !adult || busy) return;
     const normalized = nationalToE164(country, phone);
     if (!normalized) {
@@ -348,38 +423,45 @@ export function PhoneEntryScreen() {
 
   return (
     <Artwork source={authPhone}>
+      {(reveal) => <>
       <Abs t={11.5} l={4} h={6} w={12}>
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
       </Abs>
-      <Abs t={59} l={10} h={5.5} w={80}>
-        <Pressable
-          accessibilityLabel={`Pays : ${country.fr} (${country.dial})`}
-          onPress={() => setMenuOpen(true)}
-          style={{ flex: 1, borderRadius: 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8 }}
-        >
-          <Flag id={country.id} />
-          <Text style={{ flex: 1, color: colors.fg, fontSize: 15 }} numberOfLines={1}>
-            {country.fr}
-          </Text>
-          <Text style={{ color: colors.muted, fontSize: 15 }}>{country.dial}</Text>
-          <ChevronDown size={14} color={colors.muted} />
-        </Pressable>
-      </Abs>
-      <Abs t={69.1} l={10.6} h={6} w={78.8}>
-        <TextInput
-          value={phone}
-          onChangeText={(v) => {
-            setPhone(v);
-            setError("");
-          }}
-          keyboardType="phone-pad"
-          placeholder="(514) 123-4567"
-          placeholderTextColor={colors.muted}
-          underlineColorAndroid="transparent"
-          style={{ flex: 1, color: colors.fg, fontSize: 18, paddingHorizontal: 16, paddingVertical: 0, backgroundColor: "transparent" }}
-        />
+      <Abs t={63.2} l={5.5} h={11.5} w={89}>
+        <View ref={phoneBlockRef} style={{ flex: 1 }}>
+          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
+          <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
+            <Pressable
+              accessibilityLabel={`Pays : ${country.fr} (${country.dial})`}
+              onPress={() => setMenuOpen(true)}
+              hitSlop={8}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 4 }}
+            >
+              <Flag id={country.id} size={15} />
+              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>{country.dial}</Text>
+              <ChevronDown size={14} color={colors.muted} />
+            </Pressable>
+            <TextInput
+              onFocus={() => reveal(phoneBlockRef.current)}
+              value={phone}
+              onChangeText={(v) => {
+                setPhone(v);
+                setError("");
+              }}
+              keyboardType="phone-pad"
+              inputAccessoryViewID={Platform.OS === "ios" ? phoneAccessoryId : undefined}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              placeholder="(514) 123-4567"
+              placeholderTextColor={colors.muted}
+              underlineColorAndroid="transparent"
+              textAlignVertical="center"
+              style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false }}
+            />
+          </View>
+        </View>
       </Abs>
       <Abs t={76.8} l={6} h={10} w={88}>
         <View pointerEvents="none" style={{ flex: 1, borderRadius: 8, backgroundColor: colors.bg }} />
@@ -407,6 +489,8 @@ export function PhoneEntryScreen() {
         <ContinueHit ready={legal && adult} busy={busy} label="Continuer" onPress={() => void continueWithPhone()} />
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
+      <KeyboardDone nativeID={phoneAccessoryId} />
+      </>}
     </Artwork>
   );
 }
@@ -421,8 +505,11 @@ export function LoginScreen() {
   const [adult, setAdult] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const phoneBlockRef = useRef<View>(null);
+  const phoneAccessoryId = "wipp-login-keyboard";
 
   async function tryLogin() {
+    Keyboard.dismiss();
     if (!legal || !adult || busy) return;
     const e164 = nationalToE164(country, phone);
     if (!e164) {
@@ -442,31 +529,39 @@ export function LoginScreen() {
 
   return (
     <Artwork source={authLogin}>
-      <Abs t={61} l={6} h={6} w={88}>
-        <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 10, gap: 8 }}>
-          <Pressable
-            accessibilityLabel={`Pays : ${country.fr} (${country.dial})`}
-            onPress={() => setMenuOpen(true)}
-            hitSlop={8}
-            style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 4 }}
-          >
-            <Flag id={country.id} size={15} />
-            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>{country.dial}</Text>
-            <ChevronDown size={14} color={colors.muted} />
-          </Pressable>
-          <TextInput
-            value={phone}
-            onChangeText={(v) => {
-              setPhone(v);
-              setError("");
-            }}
-            keyboardType="phone-pad"
-            placeholder="(514) 123-4567"
-            placeholderTextColor={colors.muted}
-            underlineColorAndroid="transparent"
-            textAlignVertical="center"
-            style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false }}
-          />
+      {(reveal) => <>
+      <Abs t={57.2} l={5.5} h={10.5} w={89}>
+        <View ref={phoneBlockRef} style={{ flex: 1 }}>
+          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
+          <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
+            <Pressable
+              accessibilityLabel={`Pays : ${country.fr} (${country.dial})`}
+              onPress={() => setMenuOpen(true)}
+              hitSlop={8}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 4 }}
+            >
+              <Flag id={country.id} size={15} />
+              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>{country.dial}</Text>
+              <ChevronDown size={14} color={colors.muted} />
+            </Pressable>
+            <TextInput
+              onFocus={() => reveal(phoneBlockRef.current)}
+              value={phone}
+              onChangeText={(v) => {
+                setPhone(v);
+                setError("");
+              }}
+              keyboardType="phone-pad"
+              inputAccessoryViewID={Platform.OS === "ios" ? phoneAccessoryId : undefined}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              placeholder="(514) 123-4567"
+              placeholderTextColor={colors.muted}
+              underlineColorAndroid="transparent"
+              textAlignVertical="center"
+              style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false }}
+            />
+          </View>
         </View>
       </Abs>
       <Abs t={67.15} l={5} h={6.5} w={90}>
@@ -502,6 +597,8 @@ export function LoginScreen() {
         <Pressable accessibilityLabel="Je n’ai pas encore de compte" onPress={() => push({ name: "phone-entry" })} style={{ flex: 1 }} />
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
+      <KeyboardDone nativeID={phoneAccessoryId} />
+      </>}
     </Artwork>
   );
 }
@@ -516,6 +613,8 @@ export function SmsReferenceScreen() {
   const [busy, setBusy] = useState(false);
   const [seconds, setSeconds] = useState(45);
   const [noAccount, setNoAccount] = useState<{ idToken: string; phone: string } | null>(null);
+  const otpBlockRef = useRef<View>(null);
+  const codeAccessoryId = "wipp-sms-code-keyboard";
   const signin = (pendingMode() ?? pending.mode) === "signin";
   useEffect(() => {
     if (seconds <= 0) return;
@@ -524,11 +623,12 @@ export function SmsReferenceScreen() {
   }, [seconds]);
 
   async function validate() {
+    Keyboard.dismiss();
     if (code.length !== 6 || busy) return;
     setBusy(true);
     setError("");
     setNoAccount(null);
-    if (isTestSigninPassword(code)) {
+    if (isTestSigninPassword(code, phone)) {
       enterWithoutServer(phone);
       clearPending();
       setBusy(false);
@@ -594,6 +694,7 @@ export function SmsReferenceScreen() {
 
   return (
     <Artwork source={authSms}>
+      {(reveal) => <>
       <Abs t={8} l={4} h={6} w={12}>
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} color={colors.fg} />
@@ -621,26 +722,32 @@ export function SmsReferenceScreen() {
         </Pressable>
       </Abs>
       <Abs t={60} l={7} h={9} w={86}>
-        <Pressable onPress={() => {}} style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
-          {Array.from({ length: 6 }, (_, i) => (
-            <View key={i} style={{ width: "13.5%", alignItems: "center", justifyContent: "center", borderRadius: 12 }}>
-              <Text style={{ fontSize: 28, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{code[i] ?? ""}</Text>
-            </View>
-          ))}
-        </Pressable>
-        <TextInput
-          value={code}
-          onChangeText={(v) => {
-            setCode(v.replace(/\D/g, "").slice(0, 6));
-            setError("");
-          }}
-          keyboardType="number-pad"
-          maxLength={6}
-          autoFocus
-          textContentType="oneTimeCode"
-          autoComplete="sms-otp"
-          style={{ position: "absolute", opacity: 0.02, width: "100%", height: "100%", color: colors.fg }}
-        />
+        <View ref={otpBlockRef} style={{ flex: 1 }}>
+          <Pressable onPress={() => {}} style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <View key={i} style={{ width: "13.5%", alignItems: "center", justifyContent: "center", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.32)", backgroundColor: "rgba(9,15,28,0.9)" }}>
+                <Text style={{ fontSize: 28, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{code[i] ?? ""}</Text>
+              </View>
+            ))}
+          </Pressable>
+          <TextInput
+            onFocus={() => reveal(otpBlockRef.current)}
+            value={code}
+            onChangeText={(v) => {
+              setCode(v.replace(/\D/g, "").slice(0, 6));
+              setError("");
+            }}
+            keyboardType="number-pad"
+            inputAccessoryViewID={Platform.OS === "ios" ? codeAccessoryId : undefined}
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+            maxLength={6}
+            autoFocus
+            textContentType="oneTimeCode"
+            autoComplete="sms-otp"
+            style={{ position: "absolute", opacity: 0.02, width: "100%", height: "100%", color: colors.fg }}
+          />
+        </View>
       </Abs>
       {error ? (
         <Abs t={70} l={8} h={5} w={84}>
@@ -678,6 +785,8 @@ export function SmsReferenceScreen() {
       <Abs t={88} l={22} h={5} w={56}>
         <Pressable accessibilityLabel="Modifier mon numéro" onPress={pop} style={{ flex: 1 }} />
       </Abs>
+      <KeyboardDone nativeID={codeAccessoryId} />
+      </>}
     </Artwork>
   );
 }
@@ -695,6 +804,10 @@ export function ProfileReferenceScreen() {
   const [checkedUsername, setCheckedUsername] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const firstNameBlockRef = useRef<View>(null);
+  const lastNameBlockRef = useRef<View>(null);
+  const usernameBlockRef = useRef<View>(null);
+  const profileAccessoryId = "wipp-profile-keyboard";
   const okUser = /^[a-z0-9_]{3,20}$/.test(username);
   const countryLabel = countryById(country);
 
@@ -721,6 +834,7 @@ export function ProfileReferenceScreen() {
   }, [username, okUser]);
 
   async function finish() {
+    Keyboard.dismiss();
     const verified = getVerifiedSignup();
     if (!verified || verified.phone !== phone) {
       setError("Code SMS expiré. Recommence la vérification.");
@@ -772,29 +886,38 @@ export function ProfileReferenceScreen() {
 
   return (
     <Artwork source={authProfile}>
+      {(reveal) => <>
       <Abs t={8} l={4} h={5} w={12}>
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
       </Abs>
       <Abs t={53.8} l={10.5} h={4.4} w={37}>
-        <TextInput value={firstName} onChangeText={setFirst} placeholder="Prénom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, backgroundColor: colors.authInput }} />
+        <View ref={firstNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
+          <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Prénom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8 }} />
+        </View>
       </Abs>
       <Abs t={53.8} l={52} h={4.4} w={37}>
-        <TextInput value={lastName} onChangeText={setLast} placeholder="Nom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, backgroundColor: colors.authInput }} />
+        <View ref={lastNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
+          <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Nom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8 }} />
+        </View>
       </Abs>
       <Abs t={61.6} l={10} h={4.3} w={60}>
-        <TextInput
-          value={username}
-          onChangeText={(v) => {
-            setUser(v.toLowerCase().replace(/[^a-z0-9_]/g, ""));
-            setAvailability(null);
-          }}
-          placeholder="@pseudo"
-          placeholderTextColor={colors.muted}
-          autoCapitalize="none"
-          style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, backgroundColor: colors.authInput }}
-        />
+        <View ref={usernameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
+          <TextInput
+            onFocus={() => reveal(usernameBlockRef.current)}
+            value={username}
+            onChangeText={(v) => {
+              setUser(v.toLowerCase().replace(/[^a-z0-9_]/g, ""));
+              setAvailability(null);
+            }}
+            placeholder="@pseudo"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined}
+            style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8 }}
+          />
+        </View>
       </Abs>
       <Abs t={62.7} l={72} h={3} w={18}>
         <Text style={{ fontSize: 11, color: availability === "taken" ? colors.danger : colors.success }}>
@@ -816,6 +939,8 @@ export function ProfileReferenceScreen() {
           {busy ? <ActivityIndicator color={colors.accent} /> : null}
         </Pressable>
       </Abs>
+      <KeyboardDone nativeID={profileAccessoryId} />
+      </>}
     </Artwork>
   );
 }

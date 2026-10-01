@@ -39,6 +39,7 @@ import {
 import { useWippStore } from "../lib/store";
 import { colors, layout } from "../theme";
 import { SurpriseReveal } from "./SurpriseReveal";
+import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
 
 const CONTENT = [
@@ -150,6 +151,11 @@ export function ShareSurpriseSheet({
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [animCat, setAnimCat] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
+  const [previewPlay, setPreviewPlay] = useState<{ id: string; n: number } | null>(null);
+  const previewSequence = useRef(0);
+  useEffect(() => {
+    if (!preview) setPreviewPlay(null);
+  }, [preview]);
   const [assist, setAssist] = useState(false);
   const [occasion, setOccasion] = useState("");
   const [tone, setTone] = useState<(typeof TONES)[number]>("Tendre");
@@ -647,12 +653,13 @@ export function ShareSurpriseSheet({
               </View>
               <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>Surprise ✨</Text>
               <View style={{ marginTop: 12, alignItems: "center" }}>
-                <SurpriseReveal demo surprise={draft()} />
+                <SurpriseReveal demo surprise={draft()} onPlayAnimation={(id) => setPreviewPlay({ id, n: ++previewSequence.current })} />
               </View>
               <Press onPress={() => setPreview(false)} style={{ marginTop: 16, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ color: colors.surpriseBright, fontFamily: "Inter_600SemiBold" }}>Retour à ma surprise</Text>
               </Press>
             </View>
+            <SurpriseAnimOverlay centered animationId={previewPlay?.id ?? null} playKey={previewPlay?.n ?? 0} onDone={() => setPreviewPlay(null)} />
           </View>
         </Modal>
     </>

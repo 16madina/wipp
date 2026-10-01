@@ -30,13 +30,17 @@ const MOTIFS: Record<string, string> = {
 
 type Phase = "sealed" | "scratch" | "open";
 
-export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; demo?: boolean; onReveal?: () => void }) {
+export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surprise: Surprise; demo?: boolean; onReveal?: () => void; onPlayAnimation?: (id: string) => void }) {
   const scratch = surprise.surpriseType === "scratch";
   const [phase, setPhase] = useState<Phase>("sealed");
   const [left, setLeft] = useState(surprise.surpriseOptions.countdown?.seconds ?? 10);
   const [playing, setPlaying] = useState(false);
   const [playKey, setPlayKey] = useState(0);
   const started = useRef(false);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+  }, []);
   const finish = useCallback(() => setPlaying(false), []);
   const art = wippSrc(surpriseKindArt[surprise.surpriseType]);
   const design = findDesign(surprise.surpriseType, surprise.designId);
@@ -54,10 +58,18 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
   function playChosenAnimation() {
     if (!surprise.animationId || started.current) return;
     started.current = true;
-    setTimeout(() => {
+    revealTimer.current = setTimeout(() => {
+      playAnimation();
+    }, SURPRISE_REVEAL_PAUSE_MS);
+  }
+
+  function playAnimation() {
+    if (!surprise.animationId) return;
+    if (onPlayAnimation) onPlayAnimation(surprise.animationId);
+    else {
       setPlayKey((n) => n + 1);
       setPlaying(true);
-    }, SURPRISE_REVEAL_PAUSE_MS);
+    }
   }
 
   function showMessage() {
@@ -146,9 +158,9 @@ export function SurpriseReveal({ surprise, onReveal }: { surprise: Surprise; dem
         <Press
           onPress={() => {
             if (playing) return;
-            setPlayKey((n) => n + 1);
-            setPlaying(true);
+            playAnimation();
           }}
+          accessibilityLabel="Rejouer l’animation de la surprise"
           style={{ marginTop: 4, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
         >
           <Sparkles size={19} color={colors.surpriseGold} />

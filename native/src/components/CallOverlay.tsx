@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text } from "react-native";
+import { Platform, View, Text } from "react-native";
 import { Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
-import { RTCView } from "@livekit/react-native-webrtc";
 import { Audio } from "expo-av";
 import { Camera } from "expo-camera";
 import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume2 } from "lucide-react-native";
@@ -20,6 +19,11 @@ import {
   type CallPhase,
 } from "../lib/calls/session";
 import { endSystemCall, setupCallKeep, showSystemIncoming } from "../lib/calls/callkeep";
+
+// The native WebRTC renderer cannot be imported by React Native Web.
+const RTCView = Platform.OS === "web"
+  ? View
+  : (require("@livekit/react-native-webrtc") as typeof import("@livekit/react-native-webrtc")).RTCView;
 
 function streamURL(track: { mediaStream?: unknown } | null) {
   const stream = track?.mediaStream as { toURL?: () => string } | undefined;

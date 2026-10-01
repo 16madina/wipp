@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { FlatList, ScrollView, Text, TextInput, View } from "react-native";
+import { AccessibilityInfo, Animated, FlatList, ScrollView, Text, TextInput, View } from "react-native";
 import { Clock, Gift, Search, Smile, Sparkles, User } from "lucide-react-native";
 import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
@@ -44,6 +44,9 @@ export function StickerTray({
   const [wippie, setWippie] = useState<Wippie>("tous");
   const [search, setSearch] = useState(false);
   const [q, setQ] = useState("");
+  const [closing, setClosing] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const slideY = useRef(new Animated.Value(0)).current;
   const moji = stickersInPack("moji");
   const moments = stickersInPack("ani");
   const wippies = wippieStickers(wippie);
@@ -72,9 +75,31 @@ export function StickerTray({
     if (tab === "pop") prefetchMoments();
   }, [tab]);
 
+  useEffect(() => {
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      if (mounted) setReduceMotion(value);
+    });
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, []);
+
+  function dismiss(after: () => void) {
+    if (closing) return;
+    setClosing(true);
+    if (reduceMotion) {
+      after();
+      return;
+    }
+    Animated.timing(slideY, { toValue: trayH, duration: 170, useNativeDriver: true }).start(after);
+  }
+
   function pick(s: StickerDef) {
     haptic("select");
-    onPick(s);
+    dismiss(() => onPick(s));
   }
 
   function goto(next: Tab) {
@@ -83,7 +108,7 @@ export function StickerTray({
   }
 
   return (
-    <View
+    <Animated.View
       style={{
         height: trayH,
         backgroundColor: "rgba(18,23,34,0.98)",
@@ -91,6 +116,7 @@ export function StickerTray({
         borderTopColor: colors.hair,
         paddingHorizontal: 12,
         paddingTop: 6,
+        transform: [{ translateY: slideY }],
       }}
     >
       <View style={{ alignItems: "center", marginBottom: 6 }}>
@@ -154,7 +180,7 @@ export function StickerTray({
           <Press
             onPress={() => {
               haptic("select");
-              onSurprise();
+              dismiss(onSurprise);
             }}
             style={{ width: "100%", borderRadius: 16, backgroundColor: colors.navy, padding: 12, borderWidth: 1, borderColor: colors.accent }}
           >
@@ -173,7 +199,7 @@ export function StickerTray({
               key={item.name}
               onPress={() => {
                 haptic("select");
-                onSurprise();
+                dismiss(onSurprise);
               }}
               style={{ width: "48%", borderRadius: 16, backgroundColor: colors.navy, padding: 12, borderWidth: 1, borderColor: colors.hair }}
             >
@@ -253,6 +279,6 @@ export function StickerTray({
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 }

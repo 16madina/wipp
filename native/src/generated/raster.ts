@@ -90,6 +90,8 @@ export const raster = {
   "fx/surprise/anims/amour-fusion.png": require("../../assets/wipp/fx/surprise/anims/amour-fusion.png"),
   "fx/surprise/anims/amour-fusion.webp": require("../../assets/wipp/fx/surprise/anims/amour-fusion.png"),
   "fx/surprise/anims/amour-monstre.png": require("../../assets/wipp/fx/surprise/anims/amour-monstre.png"),
+  "fx/surprise/anims/amour-pluie-cristal.png": require("../../assets/wipp/fx/surprise/anims/amour-pluie-cristal.png"),
+  "fx/surprise/anims/amour-pluie-cristal.webp": require("../../assets/wipp/fx/surprise/anims/amour-pluie-cristal.webp"),
   "fx/surprise/anims/animation-amitie.jpg": require("../../assets/wipp/fx/surprise/anims/animation-amitie.jpg"),
   "fx/surprise/anims/animation-amour.jpg": require("../../assets/wipp/fx/surprise/anims/animation-amour.jpg"),
   "fx/surprise/anims/animation-beaute.jpg": require("../../assets/wipp/fx/surprise/anims/animation-beaute.jpg"),

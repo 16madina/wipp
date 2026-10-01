@@ -16,6 +16,13 @@ const CATS = ["all", "auto", "home", "goods", "jobs", "services"] as const;
 const GEO = { lat: 45.531, lng: -73.518 };
 type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
+const HUB_BACKGROUNDS = {
+  listings: require("../../assets/wipp/media/apt.webp"),
+  utilities: require("../../assets/wipp/media/chair.webp"),
+  shops: require("../../assets/wipp/media/shop-chen-hero.webp"),
+  lifestyle: require("../../assets/wipp/media/soccer.webp"),
+} as const;
+
 function shopCatLabel(cat: ShopCategory, t: ReturnType<typeof useT>) {
   return t(SHOP_CAT_KEYS[cat]);
 }
@@ -141,20 +148,24 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
     .sort((a, b) => a.meters - b.meters)
     .slice(0, 6);
   const hubs = [
-    { icon: Tag, title: t("hubListings"), sub: t("hubListingsSub"), go: () => go("listings") },
-    { icon: Cross, title: t("hubServices"), sub: t("hubServicesSub"), go: () => go("utilities") },
-    { icon: Store, title: t("hubShops"), sub: t("hubShopsSub"), go: () => go("shops") },
-    { icon: Calendar, title: t("hubEvents"), sub: t("hubEventsSub"), go: () => go("lifestyle") },
+    { icon: Tag, title: t("hubListings"), sub: t("hubListingsSub"), kind: "listings" as const, go: () => go("listings") },
+    { icon: Cross, title: t("hubServices"), sub: t("hubServicesSub"), kind: "utilities" as const, go: () => go("utilities") },
+    { icon: Store, title: t("hubShops"), sub: t("hubShopsSub"), kind: "shops" as const, go: () => go("shops") },
+    { icon: Calendar, title: t("hubEvents"), sub: t("hubEventsSub"), kind: "lifestyle" as const, go: () => go("lifestyle") },
   ];
   return (
     <View style={{ paddingHorizontal: 16 }}>
       <Text style={{ fontSize: 13, lineHeight: 18, color: colors.muted }}>{t("exploreSplit")}</Text>
-      <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
         {hubs.map((h) => (
-          <Press key={h.title} onPress={h.go} style={{ width: hubW, minHeight: 100, borderRadius: 16, backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
-            <h.icon size={20} color={colors.accent} />
-            <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{h.title}</Text>
-            <Text style={{ marginTop: 2, fontSize: 11, color: colors.muted }}>{h.sub}</Text>
+          <Press key={h.title} onPress={h.go} style={{ width: hubW, minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
+            <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
+            <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
+            <View style={{ zIndex: 1 }}>
+              <h.icon size={20} color={colors.accent} />
+              <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{h.title}</Text>
+              <Text style={{ marginTop: 2, fontSize: 11, color: colors.muted }}>{h.sub}</Text>
+            </View>
           </Press>
         ))}
       </View>

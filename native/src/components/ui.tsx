@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { Keyboard, Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { haptic } from "../lib/haptics";
@@ -294,6 +294,9 @@ export function SearchField({
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={colors.muted}
+      returnKeyType="search"
+      blurOnSubmit
+      onSubmitEditing={() => Keyboard.dismiss()}
       style={{
         height: 44,
         borderRadius: 12,
@@ -401,6 +404,9 @@ export function Field({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}
+        returnKeyType={multiline ? "default" : "done"}
+        blurOnSubmit={!multiline}
+        onSubmitEditing={() => Keyboard.dismiss()}
         style={{
           minHeight: multiline ? 88 : 48,
           borderRadius: 8,

@@ -70,6 +70,14 @@ export const countdownChoices = [
 
 export const amourAnimations: SurpriseAnimationItem[] = [
   {
+    id: "amour-pluie-cristal",
+    label: "Pluie d’amour",
+    art: "fx/surprise/anims/amour-pluie-cristal.png",
+    anim: "fx/surprise/anims/amour-pluie-cristal.webp",
+    enter: "pop",
+    durationMs: 7042,
+  },
+  {
     id: "amour-fusion",
     label: "Fusion",
     art: "fx/surprise/anims/amour-fusion.png",

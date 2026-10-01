@@ -25,6 +25,7 @@ import { ReceiptTicks } from "../components/ReceiptTicks";
 import { ShareSurpriseSheet } from "../components/ShareSurpriseSheet";
 import { StickerTray } from "../components/StickerTray";
 import { SurpriseReveal } from "../components/SurpriseReveal";
+import { SurpriseAnimOverlay } from "../components/SurpriseAnimOverlay";
 import { SwipeableBubble } from "../components/SwipeableBubble";
 import { VoiceHoldButton } from "../components/VoiceHoldButton";
 import { mentionIdsInText } from "../lib/lot7/api";
@@ -148,6 +149,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const [viewOnceProtect, setViewOnceProtect] = useState(false);
   const [viewer, setViewer] = useState<{ items: MediaItem[]; start: number } | null>(null);
   const [momentPlay, setMomentPlay] = useState<{ id: string; n: number } | null>(null);
+  const [surprisePlay, setSurprisePlay] = useState<{ id: string; n: number } | null>(null);
+  const surpriseSequence = useRef(0);
   const [jumpId, setJumpId] = useState<string | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
   const seenMoment = useRef<string | null>(null);
@@ -629,7 +632,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   </Text>
                 </View>
               ) : null}
-              {m.type === "scratch" ? <SurpriseReveal surprise={surpriseFromMessage(m)} onReveal={() => useWippStore.getState().markScratch(chatId, m.id)} /> : null}
+              {m.type === "scratch" ? <SurpriseReveal surprise={surpriseFromMessage(m)} onReveal={() => useWippStore.getState().markScratch(chatId, m.id)} onPlayAnimation={(id) => setSurprisePlay({ id, n: ++surpriseSequence.current })} /> : null}
               {m.type === "shop" ? (
                 <View style={{ width: 220 }}>
                   {m.imageUrl ? <Image source={{ uri: m.imageUrl }} style={{ width: "100%", height: 110, borderRadius: 10, marginBottom: 8 }} contentFit="cover" /> : (
@@ -900,6 +903,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 <StickerTray
                   onPick={(s) => {
                     sendMessage(chatId, { type: "sticker", text: s.labelFr, stickerId: s.id });
+                    setStickerBar(false);
                   }}
                   onSurprise={() => {
                     setStickerBar(false);
@@ -911,6 +915,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           </View>
         )}
       </KeyboardAvoidingView>
+      <SurpriseAnimOverlay centered animationId={surprisePlay?.id ?? null} playKey={surprisePlay?.n ?? 0} onDone={() => setSurprisePlay(null)} />
       <WippMomentOverlay stickerId={momentPlay?.id ?? null} playKey={momentPlay?.n ?? 0} onDone={() => setMomentPlay(null)} />
       <ShareSurpriseSheet
         open={shareOpen}
@@ -921,7 +926,10 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           else if (label === "Caméra") void pickCamera();
           else if (label === "Document") void pickDocument();
           else if (label === "GIF") setGifOpen(true);
-          else if (label === "Stickers") setStickerBar(true);
+          else if (label === "Stickers") {
+            setShareOpen(false);
+            setStickerBar(true);
+          }
           else if (label === "Contact" && peer) {
             sendText(chatId, `👤 ${peer.displayName} @${peer.username}`);
           }
@@ -936,7 +944,10 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             duration: surprise.surpriseOptions.countdown?.seconds,
           })
         }
-        onStickers={() => setStickerBar(true)}
+        onStickers={() => {
+          setShareOpen(false);
+          setStickerBar(true);
+        }}
       />
       <Modal visible={gifOpen} transparent animationType="slide" onRequestClose={() => setGifOpen(false)}>
         <Press onPress={() => setGifOpen(false)} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
