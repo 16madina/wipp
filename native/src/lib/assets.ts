@@ -19,3 +19,4 @@ export const logoGold = require("../../assets/auth/wipp-logo-gold.png");
 export const brandOfficial = require("../../assets/wipp/brand/wipp-official.png");
 export const bootVideo = require("../../assets/wipp/brand/wipp-boot.mp4");
 export const bootPoster = require("../../assets/wipp/brand/wipp-boot.jpg");
+export const composerSticker = require("../../assets/composer/sticker.png");

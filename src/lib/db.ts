@@ -18,6 +18,27 @@ const databaseUrl =
  */
 export const dbSource: DbSource = databaseUrl ? "neon" : "pglite";
 
+/** Vercel production and `NODE_ENV=production` must not fall back to PGLite. */
+export function isProductionRuntime() {
+  return process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+}
+
+export class DatabaseConfigError extends Error {
+  readonly code = "config_error";
+  constructor() {
+    super("DATABASE_URL est requis en production.");
+    this.name = "DatabaseConfigError";
+  }
+}
+
+export function productionDatabaseMissing() {
+  return isProductionRuntime() && !databaseUrl;
+}
+
+function assertProductionDatabase() {
+  if (productionDatabaseMissing()) throw new DatabaseConfigError();
+}
+
 /**
  * Minimal shared SQL surface, satisfied by both Neon and PGLite. Both the
  * tagged-template and `.query()` forms resolve to an array of row objects:
@@ -176,6 +197,7 @@ async function createPgliteSql(): Promise<Sql> {
 let sqlPromise: Promise<Sql> | null = null;
 
 async function createSql(): Promise<Sql> {
+  assertProductionDatabase();
   if (typeof window !== "undefined") {
     throw new Error(
       "@/lib/db is server-only — call getSql() from a createServerFn handler " +
@@ -226,6 +248,7 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
  * module kick it off immediately (see bottom of file).
  */
 export function ensureDbReady(): Promise<void> {
+  if (productionDatabaseMissing()) return Promise.reject(new DatabaseConfigError());
   if (dbSource !== "pglite") return Promise.resolve();
   return getSql().then(() => undefined);
 }
@@ -235,7 +258,7 @@ export function ensureDbReady(): Promise<void> {
 const globalBoot = globalThis as typeof globalThis & {
   __pgBootstrapPromise__?: Promise<void>;
 };
-if (typeof window === "undefined" && dbSource === "pglite") {
+if (typeof window === "undefined" && dbSource === "pglite" && !isProductionRuntime()) {
   globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
     globalBoot.__pgBootstrapPromise__ = undefined;
     console.error("[db] PGLite bootstrap failed:", err);

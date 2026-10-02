@@ -1,19 +1,8 @@
-import { confirmSmsCode, explainSmsError, hasPendingSms, sendSmsCode, toE164 } from "./firebase-phone";
+import { confirmSmsCode, currentFirebaseUser, explainSmsError, hasPendingSms, sendSmsCode, toE164 } from "./firebase-phone";
 
 export type AuthMode = "signup" | "signin";
 
-/** Dev-only bypass. Production always requires the SMS code. */
-export const TEST_SIGNIN_PASSWORD = "160184";
-
-export function isTestPhone(phone: string) {
-  if (typeof __DEV__ === "undefined" || !__DEV__) return false;
-  return toE164(phone) === "+18195803940";
-}
-
-export function isTestSigninPassword(code: string, phone: string) {
-  if (!isTestPhone(phone)) return false;
-  return code.replace(/\s/g, "") === TEST_SIGNIN_PASSWORD;
-}
+export { toE164 };
 
 type Pending = {
   phone: string;
@@ -21,9 +10,9 @@ type Pending = {
 };
 
 let pending: Pending | null = null;
-let verifiedSignup: { idToken: string; phone: string } | null = null;
+let verifiedSignup: { phone: string } | null = null;
 
-export function setVerifiedSignup(value: { idToken: string; phone: string }) {
+export function setVerifiedSignup(value: { phone: string }) {
   verifiedSignup = value;
 }
 export function getVerifiedSignup() {
@@ -33,11 +22,6 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return "Numéro invalide. Vérifie l'indicatif et le numéro.";
-  // Local preview only: never request an SMS or create a server session.
-  if (isTestPhone(phone)) {
-    pending = { phone, mode };
-    return null;
-  }
   try {
     await sendSmsCode(phone);
     pending = { phone, mode };
@@ -60,7 +44,7 @@ export function pendingMode(): AuthMode | null {
   return pending?.mode ?? null;
 }
 
-export async function verifyPhoneCode(code: string): Promise<{ idToken: string; phone: string } | { error: string }> {
+export async function verifyPhoneCode(code: string): Promise<{ phone: string } | { error: string }> {
   if (!pending) return { error: "Code expiré. Renvoie un nouveau code." };
   if (!hasPendingSms()) {
     return {
@@ -69,8 +53,11 @@ export async function verifyPhoneCode(code: string): Promise<{ idToken: string; 
     };
   }
   try {
-    const idToken = await confirmSmsCode(code);
-    return { idToken, phone: pending.phone };
+    await confirmSmsCode(code);
+    if (!currentFirebaseUser()) {
+      return { error: "Code SMS incorrect ou expiré. Utilise le dernier texto reçu — pas ton code WIPP." };
+    }
+    return { phone: pending.phone };
   } catch {
     return { error: "Code SMS incorrect ou expiré. Utilise le dernier texto reçu — pas ton code WIPP." };
   }

@@ -28,7 +28,7 @@ function SupportPage() {
         <h2>Liens utiles</h2>
         <ul>
           <li>
-            <Link to="/connect">Lier le web à ton téléphone</Link>
+            <Link to="/connect" search={{ code: undefined }}>Lier le web à ton téléphone</Link>
           </li>
           <li>
             <Link to="/privacy">Politique de confidentialité</Link>

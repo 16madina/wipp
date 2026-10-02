@@ -1,10 +1,4 @@
 import { supabase } from "./supabase";
-import { callServerFn } from "./server-fn";
-
-const FN = {
-  sendConnectionRequest: "9bc765a9e23c12b8b7b6f54798f9e4f1830825ffad7d6e38a6f5f4a11c1f4b76",
-  respondConnectionRequest: "b01d8afddd07857f97628d27ebfe1f4187486e7db4efb56263cfa4ed72eea727",
-} as const;
 
 export type RealRequest = {
   id: string;
@@ -59,9 +53,10 @@ export async function listIncomingRequests(): Promise<RealRequest[]> {
 
 export async function sendRequest(username: string, via: "request" | "qr" | "touch" = "request"): Promise<string> {
   const clean = username.replace(/^@/, "").trim().toLowerCase();
-  const res = await callServerFn<{ status: string }>(FN.sendConnectionRequest, {
-    recipientUsername: clean,
-    via,
+  const { wippApi } = await import("./proximity/wipp-session");
+  const res = await wippApi<{ status: string }>("connections/requests", {
+    method: "POST",
+    body: JSON.stringify({ username: clean, via }),
   });
   try {
     const { wippApi } = await import("./proximity/wipp-session");
@@ -76,7 +71,11 @@ export async function sendRequest(username: string, via: "request" | "qr" | "tou
 }
 
 export async function respondRequest(id: string, action: "accept" | "decline" | "ignore"): Promise<string> {
-  const res = await callServerFn<{ status: string }>(FN.respondConnectionRequest, { id, action });
+  const { wippApi } = await import("./proximity/wipp-session");
+  const res = await wippApi<{ status: string }>(`connections/requests/${id}`, {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
   return res.status;
 }
 

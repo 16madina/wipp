@@ -45,7 +45,9 @@ import {
   unlockChatFromPrivate,
 } from "../lib/private-vault";
 import { pushProtect } from "../lib/screen-protection";
+import { orderedOtherStoryUsers, storyRing, type StoryRing } from "../lib/story-status";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
+import type { StoryItem } from "../lib/types";
 import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
 import { colors, layout } from "../theme";
@@ -65,7 +67,6 @@ export function ChatsScreen() {
   const shops = useWippStore((s) => s.shops);
   const storyRows = useWippStore((s) => s.stories);
   const stories = serverConnected ? storyRows.filter((story) => story.id.startsWith("sty_")) : storyRows;
-  const viewed = useWippStore((s) => s.viewedStories);
   const pending = useWippStore(
     (s) =>
       s.requests.filter((r) => r.status === "pending").length +
@@ -110,8 +111,8 @@ export function ChatsScreen() {
     .reduce((n, c) => n + (c.unread || 0), 0);
 
   const storyUsers = useMemo(
-    () => [...new Set(stories.filter((s) => s.userId !== "me" && isStoryLive(s, now) && !blockedIds.includes(s.userId)).map((s) => s.userId))],
-    [stories, now, blockedIds],
+    () => orderedOtherStoryUsers(stories.filter((story) => !blockedIds.includes(story.userId))),
+    [stories, blockedIds],
   );
   const myStory = stories.filter((s) => s.userId === "me" && isStoryLive(s, now)).length > 0;
 
@@ -163,7 +164,7 @@ export function ChatsScreen() {
       </GlassHeader>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8, gap: 16 }}>
-          <Press onPress={() => push({ name: "new-story" })} style={{ width: 64, alignItems: "center" }}>
+          <Press accessibilityLabel={t("addStory")} onPress={() => push({ name: "new-story" })} style={{ width: 64, alignItems: "center" }}>
             <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderStyle: "dashed", borderColor: "rgba(139,147,167,0.6)", alignItems: "center", justifyContent: "center" }}>
               <Plus size={24} color={colors.muted} strokeWidth={2.5} />
             </View>
@@ -171,22 +172,21 @@ export function ChatsScreen() {
               {t("storyAddShort")}
             </Text>
           </Press>
-          <Press onPress={() => push(myStory ? { name: "stories", userId: "me" } : { name: "new-story" })} style={{ width: 64, alignItems: "center" }}>
-            <Avatar user={me} size={56} ring={myStory ? "accent" : "none"} />
+          <Press onPress={() => { if (myStory) push({ name: "stories", userId: "me" }); }} style={{ width: 64, alignItems: "center" }}>
+            <Avatar user={me} size={56} ring={storyRing(stories, "me")} />
             <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 11, color: colors.muted, width: "100%", textAlign: "center" }}>
               {t("yourStory")}
             </Text>
           </Press>
           {storyUsers.map((id) => {
             const u = users[id];
-            const lastViewed = viewed[id] ?? 0;
-            const unseen = stories.some((s) => s.userId === id && isStoryLive(s, now) && s.createdAt > lastViewed);
+            const ring = storyRing(stories, id);
             const withMusic = stories.some((s) => s.userId === id && isStoryLive(s, now) && s.music);
             const withVideo = stories.some((s) => s.userId === id && isStoryLive(s, now) && s.type === "video");
             return (
               <Press key={id} onPress={() => push({ name: "stories", userId: id })} style={{ width: 64, alignItems: "center" }}>
                 <View>
-                  <Avatar user={u} size={56} ring={unseen ? "accent" : "muted"} />
+                  <Avatar user={u} size={56} ring={ring === "none" ? "muted" : ring} />
                   {withVideo || withMusic ? (
                     <View style={{ position: "absolute", right: -2, bottom: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                       {withVideo ? <Play size={12} color={colors.accentFg} /> : <Music size={12} color={colors.accentFg} />}
@@ -236,6 +236,7 @@ export function ChatsScreen() {
               onMenu={() => setMenuChatId(chat.id)}
               users={users}
               shops={shops}
+              stories={stories}
               verifiedIds={verifiedIds}
               lang={lang}
               now={now}
@@ -320,6 +321,7 @@ function ChatRow({
   onMenu,
   users,
   shops,
+  stories,
   verifiedIds,
   lang,
   now,
@@ -330,15 +332,19 @@ function ChatRow({
   onMenu: () => void;
   users: ReturnType<typeof useWippStore.getState>["users"];
   shops: Shop[];
+  stories: StoryItem[];
   verifiedIds: string[];
   lang: "fr" | "en";
   now: number;
   draft?: string;
 }) {
   const t = useT();
+  const push = useWippStore((s) => s.push);
   const peer = chatPeer(chat, users);
   const shop = chat.shopId ? shops.find((s) => s.id === chat.shopId) : undefined;
   const mineShop = Boolean(shop && shop.ownerId === "me");
+  const personStory = Boolean(peer && chat.type !== "group" && !(shop && !mineShop));
+  const ring: StoryRing = personStory && peer ? storyRing(stories, peer.id) : "none";
   const groupUsers = chat.participantIds.filter((id) => id !== "me").map((id) => users[id]);
   const sealed = isChatSealed(chat, now);
   const ephemeral = Boolean(chat.ephemeral) && !sealed;
@@ -355,13 +361,22 @@ function ChatRow({
   const preview = sealed ? t("sealedKeepsNone") : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
   const stamp = ephemeral && chat.expiresAt ? formatRemainShort(chat.expiresAt, now) : formatChatTime(chat.lastAt, lang);
   return (
-    <Press onPress={onOpen} onLongPress={onMenu} style={{ minHeight: 74, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
-      {chat.type === "group" ? (
-        <GroupAvatar users={groupUsers} size={52} fallback={chat.avatar} />
-      ) : (
-        <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} />
-      )}
-      <View style={{ flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: colors.hair, paddingBottom: 10 }}>
+    <View style={{ minHeight: 74, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
+      <Press
+        accessibilityLabel={ring === "none" ? "Ouvrir la conversation" : "Voir la story"}
+        onPress={() => {
+          if (ring !== "none" && peer) push({ name: "stories", userId: peer.id });
+          else onOpen();
+        }}
+        onLongPress={onMenu}
+      >
+        {chat.type === "group" ? (
+          <GroupAvatar users={groupUsers} size={52} fallback={chat.avatar} />
+        ) : (
+          <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} ring={ring} />
+        )}
+      </Press>
+      <Press onPress={onOpen} onLongPress={onMenu} style={{ flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: colors.hair, paddingBottom: 10 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontFamily: "Inter_500Medium", color: colors.fg }}>
             {title}
@@ -384,8 +399,8 @@ function ChatRow({
           </Text>
           {!sealed && chat.unread ? <Badge n={chat.unread} /> : null}
         </View>
-      </View>
-    </Press>
+      </Press>
+    </View>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Header, StatusBar } from "@/components/ui";
 import { Avatar, GroupAvatar } from "@/components/avatar";
-import { useT, useWgoStore } from "@/lib/store";
+import { useWgoStore } from "@/lib/store";
 import {
   isPrivateChat,
   lastPinWaitMs,
@@ -16,7 +16,6 @@ function askPin() {
 }
 
 export function PrivateChatsScreen() {
-  const t = useT();
   const pop = useWgoStore((s) => s.pop);
   const push = useWgoStore((s) => s.push);
   const chats = useWgoStore((s) => s.chats);
@@ -24,7 +23,9 @@ export function PrivateChatsScreen() {
   const markRead = useWgoStore((s) => s.markRead);
   const [, setTick] = useState(0);
 
-  useEffect(() => subscribePrivateVault(() => setTick((n) => n + 1)), []);
+  useEffect(() => {
+    return subscribePrivateVault(() => setTick((n) => n + 1));
+  }, []);
 
   useEffect(() => {
     const onVis = () => {
@@ -69,7 +70,7 @@ export function PrivateChatsScreen() {
           ))
         )}
       </div>
-      <p className="sr-only">{t("chats")}</p>
+      <p className="sr-only">Conversations privées</p>
     </div>
   );
 }

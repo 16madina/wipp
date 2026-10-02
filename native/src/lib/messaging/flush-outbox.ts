@@ -36,6 +36,7 @@ export async function flushOutboxItem(
       : undefined,
     forwarded: item.forwarded,
     vault: item.vault ?? isPrivateChat(item.localChatId),
+    story: item.story,
   });
   dropOutbox(item.clientId);
   const synced = await syncChatMessages(item.localChatId);

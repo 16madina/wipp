@@ -352,6 +352,8 @@ function pumpReceipt(get: () => Store, set: (fn: (st: Store) => Partial<Store>) 
   }, 420);
 }
 
+let inboxSyncTicket = 0;
+
 export const useWippStore = create<Store>((set, get) => ({
   language: "fr",
   ...fresh(),
@@ -399,7 +401,6 @@ export const useWippStore = create<Store>((set, get) => ({
             messages: fict.messages,
             requests: [],
             intros: [],
-            stories: [],
             calls: [],
             users: { ...s.users },
           }
@@ -412,6 +413,8 @@ export const useWippStore = create<Store>((set, get) => ({
   updateMe: (data) => set((s) => ({ me: { ...s.me, ...data } })),
   changeAvatar: (avatar) => set((s) => ({ me: { ...s.me, avatar } })),
   signOut: () => {
+    void import("./firebase-phone").then(({ signOutFirebase }) => signOutFirebase());
+    void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
     void import("./push").then(({ unregisterThisInstall }) => unregisterThisInstall());
     void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
     void import("./proximity/lifecycle").then(({ syncProximityLifecycle }) => syncProximityLifecycle("splash", "background"));
@@ -527,6 +530,7 @@ export const useWippStore = create<Store>((set, get) => ({
       listingId: data.listingId,
       shopId: data.shopId ?? existingChat?.shopId,
       replyTo: data.replyTo,
+      storyRef: data.storyRef,
       replyPreview:
         data.replyPreview ??
         (cited?.deletedForAll ? "Message supprimé" : cited?.text?.replace(/\s+/g, " ").trim().slice(0, 80)),
@@ -598,6 +602,7 @@ export const useWippStore = create<Store>((set, get) => ({
           identity: st.identity,
           peerPublicJwk: peerPubOf(st, chatId),
           vault: isPrivateChat(chatId),
+          story: message.storyRef,
         });
       })();
     }
@@ -652,6 +657,7 @@ export const useWippStore = create<Store>((set, get) => ({
               reply: message.replyTo ? { id: message.replyTo, preview: cite, senderId: reply?.fromId } : undefined,
               forwarded: data.forwarded,
               vault: isPrivateChat(chatId),
+              story: message.storyRef,
             });
           } catch (err) {
             const { enqueueOutbox } = await import("./messaging/outbox");
@@ -664,6 +670,7 @@ export const useWippStore = create<Store>((set, get) => ({
               replySenderId: reply?.fromId,
               forwarded: data.forwarded,
               vault: isPrivateChat(chatId),
+              story: message.storyRef,
             });
             set((s) => ({
               messages: {
@@ -881,6 +888,7 @@ export const useWippStore = create<Store>((set, get) => ({
     }
   },
   syncServerInbox: async () => {
+    const ticket = ++inboxSyncTicket;
     try {
       const me = get().me;
       const { bootstrapMessaging, mergeServerChatsIntoState } = await import("./messaging/sync");
@@ -889,6 +897,7 @@ export const useWippStore = create<Store>((set, get) => ({
         displayName: me.displayName || `${me.firstName} ${me.lastName}`.trim() || "WIPP",
       });
       const [firstName, ...rest] = (profile.displayName || me.displayName).split(" ");
+      if (ticket !== inboxSyncTicket) return;
       set((st) => {
         const merged = mergeServerChatsIntoState(st, chats, profile.id);
         const onSeed = st.stack.some(
@@ -899,7 +908,6 @@ export const useWippStore = create<Store>((set, get) => ({
           serverProfileId: profile.id,
           serverUsername: profile.username,
           serverConnected: true,
-          stories: [],
           listings: [],
           lifestyle: [],
           pharmacies: [],
@@ -933,12 +941,14 @@ export const useWippStore = create<Store>((set, get) => ({
           fetchEvents(profile.id),
           fetchSaves(),
         ]);
+        if (ticket !== inboxSyncTicket) return;
         set({ stories, listings, lifestyle, saves });
       } catch (err) {
         console.warn("[wipp] lot7 sync", err);
       }
     } catch (err) {
       console.warn("[wipp] server sync failed", err);
+      if (ticket !== inboxSyncTicket) return;
       set({ serverConnected: false });
     }
   },

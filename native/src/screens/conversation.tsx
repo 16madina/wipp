@@ -17,7 +17,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Sticker, Store, Video, X } from "lucide-react-native";
+import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { MediaViewer } from "../components/MediaViewer";
 import { MessageMenu } from "../components/MessageMenu";
@@ -32,7 +32,7 @@ import { mentionIdsInText } from "../lib/lot7/api";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { WippSticker } from "../components/WippSticker";
 import { GlassHeader, Header, IconBtn, Press, ScreenRoot } from "../components/ui";
-import { wippSrc } from "../lib/assets";
+import { composerSticker, wippSrc } from "../lib/assets";
 import { useDeviceLayout } from "../lib/device-layout";
 import { formatClock, formatLastSeen } from "../lib/format";
 import { addLocalGif, gifProviderConfigured, GIF_INTEGRATION_PENDING, loadGifs, searchGifs, type LocalGif } from "../lib/gifs";
@@ -47,7 +47,7 @@ import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../li
 import { isSeedDemoChat } from "../lib/seed";
 import { stickerById } from "../lib/stickers";
 import type { Surprise } from "../lib/surprise";
-import type { MediaItem, Message } from "../lib/types";
+import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors } from "../theme";
 
 const EMOJIS = ["😀", "😂", "😍", "🔥", "👏", "🙏", "❤️", "🎉", "😮", "😢"];
@@ -117,11 +117,49 @@ function VoiceBubble({ uri, duration, mine }: { uri?: string; duration?: number;
   );
 }
 
+function StoryCiteCard({
+  cite,
+  mine,
+  stories,
+}: {
+  cite: NonNullable<Message["storyRef"]>;
+  mine: boolean;
+  stories: { id: string; type: string; text?: string; bg?: string; imageUrl?: string; expiresAt?: number; createdAt: number; ttlMs?: number }[];
+}) {
+  const live = stories.find((story) => story.id === cite.id && isStoryLive(story));
+  const caption = !live
+    ? "Story expirée"
+    : cite.mode === "reaction"
+      ? mine
+        ? "Réaction à la story"
+        : "Réaction à votre story"
+      : mine
+        ? "Réponse à la story"
+        : "Réponse à votre story";
+  return (
+    <View style={{ marginBottom: 6, width: 132, borderRadius: 10, overflow: "hidden", backgroundColor: "rgba(0,0,0,0.16)" }}>
+      {live?.type === "image" && live.imageUrl ? (
+        <Image source={{ uri: live.imageUrl }} style={{ width: 132, height: 74 }} contentFit="cover" />
+      ) : live?.type === "text" ? (
+        <View style={{ minHeight: 56, padding: 8, backgroundColor: live.bg ?? colors.navy }}>
+          <Text numberOfLines={3} style={{ color: "#fff", fontSize: 12 }}>{live.text || cite.preview}</Text>
+        </View>
+      ) : live?.type === "video" ? (
+        <View style={{ height: 74, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
+          <Play size={18} color="#fff" />
+        </View>
+      ) : null}
+      <Text style={{ fontSize: 11, color: colors.muted, paddingHorizontal: 8, paddingVertical: 4 }}>{caption}</Text>
+    </View>
+  );
+}
+
 export function ConversationScreen({ chatId }: { chatId: string }) {
   const t = useT();
   const insets = useSafeAreaInsets();
   const { compact, icon, headerIcon, tablet } = useDeviceLayout();
   const composerIcon = tablet ? 48 : icon;
+  const composerArt = Math.round(composerIcon * 0.78);
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
@@ -135,6 +173,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const typing = useWippStore((s) => Boolean(s.typing[chatId]));
   const shop = useWippStore((s) => (chat?.shopId ? s.shops.find((x) => x.id === chat.shopId) : undefined));
   const drafts = useWippStore((s) => s.drafts[chatId] ?? "");
+  const stories = useWippStore((s) => s.stories);
   const [draft, setDraft] = useState(drafts);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareStage, setShareStage] = useState<"share" | "compose">("share");
@@ -591,6 +630,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               }}
             >
               {m.forwarded ? <Text style={{ fontSize: 11, color: colors.muted, marginBottom: 4 }}>Transféré</Text> : null}
+              {m.storyRef ? <StoryCiteCard cite={m.storyRef} mine={mine} stories={stories} /> : null}
               {m.replyTo ? (
                 <Press onPress={() => jumpTo(m.replyTo!)} style={{ marginBottom: 6, borderLeftWidth: 2, borderLeftColor: colors.accent, paddingLeft: 8 }}>
                   <Text numberOfLines={2} style={{ fontSize: 12, color: colors.muted }}>
@@ -846,7 +886,11 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   }}
                   style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginRight: 4, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
                 >
-                  <Smile size={tablet ? 22 : 20} color={emojiBar || (compact && stickerBar) ? colors.accent : colors.muted} />
+                  {compact ? (
+                    <Image source={composerSticker} style={{ width: composerArt, height: composerArt, opacity: stickerBar ? 1 : 0.92 }} contentFit="contain" />
+                  ) : (
+                    <Smile size={tablet ? 22 : 20} color={emojiBar ? colors.accent : colors.muted} />
+                  )}
                 </Press>
               </View>
               {!compact || tablet ? (
@@ -857,9 +901,9 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                     setEmojiBar(false);
                     setStickerBar((v) => !v);
                   }}
-                  style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, borderRadius: composerIcon / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}
+                  style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
                 >
-                  <Sticker size={tablet ? 22 : 20} color={stickerBar ? colors.accent : colors.fg} />
+                  <Image source={composerSticker} style={{ width: composerArt, height: composerArt, opacity: stickerBar ? 1 : 0.92 }} contentFit="contain" />
                 </Press>
               ) : null}
               <Press

@@ -33,18 +33,28 @@ export type ShopPlain = {
   image?: string;
 };
 
+/** Story reply/reaction cite. No storage URL: the chat keeps a label, the story feed stays private. */
+export type StoryCite = {
+  id: string;
+  kind: "text" | "image" | "video";
+  mode: "reply" | "reaction";
+  preview: string;
+  bg?: string;
+};
+
 export type PlainPayload = {
   text: string;
   reply?: ReplyCite;
   forwarded?: boolean;
   surprise?: SurprisePlain;
   shop?: ShopPlain;
+  story?: StoryCite;
 };
 
 const MARK = "wipp-plain-v2";
 
 export function encodePlain(input: PlainPayload): string {
-  if (!input.reply && !input.forwarded && !input.surprise && !input.shop) return input.text;
+  if (!input.reply && !input.forwarded && !input.surprise && !input.shop && !input.story) return input.text;
   return JSON.stringify({
     k: MARK,
     type: input.shop ? "shop" : "text",
@@ -53,6 +63,7 @@ export function encodePlain(input: PlainPayload): string {
     forwarded: input.forwarded || undefined,
     surprise: input.surprise,
     shop: input.shop,
+    story: input.story,
   });
 }
 
@@ -67,6 +78,7 @@ export function decodePlain(value: string): PlainPayload {
         forwarded?: boolean;
         surprise?: SurprisePlain;
         shop?: ShopPlain;
+        story?: StoryCite;
       };
       if (parsed.k === MARK && typeof parsed.text === "string") {
         return {
@@ -75,6 +87,7 @@ export function decodePlain(value: string): PlainPayload {
           forwarded: Boolean(parsed.forwarded),
           surprise: parsed.surprise,
           shop: parsed.shop?.publicId ? parsed.shop : undefined,
+          story: parsed.story?.id && parsed.story.kind && parsed.story.mode ? parsed.story : undefined,
         };
       }
     } catch {

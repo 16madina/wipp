@@ -253,33 +253,71 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
 
 export function AppShell() {
   const [introDone, setIntroDone] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState(false);
   const stack = useWippStore((s) => s.stack);
   const raw = stack[stack.length - 1] ?? { name: "onboarding" as const };
-  const top = raw.name === "splash" ? ({ name: "onboarding" } as const) : raw;
+  const signedInScreen = firebaseUser && (raw.name === "splash" || AUTH.has(raw.name));
+  const top = signedInScreen ? ({ name: "chats" } as const) : raw.name === "splash" ? ({ name: "onboarding" } as const) : raw;
   const showTabs = isTabScreen(top.name);
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
 
   useEffect(() => {
+    let stop = () => {};
+    let cancelled = false;
+    void (async () => {
+      const { watchFirebaseUser } = await import("../lib/firebase-phone");
+      const { signinOtp } = await import("../lib/auth-api");
+      const { enterLinkedProfile, restoreFirebaseSession } = await import("../lib/enter-session");
+      const { readLinkedSession } = await import("../lib/firebase-linked-session");
+      stop = watchFirebaseUser((user) => {
+        if (cancelled) return;
+        if (!user) {
+          setFirebaseUser(false);
+          setAuthReady(true);
+          return;
+        }
+        void (async () => {
+          const cached = await readLinkedSession(user.uid);
+          if (cancelled) return;
+          restoreFirebaseSession(cached, user.phoneNumber ?? "");
+          setFirebaseUser(true);
+          setAuthReady(true);
+          try {
+            const res = await signinOtp();
+            if (cancelled || !res.ok) return;
+            enterLinkedProfile(res.profile, user.phoneNumber ?? "");
+          } catch {
+            /* Firebase keeps the user. A network miss must not sign them out or request an SMS. */
+          }
+        })();
+      });
+    })();
     void hydratePrivateVault();
     void import("../lib/push/prefs").then(async ({ loadNotifPrefs }) => {
       const prefs = await loadNotifPrefs();
       useWippStore.setState({ notifs: prefs.notifs, pushMaster: prefs.pushMaster });
     });
-    return bootstrapPush();
+    const stopPush = bootstrapPush();
+    return () => {
+      cancelled = true;
+      stop();
+      stopPush();
+    };
   }, []);
 
   useEffect(() => {
-    if (!introDone) return;
+    if (!introDone || !authReady) return;
     const s = useWippStore.getState();
     const name = s.stack.at(-1)?.name;
-    if (s.onboarded) {
-      if (!name || AUTH.has(name)) s.goTab("chats");
+    if (firebaseUser || s.onboarded) {
+      if (!name || name === "splash" || AUTH.has(name)) s.goTab("chats");
     } else if (!s.stack.length || name === "splash") {
       s.replace({ name: "onboarding" });
     }
-  }, [introDone]);
+  }, [introDone, authReady, firebaseUser]);
 
   useEffect(() => {
     if (!onboarded) return;
@@ -326,7 +364,7 @@ export function AppShell() {
     });
   }, [onboarded, top.name]);
 
-  if (!introDone) {
+  if (!introDone || !authReady) {
     return <IntroSplash onDone={() => setIntroDone(true)} />;
   }
 

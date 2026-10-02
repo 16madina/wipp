@@ -1,12 +1,4 @@
 import { supabase } from "./supabase";
-import { callServerFn } from "./server-fn";
-
-const FN = {
-  getMyBusinessCard: "be8fd899c8f036ecaef12bb38299f05d803d8e5a65a024032ef67f65456b7e10",
-  saveMyBusinessCard: "af7c1e18713b57aaf761532331fd576e5c958701df828fc8410c181447d0b80c",
-  listPublicBusinessCards: "0b9f88e5e843fa90837890eb8b5b7d18aa7e650a771a913281ba47e22178ab6b",
-  getPublicBusinessCard: "13a38302c8034af02c6cbe586a9cc3749ac1aefd141735a45b0d35d472549edf",
-} as const;
 
 export type BusinessCardView = {
   id: string;
@@ -114,20 +106,28 @@ export function cardToShop(
   };
 }
 
+async function cardsApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const { wippApi } = await import("./proximity/wipp-session");
+  return wippApi<T>(path, init);
+}
+
 export async function getMyBusinessCard() {
-  return callServerFn<MyCardResult>(FN.getMyBusinessCard, {});
+  return cardsApi<MyCardResult>("business-cards/me");
 }
 
 export async function saveMyBusinessCard(input: CardInput) {
-  return callServerFn<BusinessCardView>(FN.saveMyBusinessCard, input);
+  return cardsApi<BusinessCardView>("business-cards/me", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function listPublicBusinessCards() {
-  return callServerFn<BusinessCardView[]>(FN.listPublicBusinessCards, {});
+  return cardsApi<BusinessCardView[]>("business-cards/public");
 }
 
 export async function getPublicBusinessCard(publicId: string) {
-  return callServerFn<BusinessCardView | null>(FN.getPublicBusinessCard, { publicId });
+  return cardsApi<BusinessCardView | null>(`business-cards/public/${encodeURIComponent(publicId)}`);
 }
 
 export async function uploadBusinessImage(

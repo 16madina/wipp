@@ -347,6 +347,14 @@ export type Message = {
   shopId?: string;
   replyTo?: string;
   replyPreview?: string;
+  /** Encrypted story cite. The message stays after the story expires. */
+  storyRef?: {
+    id: string;
+    kind: "text" | "image" | "video";
+    mode: "reply" | "reaction";
+    preview: string;
+    bg?: string;
+  };
   editedAt?: number;
   deletedForAll?: boolean;
   pinned?: boolean;
@@ -373,14 +381,23 @@ export type StoryItem = {
   userId: string;
   type: "text" | "image" | "video";
   text?: string;
+  /** Visual text on the media. Not the caption in `text`. */
+  overlay?: { text: string; x: number; y: number; scale: number };
   bg?: string;
   imageUrl?: string;
   videoUrl?: string;
+  /** Private storage path. Signed URLs are regenerated from this; they are not the saved story. */
+  mediaPath?: string;
+  mediaSignedAt?: number;
   durationMs?: number;
   createdAt: number;
   /** Server expiry (stories). The feed query also filters expires_at > now(). */
   expiresAt?: number;
   viewers: StoryViewer[];
+  /** Unique viewers of this item, from wipp_lot7_stories views count. Owner only. */
+  viewCount?: number;
+  /** True when the signed-in profile has a row in wipp_story_views for this item. */
+  viewed?: boolean;
   kind?: "status" | "profile";
   ttlMs?: number;
   music?: StoryMusic;

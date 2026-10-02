@@ -72,7 +72,9 @@ export function ChatsScreen() {
   const [menuChatId, setMenuChatId] = useState<string | null>(null);
   const [, setVaultTick] = useState(0);
 
-  useEffect(() => subscribePrivateVault(() => setVaultTick((n) => n + 1)), []);
+  useEffect(() => {
+    return subscribePrivateVault(() => setVaultTick((n) => n + 1));
+  }, []);
 
   useEffect(() => {
     sealExpired();

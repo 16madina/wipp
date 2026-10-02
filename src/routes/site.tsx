@@ -72,7 +72,7 @@ function SiteLandingPage() {
             <Link to="/" className="connect-cta">
               Ouvrir Wipp
             </Link>
-            <Link to="/connect" className="site-btn-ghost">
+            <Link to="/connect" search={{ code: undefined }} className="site-btn-ghost">
               Lier le web
             </Link>
           </div>

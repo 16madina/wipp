@@ -1,44 +1,41 @@
-import { supabase } from "./supabase";
+import type { LinkedProfile } from "./auth-api";
+import { currentFirebaseUser } from "./firebase-phone";
+import { writeLinkedSession } from "./firebase-linked-session";
 import { useWippStore } from "./store";
 
-export function enterWithoutServer(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  useWippStore.getState().completeSetup(
-    {
-      firstName: "",
-      lastName: "",
-      displayName: digits ? `+${digits}` : "Moi",
-      username: digits ? `u${digits.slice(-10)}` : "moi",
-      phone,
-    },
-    true,
-  );
-}
-
-export async function enterWithSession(accessToken: string, refreshToken: string, phone: string) {
-  await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-  const { data: u } = await supabase.auth.getUser();
-  let displayName = "";
-  let username = "";
-  if (u.user) {
-    const id = ((await supabase.rpc("wipp_my_profile_id")).data as string | null) ?? "";
-    const { data: p } = await supabase
-      .from("wipp_public_profiles")
-      .select("display_name,username")
-      .eq("id", id)
-      .maybeSingle();
-    displayName = (p?.display_name as string | undefined) ?? "";
-    username = (p?.username as string | undefined) ?? "";
-  }
+/** Local shell after the server linked the Firebase uid. No Supabase Auth session. */
+export function enterLinkedProfile(profile: LinkedProfile, phone: string) {
+  const uid = currentFirebaseUser()?.uid;
+  if (uid && profile.id) void writeLinkedSession(uid, { ...profile, phone: profile.phone || phone });
+  const displayName = profile.displayName || "";
   const [firstName, ...rest] = displayName.split(" ");
   useWippStore.getState().completeSetup(
     {
       firstName: firstName ?? "",
       lastName: rest.join(" "),
       displayName,
-      ...(username ? { username } : {}),
-      phone,
+      ...(profile.username ? { username: profile.username } : {}),
+      phone: profile.phone || phone,
     },
     true,
   );
+}
+
+/** Reopen an already authenticated Firebase user. Does not create a profile and does not reseed the inbox. */
+export function restoreFirebaseSession(profile: LinkedProfile | null, phone: string) {
+  const displayName = profile?.displayName || phone || "";
+  const [firstName, ...rest] = displayName.split(" ");
+  useWippStore.setState((s) => ({
+    onboarded: true,
+    stack: [{ name: "chats" }],
+    me: {
+      ...s.me,
+      firstName: firstName || s.me.firstName,
+      lastName: rest.join(" ") || s.me.lastName,
+      displayName: displayName || s.me.displayName,
+      ...(profile?.username ? { username: profile.username } : {}),
+      phone: profile?.phone || phone || s.me.phone,
+      online: true,
+    },
+  }));
 }

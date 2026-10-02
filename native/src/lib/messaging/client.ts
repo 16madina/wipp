@@ -1,18 +1,6 @@
 import { supabase } from "../supabase";
-import { callServerFn } from "../server-fn";
 import * as S from "./supa";
 import type { WippChatSummary, WippMessage, WippProfile } from "./types";
-
-const FN = {
-  openDm: "128ddda6081c4f75884e12b3c0dc035246eedc86b7cd4d3d6f22c74c0dc51edb",
-  openBusinessChat: "3ef82e8d9311db0d7ed71cefabce694b5c30e46c88534c05785d2cc1411fe138",
-  listBusinessChatContexts: "0b2051f268a135f5c2ad300e0d83ae013988a1a101a8cedde4a0f81e5a9003d3",
-  createAttachment: "b1a19bc8a5450b811b120ab9cfba9080f2dfa9a1edd980082b4aa785e66a223b",
-  putAttachmentChunk: "696b8b882e11e2b5701b1f5b504b38c004c394ac5e3db7250dd637ec85e2a104",
-  completeAttachment: "ff2bfd0c26b024eddefe549a0753558b101d89dd1e811ac79b23996ad0db938d",
-  fetchAttachmentChunk: "10880171fd18bd66ce5321418011d5ed8fc022e4289c7eca7f63b51a1315a0a2",
-  consumeAttachment: "358a10b7b6c784e004af9a1f9226b70e7ed7fc09fd1e6dd65fea6ad9a06474d5",
-} as const;
 
 export function getStoredProfile(): WippProfile | null {
   return S.cachedProfile();
@@ -31,14 +19,22 @@ export async function searchUsers(q: string) {
 }
 
 export async function openServerChat(peerUsername: string) {
-  const { chatId } = await callServerFn<{ chatId: string }>(FN.openDm, { peerUsername });
-  const chat = (await S.listChats()).find((c) => c.id === chatId);
+  const { wippApi } = await import("../proximity/wipp-session");
+  const data = await wippApi<{ chat: { id: string } }>("chats", {
+    method: "POST",
+    body: JSON.stringify({ peerUsername }),
+  });
+  const chat = (await S.listChats()).find((c) => c.id === data.chat.id);
   if (!chat) throw new Error("Conversation introuvable");
   return chat;
 }
 
 export async function openBusinessChat(publicId: string) {
-  return callServerFn<{ chatId: string }>(FN.openBusinessChat, { publicId });
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<{ chatId: string }>("chats/business", {
+    method: "POST",
+    body: JSON.stringify({ publicId }),
+  });
 }
 
 export type BusinessChatContext = {
@@ -52,7 +48,8 @@ export type BusinessChatContext = {
 };
 
 export async function listBusinessChatContexts() {
-  return callServerFn<BusinessChatContext[]>(FN.listBusinessChatContexts, {});
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<BusinessChatContext[]>("chats/business");
 }
 
 export async function fetchServerChats() {
@@ -157,26 +154,42 @@ export async function createServerAttachment(
   chatId: string,
   input: { chunkCount: number; byteSize: number; viewOnce?: boolean },
 ) {
-  return callServerFn<{ id: string; state: string }>(FN.createAttachment, { chatId, ...input });
-}
-
-export async function putServerChunk(attachmentId: string, index: number, ciphertext: string, sha256: string) {
-  return callServerFn<{ ok: boolean }>(FN.putAttachmentChunk, { attachmentId, index, ciphertext, sha256 });
-}
-
-export async function completeServerAttachment(attachmentId: string, messageId?: string) {
-  return callServerFn<{ ok: boolean; state: string }>(FN.completeAttachment, { attachmentId, messageId });
-}
-
-export async function fetchServerChunk(attachmentId: string, index: number) {
-  return callServerFn<{ ciphertext: string; sha256: string; index: number }>(FN.fetchAttachmentChunk, {
-    attachmentId,
-    index,
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<{ id: string; state: string }>(`chats/${chatId}/attachments`, {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 
+export async function putServerChunk(attachmentId: string, index: number, ciphertext: string, sha256: string) {
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<{ ok: boolean }>(`attachments/${attachmentId}/chunks/${index}`, {
+    method: "PUT",
+    body: JSON.stringify({ ciphertext, sha256 }),
+  });
+}
+
+export async function completeServerAttachment(attachmentId: string, messageId?: string) {
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<{ ok: boolean; state: string }>(`attachments/${attachmentId}/complete`, {
+    method: "POST",
+    body: JSON.stringify({ messageId }),
+  });
+}
+
+export async function fetchServerChunk(attachmentId: string, index: number) {
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<{ ciphertext: string; sha256: string; index: number }>(
+    `attachments/${attachmentId}/chunks/${index}`,
+  );
+}
+
 export async function consumeServerAttachment(attachmentId: string) {
-  return callServerFn<{ ok: boolean; state: string }>(FN.consumeAttachment, { attachmentId });
+  const { wippApi } = await import("../proximity/wipp-session");
+  return wippApi<{ ok: boolean; state: string }>(`attachments/${attachmentId}/consume`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 export type { WippChatSummary, WippMessage, WippProfile };

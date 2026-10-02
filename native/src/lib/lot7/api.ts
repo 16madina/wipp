@@ -1,9 +1,24 @@
+import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../firebase-config";
+import { firebaseIdToken } from "../firebase-phone";
+import { parseStoryOverlay, type StoryOverlay } from "../story-overlay";
 import { supabase } from "../supabase";
-import type { Listing, LifestyleItem, StoryItem } from "../types";
+import type { Listing, LifestyleItem, StoryItem, User } from "../types";
 import { groupPreview } from "./rules";
 
 function rawId(id: string) {
   return id.startsWith("srvuser:") ? id.slice("srvuser:".length) : id;
+}
+
+/** Session cache only. The server row in wipp_story_views stays the source of truth after migration 0020. */
+const sessionViewedStoryIds = new Set<string>();
+
+export function rememberViewedStory(id: string) {
+  sessionViewedStoryIds.add(id);
+}
+
+export function forgetViewedStory(id: string) {
+  sessionViewedStoryIds.delete(id);
 }
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -105,29 +120,80 @@ type StoryRow = {
   avatar_url?: string | null;
   kind: "text" | "image" | "video";
   body?: string | null;
+  overlay?: unknown;
   media_url?: string | null;
   audience: "contacts" | "only_me" | "close";
   created_at: string;
   expires_at: string;
   views?: number;
+  viewed?: boolean;
 };
 
-function mapStory(row: StoryRow, me: string | null): StoryItem {
+function mapStory(row: StoryRow, me: string | null, mineUsername: string | null): StoryItem {
   const createdAt = Date.parse(row.created_at);
   const expiresAt = Date.parse(row.expires_at);
+  const sameProfile = Boolean(me && row.author_id === me);
+  const sameUsername = Boolean(
+    mineUsername && row.username && row.username.toLowerCase() === mineUsername.toLowerCase(),
+  );
   return {
     id: row.id,
-    userId: me && row.author_id === me ? "me" : `srvuser:${row.author_id}`,
+    userId: sameProfile || sameUsername ? "me" : `srvuser:${row.author_id}`,
     type: row.kind,
     text: row.body ?? "",
-    imageUrl: row.kind === "image" ? row.media_url ?? undefined : undefined,
-    videoUrl: row.kind === "video" ? row.media_url ?? undefined : undefined,
+    overlay: parseStoryOverlay(row.overlay) ?? undefined,
+    mediaPath: row.media_url && !row.media_url.startsWith("http") ? row.media_url : undefined,
+    imageUrl: row.kind === "image" && row.media_url?.startsWith("http") ? row.media_url : undefined,
+    videoUrl: row.kind === "video" && row.media_url?.startsWith("http") ? row.media_url : undefined,
     createdAt,
     expiresAt,
     ttlMs: Math.max(0, expiresAt - createdAt),
     viewers: [],
+    viewCount: typeof row.views === "number" ? row.views : undefined,
+    viewed: row.viewed === true,
     audience: row.audience === "only_me" ? "me" : row.audience === "close" ? "close" : "contacts",
   };
+}
+
+async function storyIdentity(meHint: string | null) {
+  let me = meHint;
+  try {
+    const resolved = await myProfileId();
+    if (resolved) me = resolved;
+  } catch {
+    /* The story RPC uses this same resolver. Keep the hint if it is unavailable. */
+  }
+  const { useWippStore } = await import("../store");
+  const state = useWippStore.getState();
+  if (me && state.serverProfileId !== me) useWippStore.setState({ serverProfileId: me });
+  return { me, username: state.me.username || state.serverUsername || null, users: state.users };
+}
+
+function rememberStoryAuthors(rows: StoryRow[], me: string | null, users: Record<string, User>) {
+  const next: Record<string, User> = { ...users };
+  let changed = false;
+  for (const row of rows) {
+    if (me && row.author_id === me) continue;
+    const id = `srvuser:${row.author_id}`;
+    const name = row.display_name || row.username || "";
+    if (!name || next[id]?.displayName) continue;
+    const [firstName, ...rest] = name.split(" ");
+    next[id] = {
+      id,
+      firstName: firstName || name,
+      lastName: rest.join(" "),
+      displayName: name,
+      username: row.username || "",
+      bio: "",
+      avatar: row.avatar_url || "",
+      online: false,
+      connected: true,
+      city: "",
+    };
+    changed = true;
+  }
+  if (!changed) return;
+  void import("../store").then(({ useWippStore }) => useWippStore.setState({ users: next as never }));
 }
 
 export async function publishStory(input: {
@@ -135,31 +201,33 @@ export async function publishStory(input: {
   body?: string;
   mediaUrl?: string | null;
   audience: "contacts" | "only_me" | "close";
+  overlay?: StoryOverlay | null;
 }) {
-  return rpc<string>("wipp_lot7_publish_story", {
+  const args = {
     p_kind: input.kind,
     p_body: input.body ?? "",
     p_media: input.mediaUrl ?? null,
     p_audience: input.audience,
-  });
+  };
+  if (!input.overlay) return rpc<string>("wipp_lot7_publish_story", args);
+  return rpc<string>("wipp_lot7_publish_story", { ...args, p_overlay: input.overlay });
 }
 
-export async function fetchStories(me: string | null) {
+export async function fetchStories(meHint: string | null) {
   const rows = await rpc<StoryRow[]>("wipp_lot7_stories");
+  const identity = await storyIdentity(meHint);
+  const { useWippStore } = await import("../store");
+  const already = new Set(useWippStore.getState().stories.filter((story) => story.viewed).map((story) => story.id));
+  rememberStoryAuthors(rows ?? [], identity.me, identity.users);
   return Promise.all(
     (rows ?? []).map(async (row) => {
-      const story = mapStory(row, me);
-      const path = row.media_url && !row.media_url.startsWith("http") ? row.media_url : null;
-      if (!path) return story;
+      const story = mapStory(row, identity.me, identity.username);
+      if (typeof row.viewed !== "boolean" && (already.has(row.id) || sessionViewedStoryIds.has(row.id))) story.viewed = true;
+      if (!story.mediaPath) return story;
       try {
-        const url = await signPrivateMedia(path);
-        return {
-          ...story,
-          imageUrl: row.kind === "image" ? url : story.imageUrl,
-          videoUrl: row.kind === "video" ? url : story.videoUrl,
-        };
+        return await hydrateStoryMedia(story, true);
       } catch {
-        return { ...story, imageUrl: undefined, videoUrl: undefined };
+        return story;
       }
     }),
   );
@@ -170,8 +238,17 @@ export async function markStoryView(id: string) {
 }
 
 export async function fetchStoryViewers(id: string) {
-  return rpc<{ viewer_id: string; username: string; display_name: string; viewed_at: string }[]>("wipp_lot7_story_viewers", {
-    p_id: id,
+  const data = await rpc<unknown>("wipp_lot7_story_viewers", { p_id: id });
+  const rows = typeof data === "string" ? JSON.parse(data) : data;
+  if (!Array.isArray(rows)) return [];
+  return rows.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const item = row as { username?: string; display_name?: string; viewed_at?: string };
+    return [{
+      username: item.username ?? "",
+      displayName: item.display_name || item.username || "WIPP",
+      viewedAt: item.viewed_at ?? "",
+    }];
   });
 }
 
@@ -338,9 +415,39 @@ async function uploadBucket(bucket: "wipp-public-media" | "wipp-private-media", 
 }
 
 export async function signPrivateMedia(path: string) {
-  const signed = await supabase.storage.from("wipp-private-media").createSignedUrl(path, 10 * 60);
+  const signed = await supabase.storage.from("wipp-private-media").createSignedUrl(path, 60 * 60);
   if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "signed-url");
   return signed.data.signedUrl;
+}
+
+const STORY_SIGN_FRESH_MS = 8 * 60 * 1000;
+
+async function signStoryMedia(path: string) {
+  let last: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await signPrivateMedia(path);
+    } catch (err) {
+      last = err;
+      await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+    }
+  }
+  throw last instanceof Error ? last : new Error("signed-url");
+}
+
+/** Regenerates the authorized URL from the stored private path. Does not publish the bucket. */
+export async function hydrateStoryMedia(story: StoryItem, force = false) {
+  if (!story.mediaPath) return story;
+  const current = story.type === "video" ? story.videoUrl : story.imageUrl;
+  const fresh = typeof story.mediaSignedAt === "number" && Date.now() - story.mediaSignedAt < STORY_SIGN_FRESH_MS;
+  if (!force && fresh && current?.startsWith("http")) return story;
+  const url = await signStoryMedia(story.mediaPath);
+  return {
+    ...story,
+    mediaSignedAt: Date.now(),
+    imageUrl: story.type === "image" ? url : story.imageUrl,
+    videoUrl: story.type === "video" ? url : story.videoUrl,
+  };
 }
 
 export async function signPublicMedia(path: string) {
@@ -356,6 +463,38 @@ export async function uploadPublicMedia(path: string, bytes: Uint8Array, mime: s
 
 export function uploadPrivateMedia(path: string, bytes: Uint8Array, mime: string) {
   return uploadBucket("wipp-private-media", path, bytes, mime);
+}
+
+/** Streams a local file to private Storage. Does not read the file into JS memory. */
+export async function uploadPrivateMediaFile(
+  path: string,
+  uri: string,
+  mime: string,
+  onProgress?: (sent: number, total: number) => void,
+) {
+  const token = await firebaseIdToken();
+  const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-private-media/${path}`;
+  const task = createUploadTask(
+    endpoint,
+    uri,
+    {
+      httpMethod: "POST",
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      sessionType: FileSystemSessionType.FOREGROUND,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+        "Content-Type": mime,
+        "x-upsert": "false",
+      },
+    },
+    (data) => {
+      if (data.totalBytesExpectedToSend > 0) onProgress?.(data.totalBytesSent, data.totalBytesExpectedToSend);
+    },
+  );
+  const result = await task.uploadAsync();
+  if (!result || result.status < 200 || result.status >= 300) throw new Error("upload");
+  return path;
 }
 
 export async function myProfileId() {

@@ -26,7 +26,9 @@ function emit() {
 
 export function subscribePrivateVault(fn: () => void) {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 function readIds(): string[] {
@@ -59,7 +61,7 @@ async function pbkdf2(pin: string, salt: Uint8Array, iter: number) {
   const enc = new TextEncoder().encode(pin);
   const key = await crypto.subtle.importKey("raw", enc, "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" },
+    { name: "PBKDF2", salt: Uint8Array.from(salt), iterations: iter, hash: "SHA-256" },
     key,
     256,
   );

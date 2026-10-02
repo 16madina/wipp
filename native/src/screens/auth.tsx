@@ -11,12 +11,11 @@ import {
   pendingPhone,
   setVerifiedSignup,
   startPhoneCode,
+  toE164,
   verifyPhoneCode,
-  isTestSigninPassword,
 } from "../lib/auth-flow";
 import { COUNTRIES, DEFAULT_COUNTRY, countryById, flagEmoji, flagUri, type Country } from "../lib/countries";
-import { enterWithSession, enterWithoutServer } from "../lib/enter-session";
-import { toE164 } from "../lib/firebase-phone";
+import { enterLinkedProfile } from "../lib/enter-session";
 import {
   authLogin,
   authPhone,
@@ -28,7 +27,6 @@ import {
 } from "../lib/assets";
 import { haptic } from "../lib/haptics";
 import type { I18nKey } from "../lib/i18n";
-import { supabase } from "../lib/supabase";
 import { useT, useWippStore } from "../lib/store";
 import { colors } from "../theme";
 import { Press, SafeTop } from "../components/ui";
@@ -105,9 +103,14 @@ function Artwork({ source, children }: { source: number; children?: ReactNode | 
         contentFit="fill"
       />
       <Animated.View style={{ flex: 1, zIndex: 1, elevation: 2, transform: [{ translateY }] }}>
-        <Pressable onPress={() => Keyboard.dismiss()} style={{ flex: 1 }}>
-          {typeof children === "function" ? children(reveal) : children}
-        </Pressable>
+        {Platform.OS === "web" ? (
+          // On web, the wrapping Pressable fires after a click inside a TextInput and blurs it.
+          <View style={{ flex: 1 }}>{typeof children === "function" ? children(reveal) : children}</View>
+        ) : (
+          <Pressable onPress={() => Keyboard.dismiss()} style={{ flex: 1 }}>
+            {typeof children === "function" ? children(reveal) : children}
+          </Pressable>
+        )}
       </Animated.View>
     </View>
   );
@@ -612,7 +615,7 @@ export function SmsReferenceScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [seconds, setSeconds] = useState(45);
-  const [noAccount, setNoAccount] = useState<{ idToken: string; phone: string } | null>(null);
+  const [noAccount, setNoAccount] = useState<{ phone: string } | null>(null);
   const otpBlockRef = useRef<View>(null);
   const codeAccessoryId = "wipp-sms-code-keyboard";
   const signin = (pendingMode() ?? pending.mode) === "signin";
@@ -628,12 +631,6 @@ export function SmsReferenceScreen() {
     setBusy(true);
     setError("");
     setNoAccount(null);
-    if (isTestSigninPassword(code, phone)) {
-      enterWithoutServer(phone);
-      clearPending();
-      setBusy(false);
-      return;
-    }
     if (signin) {
       const result = await verifyPhoneCode(code);
       if ("error" in result) {
@@ -642,16 +639,16 @@ export function SmsReferenceScreen() {
         return;
       }
       try {
-        const res = await signinOtp({ idToken: result.idToken });
+        const res = await signinOtp();
         if (res.ok) {
-          await enterWithSession(res.accessToken, res.refreshToken, phone);
+          enterLinkedProfile(res.profile, phone);
           clearPending();
           setBusy(false);
           return;
         }
         if ("noAccount" in res && res.noAccount) {
           setBusy(false);
-          setNoAccount(result);
+          setNoAccount({ phone });
           setError(res.error);
           return;
         }
@@ -852,7 +849,6 @@ export function ProfileReferenceScreen() {
     setError("");
     try {
       const result = await signupPhone({
-        idToken: verified.idToken,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username,
@@ -860,11 +856,6 @@ export function ProfileReferenceScreen() {
       });
       if (!result.ok) {
         setError(result.error);
-        return;
-      }
-      const session = await supabase.auth.setSession({ access_token: result.accessToken, refresh_token: result.refreshToken });
-      if (session.error) {
-        setError("Compte créé, mais connexion impossible. Réessaie.");
         return;
       }
       clearPending();

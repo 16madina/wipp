@@ -9,6 +9,7 @@ export type OutboxItem = {
   replySenderId?: string;
   forwarded?: boolean;
   vault?: boolean;
+  story?: import("./plain").StoryCite;
 };
 
 let items: OutboxItem[] = [];

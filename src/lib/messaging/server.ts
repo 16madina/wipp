@@ -55,6 +55,17 @@ export class WippHttpError extends Error {
   }
 }
 
+/** Public username check used by native signup. Reads wipp_profiles.username only. */
+export async function isUsernameAvailable(raw: string): Promise<boolean> {
+  const username = normalizeUsername(raw);
+  assertUsername(username);
+  const sql = await getSql();
+  const rows = await sql<{ id: string }>`
+    select id from wipp_profiles where lower(username) = ${username} limit 1
+  `;
+  return rows.length === 0;
+}
+
 export async function isBlocked(a: string, b: string) {
   if (!a || !b || a === b) return false;
   const sql = await getSql();
@@ -175,6 +186,9 @@ async function seedDemoUsers() {
 
 export async function ensureMessagingReady() {
   await ensureDbReady();
+  // DATABASE_URL is the hosted database. Do not seed demo rows or create
+  // an admin account there — that would write production data on first request.
+  if (process.env.DATABASE_URL) return;
   await seedDemoUsers();
   await ensureAdminAccount();
 }
@@ -498,6 +512,23 @@ async function createSession(profileId: string): Promise<WippSessionPayload> {
   return { token, profile };
 }
 
+async function tryResolveFirebaseIdToken(token: string): Promise<WippProfile | null> {
+  if (!token.includes(".")) return null;
+  try {
+    const { verifyFirebaseIdToken } = await import("@/lib/firebase/verify-id-token");
+    const claims = await verifyFirebaseIdToken(token);
+    if (!claims.uid) return null;
+    const sql = await getSql();
+    const rows = await sql<{ id: string }>`
+      select id from wipp_profiles where firebase_uid = ${claims.uid} limit 1
+    `;
+    if (!rows[0]) return null;
+    return getProfileById(rows[0].id);
+  } catch {
+    return null;
+  }
+}
+
 async function tryResolveSupabaseAccessToken(token: string): Promise<WippProfile | null> {
   if (!token.includes(".")) return null;
   try {
@@ -509,31 +540,13 @@ async function tryResolveSupabaseAccessToken(token: string): Promise<WippProfile
       },
     });
     if (!res.ok) return null;
-    const user = (await res.json()) as { id?: string; phone?: string };
+    const user = (await res.json()) as { id?: string };
     if (!user.id) return null;
     const sql = await getSql();
-    const byFb = await sql<{ id: string }>`
-      select id from wipp_profiles where firebase_uid = ${user.id} limit 1
+    const byAuth = await sql<{ id: string }>`
+      select id from wipp_profiles where auth_user_id = ${user.id} limit 1
     `;
-    if (byFb[0]) return getProfileById(byFb[0].id);
-    const byId = await sql<{ id: string }>`
-      select id from wipp_profiles where id = ${user.id} limit 1
-    `;
-    if (byId[0]) return getProfileById(byId[0].id);
-    if (user.phone) {
-      const byPhone = await sql<{ id: string }>`
-        select id from wipp_profiles where phone_e164 = ${user.phone} limit 1
-      `;
-      if (byPhone[0]) return getProfileById(byPhone[0].id);
-    }
-    try {
-      const byAuth = await sql<{ id: string }>`
-        select id from wipp_profiles where auth_user_id = ${user.id} limit 1
-      `;
-      if (byAuth[0]) return getProfileById(byAuth[0].id);
-    } catch {
-      /* column may not exist */
-    }
+    if (byAuth[0]) return getProfileById(byAuth[0].id);
   } catch {
     return null;
   }
@@ -551,6 +564,8 @@ export async function resolveSession(token: string | null | undefined): Promise<
   `;
   const profileId = rows[0]?.profile_id;
   if (!profileId) {
+    const fromFirebase = await tryResolveFirebaseIdToken(token);
+    if (fromFirebase) return fromFirebase;
     const fromJwt = await tryResolveSupabaseAccessToken(token);
     if (fromJwt) return fromJwt;
     throw new WippHttpError(401, "unauthorized", "Session expirée.");
@@ -639,6 +654,370 @@ export async function loginWithFirebaseIdToken(idToken: string): Promise<WippSes
     )
   `;
   return createSession(id);
+}
+
+type FirebaseLinkResult =
+  | {
+      ok: true;
+      profile: { id: string; username: string; displayName: string; phone: string };
+    }
+  | { ok: false; noAccount: true; message: string };
+
+function linkedPayload(profile: WippProfile, phone: string): FirebaseLinkResult {
+  return {
+    ok: true,
+    profile: {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.displayName,
+      phone: profile.phoneE164 || phone,
+    },
+  };
+}
+
+/**
+ * Resolve or create the WIPP profile for a verified Firebase ID token.
+ * Identity is the token subject. A client profile id is ignored.
+ */
+export async function linkFirebaseThirdPartyProfile(
+  idToken: string,
+  input: { mode?: string; username?: string; firstName?: string; lastName?: string },
+): Promise<FirebaseLinkResult> {
+  await ensureMessagingReady();
+  const { verifyFirebaseIdToken } = await import("@/lib/firebase/verify-id-token");
+  let claims;
+  try {
+    claims = await verifyFirebaseIdToken(idToken);
+  } catch {
+    throw new WippHttpError(401, "invalid_firebase_token", "Jeton Firebase invalide.");
+  }
+  const firebaseUid = claims.uid.trim();
+  const phone = (claims.phone ?? "").trim();
+  if (!firebaseUid) throw new WippHttpError(401, "invalid_firebase_token", "UID Firebase manquant.");
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+    throw new WippHttpError(400, "phone_required", "Numéro vérifié manquant.");
+  }
+  const mode = input.mode === "signup" ? "signup" : "signin";
+  const sql = await getSql();
+  const byUid = await sql<{ id: string }>`
+    select id from wipp_profiles where firebase_uid = ${firebaseUid} limit 2
+  `;
+  if (byUid.length > 1) {
+    throw new WippHttpError(409, "ambiguous_profile", "Plusieurs profils portent cette identité.");
+  }
+  if (byUid[0]) {
+    const profile = await getProfileById(byUid[0].id);
+    if (!profile) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+    return linkedPayload(profile, phone);
+  }
+  const byPhone = await sql<{ id: string; firebase_uid: string | null }>`
+    select id, firebase_uid from wipp_profiles where phone_e164 = ${phone} limit 2
+  `;
+  if (byPhone.length > 1) {
+    throw new WippHttpError(409, "ambiguous_profile", "Plusieurs profils correspondent à ce numéro.");
+  }
+  if (byPhone[0]) {
+    if (byPhone[0].firebase_uid && byPhone[0].firebase_uid !== firebaseUid) {
+      throw new WippHttpError(409, "profile_owned", "Ce numéro est déjà lié à un autre compte.");
+    }
+    const updated = await sql<{ id: string }>`
+      update wipp_profiles
+      set firebase_uid = ${firebaseUid}
+      where id = ${byPhone[0].id}
+        and phone_e164 = ${phone}
+        and (firebase_uid is null or firebase_uid = ${firebaseUid})
+      returning id
+    `;
+    if (!updated[0]) {
+      throw new WippHttpError(409, "profile_owned", "Ce numéro est déjà lié à un autre compte.");
+    }
+    const profile = await getProfileById(updated[0].id);
+    if (!profile) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+    return linkedPayload(profile, phone);
+  }
+  if (mode !== "signup") {
+    return { ok: false, noAccount: true, message: "Aucun compte pour ce numéro." };
+  }
+  const username = normalizeUsername(input.username ?? "");
+  assertUsername(username);
+  const taken = await sql`select id from wipp_profiles where lower(username) = ${username} limit 1`;
+  if (taken.length) throw new WippHttpError(409, "username_taken", `@${username} est déjà pris.`);
+  const displayName = `${(input.firstName ?? "").trim()} ${(input.lastName ?? "").trim()}`.trim() || "Wipp";
+  const id = uid("u");
+  try {
+    await sql`
+      insert into wipp_profiles (
+        id, username, display_name, password_hash, bio, firebase_uid, phone_e164
+      ) values (
+        ${id},
+        ${username},
+        ${displayName},
+        ${hashPassword(randomBytes(24).toString("hex"))},
+        ${""},
+        ${firebaseUid},
+        ${phone}
+      )
+    `;
+  } catch (err) {
+    const again = await sql<{ id: string }>`
+      select id from wipp_profiles where firebase_uid = ${firebaseUid} limit 1
+    `;
+    if (again[0]) {
+      const profile = await getProfileById(again[0].id);
+      if (profile) return linkedPayload(profile, phone);
+    }
+    throw err;
+  }
+  const created = await getProfileById(id);
+  if (!created) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+  return linkedPayload(created, phone);
+}
+
+const AUTH_UID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type LinkRow = { id: string; auth_user_id: string | null; firebase_uid: string | null; phone_e164: string | null };
+
+/**
+ * Bind the verified Supabase Auth UUID to exactly one WIPP profile.
+ * Lookup keys are the verified phone and Firebase uid, never a client profile id.
+ * A row already linked to a different auth user is refused.
+ */
+export async function linkVerifiedFirebaseProfile(input: {
+  authUserId: string;
+  firebaseUid: string;
+  phone: string;
+  username?: string;
+  displayName?: string;
+}): Promise<WippProfile> {
+  await ensureMessagingReady();
+  if (!AUTH_UID.test(input.authUserId)) {
+    throw new WippHttpError(401, "invalid_auth_user", "Identité Auth invalide.");
+  }
+  const phone = input.phone.trim();
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+    throw new WippHttpError(400, "phone_required", "Numéro vérifié manquant.");
+  }
+  if (!input.firebaseUid) {
+    throw new WippHttpError(401, "invalid_firebase_token", "UID Firebase manquant.");
+  }
+  const sql = await getSql();
+
+  const byAuth = await sql<LinkRow>`
+    select id, auth_user_id, firebase_uid, phone_e164
+    from wipp_profiles where auth_user_id = ${input.authUserId} limit 2
+  `;
+  if (byAuth.length > 1) {
+    throw new WippHttpError(409, "ambiguous_profile", "Plusieurs profils portent cette identité.");
+  }
+  if (byAuth[0]) {
+    const row = byAuth[0];
+    if ((row.phone_e164 && row.phone_e164 !== phone) || (row.firebase_uid && row.firebase_uid !== input.firebaseUid)) {
+      throw new WippHttpError(409, "profile_owned", "Cette session ne correspond pas au profil lié.");
+    }
+    await sql`
+      update wipp_profiles
+      set phone_e164 = coalesce(phone_e164, ${phone}),
+          firebase_uid = coalesce(firebase_uid, ${input.firebaseUid})
+      where id = ${row.id} and auth_user_id = ${input.authUserId}
+    `;
+    const profile = await getProfileById(row.id);
+    if (!profile) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+    return profile;
+  }
+
+  const byFb = await sql<LinkRow>`
+    select id, auth_user_id, firebase_uid, phone_e164
+    from wipp_profiles where firebase_uid = ${input.firebaseUid} limit 2
+  `;
+  const byPhone = await sql<LinkRow>`
+    select id, auth_user_id, firebase_uid, phone_e164
+    from wipp_profiles where phone_e164 = ${phone} limit 2
+  `;
+  if (byFb.length > 1 || byPhone.length > 1) {
+    throw new WippHttpError(409, "ambiguous_profile", "Plusieurs profils correspondent à cette identité.");
+  }
+  if (byFb[0] && byPhone[0] && byFb[0].id !== byPhone[0].id) {
+    throw new WippHttpError(409, "ambiguous_profile", "Le numéro et le compte Firebase ne désignent pas le même profil.");
+  }
+  const existing = byFb[0] ?? byPhone[0];
+  if (existing) {
+    if (existing.auth_user_id && existing.auth_user_id !== input.authUserId) {
+      throw new WippHttpError(409, "profile_owned", "Ce numéro est déjà lié à un autre compte.");
+    }
+    if (existing.firebase_uid && existing.firebase_uid !== input.firebaseUid) {
+      throw new WippHttpError(409, "profile_owned", "Ce numéro est déjà lié à un autre compte.");
+    }
+    if (existing.phone_e164 && existing.phone_e164 !== phone) {
+      throw new WippHttpError(409, "profile_owned", "Ce compte Firebase est déjà lié à un autre numéro.");
+    }
+    const updated = await sql<{ id: string }>`
+      update wipp_profiles
+      set auth_user_id = ${input.authUserId},
+          firebase_uid = ${input.firebaseUid},
+          phone_e164 = ${phone}
+      where id = ${existing.id}
+        and (auth_user_id is null or auth_user_id = ${input.authUserId})
+        and (firebase_uid is null or firebase_uid = ${input.firebaseUid})
+        and (phone_e164 is null or phone_e164 = ${phone})
+      returning id
+    `;
+    if (!updated[0]) {
+      throw new WippHttpError(409, "profile_owned", "Ce profil est déjà lié à un autre compte.");
+    }
+    const profile = await getProfileById(updated[0].id);
+    if (!profile) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+    return profile;
+  }
+
+  let username = input.username ? normalizeUsername(input.username) : usernameFromPhone(phone);
+  if (input.username) assertUsername(username);
+  for (let i = 0; i < 5; i++) {
+    const clash = await sql`select id from wipp_profiles where lower(username) = ${username} limit 1`;
+    if (!clash.length) break;
+    if (input.username) throw new WippHttpError(409, "username_taken", `@${username} est déjà pris.`);
+    username = `u${randomBytes(5).toString("hex")}`.slice(0, 24);
+  }
+  const displayName = input.displayName?.trim() || "Wipp";
+  const id = uid("u");
+  try {
+    await sql`
+      insert into wipp_profiles (
+        id, username, display_name, password_hash, bio, firebase_uid, phone_e164, auth_user_id
+      ) values (
+        ${id},
+        ${username},
+        ${displayName},
+        ${hashPassword(randomBytes(24).toString("hex"))},
+        ${""},
+        ${input.firebaseUid},
+        ${phone},
+        ${input.authUserId}
+      )
+    `;
+  } catch (err) {
+    const again = await sql<LinkRow>`
+      select id, auth_user_id, firebase_uid, phone_e164
+      from wipp_profiles
+      where auth_user_id = ${input.authUserId} or firebase_uid = ${input.firebaseUid} or phone_e164 = ${phone}
+      limit 2
+    `;
+    if (again.length === 1 && again[0].auth_user_id === input.authUserId) {
+      const profile = await getProfileById(again[0].id);
+      if (profile) return profile;
+    }
+    throw err;
+  }
+  const created = await getProfileById(id);
+  if (!created) throw new WippHttpError(500, "profile_missing", "Profil introuvable.");
+  return created;
+}
+
+const AUTH_USER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function supabaseAuthUser(accessToken: string): Promise<{ id: string; phone: string }> {
+  const { SUPABASE_ANON_KEY, SUPABASE_URL } = await import("@/lib/supabase/config");
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new WippHttpError(503, "auth_unconfigured", "Connexion Supabase indisponible.");
+  }
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new WippHttpError(401, "unauthorized", "Session invalide.");
+  const user = (await res.json()) as { id?: string; phone?: string };
+  if (!user.id || !AUTH_USER_UUID.test(user.id)) {
+    throw new WippHttpError(401, "unauthorized", "Session invalide.");
+  }
+  const raw = (user.phone ?? "").replace(/[\s()-]/g, "");
+  const phone = raw.startsWith("+") ? raw : raw ? `+${raw}` : "";
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+    throw new WippHttpError(400, "phone_missing", "Numéro non vérifié.");
+  }
+  return { id: user.id, phone };
+}
+
+/** Lie le profil WIPP à l'UUID de la session téléphone Supabase. Jamais un id client. */
+export async function linkSupabasePhoneProfile(
+  accessToken: string,
+  input: { mode?: string; username?: string; firstName?: string; lastName?: string },
+): Promise<{ ok: true; profileId: string } | { ok: false; noAccount: true; message: string }> {
+  await ensureMessagingReady();
+  const user = await supabaseAuthUser(accessToken);
+  const mode = input.mode === "signup" ? "signup" : "signin";
+  const sql = await getSql();
+  const byAuth = await sql<{ id: string; phone_e164: string | null }>`
+    select id, phone_e164 from wipp_profiles where auth_user_id = ${user.id} limit 2
+  `;
+  if (byAuth.length > 1) {
+    throw new WippHttpError(409, "ambiguous_profile", "Plusieurs profils correspondent à ce compte.");
+  }
+  if (byAuth[0]) {
+    if (byAuth[0].phone_e164 && byAuth[0].phone_e164 !== user.phone) {
+      throw new WippHttpError(409, "profile_owned", "Ce compte est déjà lié à un autre numéro.");
+    }
+    if (!byAuth[0].phone_e164) {
+      await sql`
+        update wipp_profiles
+        set phone_e164 = ${user.phone}
+        where id = ${byAuth[0].id} and auth_user_id = ${user.id} and phone_e164 is null
+      `;
+    }
+    return { ok: true, profileId: byAuth[0].id };
+  }
+  const byPhone = await sql<{ id: string; auth_user_id: string | null }>`
+    select id, auth_user_id from wipp_profiles where phone_e164 = ${user.phone} limit 2
+  `;
+  if (byPhone.length > 1) {
+    throw new WippHttpError(409, "ambiguous_profile", "Plusieurs profils correspondent à ce numéro.");
+  }
+  if (byPhone[0]) {
+    if (byPhone[0].auth_user_id && byPhone[0].auth_user_id !== user.id) {
+      throw new WippHttpError(409, "profile_owned", "Ce numéro est déjà lié à un autre compte.");
+    }
+    const updated = await sql<{ id: string }>`
+      update wipp_profiles
+      set auth_user_id = ${user.id}
+      where id = ${byPhone[0].id}
+        and phone_e164 = ${user.phone}
+        and (auth_user_id is null or auth_user_id = ${user.id})
+      returning id
+    `;
+    if (!updated[0]) {
+      throw new WippHttpError(409, "profile_owned", "Ce numéro est déjà lié à un autre compte.");
+    }
+    return { ok: true, profileId: updated[0].id };
+  }
+  if (mode !== "signup") {
+    return { ok: false, noAccount: true, message: "Aucun compte pour ce numéro." };
+  }
+  const username = normalizeUsername(input.username ?? "");
+  assertUsername(username);
+  const taken = await sql`select id from wipp_profiles where lower(username) = ${username} limit 1`;
+  if (taken.length) throw new WippHttpError(409, "username_taken", `@${username} est déjà pris.`);
+  const displayName = `${(input.firstName ?? "").trim()} ${(input.lastName ?? "").trim()}`.trim() || "Wipp";
+  const id = uid("u");
+  try {
+    await sql`
+      insert into wipp_profiles (
+        id, username, display_name, password_hash, bio, phone_e164, auth_user_id
+      ) values (
+        ${id},
+        ${username},
+        ${displayName},
+        ${hashPassword(randomBytes(24).toString("hex"))},
+        ${""},
+        ${user.phone},
+        ${user.id}
+      )
+    `;
+  } catch (err) {
+    const again = await sql<{ id: string }>`
+      select id from wipp_profiles where auth_user_id = ${user.id} limit 1
+    `;
+    if (again[0]) return { ok: true, profileId: again[0].id };
+    throw err;
+  }
+  return { ok: true, profileId: id };
 }
 
 /**

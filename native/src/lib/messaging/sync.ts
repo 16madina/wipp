@@ -12,7 +12,7 @@ import {
   previewFromBody,
   type KeyBundle,
 } from "@/lib/crypto";
-import { decodePlain, encodePlain, type ReplyCite, type ShopPlain, type SurprisePlain } from "@/lib/messaging/plain";
+import { decodePlain, encodePlain, type ReplyCite, type ShopPlain, type StoryCite, type SurprisePlain } from "@/lib/messaging/plain";
 import {
   editServerMessage,
   ensureServerSession,
@@ -91,6 +91,7 @@ export async function mapServerMessageAsync(
           replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
           replyPreview: plain.reply?.preview,
           forwarded: plain.forwarded,
+          storyRef: plain.story,
         },
         plain.shop,
       ),
@@ -113,6 +114,7 @@ export async function mapServerMessageAsync(
           replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
           replyPreview: plain.reply?.preview,
           forwarded: plain.forwarded,
+          storyRef: plain.story,
           enc: parsed.envelope,
           encFailed: false,
         },
@@ -136,6 +138,7 @@ function keepLocalMedia(local: Message | undefined, next: Message): Message {
     if (v !== undefined && (out[k] === undefined || k === "type" || k === "text")) out[k] = v;
   }
   out.encFailed = false;
+  if (local.storyRef && !out.storyRef) out.storyRef = local.storyRef;
   return out as Message;
 }
 
@@ -267,6 +270,7 @@ function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): M
     mentions: m.mentions,
     replyTo: plain?.reply?.id ?? m.replyTo ?? undefined,
     replyPreview: plain?.reply?.preview,
+    storyRef: plain?.story,
     editedAt: m.editedAt ?? undefined,
     deletedForAll: Boolean(m.deletedAt),
     pinned: Boolean(m.pinnedAt),
@@ -417,6 +421,7 @@ export function mergeServerMessagesIntoState(
           mapped.text = optimistic.text;
           mapped.replyPreview = mapped.replyPreview ?? optimistic.replyPreview;
           mapped.forwarded = mapped.forwarded ?? optimistic.forwarded;
+          mapped.storyRef = mapped.storyRef ?? optimistic.storyRef;
           mapped.encFailed = false;
         }
       }
@@ -429,6 +434,7 @@ export function mergeServerMessagesIntoState(
         text: prev.text,
         replyPreview: mapped.replyPreview ?? prev.replyPreview,
         forwarded: mapped.forwarded ?? prev.forwarded,
+        storyRef: mapped.storyRef ?? prev.storyRef,
         encFailed: false,
       });
     } else if (ctChanged) {
@@ -497,6 +503,7 @@ export async function decryptMergedMessages(
             ...base,
             replyTo: plain.reply?.id ?? m.replyTo,
             replyPreview: plain.reply?.preview ?? m.replyPreview,
+            storyRef: plain.story ?? m.storyRef,
             forwarded: plain.forwarded,
             encFailed: false,
           },
@@ -552,11 +559,12 @@ export async function sendViaServer(
     vault?: boolean;
     surprise?: SurprisePlain;
     shop?: ShopPlain;
+    story?: StoryCite;
   },
 ) {
   if (!isServerChatId(localChatId)) return null;
   const serverChatId = toServerChatId(localChatId);
-  const plain = encodePlain({ text, reply: opts?.reply, forwarded: opts?.forwarded, surprise: opts?.surprise, shop: opts?.shop });
+  const plain = encodePlain({ text, reply: opts?.reply, forwarded: opts?.forwarded, surprise: opts?.surprise, shop: opts?.shop, story: opts?.story });
   let body = plain;
   if (opts?.identity && opts.peerPublicJwk) {
     const key = await deriveChatKey(opts.identity, opts.peerPublicJwk, serverChatId);

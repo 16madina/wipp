@@ -18,6 +18,19 @@ import {
 import { getTouchBumpConfig } from "@/lib/messaging/touch-config";
 import { TOUCH_RL, touchRateLimit } from "@/lib/messaging/touch-rate-limit";
 import { getNearbyVisibility, resolveNearbyToken, setNearbyVisibility } from "@/lib/messaging/nearby";
+import { DatabaseConfigError, productionDatabaseMissing } from "@/lib/db";
+import {
+  getMyBusinessCard,
+  getPublicBusinessCard,
+  issueTempQr,
+  listPublicBusinessCards,
+  redeemTempQr,
+  respondConnectionRequest,
+  saveMyBusinessCard,
+  sendConnectionRequest,
+  listBusinessChatContexts,
+  openBusinessChat,
+} from "@/lib/messaging/social";
 import { liveKitPublicConfig } from "@/lib/livekit/config";
 import { mintCallToken } from "@/lib/livekit/token";
 import {
@@ -47,8 +60,9 @@ import {
   listChats,
   listDevices,
   listMessages,
+  isUsernameAvailable,
+  linkFirebaseThirdPartyProfile,
   loginProfile,
-  loginWithFirebaseIdToken,
   logoutSession,
   publishE2ePublicKey,
   registerProfile,
@@ -93,6 +107,9 @@ function json(data: unknown, status = 200) {
 }
 
 function errorResponse(err: unknown) {
+  if (err instanceof DatabaseConfigError) {
+    return json({ error: "config_error", message: err.message }, 503);
+  }
   if (err instanceof WippHttpError) {
     return json({ error: err.code, message: err.message }, err.status);
   }
@@ -130,6 +147,10 @@ export async function handleWippApi(request: Request): Promise<Response> {
     const method = request.method.toUpperCase();
     if (method === "OPTIONS") {
       return handleWippOptions();
+    }
+
+    if (productionDatabaseMissing()) {
+      return json({ error: "config_error", message: "DATABASE_URL est requis en production." }, 503);
     }
 
     await ensureMessagingReady();
@@ -487,10 +508,24 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(session);
     }
 
-    if (method === "POST" && a === "auth" && b === "firebase") {
-      const body = await readBody<{ idToken?: string }>(request);
-      const session = await loginWithFirebaseIdToken(body.idToken ?? "");
-      return json(session);
+    if (method === "GET" && a === "auth" && b === "username") {
+      const username = new URL(request.url).searchParams.get("u") ?? "";
+      const available = await isUsernameAvailable(username);
+      return json({ available });
+    }
+
+    if (method === "POST" && a === "auth" && b === "profile") {
+      const token = bearer(request);
+      if (!token) return json({ ok: false, error: "unauthorized", message: "Session requise." }, 401);
+      const body = await readBody<{
+        mode?: string;
+        username?: string;
+        firstName?: string;
+        lastName?: string;
+      }>(request);
+      const linked = await linkFirebaseThirdPartyProfile(token, body);
+      if (!linked.ok) return json(linked, 404);
+      return json(linked);
     }
 
     if (method === "POST" && a === "logout") {
@@ -807,6 +842,74 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const me = await resolveSession(bearer(request));
       const { openSealedReport } = await import("./report-seal");
       return json(await openSealedReport(me.id, c));
+    }
+
+    if (method === "POST" && a === "connections" && b === "requests" && !c) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string; via?: string }>(request);
+      return json(await sendConnectionRequest(me.id, body.username ?? "", body.via ?? "request"));
+    }
+
+    if (method === "POST" && a === "connections" && b === "requests" && c && !d) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ action?: string }>(request);
+      return json(await respondConnectionRequest(me.id, c, body.action ?? ""));
+    }
+
+    if (method === "GET" && a === "business-cards" && b === "me") {
+      const me = await resolveSession(bearer(request));
+      return json(await getMyBusinessCard(me.id));
+    }
+
+    if (method === "PUT" && a === "business-cards" && b === "me") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{
+        name?: string;
+        category?: string;
+        description?: string;
+        country?: string;
+        city?: string;
+        address?: string | null;
+        showAddress?: boolean;
+        hours?: string | null;
+        businessPhone?: string | null;
+        website?: string | null;
+        coverPath?: string | null;
+        logoPath?: string | null;
+      }>(request);
+      return json(await saveMyBusinessCard(me.id, body));
+    }
+
+    if (method === "GET" && a === "business-cards" && b === "public" && !c) {
+      return json(await listPublicBusinessCards());
+    }
+
+    if (method === "GET" && a === "business-cards" && b === "public" && c) {
+      return json(await getPublicBusinessCard(c));
+    }
+
+    if (method === "POST" && a === "qr" && b === "temp" && !c) {
+      const me = await resolveSession(bearer(request));
+      return json(await issueTempQr(me.id));
+    }
+
+    if (method === "POST" && a === "qr" && b === "temp" && c === "redeem") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ token?: string }>(request);
+      return json(await redeemTempQr(me.id, body.token ?? ""));
+    }
+
+    if (method === "POST" && a === "chats" && b === "business" && !c) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ publicId?: string }>(request);
+      const publicId = (body.publicId ?? "").trim();
+      if (!publicId) return json({ ok: false, error: "invalid", message: "Carte manquante." }, 400);
+      return json(await openBusinessChat(me.id, publicId));
+    }
+
+    if (method === "GET" && a === "chats" && b === "business" && !c) {
+      const me = await resolveSession(bearer(request));
+      return json(await listBusinessChatContexts(me.id));
     }
 
     return json({ error: "not_found", message: "Route API inconnue." }, 404);
