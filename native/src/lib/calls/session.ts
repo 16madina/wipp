@@ -276,6 +276,6 @@ export async function pollIncoming() {
 export async function upgradeToVideo() {
   const live = useCallSession.getState().session;
   if (!live?.callId || live.phase !== "connected") return;
-  useCallSession.getState().patch({ kind: "video", camOff: false });
-  await attachToken(live.callId, true);
+  // Same room, same token (it may publish any source): the overlay just turns the camera on.
+  useCallSession.getState().patch({ kind: "video", camOff: false, speaker: true });
 }

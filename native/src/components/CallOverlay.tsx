@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Platform, View, Text } from "react-native";
+import { Platform, Pressable, View, Text } from "react-native";
 import { Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
 import { Audio } from "expo-av";
 import { Camera } from "expo-camera";
-import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume2 } from "lucide-react-native";
+import { Mic, MicOff, Phone, PhoneOff, SwitchCamera, Video, VideoOff, Volume2 } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { formatDuration } from "../lib/format";
@@ -62,6 +62,9 @@ export function CallOverlay() {
   const serverConnected = useWippStore((s) => s.serverConnected);
   const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
   const [localUrl, setLocalUrl] = useState<string | null>(null);
+  const [remoteMuted, setRemoteMuted] = useState(false);
+  const [swapped, setSwapped] = useState(false);
+  const lastTap = useRef(0);
   const [sec, setSec] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const shownSystem = useRef<string | null>(null);
@@ -154,9 +157,26 @@ export function CallOverlay() {
       if (local) setLocalUrl(url);
       else setRemoteUrl(url);
     };
-    room.on(RoomEvent.TrackSubscribed, (track) => bind(track, false));
+    room.on(RoomEvent.TrackSubscribed, (track, pub) => {
+      bind(track, false);
+      if (track.kind === Track.Kind.Video) setRemoteMuted(pub.isMuted);
+    });
     room.on(RoomEvent.TrackUnsubscribed, (track) => {
       if (track.kind === Track.Kind.Video) setRemoteUrl(null);
+    });
+    // Camera turned off/on without unpublishing: hide the frozen frame on the other side.
+    room.on(RoomEvent.TrackMuted, (pub, participant) => {
+      if (pub.kind === Track.Kind.Video && participant !== room.localParticipant) setRemoteMuted(true);
+    });
+    room.on(RoomEvent.TrackUnmuted, (pub, participant) => {
+      if (pub.kind !== Track.Kind.Video) return;
+      // Unmuting can restart the capture with a new stream: rebind the view.
+      if (participant === room.localParticipant) {
+        if (pub.track) bind(pub.track as LocalVideoTrack, true);
+        return;
+      }
+      setRemoteMuted(false);
+      if (pub.track) bind(pub.track as RemoteTrack, false);
     });
     room.on(RoomEvent.LocalTrackPublished, (pub) => {
       if (pub.track) bind(pub.track as LocalVideoTrack, true);
@@ -179,10 +199,6 @@ export function CallOverlay() {
         patch({ phase: "failed", note: "Micro refusé." });
         return;
       }
-      if (session.kind === "video" && !session.camOff) {
-        const cam = await Camera.requestCameraPermissionsAsync();
-        if (!cam.granted) patch({ camOff: true, note: "Caméra refusée. L’audio continue." });
-      }
       const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
       await AudioSession.configureAudio({
         android: { audioTypeOptions: AndroidAudioTypePresets.communication, preferredOutputList: ["speaker", "earpiece", "bluetooth"] },
@@ -192,9 +208,6 @@ export function CallOverlay() {
       await room.connect(session.url!, session.token!);
       if (cancelled) return;
       await room.localParticipant.setMicrophoneEnabled(!session.muted);
-      if (session.kind === "video" && !session.camOff) {
-        await room.localParticipant.setCameraEnabled(true, { facingMode: session.facing === "environment" ? "environment" : "user" });
-      }
       patch({ phase: "connected", startedAt: Date.now() });
       if (session.group && session.callId) {
         const { setGroupState } = await import("../lib/calls/livekit-client");
@@ -207,6 +220,8 @@ export function CallOverlay() {
       cancelled = true;
       setRemoteUrl(null);
       setLocalUrl(null);
+      setRemoteMuted(false);
+      setSwapped(false);
       void room.disconnect();
       void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
     };
@@ -218,13 +233,42 @@ export function CallOverlay() {
     void room.localParticipant.setMicrophoneEnabled(!session.muted);
   }, [session?.muted, session?.phase]);
 
+  // Camera on/off inside the same room: no reconnect, the other side gets mute/unmute events.
   useEffect(() => {
     const room = roomRef.current;
     if (!room || session?.phase !== "connected") return;
-    void room.localParticipant.setCameraEnabled(session.kind === "video" && !session.camOff, {
-      facingMode: session.facing === "environment" ? "environment" : "user",
-    });
-  }, [session?.camOff, session?.facing, session?.kind, session?.phase]);
+    const want = session.kind === "video" && !session.camOff;
+    let stale = false;
+    void (async () => {
+      if (want) {
+        const cam = await Camera.requestCameraPermissionsAsync();
+        if (!cam.granted) {
+          patch({ camOff: true, note: "Caméra refusée. L’audio continue." });
+          return;
+        }
+      }
+      const pub = await room.localParticipant.setCameraEnabled(want, {
+        facingMode: useCallSession.getState().session?.facing === "environment" ? "environment" : "user",
+      });
+      if (stale) return;
+      const track = pub?.track ?? room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+      setLocalUrl(want && track ? streamURL(track) : null);
+    })().catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [session?.camOff, session?.kind, session?.phase]);
+
+  useEffect(() => {
+    const room = roomRef.current;
+    if (!room || session?.phase !== "connected" || session.camOff) return;
+    const track = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+    if (!track) return;
+    void track
+      .restartTrack({ facingMode: session.facing === "environment" ? "environment" : "user" })
+      .then(() => setLocalUrl(streamURL(track)))
+      .catch(() => undefined);
+  }, [session?.facing]);
 
   useEffect(() => {
     if (!session || session.phase !== "connected") return;
@@ -258,22 +302,45 @@ export function CallOverlay() {
     );
   }
 
+  const remoteVid = remoteUrl && !remoteMuted ? remoteUrl : null;
+  const localVid = localUrl && session.kind === "video" && !session.camOff ? localUrl : null;
+  const flip = swapped && !!remoteVid && !!localVid;
+  const main = flip ? localVid : remoteVid;
+  const mini = flip ? remoteVid : localVid;
+  const onVideo = !!main;
+  const dim = onVideo ? "rgba(247,249,252,0.85)" : "rgba(247,249,252,0.6)";
+  const doubleTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) setSwapped((v) => !v);
+    lastTap.current = now;
+  };
+  const roundBtn = { width: 56, height: 56, borderRadius: 28, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: onVideo ? "rgba(0,0,0,0.45)" : colors.surface };
+  const iconColor = onVideo ? "#fff" : colors.fg;
+
   return (
-    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: colors.navy, alignItems: "center", justifyContent: "space-between", paddingVertical: 48 }}>
-      <Press onPress={() => patch({ pip: true })} style={{ alignSelf: "flex-start", marginLeft: 20 }}>
-        <Text style={{ color: "rgba(247,249,252,0.7)" }}>Réduire</Text>
-      </Press>
-      <View style={{ alignItems: "center", width: "100%", flex: 1, justifyContent: "center" }}>
-        {session.kind === "video" && remoteUrl ? (
-          <RTCView streamURL={remoteUrl} style={{ width: "100%", height: 360 }} objectFit="cover" />
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: colors.navy }}>
+      {/* Full-screen video, double tap swaps who is big and who is small. */}
+      <Pressable onPress={doubleTap} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
+        {main ? (
+          <RTCView streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={flip} zOrder={0} />
         ) : (
-          <Avatar user={user} size={96} />
+          <View style={{ alignItems: "center" }}>
+            <Avatar user={user} size={112} />
+            {remoteUrl && remoteMuted ? <Text style={{ marginTop: 12, color: dim }}>Caméra coupée</Text> : null}
+          </View>
         )}
-        {session.kind === "video" && localUrl && !session.camOff ? (
-          <RTCView streamURL={localUrl} style={{ position: "absolute", right: 16, bottom: 16, width: 96, height: 140, borderRadius: 12 }} objectFit="cover" mirror />
-        ) : null}
-        <Text style={{ marginTop: 16, fontSize: 24, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{title}</Text>
-        <Text style={{ marginTop: 6, color: "rgba(247,249,252,0.6)" }}>
+      </Pressable>
+      {mini ? (
+        <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", top: 110, right: 16, width: 108, height: 160, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", backgroundColor: "#000" }}>
+          <RTCView streamURL={mini} style={{ width: 108, height: 160 }} objectFit="cover" mirror={!flip} zOrder={1} />
+        </Press>
+      ) : null}
+      <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: 56, paddingHorizontal: 20, alignItems: "center" }}>
+        <Press onPress={() => patch({ pip: true })} style={{ alignSelf: "flex-start" }}>
+          <Text style={{ color: dim }}>Réduire</Text>
+        </Press>
+        <Text style={{ marginTop: onVideo ? 4 : 0, fontSize: onVideo ? 20 : 24, fontFamily: "Inter_600SemiBold", color: colors.paper, textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: onVideo ? 4 : 0 }}>{title}</Text>
+        <Text style={{ marginTop: 4, color: dim, textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: onVideo ? 4 : 0 }}>
           {session.kind === "video" ? "Appel vidéo" : "Appel audio"}
           {session.group ? " · groupe" : ""}
           {" · "}
@@ -281,55 +348,58 @@ export function CallOverlay() {
           {session.phase === "connected" ? ` · ${formatDuration(sec)}` : ""}
         </Text>
       </View>
-      {session.phase === "ringing" && session.dir === "in" ? (
-        <View style={{ flexDirection: "row", gap: 28, marginBottom: 24 }}>
-          <Press onPress={() => void declineCurrentCall()} accessibilityLabel="Refuser" style={{ alignItems: "center", gap: 8 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}>
-              <PhoneOff size={22} color="#fff" />
-            </View>
-            <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Refuser</Text>
-          </Press>
-          <Press onPress={() => void acceptCurrentCall()} accessibilityLabel="Accepter" style={{ alignItems: "center", gap: 8 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#1f8f4e", alignItems: "center", justifyContent: "center" }}>
-              <Phone size={22} color="#fff" />
-            </View>
-            <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Accepter</Text>
-          </Press>
-        </View>
-      ) : (
-        <View style={{ flexDirection: "row", gap: 16, marginBottom: 24 }}>
-          <Press onPress={() => patch({ muted: !session.muted })} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
-            {session.muted ? <MicOff size={22} color={colors.fg} /> : <Mic size={22} color={colors.fg} />}
-          </Press>
-          <Press onPress={() => patch({ speaker: !session.speaker })} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
-            <Volume2 size={22} color={session.speaker ? colors.accent : colors.fg} />
-          </Press>
-          <Press
-            onPress={() => {
-              if (session.kind === "audio" && session.phase === "connected") void upgradeToVideo();
-              else patch({ camOff: !session.camOff, kind: "video" });
-            }}
-            style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}
-          >
-            {session.camOff || session.kind === "audio" ? <VideoOff size={22} color={colors.fg} /> : <Video size={22} color={colors.fg} />}
-          </Press>
-          {session.kind === "video" ? (
-            <Press onPress={() => patch({ facing: session.facing === "user" ? "environment" : "user" })} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: colors.fg, fontSize: 12 }}>Flip</Text>
+      <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 48, alignItems: "center" }}>
+        {session.phase === "ringing" && session.dir === "in" ? (
+          <View style={{ flexDirection: "row", gap: 28 }}>
+            <Press onPress={() => void declineCurrentCall()} accessibilityLabel="Refuser" style={{ alignItems: "center", gap: 8 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}>
+                <PhoneOff size={22} color="#fff" />
+              </View>
+              <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Refuser</Text>
             </Press>
-          ) : null}
-          <Press
-            onPress={() => {
-              if (!terminal) void endCurrentCall();
-              leaveCall();
-            }}
-            accessibilityLabel="Terminer l’appel"
-            style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}
-          >
-            <PhoneOff size={22} color="#fff" />
-          </Press>
-        </View>
-      )}
+            <Press onPress={() => void acceptCurrentCall()} accessibilityLabel="Accepter" style={{ alignItems: "center", gap: 8 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#1f8f4e", alignItems: "center", justifyContent: "center" }}>
+                <Phone size={22} color="#fff" />
+              </View>
+              <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Accepter</Text>
+            </Press>
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", gap: 16 }}>
+            <Press onPress={() => patch({ muted: !session.muted })} accessibilityLabel="Micro" style={roundBtn}>
+              {session.muted ? <MicOff size={22} color={iconColor} /> : <Mic size={22} color={iconColor} />}
+            </Press>
+            <Press onPress={() => patch({ speaker: !session.speaker })} accessibilityLabel="Haut-parleur" style={roundBtn}>
+              <Volume2 size={22} color={session.speaker ? colors.accent : iconColor} />
+            </Press>
+            <Press
+              accessibilityLabel="Caméra"
+              onPress={() => {
+                if (session.kind === "audio") void upgradeToVideo();
+                else patch({ camOff: !session.camOff });
+              }}
+              style={roundBtn}
+            >
+              {session.camOff || session.kind === "audio" ? <VideoOff size={22} color={iconColor} /> : <Video size={22} color={iconColor} />}
+            </Press>
+            {session.kind === "video" && !session.camOff ? (
+              <Press onPress={() => patch({ facing: session.facing === "user" ? "environment" : "user" })} accessibilityLabel="Retourner la caméra" style={roundBtn}>
+                <SwitchCamera size={22} color={iconColor} />
+              </Press>
+            ) : null}
+            <Press
+              onPress={() => {
+                if (!terminal) void endCurrentCall();
+                leaveCall();
+              }}
+              accessibilityLabel="Terminer l’appel"
+              style={{ ...roundBtn, backgroundColor: colors.danger }}
+            >
+              <PhoneOff size={22} color="#fff" />
+            </Press>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
