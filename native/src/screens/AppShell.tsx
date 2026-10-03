@@ -294,18 +294,39 @@ export function AppShell() {
           return;
         }
         void (async () => {
+          const phone = user.phoneNumber ?? "";
           const cached = await readLinkedSession(user.uid);
           if (cancelled) return;
-          restoreFirebaseSession(cached, user.phoneNumber ?? "");
-          setFirebaseUser(true);
-          setAuthReady(true);
+          if (cached?.username) {
+            restoreFirebaseSession(cached, phone);
+            setFirebaseUser(true);
+            setAuthReady(true);
+            try {
+              const res = await signinOtp();
+              if (cancelled || !res.ok) return;
+              enterLinkedProfile(res.profile, phone);
+            } catch {
+              /* Firebase keeps the user. A network miss must not sign them out or request an SMS. */
+            }
+            return;
+          }
+          // No WIPP profile linked on this device: ask the server before opening the app,
+          // so a number without an account stays on the auth screens instead of the demo inbox.
           try {
             const res = await signinOtp();
-            if (cancelled || !res.ok) return;
-            enterLinkedProfile(res.profile, user.phoneNumber ?? "");
+            if (cancelled) return;
+            if (res.ok) {
+              enterLinkedProfile(res.profile, phone);
+              setFirebaseUser(true);
+              setAuthReady(true);
+              return;
+            }
           } catch {
-            /* Firebase keeps the user. A network miss must not sign them out or request an SMS. */
+            /* Offline with nothing linked yet: stay on the auth screens. */
           }
+          if (cancelled) return;
+          setFirebaseUser(false);
+          setAuthReady(true);
         })();
       });
     })();

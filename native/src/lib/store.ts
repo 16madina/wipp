@@ -490,8 +490,8 @@ export const useWippStore = create<Store>((set, get) => ({
           const { postReceipts } = await import("./messaging/client");
           await postReceipts(chatId.slice(4), incoming, receiptsOn ? "read" : "delivered");
         }
-      } catch {
-        /* offline */
+      } catch (err) {
+        console.warn("[wipp] read receipts skipped", err);
       }
     })();
   },
@@ -908,6 +908,11 @@ export const useWippStore = create<Store>((set, get) => ({
             (s) => s.name === "conversation" && "chatId" in s && isSeedDemoChat(s.chatId),
           );
           const users = { ...(merged.users ?? st.users) };
+          // Signed in for real: the demo people stay in memory for old references,
+          // but they are no longer contacts (new chat, new group, call picker, counts).
+          for (const [id, u] of Object.entries(users)) {
+            if (id !== "me" && !id.startsWith("srvuser:") && u.connected) users[id] = { ...u, connected: false };
+          }
           if (profile.avatarUrl) {
             if (users.me) users.me = { ...users.me, avatar: profile.avatarUrl };
             const serverKey = `srvuser:${profile.id}`;
@@ -932,8 +937,9 @@ export const useWippStore = create<Store>((set, get) => ({
               displayName: profile.displayName || st.me.displayName,
               firstName: firstName || st.me.firstName,
               lastName: rest.join(" ") || st.me.lastName,
-              avatar: profile.avatarUrl || st.me.avatar,
-              bio: profile.bio || st.me.bio,
+              // Never fall back to the demo profile's photo or bio on a real account.
+              avatar: profile.avatarUrl || (st.me.avatar === demoMe().avatar ? "" : st.me.avatar),
+              bio: profile.bio || (st.me.bio === demoMe().bio ? "" : st.me.bio),
             },
             requests: [],
             intros: [],
@@ -1185,6 +1191,8 @@ export const useWippStore = create<Store>((set, get) => ({
             },
           }));
           await get().refreshIncomingRequests();
+          // Same as the local path: accepting opens the conversation with the new contact.
+          get().openOrCreateDm(req.fromId);
         }
       })();
       return;

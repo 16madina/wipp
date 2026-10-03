@@ -369,11 +369,18 @@ export async function upsertReceipts(ids: string[], kind: "delivered" | "read") 
       ? { message_id, profile_id: me, delivered_at: now, read_at: now }
       : { message_id, profile_id: me, delivered_at: now },
   );
-  if (kind === "delivered") {
-    await db.from("wipp_receipts").upsert(rows, { ignoreDuplicates: true });
-  } else {
-    await db.from("wipp_receipts").upsert(rows);
-  }
+  // New receipts are inserted as-is; existing ones only get their read_at set.
+  // A plain upsert would rewrite the key columns too, which members may not update.
+  const { error } = await db.from("wipp_receipts").upsert(rows, { ignoreDuplicates: true });
+  if (error) console.warn(`[wipp] ${kind} receipt failed`, error.code, error.message);
+  if (kind !== "read") return;
+  const { error: readError } = await db
+    .from("wipp_receipts")
+    .update({ read_at: now })
+    .eq("profile_id", me)
+    .in("message_id", ids)
+    .is("read_at", null);
+  if (readError) console.warn("[wipp] read receipt failed", readError.code, readError.message);
 }
 
 export async function updatePrefs(

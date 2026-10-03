@@ -473,6 +473,11 @@ export async function decryptMergedMessages(
   if (state.chats.find((c) => c.id === localChatId)?.type === "group") return {};
   const serverChatId = toServerChatId(localChatId);
   const list = state.messages[localChatId] ?? [];
+  // ECDH needs the other party's public key. For an incoming message that is the
+  // sender key (spk); for my own message spk is my key, so use the peer's instead.
+  const peerId = state.chats.find((c) => c.id === localChatId)?.participantIds.find((id) => id !== "me");
+  const keys = state.peerPublicKeys ?? {};
+  const peerJwk = peerId ? keys[peerId] ?? (peerId.startsWith("srvuser:") ? keys[peerId.slice("srvuser:".length)] : undefined) : undefined;
   let changed = false;
   const next = [];
   for (const m of list) {
@@ -485,8 +490,13 @@ export async function decryptMergedMessages(
       next.push(m);
       continue;
     }
+    const otherJwk = m.fromId === "me" ? peerJwk : env.spk;
+    if (!otherJwk) {
+      next.push(m);
+      continue;
+    }
     try {
-      const key = await deriveChatKey(identity, env.spk, serverChatId);
+      const key = await deriveChatKey(identity, otherJwk, serverChatId);
       const text = await decryptText(key, {
         v: 1,
         alg: "AES-GCM",

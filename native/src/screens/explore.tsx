@@ -426,11 +426,15 @@ function ShopSearch({ q }: { q: string }) {
   }, [q]);
   const [kind, setKind] = useState<"all" | "shops" | "users" | "groups">("shops");
   const users = useWippStore((s) => s.users);
+  const serverConnected = useWippStore((s) => s.serverConnected);
   const chats = useWippStore((s) => s.chats);
   const needle = fold(q);
   const people = useMemo(
-    () => Object.values(users).filter((u) => fold(`${u.displayName} ${u.username}`).includes(needle)),
-    [users, needle],
+    () =>
+      Object.values(users).filter(
+        (u) => (!serverConnected || u.id.startsWith("srvuser:")) && fold(`${u.displayName} ${u.username}`).includes(needle),
+      ),
+    [users, needle, serverConnected],
   );
   const groups = useMemo(
     () => chats.filter((c) => c.type === "group" && fold(c.name || "").includes(needle)),

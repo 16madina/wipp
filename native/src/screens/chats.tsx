@@ -543,10 +543,48 @@ export function GlobalSearchScreen() {
   const users = useWippStore((s) => s.users);
   const chats = useWippStore((s) => s.chats);
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
+  const serverConnected = useWippStore((s) => s.serverConnected);
+  const blocked = useWippStore((s) => s.blockedIds);
+  const myServerId = useWippStore((s) => s.serverProfileId);
   const [q, setQ] = useState("");
+  const [serverHits, setServerHits] = useState<string[]>([]);
   const needle = q.trim().toLowerCase();
   void vaultEpoch;
-  const people = Object.values(users).filter((u) => needle.length >= 1 && `${u.displayName} ${u.username}`.toLowerCase().includes(needle));
+  useEffect(() => {
+    const clean = needle.replace(/^@/, "");
+    if (!serverConnected || clean.length < 2) {
+      setServerHits([]);
+      return;
+    }
+    let stale = false;
+    const tmr = setTimeout(() => {
+      void (async () => {
+        try {
+          const { searchPublicProfiles, upsertRemoteProfile } = await import("../lib/public-profiles");
+          const found = await searchPublicProfiles(clean);
+          if (stale) return;
+          setServerHits(found.map((p) => upsertRemoteProfile(p, false)).filter((id) => !blocked.includes(id)));
+        } catch {
+          if (!stale) setServerHits([]);
+        }
+      })();
+    }, 280);
+    return () => {
+      stale = true;
+      clearTimeout(tmr);
+    };
+  }, [needle, serverConnected, blocked]);
+  // Once signed in, only real WIPP profiles are searchable: the demo people stay out.
+  const localPeople = Object.values(users).filter(
+    (u) =>
+      needle.length >= 1 &&
+      (!serverConnected || u.id.startsWith("srvuser:")) &&
+      `${u.displayName} ${u.username}`.toLowerCase().includes(needle.replace(/^@/, "")),
+  );
+  const people = [
+    ...localPeople,
+    ...serverHits.filter((id) => !localPeople.some((u) => u.id === id)).map((id) => users[id]).filter((u): u is NonNullable<typeof u> => Boolean(u)),
+  ].filter((u) => u.id !== "me" && u.id !== `srvuser:${myServerId}`);
   const convos = chats.filter((c) => needle && !isPrivateChat(c.id) && (c.name ?? c.preview).toLowerCase().includes(needle));
   return (
     <ScreenRoot>
