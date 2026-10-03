@@ -4,6 +4,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./firebase-config";
 import { firebaseIdToken } from "./firebase-phone";
 import { signStorageObject } from "./storage-sign";
 import { supabase } from "./supabase";
+import { errorText } from "./error-fr";
 
 export type BusinessCardView = {
   id: string;
@@ -183,7 +184,7 @@ async function resolveCardImage(url: string | null, path: string | null) {
   try {
     return { url: await signBusinessImage(path), unresolved: false };
   } catch (err) {
-    console.warn("[wipp] card image unresolved", err instanceof Error ? err.message : "unknown");
+    console.warn("[wipp] card image unresolved", errorText(err, "unknown"));
     return { url: null, unresolved: true };
   }
 }
@@ -198,7 +199,7 @@ export async function withSignedCardMedia(card: BusinessCardView): Promise<Busin
       try {
         return await signBusinessImage(path);
       } catch (err) {
-        console.warn("[wipp] card gallery unresolved", err instanceof Error ? err.message : "unknown");
+        console.warn("[wipp] card gallery unresolved", errorText(err, "unknown"));
         return "";
       }
     }),

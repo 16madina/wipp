@@ -13,6 +13,7 @@ import { cardToShop, listPublicBusinessCards, withSignedCardMedia } from "../lib
 import { REPORT_REASONS, submitContentReport } from "../lib/safety";
 import type { Listing, Shop, ShopCategory } from "../lib/types";
 import { colors, layout } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 const CATS = ["all", "auto", "home", "goods", "jobs", "services"] as const;
 const GEO = { lat: 45.531, lng: -73.518 };
@@ -302,7 +303,7 @@ function ExploreSearch({ q }: { q: string }) {
         }));
         setError("");
       } catch (err) {
-        if (!cancel) setError(err instanceof Error ? err.message : "Recherche impossible.");
+        if (!cancel) setError(errorText(err, "Recherche impossible."));
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -343,7 +344,7 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
           setLoadError("");
         }
       } catch (err) {
-        if (!cancel) setLoadError(err instanceof Error ? err.message : "Impossible de charger les annonces.");
+        if (!cancel) setLoadError(errorText(err, "Impossible de charger les annonces."));
       }
     })();
     return () => {
@@ -424,7 +425,7 @@ function ShopSearch({ q }: { q: string }) {
         }));
         setError("");
       } catch (err) {
-        if (!cancel) setError(err instanceof Error ? err.message : "Recherche impossible.");
+        if (!cancel) setError(errorText(err, "Recherche impossible."));
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -523,7 +524,7 @@ function ShopRow({ shop }: { shop: Shop }) {
             useWippStore.setState((s) => ({
               saves: saved ? s.saves.filter((x) => !(x.kind === "business" && x.id === id)) : [...s.saves, { kind: "business", id }],
             }));
-          }).catch((err) => Alert.alert("Favoris", err instanceof Error ? err.message : "Enregistrement impossible."));
+          }).catch((err) => Alert.alert("Favoris", errorText(err, "Enregistrement impossible.")));
         }}
       >
         <Heart size={18} color={saved ? colors.accent : colors.muted} fill={saved ? colors.accent : "transparent"} />
@@ -553,7 +554,7 @@ function ShopsPane() {
         }));
         setLoadError("");
       } catch (err) {
-        setLoadError(err instanceof Error ? err.message : "Impossible de charger les boutiques.");
+        setLoadError(errorText(err, "Impossible de charger les boutiques."));
       } finally {
         setLoaded(true);
       }
@@ -670,7 +671,7 @@ function LifestylePane() {
           setLoadError("");
         }
       } catch (err) {
-        if (!cancel) setLoadError(err instanceof Error ? err.message : "Impossible de charger les événements.");
+        if (!cancel) setLoadError(errorText(err, "Impossible de charger les événements."));
       }
     })();
     return () => {
@@ -817,7 +818,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                             reason,
                           }).then(
                             () => Alert.alert("Signalement", "Signalement envoyé."),
-                            (err) => Alert.alert("Signalement", err instanceof Error ? err.message : "Signalement impossible."),
+                            (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
                           );
                         },
                       })),
@@ -865,7 +866,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                     saves: on ? s.saves.filter((x) => !(x.kind === "listing" && x.id === listing.id)) : [...s.saves, { kind: "listing", id: listing.id }],
                   }));
                 } catch (err) {
-                  Alert.alert("Enregistrés", err instanceof Error ? err.message : "Enregistrement impossible.");
+                  Alert.alert("Enregistrés", errorText(err, "Enregistrement impossible."));
                 }
               });
             }}
@@ -931,7 +932,7 @@ export function ShopScreen({ shopId }: { shopId: string }) {
             onPress={() => {
               if (shop.id.startsWith("business:")) {
                 void useWippStore.getState().openBusinessChat(shop.handle).catch((err) => {
-                  Alert.alert("Message", err instanceof Error ? err.message : "Conversation impossible");
+                  Alert.alert("Message", errorText(err, "Conversation impossible"));
                 });
                 return;
               }
@@ -987,7 +988,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                       : [...s.saves, { kind: "event", id: item.id }],
                   }));
                 } catch (err) {
-                  Alert.alert("Enregistrés", err instanceof Error ? err.message : "Enregistrement impossible.");
+                  Alert.alert("Enregistrés", errorText(err, "Enregistrement impossible."));
                 }
               });
             }}
@@ -1010,7 +1011,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                           await removeEvent(item.id);
                           useWippStore.setState((s) => ({ lifestyle: s.lifestyle.filter((x) => x.id !== item.id) }));
                           pop();
-                        }).catch((err) => Alert.alert("Événement", err instanceof Error ? err.message : "Suppression impossible."));
+                        }).catch((err) => Alert.alert("Événement", errorText(err, "Suppression impossible.")));
                       },
                     },
                   ]);
@@ -1122,7 +1123,7 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
                 return;
               }
               onBack();
-            })().catch((err) => setError(err instanceof Error ? err.message : "Enregistrement impossible"));
+            })().catch((err) => setError(errorText(err, "Enregistrement impossible")));
           }}
           style={{ marginTop: 16 }}
         />

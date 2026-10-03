@@ -51,6 +51,7 @@ import type { Surprise } from "../lib/surprise";
 import { storyRing } from "../lib/story-status";
 import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"));
 const NO_MESSAGES: Message[] = [];
@@ -1175,7 +1176,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                                     }),
                                   ).then(
                                     () => Alert.alert("Signalement", "Signalement envoyé."),
-                                    (err) => Alert.alert("Signalement", err instanceof Error ? err.message : "Signalement impossible."),
+                                    (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
                                   );
                                 },
                               })),

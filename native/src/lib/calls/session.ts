@@ -9,6 +9,7 @@ import {
   setGroupState,
   startGroupCall,
 } from "./livekit-client";
+import { errorText } from "../error-fr";
 
 export type CallPhase =
   | "outgoing"
@@ -202,7 +203,7 @@ export async function openCall(input: {
   } catch (err) {
     useCallSession.getState().patch({
       phase: "failed",
-      note: err instanceof Error ? err.message : "Appel impossible.",
+      note: errorText(err, "Appel impossible."),
     });
   }
 }

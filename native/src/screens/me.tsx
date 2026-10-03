@@ -68,6 +68,7 @@ import { TAKEN_USERNAMES } from "../lib/seed";
 import { APP_HOST } from "../lib/utils";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
 import { colors, layout } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 export function MeScreen() {
   const t = useT();
@@ -116,7 +117,7 @@ export function MeScreen() {
                 onPress={() => {
                   void import("../lib/profile-photo").then(({ changeProfilePhoto }) =>
                     changeProfilePhoto().catch((err) => {
-                      Alert.alert("Photo", err instanceof Error ? err.message : "Envoi impossible");
+                      Alert.alert("Photo", errorText(err, "Envoi impossible"));
                     }),
                   );
                 }}
@@ -689,7 +690,7 @@ export function BlockedScreen() {
         await reload();
         setLoadError("");
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : "Impossible de charger les comptes bloqués.");
+        setLoadError(errorText(e, "Impossible de charger les comptes bloqués."));
       } finally {
         setReady(true);
       }
@@ -734,7 +735,7 @@ export function BlockedScreen() {
                       try {
                         await reload();
                       } catch (e) {
-                        setLoadError(e instanceof Error ? e.message : "Impossible de charger les comptes bloqués.");
+                        setLoadError(errorText(e, "Impossible de charger les comptes bloqués."));
                       }
                     });
                   },
@@ -789,7 +790,7 @@ export function DeleteAccountScreen() {
               useWippStore.getState().signOut();
             })().catch((err) => {
               setBusy(false);
-              setError(err instanceof Error ? err.message : "La suppression n’est pas encore disponible sur le serveur.");
+              setError(errorText(err, "La suppression n’est pas encore disponible sur le serveur."));
             });
           }}
           style={{ marginTop: 20 }}
@@ -856,7 +857,7 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
           setLoadError("");
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Chargement impossible.");
+        if (!cancelled) setLoadError(errorText(e, "Chargement impossible."));
       }
     })();
     return () => {
@@ -943,7 +944,7 @@ export function BusinessCardScreen() {
         const status = typeof e === "object" && e && "status" in e ? Number((e as { status?: number }).status) : 0;
         if (status === 401 || status === 403) setError("Connecte-toi pour créer ta carte professionnelle.");
         else if (status === 404) setError("La carte professionnelle n’est pas encore disponible sur le serveur.");
-        else setError(e instanceof Error ? e.message : "Impossible de charger la carte.");
+        else setError(errorText(e, "Impossible de charger la carte."));
       }
     })();
   }, []);
@@ -975,7 +976,7 @@ function cardErrorMessage(e: unknown, fallback: string): string {
   const status = cardHttpStatus(e);
   if (status === 401 || status === 403) return "Connecte-toi pour créer ta carte professionnelle.";
   if (status === 404) return "La carte professionnelle n’est pas encore disponible sur le serveur.";
-  if (e instanceof Error && e.message && e.message !== "upload") return e.message;
+  if (e instanceof Error && e.message && e.message !== "upload") return errorText(e, fallback);
   return fallback;
 }
 
@@ -1215,7 +1216,7 @@ export function BusinessCardEditorScreen() {
         ]);
     } catch (e) {
       const status = cardHttpStatus(e);
-      console.warn("[wipp] card save failed", status || "no-status", e instanceof Error ? e.message : "unknown");
+      console.warn("[wipp] card save failed", status || "no-status", errorText(e, "unknown"));
       setError(cardErrorMessage(e, "Enregistrement impossible."));
     } finally {
       setBusy(false);
@@ -1434,7 +1435,7 @@ export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
         setOpening(true);
         void useWippStore.getState().openBusinessChat(card.publicId).catch((err) => {
           setOpening(false);
-          Alert.alert("Conversation", err instanceof Error ? err.message : "Impossible d’ouvrir la conversation.");
+          Alert.alert("Conversation", errorText(err, "Impossible d’ouvrir la conversation."));
         });
       }}
       onCall={card.businessPhone ? () => void Linking.openURL(`tel:${card.businessPhone}`) : undefined}

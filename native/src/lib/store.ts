@@ -49,6 +49,7 @@ import { isPrivateChat as isVaultChat, subscribePrivateVault } from "./private-v
 import type { LiveEvent } from "./messaging/message-live";
 import { stickerById } from "./stickers";
 import type { SurprisePlain } from "./messaging/plain";
+import { errorText } from "./error-fr";
 
 const TAB: Screen["name"][] = ["chats", "calls", "connect", "explore", "me"];
 const CODE_TTL = 60_000;
@@ -1191,7 +1192,7 @@ export const useWippStore = create<Store>((set, get) => ({
         }
         Alert.alert("Demande", STATUS_FR[status] ?? "La demande n’a pas pu être envoyée.");
       } catch (err) {
-        Alert.alert("Demande", err instanceof Error ? err.message : "La demande n’a pas pu être envoyée.");
+        Alert.alert("Demande", errorText(err, "La demande n’a pas pu être envoyée."));
       }
     })();
   },
@@ -1456,7 +1457,7 @@ export const useWippStore = create<Store>((set, get) => ({
     })().catch(async (err) => {
       console.warn("[wipp] group create failed", err);
       const { Alert } = await import("react-native");
-      Alert.alert("Groupe", err instanceof Error ? err.message : "Création impossible");
+      Alert.alert("Groupe", errorText(err, "Création impossible"));
     });
   },
 }));

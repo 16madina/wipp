@@ -32,6 +32,7 @@ import { Btn, GlassHeader, Header, Press, ScreenRoot, Toggle } from "../componen
 import { useWippStore } from "../lib/store";
 import type { Listing } from "../lib/types";
 import { colors } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 const LISTING_CATS = [
   { id: "goods", label: "Objets" },
@@ -273,7 +274,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
       useWippStore.setState({ listings: await fetchListings(owner) });
       useWippStore.getState().replace({ name: "listing", listingId: id || listingId || "" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Publication impossible.");
+      setError(errorText(err, "Publication impossible."));
     } finally {
       setBusy(false);
       setStatus("");
@@ -510,7 +511,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
       useWippStore.setState({ lifestyle: await fetchEvents(owner) });
       useWippStore.getState().replace({ name: "lifestyle", itemId: id || eventId || "" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Publication impossible.");
+      setError(errorText(err, "Publication impossible."));
     } finally {
       setBusy(false);
       setStatus("");

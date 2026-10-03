@@ -28,6 +28,7 @@ import { coverScaleForContain, storyCropRect } from "../lib/story-frame";
 import { materializeLibraryVideo, trimVideoSegment } from "wipp-video-trim";
 import { useWippStore } from "../lib/store";
 import { colors } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 const MAX_VIDEO_SEC = 60;
 const MIN_VIDEO_SEC = 1;
@@ -147,7 +148,7 @@ export function NewStoryScreen() {
       }
       pop();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Publication impossible";
+      const message = errorText(err, "Publication impossible");
       if (overlay && /could not find|schema cache|p_overlay|function/i.test(message)) {
         setError("Le texte sur la vidéo attend une mise à jour du serveur. La story n’a pas été publiée.");
       } else {
@@ -665,7 +666,7 @@ function VideoTrim({
       onConfirm(trimmed.uri, videoMime(trimmed.ext || trimmed.uri));
     } catch (err) {
       if (keepsWholeClip) {
-        if (__DEV__) console.warn("[wipp] story encode skipped", { sourceBytes, message: err instanceof Error ? err.message : String(err) });
+        if (__DEV__) console.warn("[wipp] story encode skipped", { sourceBytes, message: errorText(err, String(err)) });
         onConfirm(uri, mime);
         return;
       }
@@ -677,7 +678,7 @@ function VideoTrim({
           start,
           end,
           requested: end - start,
-          message: err instanceof Error ? err.message : String(err),
+          message: errorText(err, String(err)),
         });
       }
       setError("Le découpage de cette vidéo a échoué.");
@@ -813,7 +814,7 @@ function StoryGallery({
           console.warn("[wipp] video prepare failed", {
             scheme: String(asset.uri).split(":")[0],
             duration: asset.duration,
-            message: err instanceof Error ? err.message : String(err),
+            message: errorText(err, String(err)),
           });
         }
         setNotice("Cette vidéo n’est pas encore disponible sur l’iPhone. Réessaie.");

@@ -9,6 +9,7 @@ import { draftFromShare, type ShareDraft } from "../lib/share-inbox";
 import { chatPeer, isChatSealed, isPrivateChat, useWippStore } from "../lib/store";
 import { startUpload } from "../lib/messaging/send-media";
 import { colors } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 function titleOf(chat: ReturnType<typeof useWippStore.getState>["chats"][number], users: ReturnType<typeof useWippStore.getState>["users"]) {
   if (chat.type === "group") return chat.name || "Groupe";
@@ -55,7 +56,7 @@ export function ShareInboxScreen() {
         if (live) setDraft(next);
       },
       (err) => {
-        if (live) setError(err instanceof Error ? err.message : "Contenu impossible à lire.");
+        if (live) setError(errorText(err, "Contenu impossible à lire."));
       },
     );
     return () => {

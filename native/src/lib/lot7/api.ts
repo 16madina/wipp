@@ -1,5 +1,5 @@
-import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../firebase-config";
+import { uploadFileToStorage } from "../upload-file";
+import { SUPABASE_URL } from "../firebase-config";
 import { firebaseIdToken } from "../firebase-phone";
 import { parseStoryOverlay, type StoryOverlay } from "../story-overlay";
 import { supabase } from "../supabase";
@@ -668,26 +668,7 @@ export async function uploadPublicMediaFile(
   const token = await firebaseIdToken();
   if (!token) throw new Error("Session requise");
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-public-media/${path}`;
-  const task = createUploadTask(
-    endpoint,
-    uri,
-    {
-      httpMethod: "POST",
-      uploadType: FileSystemUploadType.BINARY_CONTENT,
-      sessionType: FileSystemSessionType.FOREGROUND,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        "Content-Type": mime,
-        "x-upsert": "false",
-      },
-    },
-    (data) => {
-      if (data.totalBytesExpectedToSend > 0) onProgress?.(data.totalBytesSent, data.totalBytesExpectedToSend);
-    },
-  );
-  const result = await task.uploadAsync();
-  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de l’image impossible");
+  await uploadFileToStorage(endpoint, uri, mime, token, onProgress);
   return path;
 }
 
@@ -709,26 +690,7 @@ export async function uploadPrivateMediaFile(
 ) {
   const token = await firebaseIdToken();
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-private-media/${path}`;
-  const task = createUploadTask(
-    endpoint,
-    uri,
-    {
-      httpMethod: "POST",
-      uploadType: FileSystemUploadType.BINARY_CONTENT,
-      sessionType: FileSystemSessionType.FOREGROUND,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        "Content-Type": mime,
-        "x-upsert": "false",
-      },
-    },
-    (data) => {
-      if (data.totalBytesExpectedToSend > 0) onProgress?.(data.totalBytesSent, data.totalBytesExpectedToSend);
-    },
-  );
-  const result = await task.uploadAsync();
-  if (!result || result.status < 200 || result.status >= 300) throw new Error("upload");
+  await uploadFileToStorage(endpoint, uri, mime, token, onProgress);
   return path;
 }
 

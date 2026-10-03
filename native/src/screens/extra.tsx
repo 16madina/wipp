@@ -20,11 +20,12 @@ import { QUICK_WIPPMOJI_IDS, isStoryWippmoji, storyWippmojis } from "../lib/stor
 import { stickerById } from "../lib/stickers";
 import { useT, useWippStore } from "../lib/store";
 import { colors } from "../theme";
+import { errorText } from "../lib/error-fr";
 
 export { NewStoryScreen } from "./story-composer";
 
 function replyFailure(err: unknown) {
-  const message = err instanceof Error ? err.message : "";
+  const message = errorText(err, "");
   if (/bloqu|écrire|indisponible|introuvable/i.test(message)) return message;
   return "Message impossible.";
 }
@@ -357,7 +358,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
                           reason,
                         }).then(
                           () => Alert.alert("Signalement", "Signalement envoyé."),
-                          (err) => Alert.alert("Signalement", err instanceof Error ? err.message : "Signalement impossible."),
+                          (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
                         );
                       },
                     })),
