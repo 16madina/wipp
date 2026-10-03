@@ -112,6 +112,33 @@ export async function searchUsers(q: string) {
   return data.users;
 }
 
+export async function sendConnectionRequest(username: string) {
+  return api<{ status: string; id?: string }>("/connections/requests", {
+    method: "POST",
+    body: JSON.stringify({ username: username.replace(/^@/, "").trim().toLowerCase(), via: "request" }),
+  });
+}
+
+export type IncomingConnectionRequest = {
+  id: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+  sender: { id: string; username: string; displayName: string; avatarUrl: string | null };
+};
+
+export async function listConnectionRequests() {
+  const data = await api<{ requests: IncomingConnectionRequest[] }>("/connections/requests");
+  return data.requests ?? [];
+}
+
+export async function respondConnectionRequest(id: string, action: "accept" | "decline" | "ignore") {
+  return api<{ status: string }>(`/connections/requests/${encodeURIComponent(id)}`, {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
+}
+
 export async function openServerChat(peerUsername: string) {
   const data = await api<{ chat: WippChatSummary }>("/chats", {
     method: "POST",

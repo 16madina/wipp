@@ -62,6 +62,8 @@ export function ChatsScreen() {
       s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length,
   );
   const push = useWgoStore((s) => s.push);
+  const refreshServerRequests = useWgoStore((s) => s.refreshServerRequests);
+  const onboarded = useWgoStore((s) => s.onboarded);
   const markRead = useWgoStore((s) => s.markRead);
   const verifiedIds = useWgoStore((s) => s.verifiedIds);
   const sealExpired = useWgoStore((s) => s.sealExpired);
@@ -75,6 +77,10 @@ export function ChatsScreen() {
   useEffect(() => {
     return subscribePrivateVault(() => setVaultTick((n) => n + 1));
   }, []);
+
+  useEffect(() => {
+    if (onboarded) void refreshServerRequests();
+  }, [onboarded, refreshServerRequests]);
 
   useEffect(() => {
     sealExpired();
@@ -212,19 +218,17 @@ export function ChatsScreen() {
           );
         })}
       </div>
-      {pending > 0 ? (
-        <button
-          type="button"
-          onClick={() => push({ name: "requests" })}
-          className="mx-4 mb-1 flex items-center gap-3 rounded-xl glass-card px-3 py-2.5"
-        >
-          <span className="flex size-9 items-center justify-center rounded-full bg-accent/20 text-accent-fg">
-            <UserPlus className="size-4 text-navy" />
-          </span>
-          <span className="flex-1 text-left text-[14px] font-medium">{t("requests")}</span>
-          <Badge>{pending}</Badge>
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={() => push({ name: "requests" })}
+        className="mx-4 mb-1 flex items-center gap-3 rounded-xl glass-card px-3 py-2.5"
+      >
+        <span className="flex size-9 items-center justify-center rounded-full bg-accent/20 text-accent-fg">
+          <UserPlus className="size-4 text-navy" />
+        </span>
+        <span className="flex-1 text-left text-[14px] font-medium">{t("requests")}</span>
+        {pending > 0 ? <Badge>{pending}</Badge> : null}
+      </button>
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 pb-2">
         <Chip active={filter === "all"} onClick={() => setFilter("all")}>
           {t("chatsAll")}
@@ -478,7 +482,12 @@ export function RequestsScreen() {
   const acceptRequest = useWgoStore((s) => s.acceptRequest);
   const ignoreRequest = useWgoStore((s) => s.ignoreRequest);
   const blockedIds = useWgoStore((s) => s.blockedIds);
+  const refreshServerRequests = useWgoStore((s) => s.refreshServerRequests);
   const pending = requests.filter((r) => r.status === "pending" && !blockedIds.includes(r.fromId));
+
+  useEffect(() => {
+    void refreshServerRequests();
+  }, [refreshServerRequests]);
   const pendingIntros = intros.filter((i) => i.recipientId === "me" && i.status === "pending");
   const [reportId, setReportId] = useState<string | null>(null);
   const [blockId, setBlockId] = useState<string | null>(null);

@@ -9,11 +9,12 @@ import { Btn, Chip, Empty, Header, SearchField, StatusBar } from "@/components/u
 import { NEARBY } from "@/lib/seed";
 import { useT, useWgoStore } from "@/lib/store";
 import type { FoundVia } from "@/lib/types";
-import { cn, APP_HOST } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ConnectHubExtras, ScanResultHint } from "./connect-extras";
 import { getActiveTouchInvite } from "@/lib/messaging/touch-active";
 import { acceptTouchCode, resolveTouchCode } from "@/lib/messaging/touch-client";
-import { ensureServerSession, getStoredToken } from "@/lib/messaging/client";
+import { ensureServerSession, getStoredProfile, getStoredToken, searchUsers } from "@/lib/messaging/client";
+import type { User } from "@/lib/types";
 
 export function ConnectScreen() {
   const t = useT();
@@ -71,22 +72,49 @@ export function ConnectScreen() {
   );
 }
 
+function profileFromServer(p: { id: string; username: string; displayName: string; avatarUrl?: string | null; bio?: string }): User {
+  return {
+    id: `srvuser:${p.id}`,
+    username: p.username,
+    firstName: p.displayName.split(" ")[0] ?? p.displayName,
+    lastName: p.displayName.split(" ").slice(1).join(" "),
+    displayName: p.displayName,
+    avatar: p.avatarUrl || "",
+    bio: p.bio || "",
+    online: false,
+    connected: false,
+    city: "",
+  };
+}
+
+function usernameFromQr(raw: string) {
+  const text = raw.trim();
+  const at = text.match(/(?:^|\/)@([a-z0-9._]{2,30})/i);
+  if (at) return at[1]!.toLowerCase();
+  if (/^@?[a-z0-9._]{2,30}$/i.test(text)) return text.replace(/^@/, "").toLowerCase();
+  return null;
+}
+
 export function MyQrScreen() {
   const t = useT();
   const pop = useWgoStore((s) => s.pop);
   const push = useWgoStore((s) => s.push);
   const me = useWgoStore((s) => s.me);
+  const serverUsername = useWgoStore((s) => s.serverUsername);
   const [copied, setCopied] = useState(false);
   const touchInvite = getActiveTouchInvite();
   const isTouchShare = Boolean(touchInvite?.status === "active" && touchInvite.code);
-  const link = isTouchShare ? touchInvite!.qrPayload.replace(/^https?:\/\//, "") : `${APP_HOST}/${me.username}`;
-  const qrValue = isTouchShare ? touchInvite!.qrPayload : link;
+  const linked = getStoredProfile();
+  const username = (serverUsername || linked?.username || "").replace(/^@/, "").toLowerCase();
+  const displayName = linked?.displayName || (username && username === me.username ? me.displayName : username);
+  const link = isTouchShare ? touchInvite!.qrPayload.replace(/^https?:\/\//, "") : `wippapp.com/@${username}`;
+  const qrValue = isTouchShare ? touchInvite!.qrPayload : `https://${link}`;
   const shareUrl = isTouchShare ? touchInvite!.qrPayload : `https://${link}`;
 
   async function share() {
     const payload = {
       title: "Wipp",
-      text: isTouchShare ? `Code WIPP Touch ${touchInvite!.code}` : `@${me.username}`,
+      text: isTouchShare ? `Code WIPP Touch ${touchInvite!.code}` : `@${username}`,
       url: shareUrl,
     };
     try {
@@ -108,9 +136,11 @@ export function MyQrScreen() {
       <Header title={isTouchShare ? t("wgoTouch") : t("myQr")} onBack={pop} className="text-paper [&_button]:text-paper" />
       <div className="flex flex-1 flex-col items-center overflow-y-auto no-scrollbar px-6 pt-2 pb-10">
         <WippWordmark className="mb-4 text-[22px] text-paper" />
-        <Avatar user={me} size={72} />
-        <p className="mt-3 text-[20px] font-semibold">{me.displayName}</p>
-        <p className="text-[14px] text-paper/60">@{me.username}</p>
+        {username || isTouchShare ? (
+          <>
+        <Avatar user={{ displayName: displayName || me.displayName, avatar: linked?.avatarUrl || me.avatar, online: me.online }} size={72} />
+        <p className="mt-3 text-[20px] font-semibold">{displayName}</p>
+        <p className="text-[14px] text-paper/60">@{username}</p>
         {isTouchShare ? (
           <p className="mt-2 font-mono text-[22px] font-semibold tracking-[0.2em] text-accent">{touchInvite!.code}</p>
         ) : null}
@@ -133,6 +163,12 @@ export function MyQrScreen() {
             {t("wgoTouch")}
           </Btn>
         ) : null}
+          </>
+        ) : (
+          <p className="mt-8 max-w-[28ch] text-center text-[15px] leading-relaxed text-paper/80">
+            {t("qrNeedsAccount")}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -145,10 +181,47 @@ export function ScannerScreen() {
   const completeTouch = useWgoStore((s) => s.completeTouch);
   const redeemQr = useWgoStore((s) => s.redeemQr);
   const me = useWgoStore((s) => s.me);
-  const [scan, setScan] = useState<null | "profile" | "once" | "group" | "shop">(null);
+  const serverUsername = useWgoStore((s) => s.serverUsername);
+  const [scan, setScan] = useState<null | "once" | "group" | "shop">(null);
   const [fail, setFail] = useState<string | null>(null);
   const [touchCode, setTouchCode] = useState("");
   const [touchBusy, setTouchBusy] = useState(false);
+  const [qrText, setQrText] = useState("");
+  const [qrBusy, setQrBusy] = useState(false);
+
+  async function lookupProfile(raw: string) {
+    const username = usernameFromQr(raw);
+    if (!username) {
+      setFail(t("codeNotFound"));
+      return;
+    }
+    const mine = (serverUsername || getStoredProfile()?.username || "").toLowerCase();
+    if (mine && mine === username) {
+      setFail(t("ownQr"));
+      return;
+    }
+    if (!getStoredToken()) {
+      setFail(t("connectNeedsAccount"));
+      return;
+    }
+    setQrBusy(true);
+    setFail(null);
+    try {
+      const hits = await searchUsers(username);
+      const hit = hits.find((p) => p.username.toLowerCase() === username);
+      if (!hit) {
+        setFail(t("noResults"));
+        return;
+      }
+      const user = profileFromServer(hit);
+      useWgoStore.setState((st) => ({ users: { ...st.users, [user.id]: user } }));
+      replace({ name: "found-profile", userId: user.id, via: "qr" });
+    } catch (err) {
+      setFail(err instanceof Error ? err.message : t("codeNotFound"));
+    } finally {
+      setQrBusy(false);
+    }
+  }
 
   async function redeemTouchCode(raw: string) {
     const code = raw
@@ -204,10 +277,6 @@ export function ScannerScreen() {
   useEffect(() => {
     if (!scan) return;
     const id = window.setTimeout(() => {
-      if (scan === "profile") {
-        replace({ name: "found-profile", userId: "lea", via: "qr" });
-        return;
-      }
       if (scan === "group") {
         replace({ name: "group-invite", token: "soiree-samedi" });
         return;
@@ -238,7 +307,8 @@ export function ScannerScreen() {
           type="button"
           onClick={() => {
             setFail(null);
-            setScan("profile");
+            if (qrText.trim()) void lookupProfile(qrText);
+            else setFail(t("pasteQr"));
           }}
           className="relative size-64"
           aria-label={t("scanAction")}
@@ -258,6 +328,22 @@ export function ScannerScreen() {
         <p className="mt-6 text-[14px] text-paper/60">{t("scanHint")}</p>
         {fail ? <p className="mt-2 text-[13px] text-danger">{fail}</p> : null}
         <div className="mt-6 w-full rounded-2xl bg-paper/8 p-3 ring-1 ring-paper/10">
+          <p className="mb-2 text-center text-[12px] text-paper/50">QR ou @username</p>
+          <input
+            value={qrText}
+            onChange={(e) => setQrText(e.target.value)}
+            placeholder="wippapp.com/@pseudo"
+            className="h-11 w-full rounded-xl bg-ink px-3 text-center text-[15px] text-paper outline-none ring-1 ring-paper/15"
+          />
+          <Btn
+            className="mt-2 w-full"
+            disabled={qrBusy || qrText.trim().length < 2}
+            onClick={() => void lookupProfile(qrText)}
+          >
+            {qrBusy ? "…" : t("scanProfile")}
+          </Btn>
+        </div>
+        <div className="mt-6 w-full rounded-2xl bg-paper/8 p-3 ring-1 ring-paper/10">
           <p className="mb-2 text-center text-[12px] text-paper/50">Code WIPP Touch</p>
           <input
             value={touchCode}
@@ -275,9 +361,6 @@ export function ScannerScreen() {
           </Btn>
         </div>
         <div className="mt-6 grid w-full gap-2">
-          <Btn onClick={() => { setFail(null); setScan("profile"); }}>
-            {t("scanProfile")}
-          </Btn>
           <Btn variant="secondary" onClick={() => { setFail(null); setScan("once"); }}>
             {t("scanOnce")}
           </Btn>
@@ -302,6 +385,25 @@ export function SearchUserScreen() {
   const blocked = useWgoStore((s) => s.blockedIds);
   const [q, setQ] = useState("");
   const query = q.replace(/^@/, "").toLowerCase();
+
+  useEffect(() => {
+    if (query.length < 2 || !getStoredToken()) return;
+    const id = window.setTimeout(() => {
+      void searchUsers(query)
+        .then((rows) => {
+          useWgoStore.setState((st) => {
+            const users = { ...st.users };
+            for (const row of rows) {
+              const user = profileFromServer(row);
+              users[user.id] = { ...users[user.id], ...user, connected: users[user.id]?.connected ?? false };
+            }
+            return { users };
+          });
+        })
+        .catch(() => undefined);
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [query]);
   const hits = Object.values(users).filter(
     (u) =>
       !blocked.includes(u.id) &&
@@ -446,6 +548,7 @@ export function FoundProfileScreen({
   const unblockUser = useWgoStore((s) => s.unblockUser);
   const verified = useWgoStore((s) => s.verifiedIds.includes(userId));
   const chats = useWgoStore((s) => s.chats);
+  const connectNotice = useWgoStore((s) => s.connectNotice);
   const user = userId === "me" ? me : users[userId];
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
@@ -525,10 +628,17 @@ export function FoundProfileScreen({
           <div className="mt-5 grid w-full gap-2">
             <Btn
               disabled={sent && !connected}
-              onClick={() => (connected ? openOrCreateDm(userId) : connectWith(userId))}
+              onClick={() => {
+                useWgoStore.setState({ connectNotice: "" });
+                if (connected) openOrCreateDm(userId);
+                else connectWith(userId);
+              }}
             >
               {connected ? t("message") : sent ? t("requestSent") : t("connectWith")}
             </Btn>
+            {connectNotice ? (
+              <p className="text-center text-[13px] text-danger">{connectNotice}</p>
+            ) : null}
             {connected ? (
               <Btn
                 variant="secondary"

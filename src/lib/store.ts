@@ -141,6 +141,7 @@ function fresh() {
     serverConnected: false,
     serverProfileId: undefined as string | undefined,
     serverUsername: undefined as string | undefined,
+    connectNotice: "",
     typing: {} as Record<string, boolean>,
     codes: seedCodes() as LiveCode[],
     oneTimeQrs: seedOneTimeQrs() as OneTimeQr[],
@@ -191,6 +192,7 @@ type WgoState = ReturnType<typeof fresh> & {
   saveSignup: (data: Partial<MeProfile>) => void;
   completeSetup: (data: Partial<MeProfile>) => void;
   syncServerInbox: () => Promise<void>;
+  refreshServerRequests: () => Promise<void>;
   openServerDm: (username: string) => Promise<void>;
   updateMe: (data: Partial<MeProfile>) => void;
   setTheme: (theme: ThemeMode) => void;
@@ -1175,38 +1177,156 @@ export const useWgoStore = create<WgoState>()(
           return;
         }
         if (get().sentRequestIds.includes(userId)) return;
-        set((st) => ({
-          sentRequestIds: [...st.sentRequestIds, userId],
-        }));
+        const token = typeof localStorage !== "undefined" ? localStorage.getItem("wipp-server-token") : null;
+        if (!token || !user.username) {
+          set({
+            connectNotice: get().language === "fr" ? "Connecte-toi avec un vrai compte" : "Sign in with a real account",
+          });
+          return;
+        }
+        void import("@/lib/messaging/client").then(async (client) => {
+          try {
+            const res = await client.sendConnectionRequest(user.username);
+            if (res.status === "sent" || res.status === "already_pending") {
+              set((st) => ({
+                connectNotice: res.status === "already_pending"
+                  ? (st.language === "fr" ? "Demande déjà en attente" : "Request already pending")
+                  : "",
+                sentRequestIds: st.sentRequestIds.includes(userId)
+                  ? st.sentRequestIds
+                  : [...st.sentRequestIds, userId],
+              }));
+              return;
+            }
+            if (res.status === "already_connected") {
+              set((st) => ({
+                connectNotice: "",
+                users: {
+                  ...st.users,
+                  [userId]: st.users[userId] ? { ...st.users[userId], connected: true } : st.users[userId],
+                },
+              }));
+              return;
+            }
+            const fr: Record<string, string> = {
+              not_found: "Profil introuvable",
+              invalid: "Demande impossible",
+              blocked: "Profil introuvable",
+              rate_limited: "Trop de demandes aujourd'hui, réessaie demain",
+            };
+            set({
+              connectNotice: fr[res.status] ?? (get().language === "fr"
+                ? "La demande n’a pas pu être envoyée."
+                : "The request could not be sent."),
+            });
+          } catch (err) {
+            set({
+              connectNotice: err instanceof Error ? err.message : "La demande n’a pas pu être envoyée.",
+            });
+          }
+        });
+      },
+
+      refreshServerRequests: async () => {
+        const token = typeof localStorage !== "undefined" ? localStorage.getItem("wipp-server-token") : null;
+        if (!token) return;
+        try {
+          const { listConnectionRequests } = await import("@/lib/messaging/client");
+          const rows = await listConnectionRequests();
+          set((st) => {
+            const users = { ...st.users };
+            const requests = [...st.requests];
+            for (const row of rows) {
+              const fromId = `srvuser:${row.sender.id}`;
+              const prev = users[fromId];
+              users[fromId] = {
+                id: fromId,
+                username: row.sender.username,
+                firstName: row.sender.displayName.split(" ")[0] ?? row.sender.displayName,
+                lastName: row.sender.displayName.split(" ").slice(1).join(" "),
+                displayName: row.sender.displayName,
+                avatar: row.sender.avatarUrl || prev?.avatar || "",
+                bio: prev?.bio ?? "",
+                online: prev?.online ?? false,
+                connected: prev?.connected ?? false,
+                city: prev?.city ?? "",
+              };
+              if (!requests.some((r) => r.id === row.id)) {
+                requests.unshift({
+                  id: row.id,
+                  fromId,
+                  preview: st.language === "fr" ? "Demande de connexion" : "Connection request",
+                  createdAt: Date.parse(row.createdAt) || Date.now(),
+                  status: "pending",
+                });
+              }
+            }
+            return { users, requests };
+          });
+        } catch (err) {
+          console.warn("[wipp] incoming requests", err);
+        }
       },
 
       acceptRequest: (id) => {
         const req = get().requests.find((r) => r.id === id);
         if (!req) return;
-        set((st) => ({
-          requests: st.requests.map((r) =>
-            r.id === id ? { ...r, status: "accepted" } : r,
-          ),
-          users: {
-            ...st.users,
-            [req.fromId]: st.users[req.fromId]
-              ? { ...st.users[req.fromId], connected: true }
-              : st.users[req.fromId],
-          },
-        }));
-        const chatId = get().openOrCreateDm(req.fromId);
-        get().sendMessage(chatId, {
-          text: get().language === "fr" ? "Demande acceptée." : "Request accepted.",
-          type: "system",
-        });
+        const apply = () => {
+          set((st) => ({
+            requests: st.requests.map((r) =>
+              r.id === id ? { ...r, status: "accepted" } : r,
+            ),
+            users: {
+              ...st.users,
+              [req.fromId]: st.users[req.fromId]
+                ? { ...st.users[req.fromId], connected: true }
+                : st.users[req.fromId],
+            },
+          }));
+          const chatId = get().openOrCreateDm(req.fromId);
+          get().sendMessage(chatId, {
+            text: get().language === "fr" ? "Demande acceptée." : "Request accepted.",
+            type: "system",
+          });
+        };
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+          void import("@/lib/messaging/client").then(async (client) => {
+            try {
+              await client.respondConnectionRequest(id, "accept");
+              apply();
+            } catch (err) {
+              set({
+                connectNotice: err instanceof Error ? err.message : "La demande n’a pas pu être acceptée.",
+              });
+            }
+          });
+          return;
+        }
+        apply();
       },
 
-      ignoreRequest: (id) =>
-        set((st) => ({
-          requests: st.requests.map((r) =>
-            r.id === id ? { ...r, status: "ignored" } : r,
-          ),
-        })),
+      ignoreRequest: (id) => {
+        const apply = () =>
+          set((st) => ({
+            requests: st.requests.map((r) =>
+              r.id === id ? { ...r, status: "ignored" } : r,
+            ),
+          }));
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+          void import("@/lib/messaging/client").then(async (client) => {
+            try {
+              await client.respondConnectionRequest(id, "ignore");
+              apply();
+            } catch (err) {
+              set({
+                connectNotice: err instanceof Error ? err.message : "La demande n’a pas pu être ignorée.",
+              });
+            }
+          });
+          return;
+        }
+        apply();
+      },
 
       blockUser: (userId) => {
         const profileId = userId.startsWith("srvuser:") ? userId.slice("srvuser:".length) : userId;

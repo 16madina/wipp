@@ -39,6 +39,16 @@ import { OnboardingScreen } from "./onboarding";
 
 export { OnboardingScreen };
 
+function nationalDigits(countryId: string, phone: string) {
+  let digits = phone.replace(/\D/g, "");
+  if (countryId === "CI") {
+    if (digits.length === 9 && !digits.startsWith("0")) digits = `0${digits}`;
+    return digits.length === 10 && digits.startsWith("0") ? digits : null;
+  }
+  digits = digits.replace(/^0+/, "");
+  return digits.length >= 6 ? digits : null;
+}
+
 export function SplashScreen() {
   const onboarded = useWgoStore((s) => s.onboarded);
   const replace = useWgoStore((s) => s.replace);
@@ -53,10 +63,13 @@ export function SignupScreen() {
   const replace = useWgoStore((s) => s.replace);
   const saveSignup = useWgoStore((s) => s.saveSignup);
   const acceptLegal = useWgoStore((s) => s.acceptLegal);
-  const [firstName, setFirst] = useState("Deena");
-  const [lastName, setLast] = useState("Diallo");
-  const [country, setCountry] = useState<(typeof COUNTRIES)[number]>(COUNTRIES[0]);
-  const [phone, setPhone] = useState("514 555 0148");
+  const [firstName, setFirst] = useState("");
+  const [lastName, setLast] = useState("");
+  const [country, setCountry] = useState<(typeof COUNTRIES)[number]>(
+    COUNTRIES.find((c) => c.id === "CI") ?? COUNTRIES[0],
+  );
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState(false);
   const [birthday, setBirthday] = useState("1999-04-12");
   const [accepted, setAccepted] = useState(false);
   const [needAccept, setNeedAccept] = useState(false);
@@ -77,13 +90,19 @@ export function SignupScreen() {
       setNeedAccept(true);
       return;
     }
+    const digits = nationalDigits(country.id, phone);
+    if (!firstName.trim() || !lastName.trim() || !digits) {
+      setPhoneError(!digits);
+      return;
+    }
+    setPhoneError(false);
     setNeedAccept(false);
     acceptLegal();
     saveSignup({
-      firstName,
-      lastName,
-      displayName: `${firstName} ${lastName}`.trim(),
-      phone: `${country.dial} ${phone}`,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      displayName: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      phone: `${country.dial} ${digits}`,
       birthday,
       country: country.id,
     });
@@ -148,9 +167,14 @@ export function SignupScreen() {
               className="h-full min-w-0 flex-1 bg-transparent px-2 text-[15px] outline-none"
               value={phone}
               inputMode="tel"
-              onChange={(e) => setPhone(e.target.value)}
+              placeholder={country.id === "CI" ? "07 00 00 00 00" : "(514) 123-4567"}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneError(false);
+              }}
             />
           </div>
+          {phoneError ? <p className="mt-1.5 text-[12px] text-danger">{t("invalidPhone")}</p> : null}
           {dialOpen ? (
             <CountryMenu
               lang={lang}
@@ -313,8 +337,11 @@ export function LoginScreen() {
   const lang = useWgoStore((s) => s.language);
   const replace = useWgoStore((s) => s.replace);
   const saveSignup = useWgoStore((s) => s.saveSignup);
-  const [country, setCountry] = useState<(typeof COUNTRIES)[number]>(COUNTRIES[0]);
-  const [phone, setPhone] = useState("514 555 0148");
+  const [country, setCountry] = useState<(typeof COUNTRIES)[number]>(
+    COUNTRIES.find((c) => c.id === "CI") ?? COUNTRIES[0],
+  );
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState(false);
   const [dialOpen, setDialOpen] = useState(false);
   return (
     <div className="absolute inset-0 flex flex-col bg-bg">
@@ -339,9 +366,14 @@ export function LoginScreen() {
               className="h-full min-w-0 flex-1 bg-transparent px-2 text-[15px] outline-none"
               value={phone}
               inputMode="tel"
-              onChange={(e) => setPhone(e.target.value)}
+              placeholder={country.id === "CI" ? "07 00 00 00 00" : "(514) 123-4567"}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneError(false);
+              }}
             />
           </div>
+          {phoneError ? <p className="mt-1.5 text-[12px] text-danger">{t("invalidPhone")}</p> : null}
           {dialOpen ? (
             <CountryMenu
               lang={lang}
@@ -354,13 +386,18 @@ export function LoginScreen() {
           ) : null}
         </div>
         <AuthCta
-          onClick={() =>
+          onClick={() => {
+            const digits = nationalDigits(country.id, phone);
+            if (!digits) {
+              setPhoneError(true);
+              return;
+            }
             saveSignup({
-              phone: `${country.dial} ${phone}`,
+              phone: `${country.dial} ${digits}`,
               country: country.id,
               firstName: "",
-            })
-          }
+            });
+          }}
         >
           {t("continue")}
           <ArrowRight className="size-4" />
@@ -370,7 +407,7 @@ export function LoginScreen() {
           className="mx-auto mt-4 block text-[13px] text-muted"
           onClick={() => replace({ name: "signup" })}
         >
-          {t("back")}
+          {t("noAccountYet")}
         </button>
       </div>
     </div>
@@ -448,18 +485,15 @@ const GENDERS = ["unspecified", "woman", "man", "nb"] as const;
 export function SetupScreen() {
   const t = useT();
   const pending = useWgoStore((s) => s.pendingSignup);
-  const me = useWgoStore((s) => s.me);
   const completeSetup = useWgoStore((s) => s.completeSetup);
   const pop = useWgoStore((s) => s.pop);
   const [displayName, setName] = useState(
-    pending.displayName || `${pending.firstName ?? me.firstName} ${pending.lastName ?? ""}`.trim(),
+    pending.displayName || `${pending.firstName ?? ""} ${pending.lastName ?? ""}`.trim(),
   );
-  const [username, setUser] = useState(
-    (pending.firstName || me.username).toLowerCase().replace(/[^a-z0-9]/g, ""),
-  );
+  const [username, setUser] = useState("");
   const [bio, setBio] = useState("");
   const [gender, setGender] = useState<(typeof GENDERS)[number]>("unspecified");
-  const [avatar, setAvatar] = useState(pending.avatar || me.avatar || "/avatars/deena.jpg");
+  const [avatar, setAvatar] = useState(pending.avatar || "");
   const [genderOpen, setGenderOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const taken = TAKEN_USERNAMES.has(username) && username !== "deena";
@@ -490,8 +524,14 @@ export function SetupScreen() {
             onClick={() => setPick(true)}
             aria-label={t("profilePhoto")}
           >
-            <span className="block size-[124px] overflow-hidden rounded-full ring-2 ring-accent/80">
-              <SmartImg src={avatar} alt="" priority className="size-full object-cover" />
+            <span className="block size-[124px] overflow-hidden rounded-full bg-surface ring-2 ring-accent/80">
+              {avatar ? (
+                <SmartImg src={avatar} alt="" priority className="size-full object-cover" />
+              ) : (
+                <span className="flex size-full items-center justify-center text-muted">
+                  <Camera className="size-7" />
+                </span>
+              )}
             </span>
             <span className="absolute right-1 bottom-1 flex size-9 items-center justify-center rounded-full bg-navy text-paper ring-2 ring-bg">
               <Camera className="size-4" />
