@@ -535,8 +535,6 @@ export function LoginScreen() {
   const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [menuOpen, setMenuOpen] = useState(false);
   const [phone, setPhone] = useState("");
-  const [legal, setLegal] = useState(false);
-  const [adult, setAdult] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const phoneBlockRef = useRef<View>(null);
@@ -544,7 +542,7 @@ export function LoginScreen() {
 
   async function tryLogin() {
     Keyboard.dismiss();
-    if (!legal || !adult || busy) return;
+    if (busy) return;
     const e164 = nationalToE164(country, phone);
     if (!e164) {
       setError("Entre un numéro de téléphone valide.");
@@ -591,7 +589,7 @@ export function LoginScreen() {
           Entre le numéro associé à ton compte. Nous t’enverrons un code par SMS pour vérifier que c’est bien toi.
         </Text>
       </Abs>
-      <Abs t={58} l={3} h={30.5} w={94}>
+      <Abs t={58} l={3} h={29} w={94}>
         <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </Abs>
       <Abs t={59.5} l={7} h={9.5} w={86}>
@@ -628,25 +626,22 @@ export function LoginScreen() {
           </View>
         </View>
       </Abs>
-      <Abs t={70.6} l={8} w={84}>
-        <View style={{ gap: 10 }}>
-          <CheckLine
-            checked={legal}
-            onToggle={setLegal}
-            labelStart="En continuant, j’accepte les "
-            linkA="conditions d’utilisation"
-            onA={() => push({ name: "legal", doc: "terms" })}
-            mid=" et les "
-            linkB="politiques de confidentialité"
-            onB={() => push({ name: "legal", doc: "privacy" })}
-            end="."
-          />
-          <CheckLine checked={adult} onToggle={setAdult} labelStart="Je reconnais avoir " linkA="18 ans et plus" onA={() => push({ name: "legal", doc: "age" })} end="." />
-          {error ? <Text style={{ color: colors.danger, fontSize: 11 }}>{error}</Text> : null}
-        </View>
+      {error ? (
+        <Abs t={69.6} l={8} w={84}>
+          <Text style={{ color: colors.danger, fontSize: 11 }}>{error}</Text>
+        </Abs>
+      ) : null}
+      <Abs t={72} l={6} h={7} w={88}>
+        <ContinueHit ready={phone.replace(/\D/g, "").length >= 6} busy={busy} label={t("continue")} onPress={() => void tryLogin()} />
       </Abs>
-      <Abs t={80.5} l={6} h={7} w={88}>
-        <ContinueHit ready={legal && adult} busy={busy} label={t("continue")} onPress={() => void tryLogin()} />
+      {/* Consent was given at sign-up: a passive reminder is enough here. */}
+      <Abs t={80.3} l={8} w={84}>
+        <Text style={{ color: "rgba(247,249,252,0.6)", fontSize: 11, lineHeight: 16, textAlign: "center" }}>
+          En continuant, tu acceptes les{" "}
+          <Text onPress={() => push({ name: "legal", doc: "terms" })} style={{ color: colors.accent, textDecorationLine: "underline" }}>Conditions d’utilisation</Text>
+          {" "}et la{" "}
+          <Text onPress={() => push({ name: "legal", doc: "privacy" })} style={{ color: colors.accent, textDecorationLine: "underline" }}>Politique de confidentialité</Text>.
+        </Text>
       </Abs>
       <Abs t={90} l={10} h={6} w={80}>
         <Pressable
