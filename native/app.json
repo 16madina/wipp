@@ -151,7 +151,20 @@
       ],
       "./plugins/withWippTouchNative",
       "./plugins/withWippCallNative",
-      "@livekit/react-native-expo-plugin"
+      "@livekit/react-native-expo-plugin",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsImageWithMaxCount": 1,
+            "NSExtensionActivationSupportsMovieWithMaxCount": 1
+          },
+          "androidIntentFilters": ["text/*", "image/*", "video/*"]
+        }
+      ]
     ],
     "web": {
       "favicon": "./assets/brand/favicon-48.png"

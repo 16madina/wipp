@@ -87,11 +87,37 @@ export async function searchPublicProfiles(q: string): Promise<RemoteProfile[]> 
 export async function findPublicByUsername(username: string): Promise<RemoteProfile | null> {
   const clean = username.replace(/^@/, "").trim();
   if (!clean) return null;
-  const { data } = await supabase
-    .from("wipp_public_profiles")
-    .select(PUBLIC_PROFILE_COLS)
-    .ilike("username", clean)
-    .maybeSingle();
-  if (!data?.id || !data.username) return null;
-  return mapRow(data as never);
+  try {
+    const { data, error } = await supabase
+      .from("wipp_public_profiles")
+      .select(PUBLIC_PROFILE_COLS)
+      .ilike("username", clean)
+      .maybeSingle();
+    if (!error && data?.id && data.username) return mapRow(data as never);
+  } catch {
+    /* the public view can be unreadable; the API lookup below is the source of truth */
+  }
+  try {
+    const { wippApi } = await import("./proximity/wipp-session");
+    const data = await wippApi<{
+      users?: Array<{
+        id: string;
+        username: string;
+        displayName: string;
+        avatarUrl?: string | null;
+        bio?: string;
+      }>;
+    }>(`users/search?q=${encodeURIComponent(clean)}`);
+    const hit = (data.users ?? []).find((u) => u.username.toLowerCase() === clean.toLowerCase());
+    if (!hit?.id || !hit.username) return null;
+    return {
+      id: hit.id,
+      username: hit.username,
+      displayName: hit.displayName || hit.username,
+      avatarUrl: hit.avatarUrl ?? null,
+      bio: hit.bio ?? "",
+    };
+  } catch {
+    return null;
+  }
 }

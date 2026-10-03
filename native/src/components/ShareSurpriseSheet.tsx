@@ -90,36 +90,34 @@ function RightDrawer({
   if (!visible) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View style={{ flex: 1, flexDirection: "row" }}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
-        <Animated.View
-          style={{
-            width,
-            backgroundColor: colors.surprisePanel,
-            paddingTop: insets.top + 28,
-            paddingBottom: insets.bottom + 24,
-            paddingHorizontal: 16,
-            borderLeftWidth: 1,
-            borderLeftColor: colors.hair,
-            transform: [{ translateX: slide }],
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
-            {onBack ? (
-              <Press onPress={onBack} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-                <ArrowLeft size={22} color={colors.fg} />
-              </Press>
-            ) : null}
-            <Text style={{ flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", color: colors.fg }}>{title}</Text>
-            <Press onPress={onClose} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-              <X size={21} color={colors.fg} />
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 50, elevation: 50, flexDirection: "row" }}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
+      <Animated.View
+        style={{
+          width,
+          backgroundColor: colors.surprisePanel,
+          paddingTop: insets.top + 28,
+          paddingBottom: insets.bottom + 24,
+          paddingHorizontal: 16,
+          borderLeftWidth: 1,
+          borderLeftColor: colors.hair,
+          transform: [{ translateX: slide }],
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
+          {onBack ? (
+            <Press onPress={onBack} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+              <ArrowLeft size={22} color={colors.fg} />
             </Press>
-          </View>
-          <ScrollView>{children}</ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
+          ) : null}
+          <Text style={{ flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", color: colors.fg }}>{title}</Text>
+          <Press onPress={onClose} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <X size={21} color={colors.fg} />
+          </Press>
+        </View>
+        <ScrollView>{children}</ScrollView>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -517,9 +515,6 @@ export function ShareSurpriseSheet({
           ) : null}
         </View>
 
-      </View>
-    </Modal>
-
         <RightDrawer
           visible={Boolean(drawer)}
           title={drawerTitle}
@@ -608,6 +603,7 @@ export function ShareSurpriseSheet({
                         setAnimation(item.id);
                         setDrawer(null);
                         setAnimCat(null);
+                        setPreviewPlay({ id: item.id, n: ++previewSequence.current });
                       }}
                       style={{
                         width: "47%",
@@ -642,8 +638,8 @@ export function ShareSurpriseSheet({
           )}
         </RightDrawer>
 
-        <Modal visible={preview} transparent animationType="fade" onRequestClose={() => setPreview(false)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: 20 }}>
+        {preview ? (
+          <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 60, elevation: 60, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: 20 }}>
             <View style={{ borderRadius: 20, backgroundColor: colors.surprisePanel, borderWidth: 1, borderColor: colors.surpriseLine, padding: 16 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: colors.surpriseSecondary, fontSize: 13 }}>{KINDS.find((k) => k.id === kind)?.title}</Text>
@@ -659,9 +655,15 @@ export function ShareSurpriseSheet({
                 <Text style={{ color: colors.surpriseBright, fontFamily: "Inter_600SemiBold" }}>Retour à ma surprise</Text>
               </Press>
             </View>
-            <SurpriseAnimOverlay centered animationId={previewPlay?.id ?? null} playKey={previewPlay?.n ?? 0} onDone={() => setPreviewPlay(null)} />
           </View>
-        </Modal>
+        ) : null}
+        {previewPlay ? (
+          <View pointerEvents="box-none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 80, elevation: 80 }}>
+            <SurpriseAnimOverlay centered animationId={previewPlay.id} playKey={previewPlay.n} onDone={() => setPreviewPlay(null)} />
+          </View>
+        ) : null}
+      </View>
+    </Modal>
     </>
   );
 }

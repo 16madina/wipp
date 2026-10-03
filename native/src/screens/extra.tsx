@@ -13,7 +13,9 @@ import { isStoryLive } from "../lib/types";
 import { tempQr } from "../lib/qr-payload";
 import { issueTemp } from "../lib/qr-remote";
 import { popProtect, pushProtect } from "../lib/screen-protection";
+import { hideStoryLocal, isStoryHidden } from "../lib/story-hide";
 import { orderedOtherStoryUsers } from "../lib/story-status";
+import { REPORT_REASONS, submitContentReport } from "../lib/safety";
 import { QUICK_WIPPMOJI_IDS, isStoryWippmoji, storyWippmojis } from "../lib/story-reply";
 import { stickerById } from "../lib/stickers";
 import { useT, useWippStore } from "../lib/store";
@@ -36,7 +38,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
   const allStories = useWippStore((s) => s.stories);
   const playbackOrder = useRef<string[] | null>(null);
   const groups = useMemo(() => {
-    const live = allStories.filter((story) => isStoryLive(story) && (!serverConnected || story.id.startsWith("sty_")) && (story.userId === "me" || !blockedIds.includes(story.userId)));
+    const live = allStories.filter((story) => isStoryLive(story) && !isStoryHidden(story.id) && (!serverConnected || story.id.startsWith("sty_")) && (story.userId === "me" || !blockedIds.includes(story.userId)));
     if (!playbackOrder.current && live.length) {
       const ids = orderedOtherStoryUsers(live);
       if (live.some((story) => story.userId === "me")) ids.unshift("me");
@@ -318,12 +320,64 @@ export function StoriesScreen({ userId }: { userId: string }) {
           <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 12 }}>{formatClock(story.createdAt)}</Text>
         </View>
       </View>
-      {mine && story.id.startsWith("sty_") ? (
+      {story.id.startsWith("sty_") ? (
         <Press
           accessibilityLabel="Options de la story"
           onPress={() => {
+            if (mine) {
+              Alert.alert("Story", undefined, [
+                { text: "Supprimer la story", style: "destructive", onPress: askDelete },
+                { text: "Annuler", style: "cancel" },
+              ]);
+              return;
+            }
             Alert.alert("Story", undefined, [
-              { text: "Supprimer la story", style: "destructive", onPress: askDelete },
+              {
+                text: "Signaler la story",
+                onPress: () => {
+                  Alert.alert("Signaler la story", undefined, [
+                    ...REPORT_REASONS.map((reason) => ({
+                      text: reason,
+                      onPress: () => {
+                        void submitContentReport({
+                          contentType: "story" as const,
+                          contentId: story.id,
+                          targetProfileId: group.id,
+                          reason,
+                        }).then(
+                          () => Alert.alert("Signalement", "Signalement envoyé."),
+                          (err) => Alert.alert("Signalement", err instanceof Error ? err.message : "Signalement impossible."),
+                        );
+                      },
+                    })),
+                    { text: "Annuler", style: "cancel" as const },
+                  ]);
+                },
+              },
+              {
+                text: "Masquer cette story",
+                onPress: () => {
+                  hideStoryLocal(story.id);
+                  move(1);
+                },
+              },
+              {
+                text: "Bloquer cet utilisateur",
+                style: "destructive" as const,
+                onPress: () => {
+                  Alert.alert("Bloquer", "Bloquer cet utilisateur ?", [
+                    { text: "Annuler", style: "cancel" },
+                    {
+                      text: "Bloquer",
+                      style: "destructive",
+                      onPress: () => {
+                        useWippStore.getState().blockUser(group.id);
+                        closeViewer();
+                      },
+                    },
+                  ]);
+                },
+              },
               { text: "Annuler", style: "cancel" },
             ]);
           }}

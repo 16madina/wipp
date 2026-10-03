@@ -1,3 +1,7 @@
+import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./firebase-config";
+import { firebaseIdToken } from "./firebase-phone";
+import { signStorageObject } from "./storage-sign";
 import { supabase } from "./supabase";
 
 export type BusinessCardView = {
@@ -21,6 +25,8 @@ export type BusinessCardView = {
   coverUrl: string | null;
   logoUrl: string | null;
   photoUrls: string[];
+  coverUnresolved?: boolean;
+  logoUnresolved?: boolean;
 };
 
 export type MyCardResult = {
@@ -112,36 +118,116 @@ async function cardsApi<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function getMyBusinessCard() {
-  return cardsApi<MyCardResult>("business-cards/me");
+  const result = await cardsApi<MyCardResult>("business-cards/me");
+  if (!result.card) return result;
+  return { ...result, card: await withSignedCardMedia(result.card) };
 }
 
 export async function saveMyBusinessCard(input: CardInput) {
-  return cardsApi<BusinessCardView>("business-cards/me", {
+  const saved = await cardsApi<BusinessCardView>("business-cards/me", {
     method: "PUT",
     body: JSON.stringify(input),
   });
+  return withSignedCardMedia(saved);
 }
 
-export async function listPublicBusinessCards() {
-  return cardsApi<BusinessCardView[]>("business-cards/public");
+export async function listPublicBusinessCards(q = "") {
+  const query = q.trim();
+  const path = query ? `business-cards/public?q=${encodeURIComponent(query)}` : "business-cards/public";
+  return cardsApi<BusinessCardView[]>(path);
 }
 
 export async function getPublicBusinessCard(publicId: string) {
   return cardsApi<BusinessCardView | null>(`business-cards/public/${encodeURIComponent(publicId)}`);
 }
 
-export async function uploadBusinessImage(
+export async function signBusinessImage(path: string) {
+  return signStorageObject("wipp-business-cards", path);
+}
+
+async function resolveCardImage(url: string | null, path: string | null) {
+  if (url) return { url, unresolved: false };
+  if (!path) return { url: null, unresolved: false };
+  try {
+    return { url: await signBusinessImage(path), unresolved: false };
+  } catch (err) {
+    console.warn("[wipp] card image unresolved", err instanceof Error ? err.message : "unknown");
+    return { url: null, unresolved: true };
+  }
+}
+
+export async function withSignedCardMedia(card: BusinessCardView): Promise<BusinessCardView> {
+  const cover = await resolveCardImage(card.coverUrl, card.coverPath);
+  const logo = await resolveCardImage(card.logoUrl, card.logoPath);
+  const photoUrls = await Promise.all(
+    (card.photoPaths ?? []).map(async (path, index) => {
+      const existing = card.photoUrls?.[index];
+      if (existing && /^https?:\/\//i.test(existing)) return existing;
+      try {
+        return await signBusinessImage(path);
+      } catch (err) {
+        console.warn("[wipp] card gallery unresolved", err instanceof Error ? err.message : "unknown");
+        return "";
+      }
+    }),
+  );
+  return {
+    ...card,
+    coverUrl: cover.url,
+    logoUrl: logo.url,
+    photoUrls: photoUrls.filter(Boolean),
+    coverUnresolved: cover.unresolved,
+    logoUnresolved: logo.unresolved,
+  };
+}
+
+/** Streams the file. The card row is updated only after this upload succeeds. */
+export async function uploadBusinessImageFile(
   profileId: string,
-  bytes: Uint8Array,
+  uri: string,
   mime: string,
   role: "cover" | "logo" | "photo",
+  onProgress?: (sent: number, total: number) => void,
 ) {
   if (!mime.startsWith("image/")) throw new Error("Choisis une image");
-  if (bytes.byteLength > 8 * 1024 * 1024) throw new Error("L’image dépasse 8 Mo");
+  const token = await firebaseIdToken();
+  if (!token) throw new Error("Session requise");
   const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
   const path = `${profileId}/${role}-${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("wipp-business-cards").upload(path, bytes, { contentType: mime });
-  if (error) throw new Error(error.message);
-  const { data } = await supabase.storage.from("wipp-business-cards").createSignedUrl(path, 3600);
-  return { path, url: data?.signedUrl ?? "" };
+  const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-business-cards/${path}`;
+  const task = createUploadTask(
+    endpoint,
+    uri,
+    {
+      httpMethod: "POST",
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      sessionType: FileSystemSessionType.FOREGROUND,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+        "Content-Type": mime,
+        "x-upsert": "false",
+      },
+    },
+    (data) => {
+      if (data.totalBytesExpectedToSend > 0) onProgress?.(data.totalBytesSent, data.totalBytesExpectedToSend);
+    },
+  );
+  const result = await task.uploadAsync();
+  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de l’image impossible");
+  try {
+    return { path, url: await signBusinessImage(path) };
+  } catch {
+    return { path, url: "" };
+  }
+}
+
+/** Opens the normal 1:1 conversation with the card owner. Does not create a business inbox. */
+export async function messageCardOwner(ownerProfileId: string) {
+  const id = ownerProfileId.replace(/^srvuser:/, "");
+  if (!id) throw new Error("Profil WIPP introuvable.");
+  const { data, error } = await supabase.from("wipp_public_profiles").select("username").eq("id", id).maybeSingle();
+  if (error || !data?.username) throw new Error("Profil WIPP introuvable.");
+  const { useWippStore } = await import("./store");
+  await useWippStore.getState().openServerDm(data.username);
 }

@@ -34,7 +34,6 @@ import {
 } from "../components/ui";
 import { formatChatTime, formatRemainShort } from "../lib/format";
 import { haptic } from "../lib/haptics";
-import { SHOP_CAT_KEYS } from "../lib/i18n";
 import { usePrivatePinAsk } from "../components/PrivatePinGate";
 import {
   authenticatePrivate,
@@ -54,7 +53,7 @@ import { colors, layout } from "../theme";
 import { useDeviceLayout } from "../lib/device-layout";
 
 function shopFace(shop: Shop) {
-  return { displayName: shop.name, avatar: shop.image, online: true };
+  return { displayName: shop.name, avatar: shop.logo || shop.image, online: true };
 }
 
 export function ChatsScreen() {
@@ -65,8 +64,9 @@ export function ChatsScreen() {
   const chats = useWippStore((s) => s.chats);
   const serverConnected = useWippStore((s) => s.serverConnected);
   const shops = useWippStore((s) => s.shops);
+  const onboarded = useWippStore((s) => s.onboarded);
   const storyRows = useWippStore((s) => s.stories);
-  const stories = serverConnected ? storyRows.filter((story) => story.id.startsWith("sty_")) : storyRows;
+  const stories = onboarded ? storyRows.filter((story) => story.id.startsWith("sty_")) : storyRows;
   const pending = useWippStore(
     (s) =>
       s.requests.filter((r) => r.status === "pending").length +
@@ -87,7 +87,10 @@ export function ChatsScreen() {
   void vaultEpoch;
 
   useEffect(() => {
-    if (useWippStore.getState().onboarded) void useWippStore.getState().syncServerInbox();
+    if (useWippStore.getState().onboarded) {
+      void useWippStore.getState().syncServerInbox();
+      void useWippStore.getState().refreshIncomingRequests();
+    }
   }, []);
 
   const visible = chats
@@ -355,7 +358,7 @@ function ChatRow({
         ? t("tempChatEnded")
         : ephemeral
           ? peer?.firstName ?? t("someone")
-          : shop && !mineShop
+          : shop
             ? shop.name
             : peer?.displayName;
   const preview = sealed ? t("sealedKeepsNone") : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
@@ -373,7 +376,7 @@ function ChatRow({
         {chat.type === "group" ? (
           <GroupAvatar users={groupUsers} size={52} fallback={chat.avatar} />
         ) : (
-          <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} ring={ring} />
+          <Avatar user={shop ? shopFace(shop) : peer} size={52} ring={ring} />
         )}
       </Press>
       <Press onPress={onOpen} onLongPress={onMenu} style={{ flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: colors.hair, paddingBottom: 10 }}>
@@ -382,10 +385,8 @@ function ChatRow({
             {title}
           </Text>
           {shop ? (
-            <View style={{ borderRadius: 999, backgroundColor: colors.navy, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: colors.accent }}>
-                {mineShop ? `${shop.name} · Professionnel` : "Professionnel"}
-              </Text>
+            <View style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 6, paddingVertical: 2 }}>
+              <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: colors.accent }}>Professionnel</Text>
             </View>
           ) : null}
           {peer && verifiedIds.includes(peer.id) ? <ShieldCheck size={14} color={colors.accent} /> : !sealed && chat.type !== "group" ? <Lock size={14} color={colors.muted} /> : null}
@@ -395,7 +396,7 @@ function ChatRow({
         </View>
         <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: sealed ? colors.muted : chat.unread ? colors.fg : colors.muted }}>
-            {shop && !sealed ? `${t(SHOP_CAT_KEYS[shop.category])} · ${preview}` : preview}
+            {preview}
           </Text>
           {!sealed && chat.unread ? <Badge n={chat.unread} /> : null}
         </View>
@@ -472,7 +473,7 @@ export function RequestsScreen() {
   const pending = requests.filter((r) => r.status === "pending" && !blockedIds.includes(r.fromId));
   const pendingIntros = live ? [] : intros.filter((i) => i.recipientId === "me" && i.status === "pending");
   useEffect(() => {
-    if (live) void useWippStore.getState().refreshIncomingRequests();
+    void useWippStore.getState().refreshIncomingRequests();
   }, [live]);
   return (
     <ScreenRoot>

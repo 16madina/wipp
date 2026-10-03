@@ -59,13 +59,12 @@ export async function hydrateCachedProfile() {
 }
 
 export async function loadMe(): Promise<WippProfile> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) {
+  const { data: pid, error: who } = await db.rpc("wipp_my_profile_id");
+  if (who || typeof pid !== "string" || !pid) {
     setCachedProfile(null);
-    throw new Error("Non connecté");
+    throw new Error("Profil introuvable");
   }
-  const { data: pid } = await db.rpc("wipp_my_profile_id");
-  const { data, error } = await db.from("wipp_profiles").select(PROFILE_COLS).eq("id", pid ?? "").maybeSingle();
+  const { data, error } = await db.from("wipp_profiles").select(PROFILE_COLS).eq("id", pid).maybeSingle();
   if (error || !data) throw new Error("Profil introuvable");
   const p = mapProfile(data);
   setCachedProfile(p);
@@ -297,8 +296,22 @@ async function one(id: string) {
   return mapMessage(data, me);
 }
 
+async function assertDmNotBlocked(chatId: string, me: string) {
+  const { data: members } = await db.from("wipp_chat_members").select("profile_id").eq("chat_id", chatId);
+  const peers = (members ?? []).map((row: { profile_id: string }) => row.profile_id).filter((id: string) => id && id !== me);
+  if (!peers.length) return;
+  const [{ data: outgoing }, { data: incoming }] = await Promise.all([
+    db.from("wipp_blocks").select("blocked_id").eq("blocker_id", me).in("blocked_id", peers),
+    db.from("wipp_blocks").select("blocker_id").eq("blocked_id", me).in("blocker_id", peers),
+  ]);
+  if ((outgoing?.length ?? 0) > 0 || (incoming?.length ?? 0) > 0) {
+    throw new Error("Cette personne est bloquée.");
+  }
+}
+
 export async function insertMessage(chatId: string, body: string, clientId: string, replyTo?: string | null) {
   const me = await meId();
+  await assertDmNotBlocked(chatId, me);
   const { data: existing } = await db.from("wipp_messages").select("id").eq("client_id", clientId).maybeSingle();
   if (existing) return one(existing.id);
   const id = `m_${crypto.randomUUID()}`;

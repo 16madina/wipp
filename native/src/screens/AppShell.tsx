@@ -1,3 +1,4 @@
+import { useShareIntentContext } from "expo-share-intent";
 import { isTabScreen, useWippStore } from "../lib/store";
 import type { Screen } from "../lib/types";
 import { TabBar } from "../components/TabBar";
@@ -25,6 +26,8 @@ import {
   RequestsScreen,
 } from "./chats";
 import { ConversationScreen, E2eInfoScreen } from "./conversation";
+import { ShareInboxScreen } from "./share-inbox";
+import { CreateLifestyleScreen, CreateListingScreen } from "./publish";
 import {
   ConnectScreen,
   FoundProfileScreen,
@@ -40,8 +43,6 @@ import {
 import { CallOverlay } from "../components/CallOverlay";
 import { ActiveCallScreen, CallLinkScreen, CallsScreen } from "./calls";
 import {
-  CreateLifestyleScreen,
-  CreateListingScreen,
   CreateShopScreen,
   ExploreScreen,
   ListingScreen,
@@ -132,6 +133,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <ChatsScreen />;
     case "conversation":
       return <ConversationScreen chatId={screen.chatId} />;
+    case "share-inbox":
+      return <ShareInboxScreen />;
     case "archives":
       return <ArchivesScreen />;
     case "chat-info":
@@ -241,9 +244,9 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "lifestyle":
       return <LifestyleScreen itemId={screen.itemId} />;
     case "create-lifestyle":
-      return <CreateLifestyleScreen />;
+      return <CreateLifestyleScreen eventId={screen.eventId} />;
     case "create-listing":
-      return <CreateListingScreen />;
+      return <CreateListingScreen listingId={screen.listingId} />;
     case "e2e-info":
       return <E2eInfoScreen chatId={screen.chatId} />;
     default:
@@ -257,12 +260,21 @@ export function AppShell() {
   const [firebaseUser, setFirebaseUser] = useState(false);
   const stack = useWippStore((s) => s.stack);
   const raw = stack[stack.length - 1] ?? { name: "onboarding" as const };
-  const signedInScreen = firebaseUser && (raw.name === "splash" || AUTH.has(raw.name));
+  const signupMode = useWippStore((s) => s.pendingSignup.mode);
+  const holdSignup =
+    raw.name === "phone-entry" ||
+    raw.name === "profile-reference" ||
+    raw.name === "signup-celebration" ||
+    raw.name === "signup" ||
+    raw.name === "setup" ||
+    (raw.name === "sms-reference" && signupMode !== "signin");
+  const signedInScreen = firebaseUser && !holdSignup && (raw.name === "splash" || AUTH.has(raw.name));
   const top = signedInScreen ? ({ name: "chats" } as const) : raw.name === "splash" ? ({ name: "onboarding" } as const) : raw;
   const showTabs = isTabScreen(top.name);
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
+  const { hasShareIntent } = useShareIntentContext();
 
   useEffect(() => {
     let stop = () => {};
@@ -270,11 +282,13 @@ export function AppShell() {
     void (async () => {
       const { watchFirebaseUser } = await import("../lib/firebase-phone");
       const { signinOtp } = await import("../lib/auth-api");
+      const { pendingMode } = await import("../lib/auth-flow");
       const { enterLinkedProfile, restoreFirebaseSession } = await import("../lib/enter-session");
       const { readLinkedSession } = await import("../lib/firebase-linked-session");
       stop = watchFirebaseUser((user) => {
         if (cancelled) return;
-        if (!user) {
+        const creating = pendingMode() === "signup" || useWippStore.getState().pendingSignup.mode === "signup";
+        if (!user || creating) {
           setFirebaseUser(false);
           setAuthReady(true);
           return;
@@ -363,6 +377,13 @@ export function AppShell() {
       void syncProximityLifecycle(top.name);
     });
   }, [onboarded, top.name]);
+
+  useEffect(() => {
+    if (!authReady || !firebaseUser || !hasShareIntent) return;
+    const current = useWippStore.getState().stack.at(-1)?.name;
+    if (current === "share-inbox") return;
+    useWippStore.getState().push({ name: "share-inbox" });
+  }, [authReady, firebaseUser, hasShareIntent, top.name]);
 
   if (!introDone || !authReady) {
     return <IntroSplash onDone={() => setIntroDone(true)} />;

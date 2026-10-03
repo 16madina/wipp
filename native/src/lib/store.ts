@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { create } from "zustand";
 import type {
   CallLog,
@@ -890,66 +891,84 @@ export const useWippStore = create<Store>((set, get) => ({
   syncServerInbox: async () => {
     const ticket = ++inboxSyncTicket;
     try {
-      const me = get().me;
-      const { bootstrapMessaging, mergeServerChatsIntoState } = await import("./messaging/sync");
-      const { profile, chats } = await bootstrapMessaging({
-        username: me.username || "user",
-        displayName: me.displayName || `${me.firstName} ${me.lastName}`.trim() || "WIPP",
-      });
-      const [firstName, ...rest] = (profile.displayName || me.displayName).split(" ");
+      const { waitForFirebaseUser } = await import("./firebase-phone");
+      const firebaseUser = await waitForFirebaseUser();
       if (ticket !== inboxSyncTicket) return;
-      set((st) => {
-        const merged = mergeServerChatsIntoState(st, chats, profile.id);
-        const onSeed = st.stack.some(
-          (s) => s.name === "conversation" && "chatId" in s && isSeedDemoChat(s.chatId),
-        );
-        return {
-          ...merged,
-          serverProfileId: profile.id,
-          serverUsername: profile.username,
-          serverConnected: true,
-          listings: [],
-          lifestyle: [],
-          pharmacies: [],
-          calls: [],
-          shops: st.shops.filter((shop) => shop.id.startsWith("business:")),
-          saves: [],
-          stack: onSeed ? ([{ name: "chats" }] as Screen[]) : st.stack,
-          me: {
-            ...st.me,
-            username: profile.username || st.me.username,
-            displayName: profile.displayName || st.me.displayName,
-            firstName: firstName || st.me.firstName,
-            lastName: rest.join(" ") || st.me.lastName,
-            avatar: profile.avatarUrl || st.me.avatar,
-            bio: profile.bio || st.me.bio,
-          },
-          requests: [],
-          intros: [],
-        };
-      });
-      void get().syncBusinessContexts();
-      void get().refreshIncomingRequests();
-      const { flushAllOutbox } = await import("./messaging/flush-outbox");
-      await flushAllOutbox(get as never, set as never);
-      void import("./push").then(({ syncAppBadge }) => syncAppBadge());
+      if (!firebaseUser) return;
+      const me = get().me;
+      try {
+        const { bootstrapMessaging, mergeServerChatsIntoState } = await import("./messaging/sync");
+        const { profile, chats } = await bootstrapMessaging({
+          username: me.username || "user",
+          displayName: me.displayName || `${me.firstName} ${me.lastName}`.trim() || "WIPP",
+        });
+        const [firstName, ...rest] = (profile.displayName || me.displayName).split(" ");
+        if (ticket !== inboxSyncTicket) return;
+        set((st) => {
+          const merged = mergeServerChatsIntoState(st, chats, profile.id);
+          const onSeed = st.stack.some(
+            (s) => s.name === "conversation" && "chatId" in s && isSeedDemoChat(s.chatId),
+          );
+          const users = { ...(merged.users ?? st.users) };
+          if (profile.avatarUrl) {
+            if (users.me) users.me = { ...users.me, avatar: profile.avatarUrl };
+            const serverKey = `srvuser:${profile.id}`;
+            if (users[serverKey]) users[serverKey] = { ...users[serverKey], avatar: profile.avatarUrl };
+          }
+          return {
+            ...merged,
+            serverProfileId: profile.id,
+            serverUsername: profile.username,
+            serverConnected: true,
+            listings: [],
+            lifestyle: [],
+            pharmacies: [],
+            calls: [],
+            shops: st.shops.filter((shop) => shop.id.startsWith("business:")),
+            saves: [],
+            stack: onSeed ? ([{ name: "chats" }] as Screen[]) : st.stack,
+            users,
+            me: {
+              ...st.me,
+              username: profile.username || st.me.username,
+              displayName: profile.displayName || st.me.displayName,
+              firstName: firstName || st.me.firstName,
+              lastName: rest.join(" ") || st.me.lastName,
+              avatar: profile.avatarUrl || st.me.avatar,
+              bio: profile.bio || st.me.bio,
+            },
+            requests: [],
+            intros: [],
+          };
+        });
+        void get().syncBusinessContexts();
+        void get().refreshIncomingRequests();
+        const { flushAllOutbox } = await import("./messaging/flush-outbox");
+        await flushAllOutbox(get as never, set as never);
+        void import("./push").then(({ syncAppBadge }) => syncAppBadge());
+      } catch (err) {
+        console.warn("[wipp] server sync failed", err);
+        if (ticket !== inboxSyncTicket) return;
+        set({ serverConnected: false });
+      }
       try {
         const { fetchStories, fetchListings, fetchEvents, fetchSaves } = await import("./lot7/api");
-        const [stories, listings, lifestyle, saves] = await Promise.all([
-          fetchStories(profile.id),
-          fetchListings(profile.id),
-          fetchEvents(profile.id),
+        const profileId = get().serverProfileId;
+        const stories = await fetchStories(profileId);
+        if (ticket !== inboxSyncTicket) return;
+        set({ stories });
+        const [listings, lifestyle, saves] = await Promise.all([
+          fetchListings(profileId),
+          fetchEvents(profileId),
           fetchSaves(),
         ]);
         if (ticket !== inboxSyncTicket) return;
-        set({ stories, listings, lifestyle, saves });
+        set({ listings, lifestyle, saves });
       } catch (err) {
         console.warn("[wipp] lot7 sync", err);
       }
     } catch (err) {
       console.warn("[wipp] server sync failed", err);
-      if (ticket !== inboxSyncTicket) return;
-      set({ serverConnected: false });
     }
   },
   openServerDm: async (username) => {
@@ -1129,12 +1148,12 @@ export const useWippStore = create<Store>((set, get) => ({
       return;
     }
     if (get().sentRequestIds.includes(userId)) return;
-    set((s) => ({ sentRequestIds: [...s.sentRequestIds, userId] }));
-    if (user.username && get().serverConnected) {
-      void (async () => {
+    if (!user.username) return;
+    void (async () => {
+      try {
         const { sendRequest, STATUS_FR } = await import("./connections");
         const channel = via === "qr" ? "qr" : via === "touch" ? "touch" : "request";
-        const status = await sendRequest(user.username, channel);
+        const status = await sendRequest(user.username, channel, userId);
         if (status === "already_connected" || status === "accepted_existing" || status === "accepted") {
           set((s) => ({
             users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
@@ -1142,11 +1161,15 @@ export const useWippStore = create<Store>((set, get) => ({
           }));
           return;
         }
-        if (status === "sent" || status === "already_pending") return;
-        set((s) => ({ sentRequestIds: s.sentRequestIds.filter((id) => id !== userId) }));
-        console.warn("[wipp] connection request", STATUS_FR[status] ?? status);
-      })();
-    }
+        if (status === "sent" || status === "already_pending") {
+          set((s) => ({ sentRequestIds: [...s.sentRequestIds, userId] }));
+          return;
+        }
+        Alert.alert("Demande", STATUS_FR[status] ?? "La demande n’a pas pu être envoyée.");
+      } catch (err) {
+        Alert.alert("Demande", err instanceof Error ? err.message : "La demande n’a pas pu être envoyée.");
+      }
+    })();
   },
   acceptRequest: (id) => {
     const req = get().requests.find((r) => r.id === id);
@@ -1217,7 +1240,6 @@ export const useWippStore = create<Store>((set, get) => ({
     void get().refreshIncomingRequests();
   },
   refreshIncomingRequests: async () => {
-    if (!get().serverConnected) return;
     try {
       const { listIncomingRequests } = await import("./connections");
       const { srvUserId, userFromPublic } = await import("./public-profiles");

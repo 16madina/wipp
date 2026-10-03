@@ -1,0 +1,27 @@
+# Upload filter only. Local files stay on disk.
+# TanStack `vite build` does not read the native app.
+
+native
+native/
+native/**
+
+.env
+.env.*
+.vercel/
+.git/
+
+*.jks
+*.keystore
+**/*.jks
+**/*.keystore
+
+# Local generation and QA output. Not read by vite build or the web runtime.
+artifacts
+artifacts/
+artifacts/**
+screenshots
+screenshots/
+screenshots/**
+attachments
+attachments/
+attachments/**

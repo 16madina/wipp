@@ -121,6 +121,17 @@ const journeeAnimations: SurpriseAnimationItem[] = [
   { id: "day-alarm", label: "Réveil", art: "fx/jour/day_alarm.png" },
 ];
 
+const bonjourAnimations: SurpriseAnimationItem[] = [
+  {
+    id: "bonjour-bonne-journee",
+    label: "Bonne journée",
+    art: "fx/surprise/anims/bonjour-bonne-journee-poster.png",
+    anim: "fx/surprise/anims/bonjour-bonne-journee.webp",
+    enter: "pop",
+    durationMs: 10_000,
+  },
+];
+
 const nuitAnimations: SurpriseAnimationItem[] = [
   { id: "night-moon", label: "Lune", art: "fx/nuit/night_moon.png" },
   { id: "night-galaxy", label: "Galaxie", art: "fx/nuit/night_galaxy.png" },
@@ -136,6 +147,7 @@ const nuitAnimations: SurpriseAnimationItem[] = [
 ];
 
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
+  { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/bonjour-bonne-journee-poster.png", collection: "bonjour" },
   { id: "amour", label: "Amour", art: "fx/surprise/anims/animation-amour.jpg", collection: "amour" },
   { id: "beaute", label: "Beauté", art: "fx/surprise/anims/animation-beaute.jpg" },
   { id: "bonne-journee", label: "Bonne journée", art: "fx/surprise/anims/animation-journee.jpg", collection: "bonne-journee" },
@@ -145,6 +157,7 @@ export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
 ];
 
 export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
+  bonjour: bonjourAnimations,
   amour: amourAnimations,
   "bonne-journee": journeeAnimations,
   "bonne-nuit": nuitAnimations,
@@ -158,6 +171,7 @@ export const surpriseKindArt: Record<SurpriseType, string> = {
 };
 
 export const surpriseAnimations: SurpriseAnimationItem[] = [
+  ...bonjourAnimations,
   ...amourAnimations,
   ...journeeAnimations,
   ...nuitAnimations,

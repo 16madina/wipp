@@ -60,6 +60,58 @@ async function resolvePeerId(peerUsername?: string, peerId?: string) {
   return rows[0].id;
 }
 
+function epoch(value: unknown) {
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isNaN(ms) ? Date.now() : ms;
+  }
+  const raw = String(value ?? "").trim();
+  if (!raw) return Date.now();
+  const direct = Date.parse(raw);
+  if (Number.isFinite(direct)) return direct;
+  const iso = raw.replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00");
+  const parsed = Date.parse(iso);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
+async function expireRinging(scope?: { callId?: string; profileId?: string }) {
+  const sql = await getSql();
+  if (scope?.callId) {
+    await sql`
+      update wipp_call_invites
+      set status = 'missed'
+      where id = ${scope.callId} and status = 'ringing' and expires_at < now()
+    `;
+    return;
+  }
+  if (scope?.profileId) {
+    await sql`
+      update wipp_call_invites
+      set status = 'missed'
+      where status = 'ringing' and expires_at < now()
+        and (caller_id = ${scope.profileId} or callee_id = ${scope.profileId})
+    `;
+  }
+}
+
+async function pushCall(profileId: string, body: string, data: Record<string, unknown>) {
+  const tokens = await listPushTokens(profileId);
+  const expoTokens = tokens
+    .filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken"))
+    .map((t) => t.token);
+  if (!expoTokens.length) return;
+  const result = await sendExpoPush(expoTokens, {
+    title: "WIPP",
+    body,
+    priority: "high",
+    channelId: "incoming_calls",
+    categoryId: "incoming_call",
+    collapseId: String(data.eventId || data.inviteId || "call"),
+    data,
+  });
+  if (result.invalidTokens.length) await disablePushTokens(result.invalidTokens);
+}
+
 function roomFor(a: string, b: string) {
   const slug = [a, b]
     .map((s) => s.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24))
@@ -309,22 +361,15 @@ export async function createCallInvite(input: {
   if (!dto) throw new WippHttpError(500, "invite_failed", "Impossible de créer l’appel.");
 
   // Fire Expo push to callee devices (best-effort)
-  const tokens = await listPushTokens(calleeId);
-  const expoTokens = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
-  if (expoTokens.length) {
-    void sendExpoPush(expoTokens, {
-      title: "WIPP",
-      body: kind === "video" ? "Appel vidéo" : "Appel audio",
-      priority: "high",
-      channelId: "incoming_calls",
-      categoryId: "incoming_call",
-      data: {
-        type: "call",
-        eventId: dto.id,
-        inviteId: dto.id,
-      },
-    }).catch((err) => console.warn("[wipp-call] push", err));
-  }
+  const label = kind === "video" ? "Appel vidéo" : "Appel audio";
+  void pushCall(calleeId, `${dto.caller.displayName} · ${label}`, {
+    type: "call",
+    eventId: dto.id,
+    inviteId: dto.id,
+    kind,
+    callerName: dto.caller.displayName,
+    action: "ring",
+  }).catch((err) => console.warn("[wipp-call] push", err));
 
   return dto;
 }
@@ -431,20 +476,13 @@ export async function answerCallInvite(input: {
   if (!updated) throw new WippHttpError(404, "not_found", "Appel introuvable.");
 
   // Notify caller that call was answered/rejected
-  const notifyId = row.caller_id;
-  const tokens = await listPushTokens(notifyId);
-  const expoTokens = tokens.map((t) => t.token).filter((t) => t.startsWith("ExponentPushToken") || t.length > 20);
-  if (expoTokens.length) {
-    void sendExpoPush(expoTokens, {
-      title: "WIPP",
-      body: input.accept ? "Appel accepté" : "Appel refusé",
-      data: {
-        type: "call",
-        eventId: input.callId,
-        inviteId: input.callId,
-      },
-    }).catch(() => undefined);
-  }
+  void pushCall(row.caller_id, input.accept ? "Appel accepté" : "Appel refusé", {
+    type: "call",
+    eventId: input.callId,
+    inviteId: input.callId,
+    kind: row.kind === "video" ? "video" : "audio",
+    action: input.accept ? "accept" : "reject",
+  }).catch(() => undefined);
 
   return updated;
 }
@@ -470,11 +508,21 @@ export async function hangupCallInvite(input: { meId: string; callId: string }):
   `;
   const updated = await getCallInvite(input.callId);
   if (!updated) throw new WippHttpError(404, "not_found", "Appel introuvable.");
+  const otherId = invite.caller.id === input.meId ? invite.callee.id : invite.caller.id;
+  const action = next === "cancelled" ? "cancel" : next === "rejected" ? "reject" : "end";
+  void pushCall(otherId, next === "cancelled" ? "Appel annulé" : next === "rejected" ? "Appel refusé" : "Appel terminé", {
+    type: "call",
+    eventId: input.callId,
+    inviteId: input.callId,
+    kind: invite.kind,
+    action,
+  }).catch(() => undefined);
   return updated;
 }
 
 export async function listCallHistory(meId: string) {
   await ensureMessagingReady();
+  await expireRinging({ profileId: meId });
   const sql = await getSql();
   let rows: {
     id: string;
@@ -523,7 +571,7 @@ export async function listCallHistory(meId: string) {
     missed: row.status === "missed" || row.status === "expired",
     declined: row.status === "rejected" || row.status === "declined",
     status: row.status,
-    at: row.created_at,
+    at: new Date(epoch(row.created_at)).toISOString(),
     duration: row.duration_sec,
     group: false,
     chatId: null as string | null,
@@ -560,7 +608,7 @@ export async function listCallHistory(meId: string) {
         missed: row.state === "ringing" && row.status === "ended",
         declined: row.state === "declined",
         status: row.state === "declined" ? "declined" : row.status,
-        at: row.created_at,
+        at: new Date(epoch(row.created_at)).toISOString(),
         duration: row.duration_sec,
         group: true,
         chatId: row.chat_id,
@@ -712,6 +760,7 @@ export async function setGroupCallState(input: { meId: string; callId: string; s
 }
 
 export async function getOutgoingCallStatus(meId: string, callId: string) {
+  await expireRinging({ callId });
   const invite = await getCallInvite(callId);
   if (invite) {
     if (invite.caller.id !== meId && invite.callee.id !== meId) {

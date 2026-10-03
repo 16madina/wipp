@@ -1,29 +1,5 @@
 import { WIPP_WEB_ORIGIN } from "./firebase-config";
-import { currentFirebaseUser, firebaseIdToken } from "./firebase-phone";
-
-/**
- * Already linked in production. Startup must enter this profile and must not insert another one.
- * The server remains the source of truth when it returns a profile.
- */
-const EXISTING_PROFILE_BY_UID: Record<string, LinkedProfile> = {
-  C5wHZd360xdVo1PJNLLUgnc1NJD3: {
-    id: "u_seed_deena",
-    username: "",
-    displayName: "",
-    phone: "",
-  },
-};
-
-function existingLinkedProfile(phone = ""): AuthResult | null {
-  const uid = currentFirebaseUser()?.uid;
-  if (!uid) return null;
-  const known = EXISTING_PROFILE_BY_UID[uid];
-  if (!known) return null;
-  return {
-    ok: true,
-    profile: { ...known, phone: phone || currentFirebaseUser()?.phoneNumber || known.phone },
-  };
-}
+import { firebaseIdToken } from "./firebase-phone";
 
 export type LinkedProfile = {
   id: string;
@@ -83,8 +59,6 @@ export async function signupPhone(input: {
   country: string;
   avatar?: string;
 }): Promise<AuthResult> {
-  const existing = existingLinkedProfile();
-  if (existing?.ok) return existing;
   return linkProfile({
     mode: "signup",
     username: input.username,
@@ -94,12 +68,9 @@ export async function signupPhone(input: {
 }
 
 export async function signinOtp(): Promise<AuthResult> {
-  const phone = currentFirebaseUser()?.phoneNumber ?? "";
   try {
-    const res = await linkProfile({ mode: "signin" });
-    if (res.ok) return res;
-    return existingLinkedProfile(phone) ?? res;
+    return await linkProfile({ mode: "signin" });
   } catch {
-    return existingLinkedProfile(phone) ?? { ok: false, error: "Connexion impossible." };
+    return { ok: false, error: "Connexion impossible." };
   }
 }

@@ -18,6 +18,7 @@ import {
   useCallSession,
   type CallPhase,
 } from "../lib/calls/session";
+import { playBusyTone, playCallerWaiting, playIncomingRing, stopCallTones } from "../lib/calls/tones";
 import { endSystemCall, setupCallKeep, showSystemIncoming } from "../lib/calls/callkeep";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
@@ -28,6 +29,17 @@ const RTCView = Platform.OS === "web"
 function streamURL(track: { mediaStream?: unknown } | null) {
   const stream = track?.mediaStream as { toURL?: () => string } | undefined;
   return stream?.toURL?.() ?? null;
+}
+
+function terminalPhases(phase: CallPhase) {
+  return phase === "ended" || phase === "declined" || phase === "missed" || phase === "busy" || phase === "failed";
+}
+
+function leaveCall() {
+  void stopCallTones();
+  const state = useWippStore.getState();
+  if (state.stack.at(-1)?.name === "active-call") state.pop();
+  useCallSession.getState().clear();
 }
 
 function phaseLabel(phase: CallPhase, note?: string) {
@@ -46,7 +58,6 @@ function phaseLabel(phase: CallPhase, note?: string) {
 export function CallOverlay() {
   const session = useCallSession((s) => s.session);
   const patch = useCallSession((s) => s.patch);
-  const clear = useCallSession((s) => s.clear);
   const user = useWippStore((s) => (session ? s.users[session.userId] : undefined));
   const serverConnected = useWippStore((s) => s.serverConnected);
   const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
@@ -67,6 +78,25 @@ export function CallOverlay() {
       },
     );
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      void stopCallTones();
+      return;
+    }
+    if (session.phase === "outgoing") void playCallerWaiting();
+    else if (session.phase === "ringing" && session.dir === "in") void playIncomingRing();
+    else if (session.phase === "busy") void playBusyTone();
+    else void stopCallTones();
+  }, [session?.phase, session?.dir]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (!terminalPhases(session.phase)) return;
+    const wait = session.phase === "busy" ? 4200 : 1200;
+    const id = setTimeout(() => leaveCall(), wait);
+    return () => clearTimeout(id);
+  }, [session?.phase, session?.callId]);
 
   useEffect(() => {
     if (!serverConnected) return;
@@ -223,12 +253,18 @@ export function CallOverlay() {
         </Text>
       </View>
       {session.phase === "ringing" && session.dir === "in" ? (
-        <View style={{ flexDirection: "row", gap: 20, marginBottom: 24 }}>
-          <Press onPress={() => void declineCurrentCall()} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}>
-            <PhoneOff size={22} color="#fff" />
+        <View style={{ flexDirection: "row", gap: 28, marginBottom: 24 }}>
+          <Press onPress={() => void declineCurrentCall()} accessibilityLabel="Refuser" style={{ alignItems: "center", gap: 8 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}>
+              <PhoneOff size={22} color="#fff" />
+            </View>
+            <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Refuser</Text>
           </Press>
-          <Press onPress={() => void acceptCurrentCall()} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "#1f8f4e", alignItems: "center", justifyContent: "center" }}>
-            <Phone size={22} color="#fff" />
+          <Press onPress={() => void acceptCurrentCall()} accessibilityLabel="Accepter" style={{ alignItems: "center", gap: 8 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#1f8f4e", alignItems: "center", justifyContent: "center" }}>
+              <Phone size={22} color="#fff" />
+            </View>
+            <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Accepter</Text>
           </Press>
         </View>
       ) : (
@@ -255,9 +291,10 @@ export function CallOverlay() {
           ) : null}
           <Press
             onPress={() => {
-              if (terminal) clear();
-              else void endCurrentCall().then(() => clear());
+              if (!terminal) void endCurrentCall();
+              leaveCall();
             }}
+            accessibilityLabel="Terminer l’appel"
             style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}
           >
             <PhoneOff size={22} color="#fff" />

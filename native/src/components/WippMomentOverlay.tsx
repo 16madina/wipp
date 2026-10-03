@@ -17,6 +17,7 @@ export function WippMomentOverlay({
   const poster = row ? wippSrc(row.src) : undefined;
   const anim = row?.anim ? wippSrc(row.anim) : undefined;
   const [fade, setFade] = useState(false);
+  const [usePoster, setUsePoster] = useState(false);
   const img = useRef<Image>(null);
   const done = useRef(onDone);
   done.current = onDone;
@@ -24,6 +25,7 @@ export function WippMomentOverlay({
   useEffect(() => {
     if (!row?.playMs) return;
     setFade(false);
+    setUsePoster(false);
     const ms = row.playMs;
     const kick = setTimeout(() => {
       if (Platform.OS !== "web") void img.current?.startAnimating();
@@ -38,7 +40,7 @@ export function WippMomentOverlay({
   }, [stickerId, playKey, row?.playMs]);
 
   if (!stickerId || !row?.playMs) return null;
-  const src = anim ?? poster;
+  const src = usePoster ? poster : (anim ?? poster);
   if (!src) return null;
 
   return (
@@ -46,16 +48,20 @@ export function WippMomentOverlay({
       <Image
         ref={img}
         key={`${stickerId}-${playKey}`}
-        source={src}
+        source={typeof src === "number" ? src : { uri: src.uri, isAnimated: true }}
         placeholder={poster}
         style={styles.anim}
         contentFit="contain"
         autoplay
+        useAppleWebpCodec={false}
         allowDownscaling={false}
         cachePolicy="memory-disk"
         recyclingKey={`${stickerId}-${playKey}`}
         onDisplay={() => {
           if (Platform.OS !== "web") void img.current?.startAnimating();
+        }}
+        onError={() => {
+          if (anim && !usePoster) setUsePoster(true);
         }}
       />
     </View>

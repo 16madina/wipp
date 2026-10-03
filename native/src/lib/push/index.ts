@@ -148,6 +148,16 @@ export async function ensurePushChannels() {
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 400, 200, 400],
     sound: "default",
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    bypassDnd: true,
+  });
+  await Notifications.setNotificationChannelAsync("incoming_calls", {
+    name: "Appels entrants",
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 400, 200, 400, 200, 400],
+    sound: "default",
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    bypassDnd: true,
   });
 }
 
@@ -345,11 +355,44 @@ export function bootstrapPush() {
   const sub = Notifications.addNotificationResponseReceivedListener((r) => {
     void handleResponse(r);
   });
+  const received = Notifications.addNotificationReceivedListener((notification) => {
+    const data = (notification.request.content.data ?? {}) as Record<string, unknown>;
+    const type = String(data.type || "");
+    if (type !== "call" && type !== "incoming_call") return;
+    const callId = String(data.eventId || data.inviteId || "");
+    if (!callId) return;
+    void import("../calls/session").then(({ openCall, useCallSession }) => {
+      const action = String(data.action || "");
+      const live = useCallSession.getState().session;
+      if (action === "cancel" || action === "reject" || action === "end") {
+        if (live?.callId === callId && live.phase !== "connected") {
+          useCallSession.getState().patch({
+            phase: action === "reject" ? "declined" : "ended",
+            note: action === "reject" ? "Appel refusé." : action === "cancel" ? "Appel annulé." : "Appel terminé.",
+            url: undefined,
+            token: undefined,
+          });
+        }
+        return;
+      }
+      if (action === "accept") return;
+      if (live?.callId === callId) return;
+      void openCall({
+        userId: "call",
+        kind: data.kind === "video" ? "video" : "audio",
+        dir: "in",
+        callId,
+        group: data.group === true || data.group === "true",
+        chatId: typeof data.chatId === "string" ? data.chatId : undefined,
+      });
+    });
+  });
   const link = Linking.addEventListener("url", (e) => {
     void enqueueUrl(e.url);
   });
   return () => {
     sub.remove();
+    received.remove();
     link.remove();
     started = false;
   };

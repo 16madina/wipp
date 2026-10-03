@@ -81,6 +81,54 @@ function seed(input: {
   };
 }
 
+function watchInvite(id: string) {
+  const started = Date.now();
+  const timer = setInterval(() => {
+    void (async () => {
+      const live = useCallSession.getState().session;
+      if (!live || live.callId !== id || (live.phase !== "outgoing" && live.phase !== "ringing")) {
+        clearInterval(timer);
+        return;
+      }
+      if (Date.now() - started > 60_000 && live.phase === "outgoing") {
+        clearInterval(timer);
+        useCallSession.getState().patch({ phase: "missed", note: "Pas de réponse." });
+        return;
+      }
+      try {
+        const status = await callStatus(id);
+        const st = status.invite.status;
+        const current = useCallSession.getState().session;
+        if (!current || current.callId !== id) return;
+        if (st === "accepted") {
+          if (current.dir === "out") {
+            clearInterval(timer);
+            await attachToken(id, current.kind === "video");
+          }
+          return;
+        } else if (st === "rejected") {
+          clearInterval(timer);
+          useCallSession.getState().patch({ phase: "declined", note: "Appel refusé." });
+        } else if (st === "missed") {
+          clearInterval(timer);
+          useCallSession.getState().patch({ phase: "missed", note: "Pas de réponse." });
+        } else if (st === "cancelled") {
+          clearInterval(timer);
+          useCallSession.getState().patch({ phase: "ended", note: "Appel annulé." });
+        } else if (st === "ended") {
+          clearInterval(timer);
+          useCallSession.getState().patch({ phase: "ended" });
+        } else if (st === "busy") {
+          clearInterval(timer);
+          useCallSession.getState().patch({ phase: "busy", note: "Correspondant occupé." });
+        }
+      } catch {
+        /* keep polling until the invite expires */
+      }
+    })();
+  }, 1500);
+}
+
 async function attachToken(callId: string, video: boolean) {
   const token = await fetchCallToken(callId, video);
   if (token.mode !== "livekit") {
@@ -134,6 +182,7 @@ export async function openCall(input: {
         phase: invite.status === "accepted" ? "connecting" : "ringing",
       });
       if (invite.status === "accepted") await attachToken(input.callId, invite.kind === "video");
+      else watchInvite(input.callId);
       return;
     }
     if (input.group && input.chatId) {
@@ -149,40 +198,7 @@ export async function openCall(input: {
       return;
     }
     useCallSession.getState().patch({ callId: id, phase: "outgoing" });
-    const started = Date.now();
-    const timer = setInterval(() => {
-      void (async () => {
-        const live = useCallSession.getState().session;
-        if (!live || live.callId !== id || (live.phase !== "outgoing" && live.phase !== "ringing")) {
-          clearInterval(timer);
-          return;
-        }
-        if (Date.now() - started > 60_000) {
-          clearInterval(timer);
-          useCallSession.getState().patch({ phase: "missed", note: "Pas de réponse." });
-          return;
-        }
-        try {
-          const status = await callStatus(id);
-          const st = status.invite.status;
-          if (st === "accepted") {
-            clearInterval(timer);
-            await attachToken(id, live.kind === "video");
-          } else if (st === "rejected") {
-            clearInterval(timer);
-            useCallSession.getState().patch({ phase: "declined", note: "Appel refusé." });
-          } else if (st === "missed" || st === "cancelled" || st === "ended") {
-            clearInterval(timer);
-            useCallSession.getState().patch({ phase: st === "missed" ? "missed" : "ended" });
-          } else if (st === "busy") {
-            clearInterval(timer);
-            useCallSession.getState().patch({ phase: "busy", note: "Correspondant occupé." });
-          }
-        } catch {
-          /* keep polling until the invite expires */
-        }
-      })();
-    }, 1500);
+    watchInvite(id);
   } catch (err) {
     useCallSession.getState().patch({
       phase: "failed",
@@ -251,6 +267,7 @@ export async function pollIncoming() {
         callId: top.id,
       }),
     });
+    watchInvite(top.id);
   } catch {
     /* unsigned or offline */
   }

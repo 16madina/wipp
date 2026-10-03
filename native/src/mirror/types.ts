@@ -232,7 +232,7 @@ export type Screen =
   | { name: "shop"; shopId: string }
   | { name: "create-shop" }
   | { name: "lifestyle"; itemId: string }
-  | { name: "create-lifestyle" }
+  | { name: "create-lifestyle"; eventId?: string }
   | { name: "create-listing" }
   | { name: "e2e-info"; chatId: string }
   | { name: "archives" }

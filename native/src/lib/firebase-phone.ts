@@ -174,7 +174,9 @@ export async function signOutFirebase() {
 
 function smsSendError(err: unknown): string {
   const code = typeof err === "object" && err && "code" in err ? String((err as { code: string }).code) : "";
-  if (code.includes("invalid-phone-number")) return "Numéro invalide. Vérifie l'indicatif et le numéro.";
+  if (code.includes("invalid-phone-number")) return "Numéro invalide. Pour la Côte d’Ivoire, entre les 10 chiffres avec le 0, indicatif +225.";
+  if (code.includes("operation-not-allowed")) return "Firebase bloque les SMS vers ce pays. Autorise la Côte d’Ivoire dans les règles SMS.";
+  if (code.includes("error-code:-39")) return "Firebase n’a pas pu remettre le SMS à cet opérateur. La Côte d’Ivoire est déjà autorisée. Réessaie dans quelques minutes.";
   if (code.includes("too-many-requests") || code.includes("quota")) return "Trop d'essais. Réessaie dans un instant.";
   if (code.includes("network")) return "Réseau indisponible. Réessaie.";
   if (code.includes("captcha") || code.includes("argument-error")) {

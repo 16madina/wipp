@@ -5,6 +5,8 @@
 import { QR_HOST, profileQr } from "./qr-payload";
 import { supabase } from "./supabase";
 import { getPublicBusinessCard } from "./business-card";
+import { findPublicByUsername } from "./public-profiles";
+import { useWippStore } from "./store";
 import { GROUP_FR, groupInviteCall, isServerToken, redeemTemp, type RemoteProfile } from "./qr-remote";
 
 export type QrKind = "profile" | "temporary" | "group" | "business";
@@ -104,34 +106,25 @@ export async function resolveWippQr(raw: string): Promise<QrDestination> {
   }
 
   if (id.kind === "profile") {
+    const mine = (useWippStore.getState().serverUsername || "").toLowerCase();
+    if (mine && mine === id.value) return { ok: false, error: "C'est ton propre QR" };
     try {
-      const { data: me } = await supabase.rpc("wipp_my_profile_id");
-      const { data: p } = await supabase
-        .from("wipp_public_profiles")
-        .select("id,username,display_name,avatar_url,bio")
-        .ilike("username", id.value)
-        .maybeSingle();
+      const p = await findPublicByUsername(id.value);
       if (p) {
-        if (p.id === me) return { ok: false, error: "C'est ton propre QR" };
-        const a = [String(me), p.id].sort();
-        const { data: c } = await supabase
-          .from("wipp_connections")
-          .select("id")
-          .eq("user_a", a[0])
-          .eq("user_b", a[1])
-          .maybeSingle();
-        return {
-          ok: true,
-          kind: "remote-profile",
-          connected: Boolean(c),
-          profile: {
-            id: p.id,
-            username: p.username,
-            displayName: p.display_name,
-            avatarUrl: p.avatar_url,
-            bio: p.bio ?? "",
-          },
-        };
+        const meId = useWippStore.getState().serverProfileId;
+        if (meId && p.id === meId) return { ok: false, error: "C'est ton propre QR" };
+        let connected = false;
+        if (meId) {
+          const a = [meId, p.id].sort();
+          const { data: c } = await supabase
+            .from("wipp_connections")
+            .select("id")
+            .eq("user_a", a[0])
+            .eq("user_b", a[1])
+            .maybeSingle();
+          connected = Boolean(c);
+        }
+        return { ok: true, kind: "remote-profile", connected, profile: p };
       }
     } catch {
       /* missing */

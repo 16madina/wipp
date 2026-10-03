@@ -452,6 +452,25 @@ export async function blockUser(meId: string, target: { username?: string; profi
   return { ok: true as const, blockedId };
 }
 
+export async function listMyBlocks(meId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const rows = await sql<{ id: string; username: string; display_name: string }>`
+    select p.id, p.username, p.display_name
+    from wipp_blocks b
+    join wipp_profiles p on p.id = b.blocked_id
+    where b.blocker_id = ${meId}
+    order by b.created_at desc
+  `;
+  return {
+    blocks: rows.map((row) => ({
+      id: row.id,
+      username: row.username,
+      displayName: row.display_name,
+    })),
+  };
+}
+
 export async function unblockUser(meId: string, target: { username?: string; profileId?: string }) {
   await ensureMessagingReady();
   const sql = await getSql();
@@ -1040,6 +1059,29 @@ export async function deleteAccount(input: {
     throw new WippHttpError(401, "bad_credentials", "Identifiants incorrects.");
   }
   // Null-out message senders that would block if FKs were RESTRICT (ours are CASCADE).
+  await sql`delete from wipp_devices where profile_id = ${row.id}`;
+  await sql`delete from wipp_sessions where profile_id = ${row.id}`;
+  await sql`delete from wipp_profiles where id = ${row.id}`;
+  return { ok: true, username: row.username };
+}
+
+/**
+ * Deletes the WIPP profile of the already authenticated session.
+ * The client cannot choose another profile id.
+ * Does not delete the Firebase Auth user: that needs a server admin credential
+ * which must not live in the mobile app. Not deployed until reviewed.
+ */
+export async function deleteOwnAccount(profileId: string, confirm: string): Promise<{ ok: true; username: string }> {
+  if (confirm !== "SUPPRIMER") {
+    throw new WippHttpError(400, "confirm", "Écris SUPPRIMER pour confirmer.");
+  }
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const rows = await sql<{ id: string; username: string }>`
+    select id, username from wipp_profiles where id = ${profileId} limit 1
+  `;
+  const row = rows[0];
+  if (!row) throw new WippHttpError(404, "not_found", "Compte introuvable.");
   await sql`delete from wipp_devices where profile_id = ${row.id}`;
   await sql`delete from wipp_sessions where profile_id = ${row.id}`;
   await sql`delete from wipp_profiles where id = ${row.id}`;

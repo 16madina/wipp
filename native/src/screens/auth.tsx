@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { ActivityIndicator, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, View, type KeyboardEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
@@ -10,6 +11,7 @@ import {
   pendingMode,
   pendingPhone,
   setVerifiedSignup,
+  startFreshSignup,
   startPhoneCode,
   toE164,
   verifyPhoneCode,
@@ -196,7 +198,21 @@ function CountrySheet({
 }
 
 function nationalToE164(country: Country, phone: string) {
-  return toE164(`${country.dial}${phone.replace(/\D/g, "").replace(/^0+/, "")}`);
+  let digits = phone.replace(/\D/g, "");
+  const dialDigits = country.dial.replace(/\D/g, "");
+  if (digits.startsWith(`00${dialDigits}`)) digits = digits.slice(2 + dialDigits.length);
+  else if (digits.startsWith(dialDigits) && digits.length > dialDigits.length + 6) digits = digits.slice(dialDigits.length);
+  // Côte d'Ivoire : les 10 chiffres gardent le 0. +225 07… et non +225 7…
+  if (country.id === "CI") {
+    if (digits.length === 9 && !digits.startsWith("0")) digits = `0${digits}`;
+  } else {
+    digits = digits.replace(/^0+/, "");
+  }
+  return toE164(`${country.dial}${digits}`);
+}
+
+function phonePlaceholder(country: Country) {
+  return country.id === "CI" ? "07 00 00 00 00" : "(514) 123-4567";
 }
 
 /** Keep every auth action reachable while an iOS keyboard is open. */
@@ -376,7 +392,13 @@ export function WelcomeScreen() {
   return (
     <Artwork source={authWelcome}>
       <Abs t={70.7} l={5} h={7} w={90}>
-        <Pressable accessibilityLabel="Créer un compte" onPress={() => push({ name: "phone-entry" })} style={{ flex: 1 }} />
+        <Pressable
+          accessibilityLabel="Créer un compte"
+          onPress={() => {
+            void startFreshSignup().then(() => push({ name: "phone-entry" }));
+          }}
+          style={{ flex: 1 }}
+        />
       </Abs>
       <Abs t={79.3} l={5} h={7} w={90}>
         <Pressable accessibilityLabel="J’ai déjà un compte" onPress={() => replace({ name: "login" })} style={{ flex: 1 }} />
@@ -457,7 +479,7 @@ export function PhoneEntryScreen() {
               inputAccessoryViewID={Platform.OS === "ios" ? phoneAccessoryId : undefined}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
-              placeholder="(514) 123-4567"
+              placeholder={phonePlaceholder(country)}
               placeholderTextColor={colors.muted}
               underlineColorAndroid="transparent"
               textAlignVertical="center"
@@ -558,7 +580,7 @@ export function LoginScreen() {
               inputAccessoryViewID={Platform.OS === "ios" ? phoneAccessoryId : undefined}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
-              placeholder="(514) 123-4567"
+              placeholder={phonePlaceholder(country)}
               placeholderTextColor={colors.muted}
               underlineColorAndroid="transparent"
               textAlignVertical="center"
@@ -597,7 +619,13 @@ export function LoginScreen() {
         </View>
       </Abs>
       <Abs t={89} l={20} h={4} w={60}>
-        <Pressable accessibilityLabel="Je n’ai pas encore de compte" onPress={() => push({ name: "phone-entry" })} style={{ flex: 1 }} />
+        <Pressable
+          accessibilityLabel="Je n’ai pas encore de compte"
+          onPress={() => {
+            void startFreshSignup().then(() => push({ name: "phone-entry" }));
+          }}
+          style={{ flex: 1 }}
+        />
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
       <KeyboardDone nativeID={phoneAccessoryId} />
@@ -791,12 +819,12 @@ export function SmsReferenceScreen() {
 export function ProfileReferenceScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
-  const completeSetup = useWippStore((s) => s.completeSetup);
   const country = useWippStore((s) => s.pendingSignup.country ?? "CA");
   const phone = useWippStore((s) => s.pendingSignup.phone ?? "");
   const [firstName, setFirst] = useState("");
   const [lastName, setLast] = useState("");
   const [username, setUser] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [availability, setAvailability] = useState<"available" | "taken" | "checking" | null>(null);
   const [checkedUsername, setCheckedUsername] = useState("");
   const [error, setError] = useState("");
@@ -830,6 +858,22 @@ export function ProfileReferenceScreen() {
     };
   }, [username, okUser]);
 
+  async function choosePhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setError("Autorise l’accès aux photos pour choisir ta photo de profil.");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    const uri = res.assets?.[0]?.uri;
+    if (!res.canceled && uri) setPhotoUri(uri);
+  }
+
   async function finish() {
     Keyboard.dismiss();
     const verified = getVerifiedSignup();
@@ -858,16 +902,27 @@ export function ProfileReferenceScreen() {
         setError(result.error);
         return;
       }
+      const wantedName = `${firstName.trim()} ${lastName.trim()}`.replace(/\s+/g, " ").toLowerCase();
+      const gotName = (result.profile.displayName || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const gotUser = (result.profile.username || "").toLowerCase();
+      if (gotUser !== username.toLowerCase() || (gotName && gotName !== wantedName)) {
+        setError("Ce numéro a déjà un compte WIPP. Pour une autre personne, entre un autre numéro. Pour revenir sur celui-ci, choisis « J’ai déjà un compte ».");
+        const { signOutFirebase } = await import("../lib/firebase-phone");
+        const { clearLinkedSession } = await import("../lib/firebase-linked-session");
+        await signOutFirebase().catch(() => undefined);
+        await clearLinkedSession().catch(() => undefined);
+        return;
+      }
       clearPending();
-      completeSetup({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        displayName: `${firstName.trim()} ${lastName.trim()}`,
-        username,
-        country,
-        phone,
-      });
-      push({ name: "signup-celebration", username });
+      useWippStore.setState((s) => ({ pendingSignup: { country: s.pendingSignup.country } }));
+      enterLinkedProfile(result.profile, phone);
+      if (photoUri) {
+        useWippStore.getState().changeAvatar(photoUri);
+        void import("../lib/profile-photo").then(({ saveProfilePhotoFromUri }) =>
+          saveProfilePhotoFromUri(photoUri).catch(() => undefined),
+        );
+      }
+      push({ name: "signup-celebration", username: result.profile.username || username });
     } catch {
       setError("Inscription impossible. Réessaie.");
     } finally {
@@ -882,6 +937,14 @@ export function ProfileReferenceScreen() {
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
+      </Abs>
+      <Abs t={40.6} l={10} h={11} w={22}>
+        <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ flex: 1, borderRadius: 999, overflow: "hidden" }}>
+          {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+        </Pressable>
+      </Abs>
+      <Abs t={41.2} l={33} h={10} w={16}>
+        <Pressable accessibilityLabel="Choisir une photo" onPress={() => void choosePhoto()} style={{ flex: 1 }} />
       </Abs>
       <Abs t={53.8} l={10.5} h={4.4} w={37}>
         <View ref={firstNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>

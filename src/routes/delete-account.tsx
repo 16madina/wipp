@@ -79,6 +79,11 @@ function DeleteAccountPage() {
             <a href="mailto:support@wippapp.com">support@wippapp.com</a> depuis une adresse liée au
             compte ; nous traitons la demande sous <strong>7 jours</strong>.
           </li>
+          <li>
+            Un compte créé par téléphone n’a pas de mot de passe WIPP. Utilisez la suppression dans
+            l’application (Compte → Supprimer mon compte) ou le courriel ci-dessus. Ce formulaire
+            reste réservé aux comptes qui ont un mot de passe.
+          </li>
         </ol>
 
         <h2>Données effacées immédiatement</h2>

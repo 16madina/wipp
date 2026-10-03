@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { Mic, MicOff, Phone, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Video, VideoOff } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { Chip, Empty, GlassHeader, Header, PendingNote, Press, ScreenRoot, SearchField, Btn } from "../components/ui";
 import { QrCard } from "../components/QrCard";
-import { formatChatTime, formatDuration } from "../lib/format";
+import { asEpochMs, formatChatTime, formatDuration } from "../lib/format";
 import { useT, useWippStore } from "../lib/store";
 import { profileQr } from "../lib/qr-payload";
 import { colors, layout } from "../theme";
@@ -13,7 +13,11 @@ export function CallsScreen() {
   const t = useT();
   const lang = useWippStore((s) => s.language);
   const serverConnected = useWippStore((s) => s.serverConnected);
-  const calls = useWippStore((s) => (serverConnected ? s.calls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("gcall_") || c.id.startsWith("srvcall:")) : s.calls));
+  const allCalls = useWippStore((s) => s.calls);
+  const calls = useMemo(
+    () => (serverConnected ? allCalls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("gcall_") || c.id.startsWith("srvcall:")) : allCalls),
+    [serverConnected, allCalls],
+  );
   const users = useWippStore((s) => s.users);
   const push = useWippStore((s) => s.push);
   const markCallsSeen = useWippStore((s) => s.markCallsSeen);
@@ -36,8 +40,8 @@ export function CallsScreen() {
             missed: boolean;
             declined?: boolean;
             status?: string;
-            at: string;
-            duration?: number | null;
+            at: string | number;
+            duration?: number | string | null;
             group?: boolean;
             chatId?: string | null;
           }[];
@@ -49,8 +53,8 @@ export function CallsScreen() {
             kind: c.kind,
             direction: c.direction,
             missed: c.missed,
-            at: Date.parse(c.at),
-            duration: c.duration ?? undefined,
+            at: asEpochMs(c.at) ?? Date.now(),
+            duration: Number.isFinite(Number(c.duration)) ? Number(c.duration) : undefined,
             group: c.group,
             chatId: c.chatId ?? undefined,
             outcome: c.declined ? "declined" as const : c.status === "busy" ? "busy" as const : c.missed ? "noAnswer" as const : undefined,

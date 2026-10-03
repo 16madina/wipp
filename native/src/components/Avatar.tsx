@@ -1,8 +1,44 @@
+import { useEffect, useState } from "react";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import type { MeProfile, User } from "../lib/types";
 import { colors } from "../theme";
+
+const signedAvatar = new Map<string, string>();
+
+function useAvatarSource(path?: string) {
+  const direct = wippSrc(path);
+  const storage = Boolean(path && !direct && /^(business|listings|profiles|shops|events)\//.test(path));
+  const [uri, setUri] = useState<string | null>(path && signedAvatar.get(path) ? signedAvatar.get(path)! : null);
+  const [unresolved, setUnresolved] = useState(false);
+  useEffect(() => {
+    if (!storage || !path) return;
+    const cached = signedAvatar.get(path);
+    if (cached) {
+      setUri(cached);
+      setUnresolved(false);
+      return;
+    }
+    let live = true;
+    setUnresolved(false);
+    void import("../lib/lot7/api")
+      .then(({ signPublicMedia }) => signPublicMedia(path))
+      .then((url) => {
+        signedAvatar.set(path, url);
+        if (live) setUri(url);
+      })
+      .catch(() => {
+        if (live) setUnresolved(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [path, storage]);
+  if (direct) return { source: direct, unresolved: false };
+  if (uri) return { source: { uri }, unresolved: false };
+  return { source: undefined, unresolved: storage && unresolved };
+}
 
 export function Avatar({
   user,
@@ -13,7 +49,7 @@ export function Avatar({
   size?: number;
   ring?: "accent" | "muted" | "none";
 }) {
-  const src = wippSrc(user?.avatar);
+  const { source: src, unresolved } = useAvatarSource(user?.avatar);
   const initial = (user && "firstName" in user && user.firstName
     ? user.firstName
     : user?.displayName ?? "?"
@@ -29,8 +65,8 @@ export function Avatar({
         borderRadius: size / 2,
         overflow: "hidden",
         backgroundColor: colors.navy,
-        borderWidth: ringOn ? 2 : 0,
-        borderColor: ring === "muted" ? "rgba(255,255,255,0.28)" : colors.accent,
+        borderWidth: ringOn || unresolved ? 2 : 0,
+        borderColor: unresolved ? colors.danger : ring === "muted" ? "rgba(255,255,255,0.28)" : colors.accent,
         alignItems: "center",
         justifyContent: "center",
       }}

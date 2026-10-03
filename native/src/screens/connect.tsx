@@ -6,7 +6,7 @@ import { Avatar } from "../components/Avatar";
 import { LiveScanner } from "../components/LiveScanner";
 import { WippMark, WippWordmark, TouchHero } from "../components/Logo";
 import { QrCard } from "../components/QrCard";
-import { Btn, Chip, Empty, GlassHeader, Header, PendingNote, Press, ScreenRoot, SearchField } from "../components/ui";
+import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { getRelation, sendRequest, type Relation } from "../lib/connections";
 import { openWippLink } from "../lib/deep-links";
@@ -20,6 +20,7 @@ import { startNearbyScan, stopNearbyScan } from "../lib/proximity/nearby-scan";
 import { getLastTouchMatch } from "../lib/proximity/match-bus";
 import { rejectTouchCode } from "../lib/proximity/touch-api";
 import { shareWippPublic } from "../lib/share-public";
+import { signinOtp } from "../lib/auth-api";
 import { useT, useWippStore } from "../lib/store";
 import type { FoundVia, NearbyMode } from "../lib/types";
 import { colors, layout } from "../theme";
@@ -116,7 +117,39 @@ export function MyQrScreen() {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const me = useWippStore((s) => s.me);
-  const username = useWippStore((s) => s.serverUsername || s.me.username);
+  const username = useWippStore((s) => s.serverUsername);
+  const [usernameState, setUsernameState] = useState<"loading" | "ready" | "missing">(username ? "ready" : "loading");
+  useEffect(() => {
+    if (username) {
+      setUsernameState("ready");
+      return;
+    }
+    let cancelled = false;
+    void signinOtp().then((res) => {
+      if (cancelled) return;
+      if (!res.ok || !res.profile.username) {
+        setUsernameState("missing");
+        return;
+      }
+      const displayName = res.profile.displayName || "";
+      const [firstName, ...rest] = displayName.split(" ");
+      useWippStore.setState((s) => ({
+        serverUsername: res.profile.username,
+        serverProfileId: res.profile.id,
+        me: {
+          ...s.me,
+          username: res.profile.username,
+          displayName: displayName || s.me.displayName,
+          firstName: firstName || s.me.firstName,
+          lastName: rest.join(" ") || s.me.lastName,
+        },
+      }));
+      setUsernameState("ready");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [username]);
   const [copied, setCopied] = useState(false);
   const [temp, setTemp] = useState<{ token: string; expiresAt: number } | null>(null);
   const [expired, setExpired] = useState(false);
@@ -151,7 +184,7 @@ export function MyQrScreen() {
     }
   }
   const left = temp ? Math.max(0, Math.ceil((temp.expiresAt - now) / 1000)) : 0;
-  const qrValue = temp ? tempQr(temp.token) : profileQr(username);
+  const qrValue = temp ? tempQr(temp.token) : username ? profileQr(username) : "";
   const link = qrValue.replace(/^https?:\/\//, "").replace(/\/t\/.{8}.*/, "/t/…");
   return (
     <View style={{ flex: 1, backgroundColor: colors.navy }}>
@@ -164,16 +197,24 @@ export function MyQrScreen() {
           <Avatar user={me} size={72} />
         </View>
         <Text style={{ marginTop: 12, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
-        <Text style={{ fontSize: 14, color: "rgba(247,249,252,0.6)" }}>@{username}</Text>
+        <Text style={{ fontSize: 14, color: "rgba(247,249,252,0.6)" }}>
+          {username ? `@${username}` : usernameState === "loading" ? "Chargement du @username…" : "Compte serveur introuvable"}
+        </Text>
         {expired ? (
           <View style={{ marginTop: 20, width: "100%", alignItems: "center" }}>
             <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>QR expiré</Text>
             <Btn label="Générer un nouveau QR" onPress={() => void renewTemp()} style={{ marginTop: 12, alignSelf: "stretch" }} />
           </View>
-        ) : (
+        ) : qrValue ? (
           <View style={{ marginTop: 20 }}>
             <QrCard value={qrValue} size={220} />
           </View>
+        ) : (
+          <Text style={{ marginTop: 20, textAlign: "center", color: colors.danger, maxWidth: 280 }}>
+            {usernameState === "loading"
+              ? "Je récupère le vrai @username du compte."
+              : "Ce téléphone n'est pas lié à un compte WIPP. Déconnecte-toi, puis entre avec le numéro du compte à tester."}
+          </Text>
         )}
         {tempErr && !temp ? <Text style={{ marginTop: 12, color: colors.danger }}>{tempErr}</Text> : null}
         {temp ? (
@@ -188,7 +229,9 @@ export function MyQrScreen() {
         <View style={{ width: "100%", marginTop: 20 }}>
           <Btn
             label={copied ? t("copied") : "Partager mon WIPP"}
+            disabled={!username}
             onPress={() => {
+              if (!username) return;
               void shareWippPublic(`@${username} https://wippapp.com/@${username}`);
               setCopied(true);
             }}
@@ -196,7 +239,7 @@ export function MyQrScreen() {
         </View>
         <View style={{ width: "100%", marginTop: 8, flexDirection: "row", gap: 8 }}>
           <View style={{ flex: 1 }}>
-            <Btn label="Enregistrer" variant="secondary" onPress={() => void shareWippPublic(qrValue)} />
+            <Btn label="Enregistrer" variant="secondary" disabled={!qrValue} onPress={() => { if (qrValue) void shareWippPublic(qrValue); }} />
           </View>
           <View style={{ flex: 1 }}>
             <Btn
@@ -350,7 +393,6 @@ export function NearbyScreen() {
       <GlassHeader>
         <Header title="Personnes à proximité" onBack={pop} />
       </GlassHeader>
-      {__DEV__ ? <PendingNote label="DEV · BLE À proximité" /> : null}
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>Uniquement avec consentement. Jamais de distance ni de numéro.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
@@ -516,7 +558,6 @@ export function WgoTouchScreen() {
       <GlassHeader>
         <Header title={t("wgoTouch")} onBack={pop} />
       </GlassHeader>
-      {__DEV__ ? <PendingNote label={`DEV · ${touch.state}${touch.devRssi != null ? ` · RSSI ${touch.devRssi}` : ""}`} /> : null}
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
         <TouchHero width={140} height={110} />
         <Text style={{ marginTop: 16, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{title}</Text>
@@ -646,7 +687,6 @@ export function QrGroupScreen({ handoffKey }: { handoffKey: string }) {
       <GlassHeader>
         <Header title="Groupe" onBack={pop} />
       </GlassHeader>
-      <PendingNote label={`Invitation reconnue · ${handoffKey.slice(0, 8)}…`} />
       <Text style={{ paddingHorizontal: 16, color: colors.muted, fontSize: 13 }}>
         Les groupes restent partiels dans cette version. Le QR a bien été reconnu.
       </Text>

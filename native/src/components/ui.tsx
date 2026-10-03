@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Keyboard, Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { useRef, type ReactNode } from "react";
+import { Animated, Dimensions, Keyboard, PanResponder, Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { haptic } from "../lib/haptics";
@@ -340,6 +340,47 @@ export function GlassHeader({ children }: { children: ReactNode }) {
       <SafeTop />
       {children}
     </View>
+  );
+}
+
+/** iPhone edge swipe: the screen follows the finger from the left edge, then goes back. */
+export function EdgeBack({ onBack, children }: { onBack: () => void; children: ReactNode }) {
+  const tx = useRef(new Animated.Value(0)).current;
+  const width = Dimensions.get("window").width;
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (event, gesture) => {
+        const startX = event.nativeEvent.pageX - gesture.dx;
+        return startX < 36 && gesture.dx > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy);
+      },
+      onMoveShouldSetPanResponder: (_event, gesture) =>
+        gesture.dx < -14 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.4,
+      onPanResponderMove: (_event, gesture) => {
+        tx.setValue(gesture.dx);
+      },
+      onPanResponderRelease: (_event, gesture) => {
+        const toRight = gesture.dx > width * 0.28 || gesture.vx > 0.65;
+        const toLeft = gesture.dx < -width * 0.22 || gesture.vx < -0.65;
+        const leave = toRight || toLeft;
+        Animated.timing(tx, {
+          toValue: toRight ? width : toLeft ? -width : 0,
+          duration: leave ? 180 : 160,
+          useNativeDriver: true,
+        }).start(({ finished }) => {
+          if (!finished || !leave) return;
+          tx.setValue(0);
+          onBack();
+        });
+      },
+      onPanResponderTerminate: () => {
+        Animated.timing(tx, { toValue: 0, duration: 160, useNativeDriver: true }).start();
+      },
+    }),
+  ).current;
+  return (
+    <Animated.View style={{ flex: 1, transform: [{ translateX: tx }] }} {...pan.panHandlers}>
+      {children}
+    </Animated.View>
   );
 }
 

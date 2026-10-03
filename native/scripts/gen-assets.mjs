@@ -29,7 +29,9 @@ for (const rel of files) {
 }
 
 const lines = files.map((rel) => {
-  const source = preferred.get(rel.replace(/\.[^.]+$/, "")) ?? rel;
+  const ext = path.extname(rel).toLowerCase();
+  // Animated WebP/GIF must stay themselves. Preferring the PNG poster froze every animation.
+  const source = ext === ".webp" || ext === ".gif" ? rel : (preferred.get(rel.replace(/\.[^.]+$/, "")) ?? rel);
   return `  ${JSON.stringify(rel)}: require("../../assets/wipp/${source}"),`;
 });
 

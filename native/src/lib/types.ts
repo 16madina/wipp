@@ -111,6 +111,7 @@ export type ScreenName =
   | "setup"
   | "chats"
   | "conversation"
+  | "share-inbox"
   | "new-chat"
   | "requests"
   | "calls"
@@ -182,6 +183,7 @@ export type Screen =
   | { name: "setup" }
   | { name: "chats" }
   | { name: "conversation"; chatId: string }
+  | { name: "share-inbox" }
   | { name: "new-chat" }
   | { name: "requests" }
   | { name: "calls" }
@@ -232,8 +234,8 @@ export type Screen =
   | { name: "shop"; shopId: string }
   | { name: "create-shop" }
   | { name: "lifestyle"; itemId: string }
-  | { name: "create-lifestyle" }
-  | { name: "create-listing" }
+  | { name: "create-lifestyle"; eventId?: string }
+  | { name: "create-listing"; listingId?: string }
   | { name: "e2e-info"; chatId: string }
   | { name: "archives" }
   | { name: "chat-info"; chatId: string }
@@ -446,8 +448,14 @@ export type Listing = {
   category: "auto" | "home" | "goods" | "jobs" | "services";
   image: string;
   description: string;
-  condition?: "new" | "like-new" | "good" | "used" | "parts";
+  condition?: "new" | "like_new" | "good" | "used";
   photos?: string[];
+  photoPaths?: string[];
+  country?: string;
+  area?: string;
+  contactPhone?: string;
+  negotiable?: boolean;
+  currency?: string;
   createdAt?: number;
 };
 
@@ -536,9 +544,22 @@ export type LifestyleItem = {
   hostId?: string;
   image: string;
   note: string;
+  details?: string;
+  contact?: string;
+  startsAt?: string;
+  endsAt?: string;
+  coverPath?: string;
   paid: boolean;
   price?: string;
   deal?: string;
+  category?: string;
+  country?: string;
+  address?: string;
+  isOnline?: boolean;
+  onlineUrl?: string;
+  isFree?: boolean;
+  currency?: string;
+  hostName?: string;
 };
 
 export type RedeemResult =

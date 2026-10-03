@@ -1,9 +1,13 @@
 import { raster, type RasterKey } from "../generated/raster";
+import { stickerVideo } from "../generated/video";
 import { stickerRemoteUri } from "./sticker-cdn";
 
 export function wippSrc(path?: string | null) {
   if (!path) return undefined;
+  if (/^https?:\/\//i.test(path)) return { uri: path };
   const key = path.replace(/^\//, "").split("?")[0] as RasterKey;
+  const clip = (stickerVideo as Record<string, number>)[key];
+  if (clip != null) return clip;
   const local = (raster as Record<string, number>)[key];
   if (local != null) return local;
   const uri = stickerRemoteUri(key);

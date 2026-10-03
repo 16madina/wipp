@@ -268,29 +268,110 @@ type ListingRow = {
   created_at: string;
   username?: string;
   display_name?: string;
+  country?: string | null;
+  area?: string | null;
+  contact_phone?: string | null;
+  negotiable?: boolean | null;
+  currency?: string | null;
+  condition?: string | null;
+  photo_urls?: string[] | null;
 };
 
 const CATS = new Set(["auto", "home", "goods", "jobs", "services"]);
+const CONDITIONS = new Set(["new", "like_new", "good", "used"]);
+const ETAT = /^\[\[etat:(new|like-new|like_new|good|used)\]\]\n?/;
 
-function mapListing(row: ListingRow, me: string | null): Listing {
+export function listingPhotoPaths(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  if (raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw) as { paths?: unknown };
+      if (Array.isArray(parsed.paths)) return parsed.paths.filter((item): item is string => typeof item === "string" && item.length > 0);
+    } catch {
+      /* a plain path or URL */
+    }
+  }
+  return [raw];
+}
+
+export function encodeListingPhotos(paths: string[]): string | null {
+  const clean = paths.filter(Boolean);
+  if (!clean.length) return null;
+  if (clean.length === 1) return clean[0];
+  return JSON.stringify({ paths: clean });
+}
+
+function storedCondition(value: string | null | undefined): Listing["condition"] | undefined {
+  const raw = (value ?? "").trim().toLowerCase().replace("like-new", "like_new");
+  return CONDITIONS.has(raw) ? (raw as Listing["condition"]) : undefined;
+}
+
+function splitListingCopy(description: string) {
+  const match = description.match(ETAT);
+  return {
+    condition: storedCondition(match?.[1]),
+    description: description.replace(ETAT, ""),
+  };
+}
+
+function listingPaths(row: ListingRow) {
+  const stored = Array.isArray(row.photo_urls) ? row.photo_urls.filter((item) => typeof item === "string" && item.length > 0) : [];
+  if (stored.length === 1 && stored[0].startsWith("{")) return listingPhotoPaths(stored[0]);
+  if (stored.length) return stored;
+  return listingPhotoPaths(row.photo_url);
+}
+
+async function presentStoredMedia(paths: string[]) {
+  const shown: string[] = [];
+  for (const path of paths) {
+    if (!path) continue;
+    if (path.startsWith("http")) {
+      shown.push(path);
+      continue;
+    }
+    try {
+      shown.push(await signPublicMedia(path));
+    } catch (err) {
+      console.warn("[wipp] listing/event image unresolved", err instanceof Error ? err.message : "unknown");
+      shown.push("");
+    }
+  }
+  return shown;
+}
+
+function mapListing(row: ListingRow, me: string | null, shown: string[]): Listing {
   const cat = CATS.has(row.category) ? (row.category as Listing["category"]) : "goods";
+  const copy = splitListingCopy(row.description);
+  const paths = listingPaths(row);
+  const label = row.price_label || "";
+  const legacyNegotiable = /négociable/i.test(label);
   return {
     id: row.id,
     title: row.title,
-    price: row.price_label || "",
+    price: label,
     city: row.city,
     distance: "",
     sellerId: me && row.owner_id === me ? "me" : `srvuser:${row.owner_id}`,
     category: cat,
-    image: row.photo_url || "",
-    description: row.description,
+    image: shown[0] || "",
+    photos: shown.filter(Boolean),
+    photoPaths: paths,
+    description: copy.description,
+    condition: storedCondition(row.condition) ?? copy.condition,
+    country: row.country ?? "",
+    area: row.area ?? "",
+    contactPhone: row.contact_phone ?? "",
+    negotiable: Boolean(row.negotiable) || legacyNegotiable,
+    currency: row.currency || "",
     createdAt: Date.parse(row.created_at),
   };
 }
 
 export async function fetchListings(me: string | null, q = "") {
   const rows = await rpc<ListingRow[]>("wipp_lot7_listings", { p_q: q });
-  return (rows ?? []).map((row) => mapListing(row, me));
+  return Promise.all(
+    (rows ?? []).map(async (row) => mapListing(row, me, await presentStoredMedia(listingPaths(row)))),
+  );
 }
 
 export async function saveListing(input: {
@@ -301,6 +382,13 @@ export async function saveListing(input: {
   price: string;
   city: string;
   photo?: string | null;
+  country?: string;
+  area?: string;
+  phone?: string;
+  negotiable?: boolean;
+  currency?: string;
+  condition?: string;
+  photos?: string[] | null;
 }) {
   return rpc<string>("wipp_lot7_save_listing", {
     p_title: input.title,
@@ -310,6 +398,13 @@ export async function saveListing(input: {
     p_city: input.city,
     p_photo: input.photo ?? null,
     p_id: input.id ?? "",
+    p_country: input.country ?? "",
+    p_area: input.area ?? "",
+    p_phone: input.phone ?? "",
+    p_negotiable: input.negotiable ?? false,
+    p_currency: input.currency ?? "",
+    p_condition: input.condition ?? "",
+    p_photos: input.photos ?? null,
   });
 }
 
@@ -327,9 +422,58 @@ type EventRow = {
   starts_at?: string | null;
   photo_url?: string | null;
   contact?: string | null;
+  username?: string | null;
+  display_name?: string | null;
+  ends_at?: string | null;
+  category?: string | null;
+  country?: string | null;
+  address?: string | null;
+  is_online?: boolean | null;
+  online_url?: string | null;
+  is_free?: boolean | null;
+  price?: string | null;
+  currency?: string | null;
 };
 
-function mapEvent(row: EventRow, me: string | null): LifestyleItem {
+const EVENT_CAT = /^Catégorie : (.+)\n/;
+const EVENT_END = /^Fin : (.+)\n/;
+
+export function splitEventCopy(description: string) {
+  let rest = description;
+  let category = "";
+  let endsAt = "";
+  const cat = rest.match(EVENT_CAT);
+  if (cat) {
+    category = cat[1]?.trim() ?? "";
+    rest = rest.slice(cat[0].length);
+  }
+  const end = rest.match(EVENT_END);
+  if (end) {
+    endsAt = end[1]?.trim() ?? "";
+    rest = rest.slice(end[0].length);
+  }
+  return { category, endsAt, description: rest.replace(/^\n/, "") };
+}
+
+export function packEventCopy(description: string, category: string, endsAt: string) {
+  const head = [
+    category.trim() ? `Catégorie : ${category.trim()}` : "",
+    endsAt.trim() ? `Fin : ${endsAt.trim()}` : "",
+  ].filter(Boolean);
+  const body = description.trim();
+  return head.length ? `${head.join("\n")}\n${body}` : body;
+}
+
+function mapEvent(row: EventRow, me: string | null, image: string): LifestyleItem {
+  const copy = splitEventCopy(row.description);
+  const contact = row.contact ?? "";
+  const category = (row.category ?? "").trim() || copy.category;
+  const endsAt = row.ends_at || copy.endsAt;
+  const isOnline = Boolean(row.is_online) || row.place === "En ligne";
+  const onlineUrl = (row.online_url ?? "").trim() || (isOnline && /^https?:/i.test(contact) ? contact : "");
+  const free = typeof row.is_free === "boolean" ? row.is_free : !row.price;
+  const price = free ? "" : (row.price ?? "");
+  const currency = free ? "" : (row.currency ?? "");
   return {
     id: row.id,
     kind: "event",
@@ -340,15 +484,39 @@ function mapEvent(row: EventRow, me: string | null): LifestyleItem {
     lat: 0,
     lng: 0,
     hostId: me && row.owner_id === me ? "me" : `srvuser:${row.owner_id}`,
-    image: row.photo_url || "",
-    note: row.contact ? `${row.description}\n${row.contact}` : row.description,
-    paid: false,
+    hostName: row.display_name || row.username || "",
+    image,
+    coverPath: row.photo_url || "",
+    note: [
+      category ? `Catégorie : ${category}` : "",
+      endsAt ? `Fin : ${Number.isNaN(Date.parse(endsAt)) ? endsAt : new Date(endsAt).toLocaleString()}` : "",
+      copy.description,
+      contact,
+    ].filter(Boolean).join("\n"),
+    details: copy.description,
+    contact,
+    startsAt: row.starts_at ?? "",
+    endsAt,
+    paid: free,
+    price,
+    category,
+    country: row.country ?? "",
+    address: row.address ?? "",
+    isOnline,
+    onlineUrl,
+    isFree: free,
+    currency,
   };
 }
 
 export async function fetchEvents(me: string | null, q = "") {
   const rows = await rpc<EventRow[]>("wipp_lot7_events", { p_q: q });
-  return (rows ?? []).map((row) => mapEvent(row, me));
+  return Promise.all(
+    (rows ?? []).map(async (row) => {
+      const shown = await presentStoredMedia(row.photo_url ? [row.photo_url] : []);
+      return mapEvent(row, me, shown[0] || "");
+    }),
+  );
 }
 
 export async function saveEvent(input: {
@@ -360,7 +528,17 @@ export async function saveEvent(input: {
   starts: string;
   photo?: string | null;
   contact?: string;
+  ends?: string;
+  category?: string;
+  country?: string;
+  address?: string;
+  online?: boolean;
+  url?: string;
+  free?: boolean;
+  price?: string;
+  currency?: string;
 }) {
+  const free = input.free !== false;
   return rpc<string>("wipp_lot7_save_event", {
     p_title: input.title,
     p_desc: input.description,
@@ -370,6 +548,15 @@ export async function saveEvent(input: {
     p_photo: input.photo ?? null,
     p_contact: input.contact ?? "",
     p_id: input.id ?? "",
+    p_ends: input.ends ?? "",
+    p_category: input.category ?? "",
+    p_country: input.country ?? "",
+    p_address: input.address ?? "",
+    p_online: input.online ?? false,
+    p_url: input.url ?? "",
+    p_free: free,
+    p_price: free ? "" : (input.price ?? ""),
+    p_currency: free ? "" : (input.currency ?? ""),
   });
 }
 
@@ -451,9 +638,40 @@ export async function hydrateStoryMedia(story: StoryItem, force = false) {
 }
 
 export async function signPublicMedia(path: string) {
-  const signed = await supabase.storage.from("wipp-public-media").createSignedUrl(path, 60 * 60);
-  if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "signed-url");
-  return signed.data.signedUrl;
+  const { signStorageObject } = await import("../storage-sign");
+  return signStorageObject("wipp-public-media", path);
+}
+
+export async function uploadPublicMediaFile(
+  path: string,
+  uri: string,
+  mime: string,
+  onProgress?: (sent: number, total: number) => void,
+) {
+  const token = await firebaseIdToken();
+  if (!token) throw new Error("Session requise");
+  const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-public-media/${path}`;
+  const task = createUploadTask(
+    endpoint,
+    uri,
+    {
+      httpMethod: "POST",
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      sessionType: FileSystemSessionType.FOREGROUND,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+        "Content-Type": mime,
+        "x-upsert": "false",
+      },
+    },
+    (data) => {
+      if (data.totalBytesExpectedToSend > 0) onProgress?.(data.totalBytesSent, data.totalBytesExpectedToSend);
+    },
+  );
+  const result = await task.uploadAsync();
+  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de l’image impossible");
+  return path;
 }
 
 export async function uploadPublicMedia(path: string, bytes: Uint8Array, mime: string) {

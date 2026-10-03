@@ -7,6 +7,35 @@ function loc(lang: Lang) {
   return lang === "fr" ? FR : EN;
 }
 
+/** Accepts ms, seconds, ISO strings, or Postgres timestamps. Never throws. */
+export function asEpochMs(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    const ms = Math.abs(value) < 1e12 ? value * 1000 : value;
+    return Number.isNaN(new Date(ms).getTime()) ? null : ms;
+  }
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isNaN(ms) ? null : ms;
+  }
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return asEpochMs(Number(trimmed));
+  const direct = Date.parse(trimmed);
+  if (Number.isFinite(direct)) return direct;
+  const iso = trimmed.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+  const parsed = Date.parse(iso);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function clock(ts: number) {
+  const when = asEpochMs(ts);
+  if (when == null) return "";
+  const d = new Date(when);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function startOfDay(ts: number) {
   const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
@@ -34,62 +63,74 @@ function pad(n: number) {
 }
 
 export function formatClock(ts: number) {
-  const d = new Date(ts);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return clock(ts);
 }
 
 function weekday(ts: number, lang: Lang) {
-  return new Intl.DateTimeFormat(loc(lang), { weekday: "short" }).format(new Date(ts));
+  const when = asEpochMs(ts);
+  if (when == null) return "";
+  return new Intl.DateTimeFormat(loc(lang), { weekday: "short" }).format(new Date(when));
 }
 
 function dayMonth(ts: number, lang: Lang, month: "short" | "long") {
-  return new Intl.DateTimeFormat(loc(lang), { day: "numeric", month }).format(new Date(ts));
+  const when = asEpochMs(ts);
+  if (when == null) return "";
+  return new Intl.DateTimeFormat(loc(lang), { day: "numeric", month }).format(new Date(when));
 }
 
 export function formatChatTime(ts: number, lang: Lang) {
-  if (isToday(ts)) return formatClock(ts);
-  if (isYesterday(ts)) return lang === "fr" ? "Hier" : "Yesterday";
-  if (isThisWeek(ts)) return weekday(ts, lang);
-  return dayMonth(ts, lang, "short");
+  const when = asEpochMs(ts);
+  if (when == null) return "";
+  if (isToday(when)) return formatClock(when);
+  if (isYesterday(when)) return lang === "fr" ? "Hier" : "Yesterday";
+  if (isThisWeek(when)) return weekday(when, lang);
+  return dayMonth(when, lang, "short");
 }
 
 export function formatFullStamp(ts: number, lang: Lang) {
-  if (isToday(ts)) {
-    return `${lang === "fr" ? "Aujourd'hui" : "Today"} · ${formatClock(ts)}`;
+  const when = asEpochMs(ts);
+  if (when == null) return "";
+  if (isToday(when)) {
+    return `${lang === "fr" ? "Aujourd'hui" : "Today"} · ${formatClock(when)}`;
   }
-  if (isYesterday(ts)) {
-    return `${lang === "fr" ? "Hier" : "Yesterday"} · ${formatClock(ts)}`;
+  if (isYesterday(when)) {
+    return `${lang === "fr" ? "Hier" : "Yesterday"} · ${formatClock(when)}`;
   }
-  return `${dayMonth(ts, lang, "long")} · ${formatClock(ts)}`;
+  return `${dayMonth(when, lang, "long")} · ${formatClock(when)}`;
 }
 
 export function formatLastSeen(ts: number | undefined, online: boolean, lang: Lang) {
+  const when = asEpochMs(ts);
   if (online) return lang === "fr" ? "en ligne" : "online";
-  if (!ts) return lang === "fr" ? "vu récemment" : "last seen recently";
-  if (isToday(ts)) {
+  if (when == null) return lang === "fr" ? "vu récemment" : "last seen recently";
+  if (isToday(when)) {
     return lang === "fr"
-      ? `vu aujourd'hui à ${formatClock(ts)}`
-      : `last seen today at ${formatClock(ts)}`;
+      ? `vu aujourd'hui à ${formatClock(when)}`
+      : `last seen today at ${formatClock(when)}`;
   }
-  if (isYesterday(ts)) {
+  if (isYesterday(when)) {
     return lang === "fr"
-      ? `vu hier à ${formatClock(ts)}`
-      : `last seen yesterday at ${formatClock(ts)}`;
+      ? `vu hier à ${formatClock(when)}`
+      : `last seen yesterday at ${formatClock(when)}`;
   }
   return lang === "fr"
-    ? `vu ${dayMonth(ts, lang, "short")}`
-    : `last seen ${dayMonth(ts, lang, "short")}`;
+    ? `vu ${dayMonth(when, lang, "short")}`
+    : `last seen ${dayMonth(when, lang, "short")}`;
 }
 
 export function formatDuration(seconds: number) {
-  const t = Math.max(0, seconds);
+  const raw = Number(seconds);
+  if (!Number.isFinite(raw)) return "0:00";
+  const t = Math.max(0, raw);
   const m = Math.floor(t / 60);
   const s = Math.floor(t % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 export function formatRelativeShort(ts: number, lang: Lang) {
-  const diff = Date.now() - ts;
+  const when = asEpochMs(ts);
+  if (when == null) return "";
+  const diff = Date.now() - when;
   const min = Math.floor(diff / 60000);
   if (min < 1) return lang === "fr" ? "à l'instant" : "now";
   if (min < 60) return `${min} min`;

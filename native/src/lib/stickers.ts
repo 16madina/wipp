@@ -242,7 +242,7 @@ for (const s of SCENE) {
 
 const ANI: StickerDef[] = [
   { id: "ani-stop", pack: "ani", src: "/stickers/aniwipp/stop-full.png", labelFr: "Stop !", labelEn: "Stop!" },
-  { id: "ani-bisou", pack: "ani", src: "/stickers/aniwipp/bisou-poster.png", anim: "/stickers/aniwipp/bisou.webm", labelFr: "Bisou", labelEn: "Kiss" },
+  { id: "ani-bisou", pack: "ani", src: "/stickers/aniwipp/bisou-poster.png", anim: "/stickers/aniwipp/bisou-green.mp4", labelFr: "Bisou", labelEn: "Kiss" },
   { id: "moment-01", pack: "ani", src: "/stickers/moments/moment-01.png", anim: "/stickers/moments/moment-01.webp", playMs: 6040, labelFr: "Salut", labelEn: "Hey" },
   { id: "moment-02", pack: "ani", src: "/stickers/moments/moment-02.png", anim: "/stickers/moments/moment-02.webp", playMs: 6040, labelFr: "MDR", labelEn: "LOL" },
   { id: "moment-03", pack: "ani", src: "/stickers/moments/moment-03.png", anim: "/stickers/moments/moment-03.webp", playMs: 6040, labelFr: "Cœurs", labelEn: "Hearts" },
@@ -288,16 +288,16 @@ const ANI: StickerDef[] = [
 ];
 
 const EMO: StickerDef[] = [
-  { id: "emo-01", pack: "emo", src: "/stickers/emo/emo-01.webp", labelFr: "Champion", labelEn: "Champion" },
-  { id: "emo-02", pack: "emo", src: "/stickers/emo/emo-02.webp", labelFr: "Shopping", labelEn: "Shopping" },
-  { id: "emo-03", pack: "emo", src: "/stickers/emo/emo-03.webp", labelFr: "Je te vois", labelEn: "I see you" },
-  { id: "emo-04", pack: "emo", src: "/stickers/emo/emo-04.webp", labelFr: "Pop-corn", labelEn: "Popcorn" },
-  { id: "emo-05", pack: "emo", src: "/stickers/emo/emo-05.webp", labelFr: "Banane", labelEn: "Banana" },
-  { id: "emo-06", pack: "emo", src: "/stickers/emo/emo-06.webp", labelFr: "Ménage", labelEn: "Cleaning" },
-  { id: "emo-07", pack: "emo", src: "/stickers/emo/emo-07.webp", labelFr: "L'heure", labelEn: "The time" },
-  { id: "emo-08", pack: "emo", src: "/stickers/emo/emo-08.webp", labelFr: "Valise", labelEn: "Suitcase" },
-  { id: "emo-09", pack: "emo", src: "/stickers/emo/emo-09.webp", labelFr: "Loupe", labelEn: "Magnifier" },
-  { id: "emo-10", pack: "emo", src: "/stickers/emo/emo-10.webp", labelFr: "Cachée", labelEn: "Hiding" },
+  { id: "emo-01", pack: "emo", src: "/stickers/emo/emo-01.webp", playMs: 3984, labelFr: "Champion", labelEn: "Champion" },
+  { id: "emo-02", pack: "emo", src: "/stickers/emo/emo-02.webp", playMs: 6059, labelFr: "Shopping", labelEn: "Shopping" },
+  { id: "emo-03", pack: "emo", src: "/stickers/emo/emo-03.webp", playMs: 6059, labelFr: "Je te vois", labelEn: "I see you" },
+  { id: "emo-04", pack: "emo", src: "/stickers/emo/emo-04.webp", playMs: 6059, labelFr: "Pop-corn", labelEn: "Popcorn" },
+  { id: "emo-05", pack: "emo", src: "/stickers/emo/emo-05.webp", playMs: 6059, labelFr: "Banane", labelEn: "Banana" },
+  { id: "emo-06", pack: "emo", src: "/stickers/emo/emo-06.webp", playMs: 6059, labelFr: "Ménage", labelEn: "Cleaning" },
+  { id: "emo-07", pack: "emo", src: "/stickers/emo/emo-07.webp", playMs: 6059, labelFr: "L'heure", labelEn: "The time" },
+  { id: "emo-08", pack: "emo", src: "/stickers/emo/emo-08.webp", playMs: 6059, labelFr: "Valise", labelEn: "Suitcase" },
+  { id: "emo-09", pack: "emo", src: "/stickers/emo/emo-09.webp", playMs: 6059, labelFr: "Loupe", labelEn: "Magnifier" },
+  { id: "emo-10", pack: "emo", src: "/stickers/emo/emo-10.webp", playMs: 6059, labelFr: "Cachée", labelEn: "Hiding" },
 ];
 
 export const STICKER_PACKS = {

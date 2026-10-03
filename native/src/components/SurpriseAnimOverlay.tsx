@@ -61,10 +61,11 @@ export function SurpriseAnimOverlay({
         <Image
           ref={img}
           key={`${item.id}:${playKey}`}
-          source={src}
+          source={typeof src === "number" ? src : { uri: src.uri, isAnimated: true }}
           style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
           contentFit="contain"
           autoplay={!reduceMotion}
+          useAppleWebpCodec={false}
           allowDownscaling={false}
           cachePolicy="memory-disk"
           recyclingKey={`${item.id}:${playKey}`}

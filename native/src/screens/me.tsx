@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import {
   BadgeCheck,
@@ -8,7 +8,6 @@ import {
   CalendarDays,
   Camera,
   ChevronRight,
-  Clock,
   FileText,
   Globe,
   Hand,
@@ -26,30 +25,28 @@ import {
   Shield,
   Smartphone,
   Sparkles,
-  Store,
   Tag,
   User,
   UserPlus,
 } from "lucide-react-native";
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
+import { BusinessCardExperience, CoverCameraHint, EmptyBusinessCard } from "../components/business-face";
 import { WippWordmark } from "../components/Logo";
-import { QrCard } from "../components/QrCard";
-import { Btn, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
+import { Btn, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
 import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
 import { COUNTRIES } from "../lib/countries";
 import {
   CARD_CATEGORIES,
-  cardLink,
   cardToShop,
   getMyBusinessCard,
   getPublicBusinessCard,
   saveMyBusinessCard,
-  uploadBusinessImage,
+  uploadBusinessImageFile,
+  withSignedCardMedia,
   type BusinessCardView,
   type CardInput,
 } from "../lib/business-card";
-import { businessQr } from "../lib/qr-payload";
 import { usePrivatePinAsk } from "../components/PrivatePinGate";
 import {
   authenticateBiometric,
@@ -111,14 +108,23 @@ export function MeScreen() {
               {t("goodVibes")}
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <View>
+              <Press
+                accessibilityLabel="Changer la photo de profil"
+                onPress={() => {
+                  void import("../lib/profile-photo").then(({ changeProfilePhoto }) =>
+                    changeProfilePhoto().catch((err) => {
+                      Alert.alert("Photo", err instanceof Error ? err.message : "Envoi impossible");
+                    }),
+                  );
+                }}
+              >
                 <View style={{ borderRadius: 999, borderWidth: 2, borderColor: colors.accent, padding: 2 }}>
                   <Avatar user={me} size={72} />
                 </View>
                 <View style={{ position: "absolute", right: 0, bottom: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                   <Camera size={14} color={colors.accentFg} />
                 </View>
-              </View>
+              </Press>
               <View style={{ flex: 1, paddingRight: 72, paddingTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Text numberOfLines={1} style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
@@ -488,11 +494,7 @@ export function PrivacyScreen() {
         <Section title="">
           <Row label={t("nearbyVis")} onPress={() => push({ name: "nearby" })} />
           <Row label="WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
-          <Row label={t("blocked")} onPress={() => push({ name: "blocked" })} />
-          <Row label="Photo" value="Tout le monde" />
-          <Row label="Dernière connexion" value="Contacts" />
-          <Row label="Appels" value="Contacts" />
-          <Row label="Stories" value="Contacts" />
+          <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>
       </ScrollView>
     </ScreenRoot>
@@ -668,12 +670,77 @@ export function BlockedScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
   const blocked = useWippStore((s) => s.blockedIds);
+  const users = useWippStore((s) => s.users);
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [names, setNames] = useState<Record<string, string>>({});
+  async function reload() {
+    const { listBlockedProfiles } = await import("../lib/connections");
+    const rows = await listBlockedProfiles();
+    useWippStore.setState({ blockedIds: [...new Set(rows.flatMap((row) => [row.id, `srvuser:${row.id}`]))] });
+    setNames(Object.fromEntries(rows.map((row) => [row.id, row.displayName || (row.username ? `@${row.username}` : "")])));
+  }
+  useEffect(() => {
+    void (async () => {
+      try {
+        await reload();
+        setLoadError("");
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : "Impossible de charger les comptes bloqués.");
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+  const seen = new Set<string>();
+  const rows = blocked.filter((id) => {
+    const raw = id.startsWith("srvuser:") ? id.slice("srvuser:".length) : id;
+    if (seen.has(raw)) return false;
+    seen.add(raw);
+    return true;
+  });
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={t("blocked")} onBack={pop} />
+        <Header title={t("blockedList")} onBack={pop} />
       </GlassHeader>
-      {blocked.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Personne n’est bloqué.</Text> : blocked.map((id) => <Row key={id} label={id} />)}
+      {!ready ? <Text style={{ padding: 16, color: colors.muted }}>Chargement…</Text> : null}
+      {loadError ? <Text style={{ padding: 16, color: colors.danger }}>{loadError}</Text> : null}
+      {ready && !loadError && rows.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>{t("blockedEmpty")}</Text> : null}
+      {rows.map((id) => {
+        const raw = id.startsWith("srvuser:") ? id.slice("srvuser:".length) : id;
+        const user = users[id] ?? users[`srvuser:${raw}`] ?? users[raw];
+        const label = names[raw] || user?.displayName || (user?.username ? `@${user.username}` : "Profil bloqué");
+        return (
+          <Row
+            key={raw}
+            label={label}
+            value={t("unblock")}
+            onPress={() => {
+              Alert.alert(t("unblock"), `Débloquer ${label} ?`, [
+                { text: "Annuler", style: "cancel" },
+                {
+                  text: t("unblock"),
+                  onPress: () => {
+                    void import("../lib/connections").then(async ({ unblockProfile }) => {
+                      const ok = await unblockProfile(raw);
+                      if (!ok) {
+                        Alert.alert(t("unblock"), "Impossible pour le moment.");
+                        return;
+                      }
+                      try {
+                        await reload();
+                      } catch (e) {
+                        setLoadError(e instanceof Error ? e.message : "Impossible de charger les comptes bloqués.");
+                      }
+                    });
+                  },
+                },
+              ]);
+            }}
+          />
+        );
+      })}
     </ScreenRoot>
   );
 }
@@ -681,16 +748,50 @@ export function BlockedScreen() {
 export function DeleteAccountScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
+  const [phrase, setPhrase] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const armed = phrase.trim().toUpperCase() === "SUPPRIMER";
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("deleteAccount")} onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Suppression compte serveur" />
-      <Text style={{ padding: 16, color: colors.muted }}>{t("deleteAccountBody")}</Text>
-      <View style={{ padding: 16 }}>
-        <Btn label={t("deleteAccountCta")} variant="danger" onPress={pop} />
-      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Supprimer votre compte ?</Text>
+        <Text style={{ marginTop: 12, color: colors.muted, lineHeight: 20 }}>
+          Cette action demande la suppression du profil WIPP associé à la session en cours : stories, carte professionnelle, annonces et données de compte que le serveur peut effacer. Les messages déjà reçus par d’autres personnes peuvent rester dans leur conversation. Le compte Firebase du numéro n’est pas effacé par l’application. Une page web existe, mais elle demande un mot de passe : https://wippapp.com/delete-account. Les comptes créés par téléphone peuvent aussi écrire à support@wippapp.com.
+        </Text>
+        <Text style={{ marginTop: 16, color: colors.fg }}>Écris SUPPRIMER pour confirmer.</Text>
+        <TextInput
+          value={phrase}
+          onChangeText={setPhrase}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          placeholder="SUPPRIMER"
+          placeholderTextColor={colors.muted}
+          style={{ marginTop: 8, height: 48, borderRadius: 8, backgroundColor: colors.navy, color: colors.fg, paddingHorizontal: 12 }}
+        />
+        {error ? <Text style={{ marginTop: 12, color: colors.danger }}>{error}</Text> : null}
+        <Btn
+          label={busy ? "Suppression…" : t("deleteAccountCta")}
+          variant="danger"
+          disabled={!armed || busy}
+          onPress={() => {
+            setBusy(true);
+            setError("");
+            void (async () => {
+              const { wippApi } = await import("../lib/proximity/wipp-session");
+              await wippApi("account/delete-self", { method: "POST", body: JSON.stringify({ confirm: "SUPPRIMER" }) });
+              useWippStore.getState().signOut();
+            })().catch((err) => {
+              setBusy(false);
+              setError(err instanceof Error ? err.message : "La suppression n’est pas encore disponible sur le serveur.");
+            });
+          }}
+          style={{ marginTop: 20 }}
+        />
+      </ScrollView>
     </ScreenRoot>
   );
 }
@@ -728,16 +829,60 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
   const allEvents = useWippStore((s) => s.lifestyle);
   const saves = useWippStore((s) => s.saves);
   const shops = useWippStore((s) => s.shops);
+  const [loadError, setLoadError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { fetchListings, fetchEvents, fetchSaves, myProfileId } = await import("../lib/lot7/api");
+        let me = useWippStore.getState().serverProfileId;
+        if (!me) {
+          try {
+            me = await myProfileId();
+            useWippStore.setState({ serverProfileId: me });
+          } catch {
+            me = null;
+          }
+        }
+        const next: { listings?: typeof allListings; lifestyle?: typeof allEvents; saves?: typeof saves } = {};
+        if (kind === "listings" || kind === "saved") next.listings = await fetchListings(me);
+        if (kind === "events" || kind === "saved") next.lifestyle = await fetchEvents(me);
+        if (kind === "saved") next.saves = await fetchSaves();
+        if (!cancelled) {
+          useWippStore.setState(next);
+          setLoadError("");
+        }
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Chargement impossible.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
   const listings = allListings.filter((l) => (kind === "saved" ? saves.some((s) => s.kind === "listing" && s.id === l.id) : l.sellerId === "me"));
   const events = allEvents.filter((e) => (kind === "saved" ? saves.some((s) => s.kind === "event" && s.id === e.id) : e.hostId === "me"));
   const savedShops = shops.filter((s) => saves.some((x) => x.kind === "business" && (x.id === s.handle || x.id === s.id)));
-  const title = kind === "listings" ? "Mes annonces" : kind === "events" ? "Mes événements" : "Enregistrés";
+  const title = kind === "listings" ? "Mes annonces" : kind === "events" ? "Mes événements" : "Mes enregistrés";
+  const create = kind === "listings"
+    ? () => push({ name: "create-listing" })
+    : kind === "events"
+      ? () => push({ name: "create-lifestyle" })
+      : null;
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={title} onBack={pop} />
+        <Header
+          title={title}
+          onBack={pop}
+          right={create ? (
+            <Press onPress={create} accessibilityLabel={kind === "listings" ? "Créer une annonce" : "Créer un événement"} style={{ paddingHorizontal: 8 }}>
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{kind === "listings" ? "+ Annonce" : "+ Événement"}</Text>
+            </Press>
+          ) : null}
+        />
       </GlassHeader>
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         {kind === "saved" ? savedShops.map((s) => (
           <Press key={s.id} onPress={() => push({ name: "business-card-view", publicId: s.handle })} style={{ padding: 16 }}>
             <Text style={{ color: colors.fg }}>{s.name}</Text>
@@ -746,16 +891,35 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
         {kind !== "events" ? listings.map((l) => (
           <Press key={l.id} onPress={() => push({ name: "listing", listingId: l.id })} style={{ padding: 16 }}>
             <Text style={{ color: colors.fg }}>{l.title}</Text>
+            <Text style={{ color: colors.muted, fontSize: 12 }}>{l.city}</Text>
           </Press>
         )) : null}
         {kind !== "listings" ? events.map((e) => (
           <Press key={e.id} onPress={() => push({ name: "lifestyle", itemId: e.id })} style={{ padding: 16 }}>
             <Text style={{ color: colors.fg }}>{e.title}</Text>
+            <Text style={{ color: colors.muted, fontSize: 12 }}>{e.when}{e.place ? ` · ${e.place}` : ""}</Text>
           </Press>
         )) : null}
-        {kind === "listings" && listings.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Aucune annonce</Text> : null}
-        {kind === "events" && events.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Aucun événement</Text> : null}
-        {kind === "saved" && listings.length + events.length + savedShops.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>Rien d’enregistré</Text> : null}
+        {loadError ? <Text style={{ padding: 16, color: colors.danger, fontSize: 13 }}>{loadError}</Text> : null}
+        {kind === "listings" && listings.length === 0 ? (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Aucune annonce pour le moment</Text>
+            <Text style={{ marginTop: 6, color: colors.muted }}>Publiez votre première annonce.</Text>
+            <Btn label="Créer une annonce" onPress={() => push({ name: "create-listing" })} style={{ marginTop: 16 }} />
+          </View>
+        ) : null}
+        {kind === "events" && events.length === 0 ? (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Aucun événement à venir</Text>
+            <Btn label="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} style={{ marginTop: 16 }} />
+          </View>
+        ) : null}
+        {kind === "saved" && !loadError && listings.length + events.length + savedShops.length === 0 ? (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Vous n’avez encore rien enregistré.</Text>
+            <Btn label="Explorer" onPress={() => push({ name: "explore" })} style={{ marginTop: 16 }} />
+          </View>
+        ) : null}
       </ScrollView>
     </ScreenRoot>
   );
@@ -771,53 +935,45 @@ export function BusinessCardScreen() {
       try {
         const result = await getMyBusinessCard();
         setCard(result.card);
-      } catch {
+      } catch (e) {
         setCard(null);
-        setError("Connecte-toi pour créer ta carte professionnelle.");
+        const status = typeof e === "object" && e && "status" in e ? Number((e as { status?: number }).status) : 0;
+        if (status === 401 || status === 403) setError("Connecte-toi pour créer ta carte professionnelle.");
+        else if (status === 404) setError("La carte professionnelle n’est pas encore disponible sur le serveur.");
+        else setError(e instanceof Error ? e.message : "Impossible de charger la carte.");
       }
     })();
   }, []);
-  return (
-    <ScreenRoot>
-      <GlassHeader>
-        <Header title={card?.name || "Ma carte de visite"} onBack={pop} />
-      </GlassHeader>
-      {card === undefined ? (
+  if (card === undefined) {
+    return (
+      <ScreenRoot>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : card ? (
-        <BusinessCardBody card={card} owner onEdit={() => push({ name: "business-card-editor" })} />
-      ) : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, paddingTop: 28 }}>
-          <View style={{ alignSelf: "center", width: 80, height: 80, borderRadius: 16, backgroundColor: "rgba(255,216,77,0.1)", alignItems: "center", justifyContent: "center" }}>
-            <Store size={40} color={colors.accent} />
-          </View>
-          <Text style={{ marginTop: 28, fontSize: 29, fontFamily: "Inter_600SemiBold", color: colors.fg, lineHeight: 32 }}>
-            Crée ta carte{"\n"}
-            <Text style={{ color: colors.accent }}>professionnelle</Text>
-          </Text>
-          <Text style={{ marginTop: 16, fontSize: 15, lineHeight: 22, color: "rgba(249,250,251,0.6)" }}>
-            Fais découvrir ton activité sur WIPP et permets aux gens de te contacter sans partager ton numéro personnel.
-          </Text>
-          {[
-            ["Présente ton activité", "Photos, description, horaires…"],
-            ["Partage ton QR professionnel", "À imprimer ou à partager sur WIPP."],
-            ["Reçois des messages sur WIPP", "Les personnes te contactent directement."],
-          ].map(([title, sub]) => (
-            <View key={title} style={{ marginTop: 12, flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.navy }}>
-              <View>
-                <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{title}</Text>
-                <Text style={{ marginTop: 2, fontSize: 12, color: "rgba(249,250,251,0.5)" }}>{sub}</Text>
-              </View>
-            </View>
-          ))}
-          {error ? <Text style={{ marginTop: 12, color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
-          <Btn label="Créer ma carte de visite →" onPress={() => push({ name: "business-card-editor" })} style={{ marginTop: 20 }} />
-        </ScrollView>
-      )}
-    </ScreenRoot>
-  );
+      </ScreenRoot>
+    );
+  }
+  if (!card) {
+    return (
+      <View style={{ flex: 1 }}>
+        <EmptyBusinessCard onBack={pop} onCreate={() => push({ name: "business-card-editor" })} onHelp={() => push({ name: "help" })} />
+        {error ? <Text style={{ position: "absolute", left: 20, right: 20, bottom: 24, color: colors.danger, textAlign: "center" }}>{error}</Text> : null}
+      </View>
+    );
+  }
+  return <OwnedCard card={card} onBack={pop} onEdit={() => push({ name: "business-card-editor" })} />;
+}
+
+function cardHttpStatus(e: unknown): number {
+  return typeof e === "object" && e && "status" in e ? Number((e as { status?: number }).status) : 0;
+}
+
+function cardErrorMessage(e: unknown, fallback: string): string {
+  const status = cardHttpStatus(e);
+  if (status === 401 || status === 403) return "Connecte-toi pour créer ta carte professionnelle.";
+  if (status === 404) return "La carte professionnelle n’est pas encore disponible sur le serveur.";
+  if (e instanceof Error && e.message && e.message !== "upload") return e.message;
+  return fallback;
 }
 
 type Draft = CardInput & { coverUrl: string | null; logoUrl: string | null; photoUrls: string[] };
@@ -844,17 +1000,35 @@ export function BusinessCardEditorScreen() {
   const pop = useWippStore((s) => s.pop);
   const replace = useWippStore((s) => s.replace);
   const [profileId, setProfileId] = useState("");
+  const profileRef = useRef("");
+  const localRef = useRef<{ cover?: { uri: string; mime: string }; logo?: { uri: string; mime: string } }>({});
+  const pathRef = useRef<{ cover: string | null; logo: string | null }>({ cover: null, logo: null });
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [hasCard, setHasCard] = useState(false);
   const [busy, setBusy] = useState(true);
+  const [uploadLabel, setUploadLabel] = useState("");
   const [error, setError] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
+  function rememberProfile(id: string) {
+    profileRef.current = id;
+    setProfileId(id);
+  }
   useEffect(() => {
     void (async () => {
       try {
+        const { waitForFirebaseUser } = await import("../lib/firebase-phone");
+        const user = await waitForFirebaseUser();
+        if (!user) {
+          setError("Connecte-toi pour créer ta carte professionnelle.");
+          return;
+        }
         const r = await getMyBusinessCard();
-        setProfileId(r.profileId);
+        if (r.profileId) rememberProfile(r.profileId);
         if (r.userCountry && !r.card) setDraft((d) => ({ ...d, country: r.userCountry! }));
         if (r.card) {
+          setHasCard(true);
+          pathRef.current = { cover: r.card.coverPath, logo: r.card.logoPath };
+          const card = await withSignedCardMedia(r.card);
           setDraft({
             name: r.card.name,
             category: r.card.category,
@@ -868,55 +1042,135 @@ export function BusinessCardEditorScreen() {
             website: r.card.website,
             coverPath: r.card.coverPath,
             logoPath: r.card.logoPath,
-            photoPaths: r.card.photoPaths,
-            coverUrl: r.card.coverUrl,
-            logoUrl: r.card.logoUrl,
-            photoUrls: r.card.photoUrls,
+            photoPaths: card.photoPaths ?? [],
+            coverUrl: card.coverUrl,
+            logoUrl: card.logoUrl,
+            photoUrls: card.photoUrls ?? [],
           });
+          if (card.coverUnresolved || card.logoUnresolved) {
+            setError("Une image enregistrée n’a pas pu être affichée. Tu peux la renvoyer.");
+          }
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(cardErrorMessage(e, "Impossible de charger la carte."));
+        const status = cardHttpStatus(e);
+        if (status === 401 || status === 403) return;
+        const stored = useWippStore.getState().serverProfileId;
+        if (stored) {
+          rememberProfile(stored);
+          return;
+        }
+        try {
+          const { myProfileId } = await import("../lib/lot7/api");
+          rememberProfile(await myProfileId());
+        } catch {
+          /* keep the classified load error */
+        }
       } finally {
         setBusy(false);
       }
     })();
   }, []);
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
-  async function pick(role: "cover" | "logo" | "photo") {
-    if (!profileId) return;
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, base64: true });
-    if (res.canceled || !res.assets[0]?.base64) return;
-    setBusy(true);
+  async function resolveProfile(): Promise<string> {
+    if (profileRef.current) return profileRef.current;
+    const stored = useWippStore.getState().serverProfileId;
+    if (stored) {
+      rememberProfile(stored);
+      return stored;
+    }
+    const { waitForFirebaseUser } = await import("../lib/firebase-phone");
+    const user = await waitForFirebaseUser();
+    if (!user) throw Object.assign(new Error("Connecte-toi pour créer ta carte professionnelle."), { status: 401 });
     try {
-      const b64 = res.assets[0].base64;
-      const bin = typeof atob === "function" ? atob(b64) : Buffer.from(b64, "base64").toString("binary");
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const mime = res.assets[0].mimeType ?? "image/jpeg";
-      const media = await uploadBusinessImage(profileId, bytes, mime, role);
-      if (role === "cover") {
-        set("coverPath", media.path);
-        set("coverUrl", media.url);
-      } else if (role === "logo") {
-        set("logoPath", media.path);
-        set("logoUrl", media.url);
-      } else {
-        set("photoPaths", [...draft.photoPaths, media.path].slice(0, 8));
-        set("photoUrls", [...draft.photoUrls, media.url].slice(0, 8));
+      const r = await getMyBusinessCard();
+      if (r.profileId) {
+        rememberProfile(r.profileId);
+        return r.profileId;
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      const status = cardHttpStatus(e);
+      if (status === 401 || status === 403 || status === 404) throw e;
+    }
+    const { myProfileId } = await import("../lib/lot7/api");
+    const id = await myProfileId();
+    rememberProfile(id);
+    return id;
+  }
+  async function uploadRole(role: "cover" | "logo", file: { uri: string; mime: string }, id: string) {
+    const media = await uploadBusinessImageFile(id, file.uri, file.mime, role, (sent, total) => {
+      setUploadLabel(total > 0 ? `Envoi… ${Math.round((sent / total) * 100)}%` : "Envoi…");
+    });
+    if (role === "cover") {
+      localRef.current.cover = undefined;
+      pathRef.current.cover = media.path;
+      set("coverPath", media.path);
+      set("coverUrl", media.url || file.uri);
+    } else {
+      localRef.current.logo = undefined;
+      pathRef.current.logo = media.path;
+      set("logoPath", media.path);
+      set("logoUrl", media.url || file.uri);
+    }
+    return media.path;
+  }
+  async function pick(role: "cover" | "logo" | "photo") {
+    setError("");
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setError("Accès aux photos refusé.");
+      Alert.alert("Photos", "WIPP a besoin d’accéder à tes photos pour la carte.", [
+        { text: "Annuler", style: "cancel" },
+        { text: "Réglages", onPress: () => void Linking.openSettings() },
+      ]);
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    const asset = res.assets?.[0];
+    if (res.canceled || !asset?.uri) return;
+    const mime = asset.mimeType ?? "image/jpeg";
+    if (role === "photo") {
+      setUploadLabel("Envoi…");
+      try {
+        const id = await resolveProfile();
+        const media = await uploadBusinessImageFile(id, asset.uri, mime, "photo");
+        setDraft((d) => ({
+          ...d,
+          photoPaths: [...d.photoPaths, media.path].slice(0, 8),
+          photoUrls: [...d.photoUrls, media.url || asset.uri].slice(0, 8),
+        }));
+      } catch (e) {
+        setError(cardErrorMessage(e, "Envoi de l’image impossible. Réessaie."));
+      } finally {
+        setUploadLabel("");
+      }
+      return;
+    }
+    setDraft((d) => (role === "cover" ? { ...d, coverUrl: asset.uri } : { ...d, logoUrl: asset.uri }));
+    if (role === "cover") localRef.current.cover = { uri: asset.uri, mime };
+    else localRef.current.logo = { uri: asset.uri, mime };
+    setUploadLabel("Envoi…");
+    try {
+      const id = await resolveProfile();
+      await uploadRole(role, { uri: asset.uri, mime }, id);
+    } catch (e) {
+      setError(cardErrorMessage(e, "Envoi de l’image impossible. Réessaie."));
     } finally {
-      setBusy(false);
+      setUploadLabel("");
     }
   }
   async function save() {
     setBusy(true);
     setError("");
     try {
-      await saveMyBusinessCard({
+      let coverPath = pathRef.current.cover ?? draft.coverPath;
+      let logoPath = pathRef.current.logo ?? draft.logoPath;
+      if (localRef.current.cover || localRef.current.logo) {
+        const id = await resolveProfile();
+        if (localRef.current.cover) coverPath = await uploadRole("cover", localRef.current.cover, id);
+        if (localRef.current.logo) logoPath = await uploadRole("logo", localRef.current.logo, id);
+      }
+      const saved = await saveMyBusinessCard({
         name: draft.name,
         category: draft.category,
         description: draft.description,
@@ -927,13 +1181,21 @@ export function BusinessCardEditorScreen() {
         hours: draft.hours,
         businessPhone: draft.businessPhone,
         website: draft.website,
-        coverPath: draft.coverPath,
-        logoPath: draft.logoPath,
+        coverPath,
+        logoPath,
         photoPaths: draft.photoPaths,
       });
-      replace({ name: "business-card" });
+      if (!saved?.publicId && !saved?.name) {
+        setError("Le serveur n’a pas renvoyé la carte enregistrée.");
+        return;
+      }
+      Alert.alert("Carte enregistrée", "Ta carte est enregistrée. La photo et la bannière se rechargent à l’ouverture.", [
+        { text: "Voir ma carte", onPress: () => replace({ name: "business-card" }) },
+      ]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Enregistrement impossible");
+      const status = cardHttpStatus(e);
+      console.warn("[wipp] card save failed", status || "no-status", e instanceof Error ? e.message : "unknown");
+      setError(cardErrorMessage(e, "Enregistrement impossible."));
     } finally {
       setBusy(false);
     }
@@ -948,20 +1210,44 @@ export function BusinessCardEditorScreen() {
     );
   }
   return (
+    <EdgeBack onBack={pop}>
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Modifier ma carte" onBack={pop} />
+        <Header
+          title={hasCard ? "Modifier ma carte" : "Créer ma carte de visite"}
+          onBack={pop}
+          right={hasCard ? (
+            <Press onPress={pop} accessibilityLabel="Aperçu">
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Aperçu</Text>
+            </Press>
+          ) : undefined}
+        />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        <Press onPress={() => void pick("cover")} style={{ height: 144, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
-          {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <ImagePlus size={28} color={colors.accent} />}
-          <Text style={{ position: "absolute", bottom: 8, color: colors.paper, fontSize: 10 }}>Photo de couverture</Text>
-        </Press>
-        <Press onPress={() => void pick("logo")} style={{ marginTop: 16, width: 80, height: 80, borderRadius: 40, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-          {draft.logoUrl ? <Image source={{ uri: draft.logoUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <ImagePlus size={24} color={colors.accent} />}
-        </Press>
+        <View>
+          <Press accessibilityLabel="Bannière" onPress={() => void pick("cover")} style={{ height: 168, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+            {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : <ImagePlus size={28} color={colors.accent} />}
+            {uploadLabel ? <Text style={{ position: "absolute", top: 8, color: colors.paper, fontSize: 13 }}>{uploadLabel}</Text> : <CoverCameraHint />}
+          </Press>
+          <Press accessibilityLabel="Photo" onPress={() => void pick("logo")} style={{ marginTop: -36, marginLeft: 16, width: 84, height: 84, borderRadius: 42, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 3, borderColor: colors.ink, alignItems: "center", justifyContent: "center" }}>
+            {draft.logoUrl ? <Image source={{ uri: draft.logoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : <ImagePlus size={24} color={colors.accent} />}
+            <View style={{ position: "absolute", right: 0, bottom: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+              <Camera size={14} color={colors.accentFg} />
+            </View>
+          </Press>
+        </View>
+        {draft.coverUrl ? (
+          <Press onPress={() => { localRef.current.cover = undefined; pathRef.current.cover = null; set("coverPath", null); set("coverUrl", null); }} style={{ marginTop: 8 }}>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Retirer la bannière</Text>
+          </Press>
+        ) : null}
+        {draft.logoUrl ? (
+          <Press onPress={() => { localRef.current.logo = undefined; pathRef.current.logo = null; set("logoPath", null); set("logoUrl", null); }} style={{ marginTop: 8 }}>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Retirer la photo</Text>
+          </Press>
+        ) : null}
         <View style={{ marginTop: 16, gap: 12 }}>
-          <Field label="Nom de l’activité *" value={draft.name} onChangeText={(v) => set("name", v)} />
+          <Field label="Nom de la boutique *" value={draft.name} onChangeText={(v) => set("name", v)} />
           <Text style={{ fontSize: 12, color: colors.muted }}>Catégorie *</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {CARD_CATEGORIES.map((c) => (
@@ -993,9 +1279,9 @@ export function BusinessCardEditorScreen() {
           <Field label="Horaires (facultatifs)" value={draft.hours ?? ""} placeholder="Lun–Sam · 10 h–19 h" onChangeText={(v) => set("hours", v || null)} />
           <Field label="Téléphone professionnel (facultatif)" value={draft.businessPhone ?? ""} keyboardType="phone-pad" onChangeText={(v) => set("businessPhone", v || null)} />
           <Text style={{ fontSize: 11, color: "rgba(249,250,251,0.45)" }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
-          <Field label="Site web (facultatif)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
+          <Field label="Lien site web (optionnel)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
         </View>
-        <Text style={{ marginTop: 20, marginBottom: 8, fontSize: 12, color: colors.muted }}>Photos de l’activité · {draft.photoUrls.length}/8</Text>
+        <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de la boutique</Text>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
           {draft.photoUrls.map((url) => (
             <Image key={url} source={{ uri: url }} style={{ width: 96, height: 80, borderRadius: 12 }} contentFit="cover" />
@@ -1007,7 +1293,7 @@ export function BusinessCardEditorScreen() {
           ) : null}
         </ScrollView>
         {error ? <Text style={{ marginTop: 16, color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
-        <Btn label={busy ? "Enregistrement…" : "Enregistrer"} disabled={busy || !draft.name.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
+        <Btn label={busy ? "Enregistrement…" : "Enregistrer les modifications"} disabled={busy || !draft.name.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
       </ScrollView>
       <Modal visible={countryOpen} transparent animationType="slide" onRequestClose={() => setCountryOpen(false)}>
         <Press onPress={() => setCountryOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
@@ -1031,217 +1317,94 @@ export function BusinessCardEditorScreen() {
         </Press>
       </Modal>
     </ScreenRoot>
+    </EdgeBack>
+  );
+}
+
+function useCardContacts() {
+  const chats = useWippStore((s) => s.chats);
+  const users = useWippStore((s) => s.users);
+  return useMemo(
+    () =>
+      chats
+        .filter((c) => c.type === "dm" && !c.shopId)
+        .map((c) => {
+          const id = c.participantIds.find((x) => x !== "me");
+          const user = id ? users[id] : undefined;
+          return user ? { id: c.id, name: user.displayName, username: user.username, avatar: user.avatar } : null;
+        })
+        .filter((row): row is NonNullable<typeof row> => Boolean(row)),
+    [chats, users],
+  );
+}
+
+function OwnedCard({ card, onBack, onEdit }: { card: BusinessCardView; onBack: () => void; onEdit: () => void }) {
+  const sendMessage = useWippStore((s) => s.sendMessage);
+  const push = useWippStore((s) => s.push);
+  const contacts = useCardContacts();
+  return (
+    <BusinessCardExperience
+      card={card}
+      owner
+      onBack={onBack}
+      onEdit={onEdit}
+      contacts={contacts}
+      onSend={(chatId) => {
+        const shop = cardToShop(card);
+        useWippStore.setState((s) => ({ shops: s.shops.some((x) => x.id === shop.id) ? s.shops : [...s.shops, shop] }));
+        sendMessage(chatId, { type: "shop", text: card.name, shopId: shop.id, imageUrl: shop.logo || shop.image });
+        push({ name: "conversation", chatId });
+      }}
+    />
   );
 }
 
 export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
   const pop = useWippStore((s) => s.pop);
+  const contacts = useCardContacts();
   const [card, setCard] = useState<BusinessCardView | null | undefined>();
-  useEffect(() => {
-    void getPublicBusinessCard(publicId.replace(/^business:/, "")).then(setCard).catch(() => setCard(null));
-  }, [publicId]);
-  return (
-    <ScreenRoot>
-      <GlassHeader>
-        <Header title={card?.name || "Carte professionnelle"} onBack={pop} />
-      </GlassHeader>
-      {card ? (
-        <BusinessCardBody card={card} />
-      ) : card === null ? (
-        <Text style={{ padding: 24, textAlign: "center", color: colors.muted }}>Cette carte n’est pas disponible.</Text>
-      ) : (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
-      )}
-    </ScreenRoot>
-  );
-}
-
-function BusinessCardBody({
-  card,
-  owner,
-  onEdit,
-}: {
-  card: BusinessCardView;
-  owner?: boolean;
-  onEdit?: () => void;
-}) {
-  const push = useWippStore((s) => s.push);
-  const chats = useWippStore((s) => s.chats);
-  const users = useWippStore((s) => s.users);
-  const sendMessage = useWippStore((s) => s.sendMessage);
-  const [share, setShare] = useState(false);
-  const [q, setQ] = useState("");
   const [opening, setOpening] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const savedBiz = useWippStore((s) => s.saves.some((item) => item.kind === "business" && item.id === card.publicId));
-  const link = cardLink(card.publicId);
-  const qr = businessQr(card.publicId);
-  const contacts = chats
-    .filter((c) => c.type === "dm" && !c.shopId)
-    .map((c) => {
-      const id = c.participantIds.find((x) => x !== "me");
-      return id ? { chat: c, user: users[id] } : null;
-    })
-    .filter((x): x is NonNullable<typeof x> => Boolean(x?.user))
-    .filter((x) => !isPrivateChat(x.chat.id))
-    .filter((x) => `${x.user.displayName} ${x.user.username}`.toLowerCase().includes(q.toLowerCase()))
-    .slice(0, 8);
-  async function writeOnWipp() {
-    setOpening(true);
-    setActionError("");
-    try {
-      await useWippStore.getState().openBusinessChat(card.publicId);
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Impossible d’ouvrir la conversation");
-    } finally {
-      setOpening(false);
-    }
-  }
-  function shareTo(chatId: string) {
-    const shop = cardToShop(card);
-    useWippStore.setState((s) => ({
-      shops: s.shops.some((x) => x.id === shop.id) ? s.shops : [...s.shops, shop],
-    }));
-    sendMessage(chatId, { type: "shop", text: card.name, shopId: shop.id, imageUrl: shop.logo || shop.image });
-    setShare(false);
-    push({ name: "conversation", chatId });
-  }
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView>
-        <View style={{ height: 160, backgroundColor: colors.navy }}>
-          {card.coverUrl ? <Image source={{ uri: card.coverUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Store size={48} color="rgba(255,216,77,0.6)" />
-            </View>
-          )}
-        </View>
-        <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-          <View style={{ marginTop: -24, flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
-            {card.logoUrl ? (
-              <Image source={{ uri: card.logoUrl }} style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: colors.accent }} />
-            ) : (
-              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.navy, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: colors.accent, fontSize: 20, fontFamily: "Inter_600SemiBold" }}>{card.name.slice(0, 2).toUpperCase()}</Text>
-              </View>
-            )}
-            <View style={{ flex: 1, paddingBottom: 4 }}>
-              <Text style={{ fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{card.name}</Text>
-              <Text style={{ fontSize: 12, color: "rgba(249,250,251,0.55)" }}>{card.category}</Text>
-            </View>
-          </View>
-          <View style={{ marginTop: 20, gap: 8 }}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <MapPin size={16} color={colors.accent} />
-              <Text style={{ color: "rgba(249,250,251,0.75)", fontSize: 12, flex: 1 }}>
-                {card.address ? `${card.address}\n${card.city}, ${card.country}` : `${card.city}, ${card.country}`}
-              </Text>
-            </View>
-            {card.hours ? (
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <Clock size={16} color={colors.accent} />
-                <Text style={{ color: "rgba(249,250,251,0.75)", fontSize: 12 }}>{card.hours}</Text>
-              </View>
-            ) : null}
-            {card.website ? (
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <Globe size={16} color={colors.accent} />
-                <Text style={{ color: "rgba(249,250,251,0.75)", fontSize: 12 }}>{card.website}</Text>
-              </View>
-            ) : null}
-          </View>
-          {card.description ? <Text style={{ marginTop: 16, fontSize: 13, lineHeight: 20, color: "rgba(249,250,251,0.8)" }}>{card.description}</Text> : null}
-          {card.photoUrls.length ? (
-            <ScrollView horizontal style={{ marginTop: 16 }} contentContainerStyle={{ gap: 8 }}>
-              {card.photoUrls.map((url) => (
-                <Image key={url} source={{ uri: url }} style={{ width: 96, height: 80, borderRadius: 8 }} contentFit="cover" />
-              ))}
-            </ScrollView>
-          ) : null}
-          {owner ? (
-            <View style={{ marginTop: 20, flexDirection: "row", gap: 12, alignItems: "center", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", paddingTop: 16 }}>
-              <QrCard value={qr} size={124} pad={5} />
-              <Text style={{ flex: 1, fontSize: 13, color: colors.fg }}>Scanner pour découvrir ma carte sur WIPP.</Text>
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
-      <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", padding: 16, paddingBottom: 20, backgroundColor: colors.ink }}>
-        {actionError ? <Text style={{ marginBottom: 8, color: colors.danger, fontSize: 12 }}>{actionError}</Text> : null}
-        {owner ? (
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Btn label="Modifier" variant="secondary" onPress={onEdit} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Btn label="Partager" variant="secondary" onPress={() => setShare(true)} />
-            </View>
-          </View>
+  useEffect(() => {
+    void getPublicBusinessCard(publicId.replace(/^business:/, ""))
+      .then(async (next) => setCard(next ? await withSignedCardMedia(next) : null))
+      .catch(() => setCard(null));
+  }, [publicId]);
+  if (!card) {
+    return (
+      <ScreenRoot>
+        <GlassHeader>
+          <Header title="Carte professionnelle" onBack={pop} />
+        </GlassHeader>
+        {card === null ? (
+          <Text style={{ padding: 24, textAlign: "center", color: colors.muted }}>Cette carte n’est pas disponible.</Text>
         ) : (
-          <View style={{ gap: 8 }}>
-            <Btn label={opening ? "Ouverture…" : "Écrire sur WIPP"} disabled={opening} onPress={() => void writeOnWipp()} />
-            <Btn
-              label={savedBiz ? "Retirer" : "Enregistrer"}
-              variant="secondary"
-              onPress={() => {
-                const on = savedBiz;
-                void import("../lib/lot7/api").then(async ({ toggleSave }) => {
-                  await toggleSave("business", card.publicId, !on);
-                  useWippStore.setState((s) => ({
-                    saves: on
-                      ? s.saves.filter((x) => !(x.kind === "business" && x.id === card.publicId))
-                      : [...s.saves, { kind: "business", id: card.publicId }],
-                  }));
-                });
-              }}
-            />
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {card.businessPhone ? (
-                <View style={{ flex: 1 }}>
-                  <Btn label="Appeler" variant="secondary" onPress={() => void Linking.openURL(`tel:${card.businessPhone}`)} />
-                </View>
-              ) : null}
-              {card.address || card.city ? (
-                <View style={{ flex: 1 }}>
-                  <Btn
-                    label="Itinéraire"
-                    variant="secondary"
-                    onPress={() => void Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent([card.address, card.city, card.country].filter(Boolean).join(", "))}`)}
-                  />
-                </View>
-              ) : null}
-              <View style={{ flex: 1 }}>
-                <Btn label="Partager" variant="secondary" onPress={() => setShare(true)} />
-              </View>
-            </View>
-          </View>
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         )}
-      </View>
-      <Modal visible={share} transparent animationType="slide" onRequestClose={() => setShare(false)}>
-        <Press onPress={() => setShare(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Press onPress={() => undefined} style={{ maxHeight: "70%", backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>Partager ma carte professionnelle</Text>
-            <SearchField value={q} onChangeText={setQ} placeholder="Rechercher un contact" />
-            <ScrollView horizontal contentContainerStyle={{ gap: 12, marginTop: 12 }}>
-              {contacts.map(({ chat, user }) => (
-                <Press key={chat.id} onPress={() => shareTo(chat.id)} style={{ width: 56, alignItems: "center" }}>
-                  <Avatar user={user} size={46} />
-                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 10, color: colors.fg }}>{user.firstName}</Text>
-                </Press>
-              ))}
-            </ScrollView>
-            <Press onPress={() => void shareWippPublic(`Découvre ${card.name} sur WIPP ${link}`)} style={{ marginTop: 16, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Share2 size={20} color={colors.accent} />
-              <Text style={{ color: colors.fg }}>Partager le lien professionnel</Text>
-            </Press>
-            <Press onPress={() => void shareWippPublic(qr)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <QrCode size={20} color={colors.accent} />
-              <Text style={{ color: colors.fg }}>Partager le QR</Text>
-            </Press>
-          </Press>
-        </Press>
-      </Modal>
-    </View>
+      </ScreenRoot>
+    );
+  }
+  const place = [card.address, card.city, card.country].filter(Boolean).join(", ");
+  return (
+    <BusinessCardExperience
+      card={card}
+      onBack={pop}
+      opening={opening}
+      contacts={contacts}
+      onSend={(chatId) => {
+        const shop = cardToShop(card);
+        useWippStore.getState().sendMessage(chatId, { type: "shop", text: card.name, shopId: shop.id, imageUrl: shop.logo || shop.image });
+        useWippStore.getState().push({ name: "conversation", chatId });
+      }}
+      onWrite={() => {
+        setOpening(true);
+        void useWippStore.getState().openBusinessChat(card.publicId).catch((err) => {
+          setOpening(false);
+          Alert.alert("Conversation", err instanceof Error ? err.message : "Impossible d’ouvrir la conversation.");
+        });
+      }}
+      onCall={card.businessPhone ? () => void Linking.openURL(`tel:${card.businessPhone}`) : undefined}
+      onRoute={place ? () => void Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(place)}`) : undefined}
+    />
   );
 }
 

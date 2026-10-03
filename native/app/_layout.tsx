@@ -15,6 +15,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { GreatVibes_400Regular } from "@expo-google-fonts/great-vibes";
 import * as SplashScreen from "expo-splash-screen";
+import { ShareIntentProvider } from "expo-share-intent";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -37,8 +38,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, animation: "none", contentStyle: { backgroundColor: "#070a0f" } }} />
+        <ShareIntentProvider options={{ scheme: "wipp", resetOnBackground: false }}>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false, animation: "none", contentStyle: { backgroundColor: "#070a0f" } }} />
+        </ShareIntentProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

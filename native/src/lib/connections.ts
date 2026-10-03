@@ -16,7 +16,15 @@ async function myProfileId(): Promise<string | null> {
 }
 
 export async function listIncomingRequests(): Promise<RealRequest[]> {
-  const me = await myProfileId();
+  try {
+    const { wippApi } = await import("./proximity/wipp-session");
+    const data = await wippApi<{ requests?: RealRequest[] }>("connections/requests");
+    if (Array.isArray(data.requests)) return data.requests;
+  } catch {
+    /* older server, or the phone is not linked yet */
+  }
+  const { useWippStore } = await import("./store");
+  const me = useWippStore.getState().serverProfileId ?? (await myProfileId());
   if (!me) return [];
   const { data: reqs } = await supabase
     .from("wipp_connection_requests")
@@ -51,12 +59,55 @@ export async function listIncomingRequests(): Promise<RealRequest[]> {
     });
 }
 
-export async function sendRequest(username: string, via: "request" | "qr" | "touch" = "request"): Promise<string> {
+async function insertRequestDirect(senderId: string, recipientId: string, via: string): Promise<string | null> {
+  const expires = new Date(Date.now() + 7 * 86400000).toISOString();
+  const base = { sender_id: senderId, recipient_id: recipientId, status: "pending", expires_at: expires };
+  const payloads = [
+    { ...base, id: crypto.randomUUID(), via: "request" },
+    { ...base, id: crypto.randomUUID(), via },
+    { ...base, via: "request" },
+    { ...base },
+  ];
+  let blocked = false;
+  for (const row of payloads) {
+    const { error } = await supabase.from("wipp_connection_requests").insert(row);
+    if (!error) return "sent";
+    const text = `${error.code ?? ""} ${error.message ?? ""}`;
+    console.warn("[wipp] connection insert", text);
+    if (/23505|duplicate/i.test(text)) return "already_pending";
+    if (/42501|permission|policy|row-level/i.test(text)) blocked = true;
+  }
+  return blocked ? null : null;
+}
+
+export async function sendRequest(
+  username: string,
+  via: "request" | "qr" | "touch" = "request",
+  peerId?: string,
+): Promise<string> {
   const clean = username.replace(/^@/, "").trim().toLowerCase();
+  const { useWippStore } = await import("./store");
+  const me = useWippStore.getState().serverProfileId;
+  const peer = peerId?.startsWith("srvuser:") ? peerId.slice("srvuser:".length) : peerId;
+  if (me && peer && peer !== me) {
+    const direct = await insertRequestDirect(me, peer, via);
+    if (direct) {
+      try {
+        const { wippApi } = await import("./proximity/wipp-session");
+        await wippApi("push/connection", {
+          method: "POST",
+          body: JSON.stringify({ username: clean }),
+        });
+      } catch {
+        /* the request row exists; the notification is best-effort */
+      }
+      return direct;
+    }
+  }
   const { wippApi } = await import("./proximity/wipp-session");
   const res = await wippApi<{ status: string }>("connections/requests", {
     method: "POST",
-    body: JSON.stringify({ username: clean, via }),
+    body: JSON.stringify({ username: clean, via: "request" }),
   });
   try {
     const { wippApi } = await import("./proximity/wipp-session");
@@ -92,11 +143,24 @@ export async function blockProfile(profileId: string): Promise<boolean> {
   return !error;
 }
 
+export type BlockedProfile = { id: string; username: string; displayName: string };
+
+export async function listBlockedProfiles(): Promise<BlockedProfile[]> {
+  const { wippApi } = await import("./proximity/wipp-session");
+  const res = await wippApi<{ blocks?: BlockedProfile[] }>("blocks");
+  return res.blocks ?? [];
+}
+
 export async function listBlockedIds(): Promise<string[]> {
-  const me = await myProfileId();
-  if (!me) return [];
-  const { data } = await supabase.from("wipp_blocks").select("blocked_id").eq("blocker_id", me);
-  return (data ?? []).map((r: { blocked_id: string }) => r.blocked_id);
+  return (await listBlockedProfiles()).map((row) => row.id);
+}
+
+export async function unblockProfile(profileId: string): Promise<boolean> {
+  const raw = profileId.startsWith("srvuser:") ? profileId.slice("srvuser:".length) : profileId;
+  if (!raw) return false;
+  const { wippApi } = await import("./proximity/wipp-session");
+  await wippApi(`blocks/${encodeURIComponent(raw)}`, { method: "DELETE" });
+  return true;
 }
 
 export async function getRelation(peerId: string): Promise<Relation> {

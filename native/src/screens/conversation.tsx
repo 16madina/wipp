@@ -6,6 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Audio } from "expo-av";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -45,12 +46,13 @@ import { EDIT_WINDOW_MS } from "../lib/messaging/plain";
 import { isServerChatId, toServerChatId } from "../lib/messaging/sync";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
 import { isSeedDemoChat } from "../lib/seed";
-import { stickerById } from "../lib/stickers";
+import { stickerById, stickerLabel, stickersInPack } from "../lib/stickers";
 import type { Surprise } from "../lib/surprise";
+import { storyRing } from "../lib/story-status";
 import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors } from "../theme";
 
-const EMOJIS = ["😀", "😂", "😍", "🔥", "👏", "🙏", "❤️", "🎉", "😮", "😢"];
+const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"));
 const NO_MESSAGES: Message[] = [];
 
 function surpriseFromMessage(m: Message): Surprise {
@@ -360,18 +362,16 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     );
   }
   const peer = chatPeer(chat, users);
+  const headerRing = chat.type !== "group" && peer ? storyRing(stories, peer.id) : "none";
   const sealed = isChatSealed(chat);
-  const mineShop = Boolean(shop && shop.ownerId === "me");
   const shopFace = shop ? { displayName: shop.name, avatar: shop.logo || shop.image, online: true } : undefined;
-  const title = chat.type === "group" ? chat.name : shop && !mineShop ? shop.name : peer?.displayName;
+  const title = chat.type === "group" ? chat.name : shop ? shop.name : peer?.displayName;
   const subtitle = typing
     ? "écrit…"
     : chat.type === "group"
       ? `${chat.participantIds.length} personnes`
       : shop
-        ? mineShop
-          ? `${shop.name} · Professionnel`
-          : "Professionnel"
+        ? undefined
         : peer
           ? formatLastSeen(peer.lastSeen, peer.online, useWippStore.getState().language)
           : undefined;
@@ -689,7 +689,11 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : m.text}</Text>
               ) : null}
               {m.encFailed && !m.text ? <Text style={{ color: colors.muted }}>🔒 Message chiffré</Text> : null}
-              {m.type === "sticker" ? <WippSticker id={m.stickerId ?? ""} size={96} /> : null}
+              {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
+                <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
+              ) : m.type === "sticker" ? (
+                <WippSticker id={m.stickerId ?? ""} size={96} />
+              ) : null}
               {m.geo ? (
                 <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg }}>
                   📍 {m.geo.lat.toFixed(4)}, {m.geo.lon.toFixed(4)}
@@ -722,18 +726,33 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       <GlassHeader>
         <Header
           title={
-            <Press onPress={() => push({ name: "chat-info", chatId })} style={{ minWidth: 0, maxWidth: "100%" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0, maxWidth: "100%" }}>
                 {chat.type === "group" ? (
-                  <GroupAvatar users={chat.participantIds.filter((id) => id !== "me").map((id) => users[id])} size={32} fallback={chat.avatar} />
+                  <Press onPress={() => push({ name: "chat-info", chatId })}>
+                    <GroupAvatar users={chat.participantIds.filter((id) => id !== "me").map((id) => users[id])} size={32} fallback={chat.avatar} />
+                  </Press>
                 ) : (
-                  <Avatar user={shop && !mineShop && shopFace ? shopFace : peer} size={32} />
+                  <Press
+                    accessibilityLabel={headerRing === "none" ? "Voir le profil" : "Voir la story"}
+                    onPress={() => {
+                      if (headerRing !== "none" && peer) push({ name: "stories", userId: peer.id });
+                      else push({ name: "chat-info", chatId });
+                    }}
+                  >
+                    <Avatar user={shop && shopFace ? shopFace : peer} size={32} ring={headerRing} />
+                  </Press>
                 )}
+                <Press onPress={() => push({ name: "chat-info", chatId })} style={{ minWidth: 0, flexShrink: 1, flex: 1 }}>
                 <View style={{ minWidth: 0, flexShrink: 1, flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4, minWidth: 0 }}>
                     <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: compact ? 15 : 16, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
                       {title}
                     </Text>
+                    {shop ? (
+                      <View style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 6, paddingVertical: 1 }}>
+                        <Text style={{ fontSize: 10, color: colors.accent, fontFamily: "Inter_500Medium" }}>Professionnel</Text>
+                      </View>
+                    ) : null}
                     {!sealed ? <Lock size={12} color={colors.muted} /> : null}
                   </View>
                   {subtitle ? (
@@ -742,8 +761,8 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                     </Text>
                   ) : null}
                 </View>
-              </View>
-            </Press>
+                </Press>
+            </View>
           }
           onBack={pop}
           right={
@@ -785,6 +804,13 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted }}>Groupe non chiffré de bout en bout</Text>
         </Press>
       ) : null}
+      {shop ? (
+        <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 14, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
+          <Text style={{ color: "rgba(249,250,251,0.72)", fontSize: 13, lineHeight: 18 }}>
+            Ce compte représente une activité professionnelle sur WIPP. Vous discutez avec {shop.name}.
+          </Text>
+        </View>
+      ) : null}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <FlatList
           ref={listRef}
@@ -817,13 +843,21 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               </View>
             ) : null}
             {emojiBar ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}>
-                {EMOJIS.map((e) => (
-                  <Press key={e} onPress={() => sendText(chatId, e)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontSize: 22 }}>{e}</Text>
+              <FlatList
+                horizontal
+                data={QUICK_MOJI}
+                keyExtractor={(s) => s.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                renderItem={({ item }) => (
+                  <Press
+                    onPress={() => sendMessage(chatId, { type: "sticker", text: item.labelFr, stickerId: item.id })}
+                    style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <WippSticker id={item.id} size={40} />
                   </Press>
-                ))}
-              </ScrollView>
+                )}
+              />
             ) : null}
             {chat.type === "group" && /@[\w]*$/.test(draft) ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
@@ -1114,6 +1148,57 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   : []),
                 ...(picked.fromId === "me" && !picked.deletedForAll
                   ? [{ key: "delete-all", label: "Supprimer pour tout le monde", danger: true, onSelect: () => useWippStore.getState().tombstoneMessage(chatId, picked.id) }]
+                  : []),
+                ...(picked.fromId !== "me"
+                  ? [
+                      {
+                        key: "report",
+                        label: "Signaler le message",
+                        onSelect: () => {
+                          Alert.alert(
+                            "Signaler le message",
+                            "Le contenu chiffré n’est pas copié. Seuls l’identifiant du message et la raison sont envoyés.",
+                            [
+                              ...["Contenu inapproprié", "Harcèlement", "Spam ou arnaque", "Autre"].map((reason) => ({
+                                text: reason,
+                                onPress: () => {
+                                  void import("../lib/safety").then(({ submitContentReport }) =>
+                                    submitContentReport({
+                                      contentType: "message",
+                                      contentId: picked.id,
+                                      targetProfileId: picked.fromId,
+                                      reason,
+                                    }),
+                                  ).then(
+                                    () => Alert.alert("Signalement", "Signalement envoyé."),
+                                    (err) => Alert.alert("Signalement", err instanceof Error ? err.message : "Signalement impossible."),
+                                  );
+                                },
+                              })),
+                              { text: "Annuler", style: "cancel" as const },
+                            ],
+                          );
+                        },
+                      },
+                      {
+                        key: "block",
+                        label: "Bloquer cet utilisateur",
+                        danger: true,
+                        onSelect: () => {
+                          Alert.alert("Bloquer", "Bloquer cet utilisateur ?", [
+                            { text: "Annuler", style: "cancel" },
+                            {
+                              text: "Bloquer",
+                              style: "destructive",
+                              onPress: () => {
+                                useWippStore.getState().blockUser(picked.fromId);
+                                pop();
+                              },
+                            },
+                          ]);
+                        },
+                      },
+                    ]
                   : []),
               ]
             : []

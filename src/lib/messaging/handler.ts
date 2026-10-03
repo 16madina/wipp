@@ -24,6 +24,7 @@ import {
   getPublicBusinessCard,
   issueTempQr,
   listPublicBusinessCards,
+  listIncomingConnectionRequests,
   redeemTempQr,
   respondConnectionRequest,
   saveMyBusinessCard,
@@ -53,6 +54,7 @@ import {
   claimLinkCode,
   createLinkCode,
   deleteAccount,
+  deleteOwnAccount,
   ensureMessagingReady,
   getLinkStatus,
   getOrCreateDm,
@@ -70,6 +72,7 @@ import {
   searchProfiles,
   sendMessage,
   blockUser,
+  listMyBlocks,
   unblockUser,
   setDisappear,
   assertNotBlocked,
@@ -77,7 +80,7 @@ import {
 
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
+  "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
   "access-control-allow-headers": "authorization, content-type",
   "access-control-max-age": "86400",
 };
@@ -106,6 +109,21 @@ function json(data: unknown, status = 200) {
   );
 }
 
+function dbCode(err: unknown): string {
+  return typeof err === "object" && err && "code" in err ? String((err as { code?: unknown }).code ?? "") : "";
+}
+
+function safeDbMessage(err: unknown): { code: string; message: string } | null {
+  const code = dbCode(err);
+  if (code === "22P02") return { code: "invalid_payload", message: "Une information envoyée n’a pas le format attendu." };
+  if (code === "23505") return { code: "conflict", message: "Cette fiche existe déjà." };
+  if (code === "23503") return { code: "missing_profile", message: "Profil WIPP introuvable." };
+  if (code === "23502") return { code: "invalid_payload", message: "Une information obligatoire est manquante." };
+  if (code === "42501") return { code: "forbidden", message: "Permission refusée pour cette fiche." };
+  if (code === "42P01") return { code: "unavailable", message: "Cette fonction n’est pas encore disponible sur le serveur." };
+  return null;
+}
+
 function errorResponse(err: unknown) {
   if (err instanceof DatabaseConfigError) {
     return json({ error: "config_error", message: err.message }, 503);
@@ -113,8 +131,12 @@ function errorResponse(err: unknown) {
   if (err instanceof WippHttpError) {
     return json({ error: err.code, message: err.message }, err.status);
   }
-  console.error("[wipp-api]", err);
-  return json({ error: "internal", message: "Erreur serveur." }, 500);
+  const safe = safeDbMessage(err);
+  const code = dbCode(err);
+  const raw = err instanceof Error ? err.message : "";
+  console.error("[wipp-api]", code || "internal", raw.replace(/postgres(?:ql)?:\/\/\S+/gi, "[redacted]").slice(0, 300));
+  if (safe) return json({ error: safe.code, message: safe.message }, 400);
+  return json({ error: "internal", message: "Le serveur n’a pas pu enregistrer. Réessaie." }, 500);
 }
 
 /** Preflight for mobile / cross-origin web clients. */
@@ -533,6 +555,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ ok: true });
     }
 
+    if (method === "POST" && a === "account" && b === "delete-self") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ confirm?: string }>(request);
+      return json(await deleteOwnAccount(me.id, body.confirm ?? ""));
+    }
+
     if (method === "POST" && a === "account" && b === "delete") {
       const body = await readBody<{ username?: string; password?: string }>(request);
       const result = await deleteAccount({
@@ -758,6 +786,16 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ devices });
     }
 
+    if (method === "GET" && a === "blocks" && !b) {
+      const me = await resolveSession(bearer(request));
+      return json(await listMyBlocks(me.id));
+    }
+
+    if (method === "DELETE" && a === "blocks" && b && !c) {
+      const me = await resolveSession(bearer(request));
+      return json(await unblockUser(me.id, { profileId: decodeURIComponent(b) }));
+    }
+
     if (method === "POST" && a === "blocks" && !b) {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ username?: string; profileId?: string }>(request);
@@ -844,6 +882,11 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await openSealedReport(me.id, c));
     }
 
+    if (method === "GET" && a === "connections" && b === "requests" && !c) {
+      const me = await resolveSession(bearer(request));
+      return json({ requests: await listIncomingConnectionRequests(me.id) });
+    }
+
     if (method === "POST" && a === "connections" && b === "requests" && !c) {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ username?: string; via?: string }>(request);
@@ -876,12 +919,13 @@ export async function handleWippApi(request: Request): Promise<Response> {
         website?: string | null;
         coverPath?: string | null;
         logoPath?: string | null;
+        photoPaths?: string[];
       }>(request);
       return json(await saveMyBusinessCard(me.id, body));
     }
 
     if (method === "GET" && a === "business-cards" && b === "public" && !c) {
-      return json(await listPublicBusinessCards());
+      return json(await listPublicBusinessCards(new URL(request.url).searchParams.get("q") ?? ""));
     }
 
     if (method === "GET" && a === "business-cards" && b === "public" && c) {

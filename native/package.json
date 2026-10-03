@@ -8,6 +8,7 @@
     "web": "expo start --web",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "postinstall": "patch-package",
     "lint": "tsc --noEmit --pretty false",
     "test:proximity": "npx --yes tsx --test src/lib/proximity/logic.test.ts src/lib/proximity/hash.test.ts",
     "test:lot5": "npx --yes tsx --test src/lib/private-crypto.test.ts src/lib/notify-redact.test.ts src/lib/share-public.test.ts",
@@ -48,6 +49,7 @@
     "expo-screen-capture": "~8.0.10",
     "expo-secure-store": "~15.0.7",
     "expo-sensors": "~15.0.8",
+    "expo-share-intent": "^5.1.1",
     "expo-splash-screen": "~31.0.10",
     "expo-status-bar": "~3.0.8",
     "expo-video": "~3.0.11",
@@ -75,6 +77,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   }
 }

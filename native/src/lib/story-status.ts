@@ -1,9 +1,10 @@
+import { isStoryHidden } from "./story-hide";
 import { isStoryLive, type StoryItem } from "./types";
 
 export type StoryRing = "accent" | "muted" | "none";
 
 export function liveStoriesFor(stories: StoryItem[], userId: string, now = Date.now()) {
-  return stories.filter((story) => story.userId === userId && isStoryLive(story, now));
+  return stories.filter((story) => story.userId === userId && isStoryLive(story, now) && !isStoryHidden(story.id));
 }
 
 /** Gold while any active item is unviewed. Gray only when every active item was viewed. */
@@ -17,7 +18,7 @@ export function storyRing(stories: StoryItem[], userId: string, now = Date.now()
 export function orderedOtherStoryUsers(stories: StoryItem[], now = Date.now()) {
   const latest = new Map<string, { unseen: boolean; at: number }>();
   for (const story of stories) {
-    if (story.userId === "me" || !isStoryLive(story, now)) continue;
+    if (story.userId === "me" || !isStoryLive(story, now) || isStoryHidden(story.id)) continue;
     const current = latest.get(story.userId);
     const at = Math.max(current?.at ?? 0, story.createdAt);
     const unseen = (current?.unseen ?? false) || !story.viewed;

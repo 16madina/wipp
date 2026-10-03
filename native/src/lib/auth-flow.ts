@@ -1,4 +1,7 @@
-import { confirmSmsCode, currentFirebaseUser, explainSmsError, hasPendingSms, sendSmsCode, toE164 } from "./firebase-phone";
+import { confirmSmsCode, currentFirebaseUser, explainSmsError, hasPendingSms, sendSmsCode, signOutFirebase, toE164 } from "./firebase-phone";
+import { clearLinkedSession } from "./firebase-linked-session";
+import { demoMe } from "./seed";
+import { useWippStore } from "./store";
 
 export type AuthMode = "signup" | "signin";
 
@@ -66,4 +69,38 @@ export async function verifyPhoneCode(code: string): Promise<{ phone: string } |
 export function clearPending() {
   pending = null;
   verifiedSignup = null;
+}
+
+/** Leave the current phone session so a new account can collect its own name, username and photo. */
+export async function startFreshSignup() {
+  pending = { phone: "", mode: "signup" };
+  verifiedSignup = null;
+  try {
+    await signOutFirebase();
+  } catch {
+    /* no firebase user yet */
+  }
+  try {
+    await clearLinkedSession();
+  } catch {
+    /* nothing cached */
+  }
+  const blank = demoMe();
+  useWippStore.setState({
+    onboarded: false,
+    serverUsername: null,
+    serverProfileId: null,
+    pendingSignup: { mode: "signup", country: useWippStore.getState().pendingSignup.country ?? "CI" },
+    me: {
+      ...blank,
+      firstName: "",
+      lastName: "",
+      displayName: "",
+      username: "",
+      avatar: "",
+      phone: "",
+      email: "",
+      bio: "",
+    },
+  });
 }

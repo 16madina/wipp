@@ -1,5 +1,5 @@
 import { WIPP_WEB_ORIGIN } from "../firebase-config";
-import { firebaseIdToken } from "../firebase-phone";
+import { firebaseIdToken, waitForFirebaseUser } from "../firebase-phone";
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "wipp-server-token";
@@ -26,8 +26,10 @@ export async function persistWippToken(token: string | null) {
   }
 }
 
-/** Bearer for /api/wipp — the current Firebase ID token, never a service role key. */
+/** Bearer for /api/wipp — a fresh Firebase ID token after the persisted user is restored. */
 export async function ensureWippApiToken(): Promise<string | null> {
+  const user = await waitForFirebaseUser();
+  if (!user) return null;
   return firebaseIdToken();
 }
 

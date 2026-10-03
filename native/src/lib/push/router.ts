@@ -15,7 +15,7 @@ export function screenFromPushData(data: Record<string, unknown>): Screen | null
     return {
       name: "active-call",
       userId: "call",
-      kind: "audio",
+      kind: data.kind === "video" ? "video" : "audio",
       dir: "in",
       callId,
       group: data.group === true,

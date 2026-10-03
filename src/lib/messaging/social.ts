@@ -2,9 +2,10 @@
  * Connections, business cards, and short-lived profile QR.
  * Uses tables already present on the hosted project. No new SQL.
  */
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
+import { SUPABASE_URL } from "@/lib/supabase/config";
 
 const REQUEST_TTL_MS = 7 * 86_400_000;
 const QR_TTL_MS = 75_000;
@@ -71,13 +72,80 @@ export async function sendConnectionRequest(meId: string, rawUsername: string, v
   if (pending[0]) {
     return { status: pending[0].sender_id === meId ? ("already_pending" as const) : ("pending_in" as const) };
   }
-  const id = `rq_${randomBytes(12).toString("hex")}`;
-  const expires = new Date(Date.now() + REQUEST_TTL_MS).toISOString();
-  await sql`
-    insert into wipp_connection_requests (id, sender_id, recipient_id, status, via, expires_at)
-    values (${id}, ${meId}, ${peer.id}, 'pending', ${via}, ${expires}::timestamptz)
-  `;
+  const id = await insertConnectionRequest(meId, peer.id, via);
   return { status: "sent" as const, id };
+}
+
+function invalidPayload(err: unknown) {
+  return typeof err === "object" && err !== null && "code" in err && String((err as { code?: unknown }).code) === "22P02";
+}
+
+/** Live rows use uuid ids. A rq_ text id is rejected (22P02) and the request never arrives. */
+async function insertConnectionRequest(senderId: string, recipientId: string, via: string) {
+  const sql = await getSql();
+  const id = randomUUID();
+  const expires = new Date(Date.now() + REQUEST_TTL_MS).toISOString();
+  const viaTries = [...new Set([via, "request"])];
+  let last: unknown;
+  for (const viaValue of viaTries) {
+    try {
+      const rows = await sql<{ id: string }>`
+        insert into wipp_connection_requests (id, sender_id, recipient_id, status, via, expires_at)
+        values (${id}, ${senderId}, ${recipientId}, 'pending', ${viaValue}, ${expires}::timestamptz)
+        returning id::text
+      `;
+      return rows[0]?.id ?? id;
+    } catch (err) {
+      last = err;
+      if (!invalidPayload(err)) throw err;
+    }
+  }
+  try {
+    const rows = await sql<{ id: string }>`
+      insert into wipp_connection_requests (id, sender_id, recipient_id, status, expires_at)
+      values (${id}, ${senderId}, ${recipientId}, 'pending', ${expires}::timestamptz)
+      returning id::text
+    `;
+    return rows[0]?.id ?? id;
+  } catch (err) {
+    if (!invalidPayload(err)) throw err;
+    throw last ?? err;
+  }
+}
+
+export async function listIncomingConnectionRequests(meId: string) {
+  const sql = await getSql();
+  const rows = await sql<{
+    id: string;
+    created_at: string;
+    expires_at: string;
+    sender_id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  }>`
+    select r.id::text as id, r.created_at::text as created_at, r.expires_at::text as expires_at,
+           p.id as sender_id, p.username, p.display_name, p.avatar_url
+    from wipp_connection_requests r
+    join wipp_profiles p on p.id = r.sender_id
+    where r.recipient_id = ${meId}
+      and r.status = 'pending'
+      and r.expires_at > now()
+    order by r.created_at desc
+    limit 50
+  `;
+  return rows.map((row) => ({
+    id: row.id,
+    status: "pending",
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    sender: {
+      id: row.sender_id,
+      username: row.username,
+      displayName: row.display_name,
+      avatarUrl: row.avatar_url,
+    },
+  }));
 }
 
 export async function respondConnectionRequest(meId: string, requestId: string, action: string) {
@@ -117,7 +185,7 @@ export async function respondConnectionRequest(meId: string, requestId: string, 
   if (!conn.length) {
     await sql`
       insert into wipp_connections (id, user_a, user_b, via)
-      values (${`cn_${randomBytes(12).toString("hex")}`}, ${userA}, ${userB}, 'request')
+      values (${randomUUID()}, ${userA}, ${userB}, 'request')
     `;
   }
   const updated = await sql`
@@ -146,8 +214,52 @@ type CardRow = {
   website: string | null;
   cover_url: string | null;
   logo_url: string | null;
+  photo_urls: string[] | null;
   is_published: boolean;
 };
+
+function likeQuery(raw: string) {
+  return raw.trim().toLowerCase().replace(/[\\%_]/g, "").slice(0, 80);
+}
+
+async function signCardPath(path: string | null) {
+  if (!path || /^https?:\/\//i.test(path)) return path && /^https?:\/\//i.test(path) ? path : null;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return null;
+  const encoded = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/wipp-business-cards/${encoded}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn: 3600 }),
+    });
+    if (!res.ok) {
+      console.warn("[wipp-api] card media sign failed", res.status);
+      return null;
+    }
+    const data = (await res.json()) as { signedURL?: string; signedUrl?: string };
+    const signed = data.signedUrl || data.signedURL || "";
+    if (!signed) return null;
+    if (signed.startsWith("http")) return signed;
+    return `${SUPABASE_URL}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
+  } catch (err) {
+    console.warn("[wipp-api] card media sign failed", err instanceof Error ? err.message : "unknown");
+    return null;
+  }
+}
+
+async function withServerMedia(card: ReturnType<typeof mapCard>) {
+  const [coverUrl, logoUrl, ...photos] = await Promise.all([
+    card.coverUrl ? Promise.resolve(card.coverUrl) : signCardPath(card.coverPath),
+    card.logoUrl ? Promise.resolve(card.logoUrl) : signCardPath(card.logoPath),
+    ...card.photoPaths.map((path) => signCardPath(path)),
+  ]);
+  return { ...card, coverUrl, logoUrl, photoUrls: photos.filter((url): url is string => Boolean(url)) };
+}
 
 function mapCard(row: CardRow) {
   const http = (value: string | null) => (value && /^https?:\/\//i.test(value) ? value : null);
@@ -167,12 +279,19 @@ function mapCard(row: CardRow) {
     website: row.website,
     coverPath: row.cover_url && !http(row.cover_url) ? row.cover_url : null,
     logoPath: row.logo_url && !http(row.logo_url) ? row.logo_url : null,
-    photoPaths: [] as string[],
+    photoPaths: (row.photo_urls ?? []).filter((path) => path && !http(path)).slice(0, 8),
     isPublished: Boolean(row.is_published),
     coverUrl: http(row.cover_url),
     logoUrl: http(row.logo_url),
-    photoUrls: [] as string[],
+    photoUrls: (row.photo_urls ?? []).filter((path) => http(path)).slice(0, 8),
   };
+}
+
+function galleryPaths(meId: string, paths: string[] | undefined, previous: string[]) {
+  if (!paths) return previous;
+  const next = paths.map((path) => path.trim()).filter(Boolean).slice(0, 8);
+  for (const path of next) ownMediaPath(meId, path);
+  return next;
 }
 
 function ownMediaPath(meId: string, path: string | null | undefined) {
@@ -187,10 +306,10 @@ export async function getMyBusinessCard(meId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
     from wipp_business_cards where owner_profile_id = ${meId} limit 1
   `;
-  return { profileId: meId, userCountry: null as string | null, card: rows[0] ? mapCard(rows[0]) : null };
+  return { profileId: meId, userCountry: null as string | null, card: rows[0] ? await withServerMedia(mapCard(rows[0])) : null };
 }
 
 export async function saveMyBusinessCard(
@@ -208,6 +327,7 @@ export async function saveMyBusinessCard(
     website?: string | null;
     coverPath?: string | null;
     logoPath?: string | null;
+    photoPaths?: string[];
   },
 ) {
   const name = (input.name ?? "").trim();
@@ -217,7 +337,7 @@ export async function saveMyBusinessCard(
   const sql = await getSql();
   const current = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
     from wipp_business_cards where owner_profile_id = ${meId} limit 1
   `;
   const fields = {
@@ -232,6 +352,7 @@ export async function saveMyBusinessCard(
     businessPhone: input.businessPhone ? input.businessPhone.slice(0, 40) : null,
     website: input.website ? input.website.slice(0, 200) : null,
   };
+  const photos = galleryPaths(meId, input.photoPaths, current[0]?.photo_urls ?? []).join("\u001f");
   if (current[0]) {
     await sql`
       update wipp_business_cards set
@@ -247,49 +368,57 @@ export async function saveMyBusinessCard(
         website = ${fields.website},
         cover_url = ${cover},
         logo_url = ${logo},
+        photo_urls = ARRAY(SELECT trim(x) FROM unnest(string_to_array(${photos}, E'\u001f')) AS t(x) WHERE trim(x) <> ''),
+        is_published = true,
         updated_at = now()
       where id = ${current[0].id} and owner_profile_id = ${meId}
     `;
     const next = await sql<CardRow>`
       select id, public_id, owner_profile_id, name, category, description, country, city,
-             address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
+             address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
       from wipp_business_cards where id = ${current[0].id} and owner_profile_id = ${meId} limit 1
     `;
     if (!next[0]) throw new WippHttpError(404, "not_found", "Carte introuvable.");
-    return mapCard(next[0]);
+    return withServerMedia(mapCard(next[0]));
   }
-  const id = `card_${randomBytes(8).toString("hex")}`;
   const publicId = randomBytes(5).toString("hex");
-  await sql`
-    insert into wipp_business_cards (
-      id, public_id, owner_profile_id, name, category, description, country, city,
-      address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
-    ) values (
-      ${id}, ${publicId}, ${meId}, ${fields.name}, ${fields.category}, ${fields.description},
-      ${fields.country}, ${fields.city}, ${fields.address}, ${fields.showAddress}, ${fields.hours},
-      ${fields.businessPhone}, ${fields.website}, ${cover}, ${logo}, false
-    )
-  `;
   const created = await sql<CardRow>`
-    select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
-    from wipp_business_cards where id = ${id} and owner_profile_id = ${meId} limit 1
+    insert into wipp_business_cards (
+      public_id, owner_profile_id, name, category, description, country, city,
+      address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+    ) values (
+      ${publicId}, ${meId}, ${fields.name}, ${fields.category}, ${fields.description},
+      ${fields.country}, ${fields.city}, ${fields.address}, ${fields.showAddress}, ${fields.hours},
+      ${fields.businessPhone}, ${fields.website}, ${cover}, ${logo},
+      ARRAY(SELECT trim(x) FROM unnest(string_to_array(${photos}, E'\u001f')) AS t(x) WHERE trim(x) <> ''),
+      true
+    )
+    returning id, public_id, owner_profile_id, name, category, description, country, city,
+      address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
   `;
   if (!created[0]) throw new WippHttpError(500, "profile_missing", "Carte introuvable.");
-  return mapCard(created[0]);
+  return withServerMedia(mapCard(created[0]));
 }
 
-export async function listPublicBusinessCards() {
+export async function listPublicBusinessCards(q = "") {
+  const needle = likeQuery(q);
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
     from wipp_business_cards
     where is_published = true
+      and (
+        ${needle} = ''
+        or lower(name) like ${"%" + needle + "%"}
+        or lower(category) like ${"%" + needle + "%"}
+        or lower(city) like ${"%" + needle + "%"}
+        or lower(description) like ${"%" + needle + "%"}
+      )
     order by updated_at desc
     limit 60
   `;
-  return rows.map(mapCard);
+  return Promise.all(rows.map((row) => withServerMedia(mapCard(row))));
 }
 
 export async function getPublicBusinessCard(publicId: string) {
@@ -298,12 +427,12 @@ export async function getPublicBusinessCard(publicId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
     from wipp_business_cards
     where lower(public_id) = ${id} and is_published = true
     limit 1
   `;
-  return rows[0] ? mapCard(rows[0]) : null;
+  return rows[0] ? withServerMedia(mapCard(rows[0])) : null;
 }
 
 export async function issueTempQr(meId: string) {
