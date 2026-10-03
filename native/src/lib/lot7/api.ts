@@ -294,7 +294,7 @@ type ListingRow = {
   photo_urls?: string[] | null;
 };
 
-const CATS = new Set(["auto", "home", "goods", "jobs", "services"]);
+const CATS = new Set(["auto", "realty", "electronics", "fashion", "home", "jobs", "leisure", "goods", "services"]);
 const CONDITIONS = new Set(["new", "like_new", "good", "used"]);
 const ETAT = /^\[\[etat:(new|like-new|like_new|good|used)\]\]\n?/;
 

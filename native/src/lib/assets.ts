@@ -27,3 +27,4 @@ export const composerSticker = require("../../assets/composer/sticker.png");
 
 export const eventHero = require("../../assets/events/create-hero.png");
 export const businessIntro = require("../../assets/business/business-intro.png");
+export const listingHero = require("../../assets/listings/create-hero.png");

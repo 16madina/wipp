@@ -1,12 +1,24 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import {
   AlignLeft,
+  ArrowLeftRight,
   ArrowRight,
+  Briefcase,
+  Car,
+  Gamepad2,
+  Gift,
+  House,
+  MoreHorizontal,
+  Phone,
+  Plus,
+  Shirt,
+  Smartphone,
+  Sofa,
+  Tag,
   CalendarDays,
-  Camera,
   ChevronDown,
   ChevronLeft,
   CircleDollarSign,
@@ -23,25 +35,19 @@ import {
   X,
 } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { AddressField, FlagImage, WorldCountrySheet } from "../components/card-editor-parts";
+import { AddressField, DialPhoneField, FlagImage, WorldCountrySheet } from "../components/card-editor-parts";
 import { CalendarSheet, TimeSheet, dayLabel } from "../components/event-parts";
 import { findWorldCountry } from "../lib/countries-world";
-import { eventHero } from "../lib/assets";
+import { eventHero, listingHero } from "../lib/assets";
+import { LISTING_CATEGORIES } from "../lib/listing-cats";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Btn, GlassHeader, Header, Press, ScreenRoot, Toggle } from "../components/ui";
+import { Press, ScreenRoot, Toggle } from "../components/ui";
 import { useWippStore } from "../lib/store";
 import type { Listing } from "../lib/types";
 import { colors } from "../theme";
 import { errorText } from "../lib/error-fr";
 
-const LISTING_CATS = [
-  { id: "goods", label: "Objets" },
-  { id: "home", label: "Maison" },
-  { id: "auto", label: "Auto" },
-  { id: "jobs", label: "Emploi" },
-  { id: "services", label: "Services" },
-] as const;
-
+const EVENT_CATS = ["Musique", "Soirée", "Affaires", "Sport", "Culture", "Food", "Communauté", "Autre"];
 const CONDITIONS: { id: NonNullable<Listing["condition"]>; label: string }[] = [
   { id: "new", label: "Neuf" },
   { id: "like_new", label: "Comme neuf" },
@@ -49,21 +55,12 @@ const CONDITIONS: { id: NonNullable<Listing["condition"]>; label: string }[] = [
   { id: "used", label: "Usagé" },
 ];
 
-const EVENT_CATS = ["Musique", "Soirée", "Affaires", "Sport", "Culture", "Food", "Communauté", "Autre"];
 const CURRENCIES = ["CAD", "EUR", "USD", "XOF"];
 
 type DraftPhoto = { uri: string; path?: string; mime: string };
 
 function needsCondition(cat: string) {
-  return cat === "goods" || cat === "home" || cat === "auto";
-}
-
-function priceLabel(amount: string, currency: string, free: boolean, negotiable: boolean) {
-  if (free) return negotiable ? "Gratuit · négociable" : "Gratuit";
-  const value = amount.trim();
-  const base = value ? `${value} ${currency}` : "";
-  if (!base) return negotiable ? "Prix négociable" : "";
-  return negotiable ? `${base} · négociable` : base;
+  return ["goods", "home", "auto", "electronics", "fashion", "leisure"].includes(cat);
 }
 
 function readPrice(label: string) {
@@ -72,95 +69,6 @@ function readPrice(label: string) {
   const currency = CURRENCIES.find((item) => label.includes(item)) ?? "CAD";
   const amount = label.replace(/·\s*négociable/i, "").replace(currency, "").replace(/^gratuit/i, "").trim();
   return { amount: free ? "" : amount, currency, free, negotiable };
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={{ marginTop: 18, borderRadius: 18, backgroundColor: colors.glassCard, padding: 14 }}>
-      <Text style={{ color: colors.accent, fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 0.4 }}>{title}</Text>
-      <View style={{ marginTop: 12, gap: 12 }}>{children}</View>
-    </View>
-  );
-}
-
-function Label({ children }: { children: string }) {
-  return <Text style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter_500Medium" }}>{children}</Text>;
-}
-
-function Input({
-  value,
-  onChangeText,
-  placeholder,
-  multiline,
-  keyboardType,
-}: {
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  keyboardType?: "default" | "decimal-pad" | "url" | "phone-pad";
-}) {
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor="rgba(139,147,167,0.8)"
-      multiline={multiline}
-      keyboardType={keyboardType}
-      style={{
-        minHeight: multiline ? 120 : 48,
-        borderRadius: 12,
-        backgroundColor: colors.navy,
-        color: colors.fg,
-        paddingHorizontal: 14,
-        paddingVertical: multiline ? 12 : 0,
-        fontSize: 16,
-        textAlignVertical: multiline ? "top" : "center",
-      }}
-    />
-  );
-}
-
-function Chips({
-  options,
-  value,
-  onChange,
-}: {
-  options: { id: string; label: string }[];
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {options.map((option) => {
-        const on = value === option.id;
-        return (
-          <Press
-            key={option.id}
-            onPress={() => onChange(option.id)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 999,
-              backgroundColor: on ? colors.accent : colors.navy,
-            }}
-          >
-            <Text style={{ color: on ? colors.accentFg : colors.fg, fontSize: 13 }}>{option.label}</Text>
-          </Press>
-        );
-      })}
-    </View>
-  );
-}
-
-function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <Press onPress={() => onChange(!value)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
-      <Text style={{ color: colors.fg, fontSize: 15 }}>{label}</Text>
-      <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: value ? colors.accent : colors.muted, backgroundColor: value ? colors.accent : "transparent" }} />
-    </Press>
-  );
 }
 
 async function pickImages(multiple: boolean) {
@@ -185,18 +93,18 @@ async function pickImages(multiple: boolean) {
 export function CreateListingScreen({ listingId }: { listingId?: string }) {
   const pop = useWippStore((s) => s.pop);
   const existing = useWippStore((s) => (listingId ? s.listings.find((item) => item.id === listingId) : undefined));
-  const me = useWippStore((s) => s.me);
   const legacyPrice = readPrice(existing?.price ?? "");
   const storedFree = /^gratuit/i.test((existing?.price ?? "").trim()) || (!existing?.currency && legacyPrice.free);
   const [title, setTitle] = useState(existing?.title ?? "");
-  const [category, setCategory] = useState<Listing["category"]>(existing?.category ?? "goods");
+  const [category, setCategory] = useState<Listing["category"]>(existing?.category ?? "");
   const [condition, setCondition] = useState<Listing["condition"] | "">(existing?.condition ?? "");
   const [amount, setAmount] = useState(storedFree ? "" : existing?.currency ? (existing.price ?? "") : legacyPrice.amount);
   const [currency, setCurrency] = useState(existing?.currency || legacyPrice.currency);
-  const [free, setFree] = useState(storedFree);
+  const [mode, setMode] = useState<"sale" | "give" | "swap">(/^échange/i.test((existing?.price ?? "").trim()) ? "swap" : storedFree ? "give" : "sale");
   const [negotiable, setNegotiable] = useState(existing?.negotiable ?? legacyPrice.negotiable);
   const [description, setDescription] = useState(existing?.description ?? "");
   const [country, setCountry] = useState(existing?.country ?? "");
+  const [countryOpen, setCountryOpen] = useState(false);
   const [city, setCity] = useState(existing?.city ?? "");
   const [area, setArea] = useState(existing?.area ?? "");
   const [contactMode, setContactMode] = useState<"wipp" | "phone">(existing?.contactPhone ? "phone" : "wipp");
@@ -218,12 +126,24 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
   async function addPhotos() {
     const picked = await pickImages(true);
     if (!picked.length) return;
-    setPhotos((current) => [...current, ...picked].slice(0, 6));
+    setPhotos((current) => [...current, ...picked].slice(0, 8));
   }
 
   async function publish() {
-    if (!title.trim() || !city.trim()) {
-      setError("Le titre et la ville sont requis.");
+    if (!photos.length) {
+      setError("Ajoute au moins une photo.");
+      return;
+    }
+    if (!title.trim() || !category) {
+      setError("Le titre et la catégorie sont requis.");
+      return;
+    }
+    if (!city.trim()) {
+      setError("Indique la ville (ou choisis une adresse).");
+      return;
+    }
+    if (mode === "sale" && !amount.trim()) {
+      setError("Indique le prix, ou choisis « À donner » ou « Échange ».");
       return;
     }
     setBusy(true);
@@ -260,14 +180,14 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         title: title.trim(),
         description: description.trim(),
         category,
-        price: free ? "Gratuit" : amount.trim(),
+        price: mode === "give" ? "Gratuit" : mode === "swap" ? "Échange" : amount.trim(),
         city: city.trim(),
         photo: paths[0] ?? null,
-        country: country.trim(),
+        country: (country.trim() || listingCountry.fr),
         area: area.trim(),
         phone: contactMode === "phone" ? phone.trim() : "",
-        negotiable,
-        currency: free ? "" : currency,
+        negotiable: mode === "sale" && negotiable,
+        currency: mode === "sale" ? currency : "",
         condition: showCondition ? condition : "",
         photos: paths,
       });
@@ -281,122 +201,212 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
     }
   }
 
-  const cover = photos[0];
+  const listingCountry = findWorldCountry(country) ?? findWorldCountry("CA")!;
+  const row = { flexDirection: "row" as const, gap: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(16,22,36,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginTop: 10 };
+  const iconBox = { width: 42, height: 42, borderRadius: 12, backgroundColor: "rgba(255,216,77,0.10)", alignItems: "center" as const, justifyContent: "center" as const };
+  const rowTitle = { color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" };
+  const box = { minHeight: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 12, justifyContent: "center" as const };
+  const inputStyle = { flex: 1, color: colors.fg, fontSize: 15, paddingVertical: 10, ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) } as object;
+  const star = <Text style={{ color: colors.danger }}> *</Text>;
+  const pill = (on: boolean) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingHorizontal: 12, height: 42, borderRadius: 12, borderWidth: 1, borderColor: on ? colors.accent : "rgba(255,255,255,0.15)", backgroundColor: on ? colors.accent : "transparent" });
+  const pillText = (on: boolean) => ({ color: on ? colors.accentFg : colors.fg, fontSize: 13, fontFamily: on ? "Inter_600SemiBold" : "Inter_500Medium" });
+  const CAT_ICON: Record<string, typeof Car> = { auto: Car, realty: House, electronics: Smartphone, fashion: Shirt, home: Sofa, jobs: Briefcase, leisure: Gamepad2, goods: MoreHorizontal };
+
   return (
     <ScreenRoot>
-      <GlassHeader>
-        <Header title={listingId ? "Modifier l’annonce" : "Créer une annonce"} onBack={pop} />
-      </GlassHeader>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-          <Press onPress={() => void addPhotos()} style={{ height: 220, borderRadius: 22, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
-            {cover ? <Image source={{ uri: cover.uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera color={colors.accent} size={36} />}
-            <View style={{ position: "absolute", bottom: 12, left: 12, right: 12, borderRadius: 12, backgroundColor: "rgba(5,7,12,0.72)", paddingVertical: 10, alignItems: "center" }}>
-              <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>{cover ? "Ajouter des photos" : "+ Ajouter des photos"}</Text>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+          <View style={{ height: 210, marginHorizontal: -14, marginBottom: 4 }}>
+            <Image source={listingHero} style={{ position: "absolute", right: 0, top: 30, width: "68%", height: 180 }} contentFit="cover" />
+            <LinearGradient colors={[colors.ink, "rgba(5,7,13,0.55)", "rgba(5,7,13,0)"]} locations={[0.3, 0.5, 0.75]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
+            <LinearGradient colors={["rgba(5,7,13,0)", colors.ink]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
+            <View style={{ position: "absolute", top: insets.top + 4, left: 6, right: 10, flexDirection: "row", alignItems: "center" }}>
+              <Press accessibilityLabel="Retour" onPress={pop} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+                <ChevronLeft size={26} color={colors.fg} />
+              </Press>
+              <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>{listingId ? "Modifier l’annonce" : "Publier une annonce"}</Text>
             </View>
-          </Press>
-          {photos.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 10 }}>
-              {photos.map((photo, index) => (
-                <View key={`${photo.uri}-${index}`} style={{ width: 84 }}>
-                  <Image source={{ uri: photo.uri }} style={{ width: 84, height: 84, borderRadius: 12 }} contentFit="cover" />
-                  <Text style={{ marginTop: 4, color: index === 0 ? colors.accent : colors.muted, fontSize: 11 }}>{index === 0 ? "Couverture" : "Photo"}</Text>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                    <Press disabled={index === 0} onPress={() => setPhotos((items) => {
-                      const next = items.slice();
-                      const [item] = next.splice(index, 1);
-                      next.splice(index - 1, 0, item);
-                      return next;
-                    })}>
-                      <Text style={{ color: colors.muted }}>←</Text>
+            <View style={{ position: "absolute", left: 18, bottom: 16, width: "60%" }}>
+              <Text style={{ color: colors.fg, fontSize: 29, lineHeight: 32, fontFamily: "Inter_800ExtraBold" }}>
+                Vends, achète,{"\n"}<Text style={{ color: colors.accent }}>trouve plus</Text>
+              </Text>
+              <Text style={{ marginTop: 6, color: "rgba(249,250,251,0.8)", fontSize: 13, lineHeight: 18 }}>Publie ton annonce et touche la communauté WIPP près de toi.</Text>
+            </View>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><ImageIcon size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 10 }}>
+              <View>
+                <Text style={rowTitle}>Photos de l’annonce{star}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Ajoute jusqu’à 8 photos · la 1re est la couverture</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {photos.length < 8 ? (
+                  <Press onPress={() => void addPhotos()} style={{ width: 84, height: 84, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.35)", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+                      <Plus size={16} color={colors.accentFg} />
+                    </View>
+                    <Text style={{ color: colors.fg, fontSize: 11, textAlign: "center" }}>Ajouter des photos</Text>
+                  </Press>
+                ) : null}
+                {photos.map((photo, index) => (
+                  <View key={`${photo.uri}-${index}`} style={{ width: 84, height: 84, borderRadius: 14, overflow: "hidden", borderWidth: index === 0 ? 2 : 0, borderColor: colors.accent }}>
+                    <Image source={{ uri: photo.uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                    <Press accessibilityLabel="Retirer" onPress={() => setPhotos((items) => items.filter((_, k) => k !== index))} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}>
+                      <X size={13} color="#fff" />
                     </Press>
-                    <Press onPress={() => setPhotos((items) => items.filter((_, itemIndex) => itemIndex !== index))}>
-                      <X color={colors.danger} size={14} />
+                    {index > 0 ? (
+                      <Press accessibilityLabel="Mettre en couverture" onPress={() => setPhotos((items) => [items[index], ...items.filter((_, k) => k !== index)])} style={{ position: "absolute", left: 4, bottom: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.6)" }}>
+                        <Text style={{ color: "#fff", fontSize: 10 }}>Couverture</Text>
+                      </Press>
+                    ) : null}
+                  </View>
+                ))}
+                {Array.from({ length: Math.max(0, 4 - photos.length) }, (_, k) => (
+                  <View key={`slot${k}`} style={{ width: 84, height: 84, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.05)", alignItems: "center", justifyContent: "center" }}>
+                    <ImageIcon size={20} color="rgba(249,250,251,0.3)" />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><Type size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={rowTitle}>Titre de l’annonce{star}</Text>
+              <View style={[box, { flexDirection: "row", alignItems: "center" }]}>
+                <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 100))} placeholder="Ex. iPhone 14 Pro en excellent état" placeholderTextColor={colors.muted} style={inputStyle} />
+                <Text style={{ color: colors.muted, fontSize: 11 }}>{title.length}/100</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><AlignLeft size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={rowTitle}>Description</Text>
+              <View style={box}>
+                <TextInput value={description} onChangeText={(v) => setDescription(v.slice(0, 500))} placeholder="Décris ton article en détail : état, caractéristiques, raisons de vente…" placeholderTextColor={colors.muted} multiline style={[inputStyle, { minHeight: 70, textAlignVertical: "top" }]} />
+                <Text style={{ alignSelf: "flex-end", color: colors.muted, fontSize: 11, marginBottom: 6 }}>{description.length}/500</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><LayoutGrid size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 10 }}>
+              <Text style={rowTitle}>Catégorie{star}</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {LISTING_CATEGORIES.map((c) => {
+                  const Icon = CAT_ICON[c.id] ?? MoreHorizontal;
+                  const on = category === c.id;
+                  return (
+                    <Press key={c.id} onPress={() => setCategory(c.id)} style={pill(on)}>
+                      <Icon size={16} color={on ? colors.accentFg : colors.fg} />
+                      <Text style={pillText(on)}>{c.label}</Text>
+                    </Press>
+                  );
+                })}
+              </View>
+              {showCondition ? (
+                <>
+                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>État</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {CONDITIONS.map((c) => (
+                      <Press key={c.id} onPress={() => setCondition(condition === c.id ? "" : c.id)} style={[pill(condition === c.id), { height: 36 }]}>
+                        <Text style={pillText(condition === c.id)}>{c.label}</Text>
+                      </Press>
+                    ))}
+                  </View>
+                </>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><CircleDollarSign size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 10 }}>
+              <Text style={rowTitle}>Prix{star}</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {([["sale", "À vendre", Tag], ["give", "À donner", Gift], ["swap", "Échange", ArrowLeftRight]] as const).map(([id, label, Icon]) => (
+                  <Press key={id} onPress={() => setMode(id)} style={[pill(mode === id), { flex: 1, height: 60, flexDirection: "column", justifyContent: "center", gap: 4, paddingHorizontal: 4 }]}>
+                    <Icon size={18} color={mode === id ? colors.accentFg : colors.fg} />
+                    <Text numberOfLines={1} style={pillText(mode === id)}>{label}</Text>
+                  </Press>
+                ))}
+              </View>
+              {mode === "sale" ? (
+                <>
+                  <View style={[box, { flexDirection: "row", alignItems: "center", gap: 8 }]}>
+                    <Text style={{ color: colors.muted, fontSize: 16 }}>$</Text>
+                    <TextInput value={amount} onChangeText={setAmount} placeholder={`Prix (${currency})`} placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
+                    <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.12)" }}>
+                      <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{currency}</Text>
+                      <ChevronDown size={14} color={colors.muted} />
                     </Press>
                   </View>
-                </View>
-              ))}
-            </ScrollView>
-          ) : null}
-
-          <Section title="ESSENTIEL">
-            <Label>Titre de l’annonce *</Label>
-            <Input value={title} onChangeText={setTitle} placeholder="Ex. Vélo de ville, taille M" />
-            <Label>Catégorie *</Label>
-            <Chips options={LISTING_CATS.map((item) => ({ id: item.id, label: item.label }))} value={category} onChange={(id) => setCategory(id as Listing["category"])} />
-          </Section>
-
-          {showCondition ? (
-            <Section title="ÉTAT">
-              <Chips options={CONDITIONS.map((item) => ({ id: item.id, label: item.label }))} value={condition ?? ""} onChange={(id) => setCondition(id as NonNullable<Listing["condition"]>)} />
-            </Section>
-          ) : null}
-
-          <Section title="PRIX">
-            <ToggleRow label="Gratuit" value={free} onChange={setFree} />
-            {free ? null : (
-              <>
-                <Label>Prix</Label>
-                <Input value={amount} onChangeText={setAmount} placeholder="0" keyboardType="decimal-pad" />
-                <Chips options={CURRENCIES.map((item) => ({ id: item, label: item }))} value={currency} onChange={setCurrency} />
-              </>
-            )}
-            <ToggleRow label="Prix négociable" value={negotiable} onChange={setNegotiable} />
-          </Section>
-
-          <Section title="DESCRIPTION">
-            <Input
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Décris l’objet, ce qui est inclus, et ce que la personne doit savoir avant de te écrire."
-              multiline
-            />
-          </Section>
-
-          <Section title="LOCALISATION">
-            <Label>Pays</Label>
-            <Input value={country} onChangeText={setCountry} placeholder="Canada" />
-            <Label>Ville *</Label>
-            <Input value={city} onChangeText={setCity} placeholder="Montréal" />
-            <Label>Quartier</Label>
-            <Input value={area} onChangeText={setArea} placeholder="Plateau" />
-            <Text style={{ color: colors.muted, fontSize: 12 }}>L’adresse précise n’est pas publiée. Les gens te trouvent par la ville, puis par message WIPP.</Text>
-          </Section>
-
-          <Section title="CONTACT">
-            <Chips
-              options={[{ id: "wipp", label: "Message WIPP" }, { id: "phone", label: "Téléphone" }]}
-              value={contactMode}
-              onChange={(id) => setContactMode(id as "wipp" | "phone")}
-            />
-            {contactMode === "phone" ? (
-              <>
-                <Label>Téléphone</Label>
-                <Input value={phone} onChangeText={setPhone} placeholder="+1…" keyboardType="phone-pad" />
-              </>
-            ) : (
-              <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                <MessageCircle color={colors.accent} size={18} />
-                <Text style={{ color: colors.fg, flex: 1 }}>Message via WIPP{me.username ? ` · @${me.username}` : ""}</Text>
-              </View>
-            )}
-          </Section>
-
-          <Section title="APERÇU">
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>{title.trim() || "Ton annonce"}</Text>
-            <Text style={{ color: colors.accent, marginTop: 4 }}>{priceLabel(amount, currency, free, negotiable) || "Prix à préciser"}</Text>
-            <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-              <MapPin color={colors.muted} size={14} />
-              <Text style={{ color: colors.muted }}>{city.trim() || "Ville"} · {LISTING_CATS.find((item) => item.id === category)?.label}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Text style={{ flex: 1, color: colors.fg }}>Prix négociable</Text>
+                    <Toggle value={negotiable} onChange={setNegotiable} />
+                  </View>
+                </>
+              ) : null}
             </View>
-          </Section>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><MapPin size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={rowTitle}>Lieu{star}</Text>
+              <Press onPress={() => setCountryOpen(true)} style={[box, { flexDirection: "row", alignItems: "center", gap: 10 }]}>
+                <FlagImage id={listingCountry.id} size={14} />
+                <Text style={{ flex: 1, color: colors.fg, fontSize: 14 }}>{listingCountry.fr}</Text>
+                <ChevronDown size={16} color={colors.muted} />
+              </Press>
+              <AddressField country={listingCountry} value={area} onChange={(v) => setArea(v ?? "")} onPickCity={setCity} />
+              <View style={box}>
+                <TextInput value={city} onChangeText={setCity} placeholder="Ville *" placeholderTextColor={colors.muted} style={inputStyle} />
+              </View>
+              <Text style={{ color: colors.muted, fontSize: 11 }}>Seuls la ville et le quartier sont affichés, jamais ton adresse exacte.</Text>
+            </View>
+          </View>
+
+          <View style={row}>
+            <View style={iconBox}><Phone size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 10 }}>
+              <Text style={rowTitle}>Préférences de contact</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Press onPress={() => setContactMode("wipp")} style={[pill(contactMode === "wipp"), { flex: 1, height: 56 }]}>
+                  <MessageCircle size={18} color={contactMode === "wipp" ? colors.accentFg : colors.fg} />
+                  <View>
+                    <Text style={pillText(contactMode === "wipp")}>Chat WIPP</Text>
+                    <Text style={{ fontSize: 10, color: contactMode === "wipp" ? colors.accentFg : colors.muted }}>Recommandé (anonyme)</Text>
+                  </View>
+                </Press>
+                <Press onPress={() => setContactMode("phone")} style={[pill(contactMode === "phone"), { flex: 1, height: 56 }]}>
+                  <Phone size={18} color={contactMode === "phone" ? colors.accentFg : colors.fg} />
+                  <View>
+                    <Text style={pillText(contactMode === "phone")}>Téléphone</Text>
+                    <Text style={{ fontSize: 10, color: contactMode === "phone" ? colors.accentFg : colors.muted }}>Afficher mon numéro</Text>
+                  </View>
+                </Press>
+              </View>
+              {contactMode === "phone" ? <DialPhoneField country={listingCountry} value={phone} onChange={(v) => setPhone(v ?? "")} /> : null}
+            </View>
+          </View>
           {status ? <Text style={{ color: colors.muted, marginTop: 8 }}>{status}</Text> : null}
         </ScrollView>
-        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
+        <View style={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
           {error ? <Text style={{ color: colors.danger, marginBottom: 8, textAlign: "center" }}>{error}</Text> : null}
-          <Btn label={busy ? "Publication…" : listingId ? "Enregistrer" : "Publier l’annonce"} disabled={busy} onPress={() => void publish()} />
+          <Press disabled={busy} onPress={() => void publish()} style={{ height: 56, borderRadius: 18, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, opacity: busy ? 0.7 : 1 }}>
+            <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{busy ? "Publication…" : listingId ? "Enregistrer" : "Publier mon annonce"}</Text>
+            {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
+          </Press>
         </View>
       </KeyboardAvoidingView>
+      <WorldCountrySheet open={countryOpen} selectedId={listingCountry.id} onClose={() => setCountryOpen(false)} onPick={(c) => setCountry(c.fr)} />
     </ScreenRoot>
   );
 }

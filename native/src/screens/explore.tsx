@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
-import { Alert, Platform, ScrollView, Text, TextInput, View } from "react-native";
-import { Calendar, CalendarPlus, ChevronLeft, Cross, Heart, MapPin, Plus, Search, Store, Tag } from "lucide-react-native";
+import { Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, Plus, Search, Share2, ShieldAlert, Store, Tag } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
+import { Avatar } from "../components/Avatar";
+import { listingCatLabel } from "../lib/listing-cats";
 import { Btn, Chip, Empty, GlassHeader, Header, IconBtn, PendingNote, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { useDeviceLayout } from "../lib/device-layout";
@@ -15,7 +17,7 @@ import type { Listing, Shop, ShopCategory } from "../lib/types";
 import { colors, layout } from "../theme";
 import { errorText } from "../lib/error-fr";
 
-const CATS = ["all", "auto", "home", "goods", "jobs", "services"] as const;
+const CATS = ["all", "auto", "realty", "electronics", "fashion", "home", "jobs", "leisure", "goods"] as const;
 const GEO = { lat: 45.531, lng: -73.518 };
 /** Real cards and events have no GPS yet (0,0). Their distance is unknown, not 8 000 km. */
 function knownMeters(p: { lat?: number; lng?: number }) {
@@ -137,7 +139,7 @@ export function ExploreScreen() {
         {hub === "listings" && !searching ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 8 }}>
             {CATS.map((c) => (
-              <Chip key={c} label={c === "all" ? t("all") : c} active={cat === c} onPress={() => setCat(c)} />
+              <Chip key={c} label={c === "all" ? t("all") : listingCatLabel(c)} active={cat === c} onPress={() => setCat(c)} />
             ))}
           </ScrollView>
         ) : null}
@@ -754,37 +756,18 @@ export function ListingScreen({ listingId }: { listingId: string }) {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const listing = useWippStore((s) => s.listings.find((l) => l.id === listingId));
+  const all = useWippStore((s) => s.listings);
   const seller = useWippStore((s) => (listing ? s.users[listing.sellerId] : undefined));
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
   const saved = useWippStore((s) => s.saves.some((item) => item.kind === "listing" && item.id === listingId));
-  const src = listing?.image?.startsWith("http") ? { uri: listing.image } : wippSrc(listing?.image);
+  const [index, setIndex] = useState(0);
+  const { width } = useDeviceLayout();
   if (!listing) return <Missing onBack={pop} />;
   const mine = listing.sellerId === "me" || listing.sellerId === useWippStore.getState().serverProfileId;
-  return (
-    <ScreenRoot>
-      <GlassHeader>
-        <Header title={listing.title} onBack={pop} />
-      </GlassHeader>
-      <ScrollView>
-        {src ? <Image source={src} style={{ height: 220, width: "100%" }} contentFit="cover" /> : null}
-        {listing.photos && listing.photos.length > 1 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 12 }}>
-            {listing.photos.map((uri) => (
-              <Image key={uri} source={{ uri }} style={{ width: 72, height: 72, borderRadius: 10 }} contentFit="cover" />
-            ))}
-          </ScrollView>
-        ) : null}
-        <View style={{ padding: 16 }}>
-          <Text style={{ fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{listingPriceText(listing)}</Text>
-          <Text style={{ marginTop: 8, color: colors.muted }}>{[listing.city, listing.area, listing.country].filter(Boolean).join(" · ")}{listing.distance ? ` · ${listing.distance}` : ""}</Text>
-          {listing.condition ? <Text style={{ marginTop: 8, color: colors.fg }}>{CONDITION_LABEL[listing.condition]}</Text> : null}
-          <Text style={{ marginTop: 12, color: colors.fg, lineHeight: 20 }}>{listing.description}</Text>
-          <Text style={{ marginTop: 12, color: colors.muted }}>{listing.contactPhone ? listing.contactPhone : "Contact par message WIPP"}</Text>
-          {mine ? null : <Btn label="Contacter" onPress={() => seller && openOrCreateDm(seller.id)} style={{ marginTop: 20 }} />}
-          <Btn
-            label={mine ? "Modifier ou supprimer" : "Options"}
-            variant="secondary"
-            onPress={() => {
+  const pics = (listing.photos?.length ? listing.photos : listing.image ? [listing.image] : []).map((u) => (u.startsWith("http") ? { uri: u } : wippSrc(u)));
+  const similar = all.filter((l) => l.id !== listing.id && l.category === listing.category).slice(0, 8);
+  const ago = listing.createdAt ? timeAgo(listing.createdAt) : "";
+  const openOptions = () => {
               if (mine) {
                 Alert.alert("Annonce", undefined, [
                   { text: "Modifier", onPress: () => push({ name: "create-listing", listingId: listing.id }) },
@@ -852,43 +835,219 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                 },
                 { text: "Annuler", style: "cancel" },
               ]);
-            }}
-            style={{ marginTop: 8 }}
-          />
-          {mine ? null : <Btn
-            label={saved ? "Retirer des enregistrés" : "Enregistrer"}
-            onPress={() => {
-              const on = saved;
-              void import("../lib/lot7/api").then(async ({ toggleSave }) => {
-                try {
-                  await toggleSave("listing", listing.id, !on);
-                  useWippStore.setState((s) => ({
-                    saves: on ? s.saves.filter((x) => !(x.kind === "listing" && x.id === listing.id)) : [...s.saves, { kind: "listing", id: listing.id }],
-                  }));
-                } catch (err) {
-                  Alert.alert("Enregistrés", errorText(err, "Enregistrement impossible."));
-                }
-              });
-            }}
-            style={{ marginTop: 8 }}
-          />}
-          {listing.sellerId === "me" ? (
-            <Btn
-              label="Retirer l’annonce"
-              onPress={() => {
-                void import("../lib/lot7/api").then(async ({ removeListing }) => {
-                  await removeListing(listing.id);
-                  useWippStore.setState((s) => ({ listings: s.listings.filter((l) => l.id !== listing.id) }));
-                  pop();
-                });
-              }}
-              style={{ marginTop: 8 }}
-            />
+            };
+  const toggleSaved = () => {
+    const on = saved;
+    void import("../lib/lot7/api").then(async ({ toggleSave }) => {
+      try {
+        await toggleSave("listing", listing.id, !on);
+        useWippStore.setState((s) => ({
+          saves: on ? s.saves.filter((x) => !(x.kind === "listing" && x.id === listing.id)) : [...s.saves, { kind: "listing", id: listing.id }],
+        }));
+      } catch (err) {
+        Alert.alert("Enregistrés", errorText(err, "Enregistrement impossible."));
+      }
+    });
+  };
+  const contact = (text?: string) => {
+    if (!seller) return;
+    openOrCreateDm(seller.id);
+    // "Faire une offre": open the chat with a ready-to-complete message.
+    const top = useWippStore.getState().stack.at(-1);
+    if (text && top?.name === "conversation") useWippStore.getState().setDraftFor(top.chatId, text);
+  };
+  const card = { marginHorizontal: 14, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(16,22,36,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" };
+  const action = (on: boolean) => ({ flex: 1, minHeight: 52, borderRadius: 14, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 8, backgroundColor: on ? colors.accent : "transparent", borderWidth: 1, borderColor: on ? colors.accent : "rgba(255,255,255,0.18)" });
+  const specs = [
+    ["Catégorie", listingCatLabel(listing.category)],
+    ["État", listing.condition ? CONDITION_LABEL[listing.condition] : ""],
+    ["Prix", listingPriceText(listing)],
+    ["Ville", [listing.city, listing.country].filter(Boolean).join(", ")],
+    ["Contact", listing.contactPhone ? "Téléphone ou chat" : "Chat WIPP"],
+  ].filter(([, v]) => v);
+  return (
+    <ScreenRoot>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+        <View style={{ height: 300, backgroundColor: colors.navy }}>
+          {pics.length ? (
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))}>
+              {pics.map((src, i) => (
+                <Image key={i} source={src} style={{ width, height: 300 }} contentFit="cover" />
+              ))}
+            </ScrollView>
+          ) : null}
+          <View style={{ position: "absolute", top: 44, left: 14, right: 14, flexDirection: "row", justifyContent: "space-between" }}>
+            <Press accessibilityLabel="Retour" onPress={pop} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+              <ChevronLeft size={24} color="#fff" />
+            </Press>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Press accessibilityLabel="Partager" onPress={() => void Share.share({ message: `${listing.title} · ${listingPriceText(listing)} sur WIPP` })} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+                <Share2 size={20} color="#fff" />
+              </Press>
+              {mine ? null : (
+                <Press accessibilityLabel="Enregistrer" onPress={toggleSaved} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+                  <Heart size={20} color={saved ? colors.accent : "#fff"} fill={saved ? colors.accent : "transparent"} />
+                </Press>
+              )}
+            </View>
+          </View>
+          {pics.length > 1 ? (
+            <View style={{ position: "absolute", right: 14, bottom: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.6)" }}>
+              <Text style={{ color: "#fff", fontSize: 12 }}>{index + 1}/{pics.length}</Text>
+            </View>
           ) : null}
         </View>
+        {pics.length > 1 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingTop: 10 }}>
+            {pics.map((src, i) => (
+              <Image key={i} source={src} style={{ width: 62, height: 62, borderRadius: 10, borderWidth: i === index ? 2 : 0, borderColor: colors.accent }} contentFit="cover" />
+            ))}
+          </ScrollView>
+        ) : null}
+
+        <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>
+          <Text style={{ color: colors.fg, fontSize: 24, fontFamily: "Inter_800ExtraBold" }}>{listing.title}</Text>
+          <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Text style={{ color: colors.accent, fontSize: 26, fontFamily: "Inter_800ExtraBold" }}>{listingPriceText(listing).replace(/ · négociable$/, "")}</Text>
+            {listing.negotiable ? (
+              <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: colors.accent }}>
+                <Text style={{ color: colors.accent, fontSize: 12 }}>Négociable</Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Tag size={14} color={colors.muted} />
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{listingCatLabel(listing.category)}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <MapPin size={14} color={colors.muted} />
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{[listing.area, listing.city].filter(Boolean).join(", ") || "Ville à préciser"}</Text>
+            </View>
+            {ago ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Clock size={14} color={colors.muted} />
+                <Text style={{ color: colors.muted, fontSize: 12 }}>Publié {ago}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {seller && !mine ? (
+          <View style={[card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
+            <Avatar user={seller} size={52} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{seller.displayName}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>@{seller.username} · Membre WIPP</Text>
+            </View>
+            <Press onPress={() => push({ name: "found-profile", userId: seller.id, via: "username" })} style={{ paddingHorizontal: 12, height: 36, borderRadius: 999, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Voir le profil</Text>
+              <ChevronRight size={14} color={colors.accent} />
+            </Press>
+          </View>
+        ) : null}
+
+        {mine ? (
+          <View style={{ flexDirection: "row", gap: 8, marginHorizontal: 14, marginTop: 12 }}>
+            <Press onPress={() => push({ name: "create-listing", listingId: listing.id })} style={action(true)}>
+              <Pencil size={18} color={colors.accentFg} />
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Modifier</Text>
+            </Press>
+            <Press onPress={openOptions} style={action(false)}>
+              <MoreHorizontal size={18} color={colors.fg} />
+              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Supprimer…</Text>
+            </Press>
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginHorizontal: 14, marginTop: 12 }}>
+            <Press onPress={() => contact()} style={[action(true), { flexBasis: "47%" }]}>
+              <MessageCircle size={18} color={colors.accentFg} />
+              <View>
+                <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Chat WIPP</Text>
+                <Text style={{ color: colors.accentFg, fontSize: 11 }}>Réponse rapide</Text>
+              </View>
+            </Press>
+            {listing.contactPhone ? (
+              <Press onPress={() => void Linking.openURL(`tel:${listing.contactPhone!.replace(/\s/g, "")}`)} style={[action(false), { flexBasis: "47%" }]}>
+                <Phone size={18} color={colors.fg} />
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Appeler</Text>
+              </Press>
+            ) : null}
+            {/^gratuit|^échange/i.test(listing.price.trim()) ? null : (
+              <Press onPress={() => contact(`Bonjour ! Ton annonce « ${listing.title} » m’intéresse. Je te propose : `)} style={[action(false), { flexBasis: "47%" }]}>
+                <Tag size={18} color={colors.fg} />
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Faire une offre</Text>
+              </Press>
+            )}
+            <Press onPress={toggleSaved} style={[action(false), { flexBasis: "47%" }]}>
+              <Heart size={18} color={saved ? colors.accent : colors.fg} fill={saved ? colors.accent : "transparent"} />
+              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{saved ? "Enregistré" : "Enregistrer"}</Text>
+            </Press>
+          </View>
+        )}
+
+        <View style={card}>
+          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Description</Text>
+          <Text style={{ marginTop: 8, color: "rgba(249,250,251,0.85)", lineHeight: 21 }}>{listing.description || "Pas de description."}</Text>
+          <View style={{ marginTop: 14, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.04)", padding: 12, gap: 8 }}>
+            {specs.map(([k, v]) => (
+              <View key={k} style={{ flexDirection: "row" }}>
+                <Text style={{ width: 90, color: colors.muted, fontSize: 13 }}>{k}</Text>
+                <Text style={{ flex: 1, color: colors.fg, fontSize: 13 }}>{v}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={[card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(255,216,77,0.1)", alignItems: "center", justifyContent: "center" }}>
+            <MapPin size={22} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Lieu</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>{[listing.area, listing.city, listing.country].filter(Boolean).join(", ") || "À préciser par message"}</Text>
+          </View>
+        </View>
+
+        {mine ? null : (
+          <Press onPress={openOptions} style={[card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
+            <ShieldAlert size={20} color={colors.fg} />
+            <Text style={{ flex: 1, color: colors.fg }}>Signaler ou masquer cette annonce</Text>
+            <ChevronRight size={18} color={colors.muted} />
+          </Press>
+        )}
+
+        {similar.length ? (
+          <View style={{ marginTop: 18 }}>
+            <Text style={{ paddingHorizontal: 18, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 10 }}>Annonces similaires</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 14 }}>
+              {similar.map((l) => {
+                const src = l.image ? (l.image.startsWith("http") ? { uri: l.image } : wippSrc(l.image)) : null;
+                return (
+                  <Press key={l.id} onPress={() => push({ name: "listing", listingId: l.id })} style={{ width: 150, borderRadius: 14, overflow: "hidden", backgroundColor: "rgba(16,22,36,0.92)" }}>
+                    {src ? <Image source={src} style={{ width: 150, height: 110 }} contentFit="cover" /> : <View style={{ width: 150, height: 110, backgroundColor: colors.navy }} />}
+                    <View style={{ padding: 10 }}>
+                      <Text numberOfLines={2} style={{ color: colors.fg, fontSize: 13 }}>{l.title}</Text>
+                      <Text style={{ marginTop: 4, color: colors.accent, fontFamily: "Inter_700Bold" }}>{listingPriceText(l)}</Text>
+                    </View>
+                  </Press>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
       </ScrollView>
     </ScreenRoot>
   );
+}
+
+/** "il y a 3 heures" style label. */
+function timeAgo(ms: number) {
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 3600) return `il y a ${Math.max(1, Math.round(s / 60))} min`;
+  if (s < 86400) return `il y a ${Math.round(s / 3600)} h`;
+  const d = Math.round(s / 86400);
+  return d < 30 ? `il y a ${d} jour${d > 1 ? "s" : ""}` : `le ${new Date(ms).toLocaleDateString("fr-CA")}`;
 }
 
 export function PharmacyScreen({ pharmacyId }: { pharmacyId: string }) {

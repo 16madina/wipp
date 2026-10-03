@@ -445,7 +445,8 @@ export type Listing = {
   city: string;
   distance: string;
   sellerId: string;
-  category: "auto" | "home" | "goods" | "jobs" | "services";
+  /** See LISTING_CATEGORIES (auto, realty, electronics, fashion, home, jobs, leisure, goods); "services" is legacy. */
+  category: string;
   image: string;
   description: string;
   condition?: "new" | "like_new" | "good" | "used";
