@@ -69,6 +69,8 @@ import { APP_HOST } from "../lib/utils";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
 import { colors, layout } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { EventCard } from "../components/event-parts";
+import { wippSrc } from "../lib/assets";
 
 export function MeScreen() {
   const t = useT();
@@ -898,12 +900,28 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
             <Text style={{ color: colors.muted, fontSize: 12 }}>{l.city}</Text>
           </Press>
         )) : null}
-        {kind !== "listings" ? events.map((e) => (
-          <Press key={e.id} onPress={() => push({ name: "lifestyle", itemId: e.id })} style={{ padding: 16 }}>
-            <Text style={{ color: colors.fg }}>{e.title}</Text>
-            <Text style={{ color: colors.muted, fontSize: 12 }}>{e.when}{e.place ? ` · ${e.place}` : ""}</Text>
-          </Press>
-        )) : null}
+        {kind !== "listings" ? (
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+            {events.map((e) => {
+              const start = e.startsAt ? new Date(e.startsAt) : null;
+              const end = e.endsAt ? new Date(e.endsAt) : null;
+              return (
+                <EventCard
+                  key={e.id}
+                  title={e.title}
+                  subtitle={(e.details || e.note || e.place || "").split("\n")[0]}
+                  image={e.image ? (e.image.startsWith("http") ? { uri: e.image } : wippSrc(e.image)) : null}
+                  starts={start && !Number.isNaN(start.getTime()) ? start : null}
+                  ends={end && !Number.isNaN(end.getTime()) ? end : null}
+                  city={e.city}
+                  online={e.isOnline}
+                  priceLabel={e.isFree === false ? [e.price, e.currency].filter(Boolean).join(" ") || "PAYANT" : "GRATUIT"}
+                  onPress={() => push({ name: "lifestyle", itemId: e.id })}
+                />
+              );
+            })}
+          </View>
+        ) : null}
         {loadError ? <Text style={{ padding: 16, color: colors.danger, fontSize: 13 }}>{loadError}</Text> : null}
         {kind === "listings" && listings.length === 0 ? (
           <View style={{ padding: 16 }}>
