@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 function body() {
-  const team = process.env.APPLE_TEAM_ID?.trim() ?? "";
+  // Apple Team ID is public (it is in every signed build); env var can override it.
+  const team = process.env.APPLE_TEAM_ID?.trim() || "6XW2XM3NDF";
   const details =
     /^[A-Z0-9]{10}$/.test(team)
       ? [{ appID: `${team}.com.wipp.app`, paths: ["/@*", "/t/*", "/g/*", "/b/*"] }]

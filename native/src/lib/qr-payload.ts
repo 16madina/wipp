@@ -21,7 +21,9 @@ export function businessQr(handle: string) {
 export function parseWippQr(raw: string): QrParse {
   let url: URL;
   try {
-    url = new URL(raw.trim());
+    // wipp://@name (fallback from the web landing page) means the same as https://wippapp.com/@name.
+    const text = raw.trim().replace(/^wipp:\/\//i, `https://${QR_HOST}/`);
+    url = new URL(text);
   } catch {
     return { kind: "invalid" };
   }

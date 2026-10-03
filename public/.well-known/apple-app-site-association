@@ -1,6 +1,16 @@
 {
   "applinks": {
     "apps": [],
-    "details": []
+    "details": [
+      {
+        "appID": "6XW2XM3NDF.com.wipp.app",
+        "paths": [
+          "/@*",
+          "/t/*",
+          "/g/*",
+          "/b/*"
+        ]
+      }
+    ]
   }
 }

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as DeleteAccountRouteImport } from './routes/delete-account'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -23,6 +24,11 @@ import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HandleRoute = HandleRouteImport.update({
+  id: '/$handle',
+  path: '/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectRoute = ConnectRouteImport.update({
@@ -73,6 +79,7 @@ const ApiWippSplatRoute = ApiWippSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$handle': typeof HandleRoute
   '/connect': typeof ConnectRoute
   '/delete-account': typeof DeleteAccountRoute
   '/privacy': typeof PrivacyRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$handle': typeof HandleRoute
   '/connect': typeof ConnectRoute
   '/delete-account': typeof DeleteAccountRoute
   '/privacy': typeof PrivacyRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$handle': typeof HandleRoute
   '/connect': typeof ConnectRoute
   '/delete-account': typeof DeleteAccountRoute
   '/privacy': typeof PrivacyRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$handle'
     | '/connect'
     | '/delete-account'
     | '/privacy'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$handle'
     | '/connect'
     | '/delete-account'
     | '/privacy'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$handle'
     | '/connect'
     | '/delete-account'
     | '/privacy'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HandleRoute: typeof HandleRoute
   ConnectRoute: typeof ConnectRoute
   DeleteAccountRoute: typeof DeleteAccountRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$handle': {
+      id: '/$handle'
+      path: '/$handle'
+      fullPath: '/$handle'
+      preLoaderRoute: typeof HandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connect': {
@@ -237,6 +257,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HandleRoute: HandleRoute,
   ConnectRoute: ConnectRoute,
   DeleteAccountRoute: DeleteAccountRoute,
   PrivacyRoute: PrivacyRoute,

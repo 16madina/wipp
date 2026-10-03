@@ -32,7 +32,10 @@
         "NSBluetoothAlwaysUsageDescription": "WIPP Touch utilise le Bluetooth pour détecter un téléphone WIPP tout près, sans numéro ni e-mail.",
         "NSBluetoothPeripheralUsageDescription": "WIPP Touch utilise le Bluetooth pour partager un identifiant temporaire à proximité.",
         "NFCReaderUsageDescription": "WIPP peut lire une puce NFC WIPP comme complément à la proximité physique.",
-        "NSFaceIDUsageDescription": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil."
+        "NSFaceIDUsageDescription": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil.",
+        "NSLocationWhenInUseUsageDescription": "WIPP utilise ta position pour afficher les offres et les pros près de toi dans Explorer.",
+        "NSContactsUsageDescription": "WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.",
+        "NSMotionUsageDescription": "WIPP Touch utilise les mouvements du téléphone pour détecter un geste de rapprochement."
       },
       "icon": {
         "light": "./assets/brand/icon-1024.png",
@@ -162,7 +165,11 @@
             "NSExtensionActivationSupportsImageWithMaxCount": 1,
             "NSExtensionActivationSupportsMovieWithMaxCount": 1
           },
-          "androidIntentFilters": ["text/*", "image/*", "video/*"]
+          "androidIntentFilters": [
+            "text/*",
+            "image/*",
+            "video/*"
+          ]
         }
       ]
     ],
