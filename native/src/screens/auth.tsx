@@ -290,6 +290,9 @@ function CheckLine({
   );
 }
 
+// Browsers draw an orange focus ring around inputs on web: the field border is enough.
+const noWebOutline = (Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) as object;
+
 function ContinueHit({
   ready,
   busy,
@@ -502,7 +505,7 @@ export function PhoneEntryScreen() {
               placeholderTextColor={colors.muted}
               underlineColorAndroid="transparent"
               textAlignVertical="center"
-              style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false }}
+              style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false, ...noWebOutline }}
             />
           </View>
         </View>
@@ -631,7 +634,7 @@ export function LoginScreen() {
               placeholderTextColor={colors.muted}
               underlineColorAndroid="transparent"
               textAlignVertical="center"
-              style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false }}
+              style={{ flex: 1, height: "100%", color: colors.fg, fontSize: 16, padding: 0, margin: 0, backgroundColor: "transparent", includeFontPadding: false, ...noWebOutline }}
             />
           </View>
         </View>
@@ -807,7 +810,7 @@ export function SmsReferenceScreen() {
             autoFocus
             textContentType="oneTimeCode"
             autoComplete="sms-otp"
-            style={{ position: "absolute", opacity: 0.02, width: "100%", height: "100%", color: colors.fg }}
+            style={{ position: "absolute", opacity: 0.02, width: "100%", height: "100%", color: colors.fg, ...noWebOutline }}
           />
         </View>
       </Abs>
@@ -985,12 +988,12 @@ export function ProfileReferenceScreen() {
       </Abs>
       <Abs t={53.8} l={10.5} h={4.4} w={37}>
         <View ref={firstNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
-          <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Prénom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8 }} />
+          <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Prénom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, ...noWebOutline }} />
         </View>
       </Abs>
       <Abs t={53.8} l={52} h={4.4} w={37}>
         <View ref={lastNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
-          <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Nom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8 }} />
+          <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Nom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, ...noWebOutline }} />
         </View>
       </Abs>
       <Abs t={61.6} l={10} h={4.3} w={60}>
@@ -1006,7 +1009,7 @@ export function ProfileReferenceScreen() {
             placeholderTextColor={colors.muted}
             autoCapitalize="none"
             inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined}
-            style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8 }}
+            style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, ...noWebOutline }}
           />
         </View>
       </Abs>
