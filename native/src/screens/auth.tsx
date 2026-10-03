@@ -213,6 +213,15 @@ function nationalToE164(country: Country, phone: string) {
   return toE164(`${country.dial}${digits}`);
 }
 
+/** "+15145550101" -> "+1 (514) 555-0101", "+2250700000000" -> "+225 07 00 00 00 00". */
+function prettyPhone(e164: string) {
+  const nanp = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164);
+  if (nanp) return `+1 (${nanp[1]}) ${nanp[2]}-${nanp[3]}`;
+  const ci = /^\+225(\d{10})$/.exec(e164);
+  if (ci) return `+225 ${ci[1].replace(/(\d{2})(?=\d)/g, "$1 ")}`;
+  return e164;
+}
+
 function phonePlaceholder(country: Country) {
   // Zeros only: a real-looking number made people type it as is.
   if (country.id === "CI") return "00 00 00 00 00";
@@ -773,33 +782,46 @@ export function SmsReferenceScreen() {
   return (
     <Artwork source={authSms}>
       {(reveal) => <>
-      <Abs t={8} l={4} h={6} w={12}>
+      {/* The background is decor only: everything else is drawn here. */}
+      <Abs t={0} l={0} h={100} w={100}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(2,5,14,0.8)", "rgba(2,5,14,0.35)", "rgba(2,5,14,0)"]}
+          locations={[0, 0.6, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.2, y: 0.5 }}
+          style={{ flex: 1 }}
+        />
+      </Abs>
+      <Abs t={6} l={4} h={6} w={12}>
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
       </Abs>
-      <Abs t={40} l={6} h={5.5} w={78}>
+      <Abs t={4.5} l={32} h={7} w={36}>
+        <Image source={logoGold} style={{ width: "100%", height: "100%" }} contentFit="contain" />
+      </Abs>
+      <Abs t={15} l={6} w={88}>
+        <Text style={{ textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.fg, fontSize: 32, lineHeight: 36, fontFamily: "Inter_700Bold" }}>
+          Vérifie ton <Text style={{ color: colors.accent }}>numéro</Text>
+        </Text>
+        <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.85)", fontSize: 15, lineHeight: 21 }}>
+          Nous t’avons envoyé un code par SMS au
+        </Text>
         <Pressable
           accessibilityLabel="Modifier mon numéro"
           onPress={pop}
-          style={{
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            paddingHorizontal: 12,
-            borderRadius: 10,
-            backgroundColor: colors.authInput,
-          }}
+          style={{ marginTop: 12, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, height: 46, borderRadius: 14, backgroundColor: "rgba(5,8,18,0.82)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" }}
         >
-          <Flag id={pending.country ?? "CA"} size={14} />
-          <Text numberOfLines={1} style={{ flex: 1, color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
-            {phone}
-          </Text>
+          <Flag id={pending.country ?? "CA"} size={16} />
+          <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{prettyPhone(phone)}</Text>
           <Pencil size={16} color={colors.accent} />
         </Pressable>
       </Abs>
-      <Abs t={60} l={7} h={9} w={86}>
+      <Abs t={66} l={3} h={32.5} w={94}>
+        <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+      </Abs>
+      <Abs t={67.8} l={7} h={7.2} w={86}>
         <View ref={otpBlockRef} style={{ flex: 1 }}>
           <Pressable onPress={() => {}} style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
             {Array.from({ length: 6 }, (_, i) => (
@@ -828,7 +850,7 @@ export function SmsReferenceScreen() {
         </View>
       </Abs>
       {error ? (
-        <Abs t={70} l={8} h={5} w={84}>
+        <Abs t={75.8} l={8} w={84}>
           <Text style={{ color: colors.danger, fontSize: 12 }}>{error}</Text>
           {noAccount ? (
             <Pressable
@@ -843,25 +865,21 @@ export function SmsReferenceScreen() {
           ) : null}
         </Abs>
       ) : null}
-      <Abs t={73} l={19} h={5} w={62}>
+      <Abs t={78} l={8} h={5} w={84}>
         <Pressable disabled={seconds > 0 || busy} onPress={() => void resend()} style={{ flex: 1, justifyContent: "center" }}>
-          <Text style={{ textAlign: "center", color: colors.accent, fontSize: 13 }}>
+          <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>Tu n’as pas reçu le code ?</Text>
+          <Text style={{ marginTop: 3, textAlign: "center", color: seconds > 0 ? "rgba(255,216,77,0.6)" : colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
             {seconds > 0 ? `Renvoyer le code dans 00:${String(seconds).padStart(2, "0")}` : "Renvoyer le code"}
           </Text>
         </Pressable>
       </Abs>
-      <Abs t={79.2} l={5} h={6.7} w={90}>
-        <Pressable
-          accessibilityLabel="Continuer"
-          disabled={busy || code.length !== 6}
-          onPress={() => void validate()}
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        >
-          {busy ? <ActivityIndicator color={colors.accent} /> : null}
-        </Pressable>
+      <Abs t={84} l={6} h={6.6} w={88}>
+        <ContinueHit ready={code.length === 6} busy={busy} label="Continuer" onPress={() => void validate()} solid />
       </Abs>
-      <Abs t={88} l={22} h={5} w={56}>
-        <Pressable accessibilityLabel="Modifier mon numéro" onPress={pop} style={{ flex: 1 }} />
+      <Abs t={91.5} l={20} h={5} w={60}>
+        <Pressable accessibilityLabel="Modifier mon numéro" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Modifier mon numéro</Text>
+        </Pressable>
       </Abs>
       <KeyboardDone nativeID={codeAccessoryId} />
       </>}
