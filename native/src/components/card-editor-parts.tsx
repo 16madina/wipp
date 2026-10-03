@@ -48,7 +48,7 @@ function SearchBox({ value, onChange, placeholder }: { value: string; onChange: 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, height: 44, marginBottom: 8 }}>
       <Search size={18} color={colors.muted} />
-      <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} autoCorrect={false} style={{ flex: 1, color: colors.fg, fontSize: 15 , ...noOutline }} />
+      <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} autoCorrect={false} style={{ flex: 1, color: colors.fg, fontSize: 15, ...noOutline }} />
     </View>
   );
 }
@@ -119,7 +119,7 @@ export function CategorySheet({ open, categories, selected, onClose, onPick }: {
             placeholder="Ex. Location de voitures"
             placeholderTextColor={colors.muted}
             maxLength={60}
-            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg, fontSize: 15 , ...noOutline }}
+            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg, fontSize: 15, ...noOutline }}
           />
           <Press disabled={!custom.trim()} onPress={() => pick(custom.trim())} style={{ height: 44, paddingHorizontal: 16, borderRadius: 12, backgroundColor: custom.trim() ? colors.accent : colors.navy, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: custom.trim() ? colors.accentFg : colors.muted, fontFamily: "Inter_600SemiBold" }}>OK</Text>
@@ -250,7 +250,7 @@ export function DialPhoneField({ country, value, onChange }: { country: Country;
           keyboardType="phone-pad"
           placeholder="Numéro de la boutique"
           placeholderTextColor={colors.muted}
-          style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0 }}
+          style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0, ...noOutline }}
         />
       </View>
     </View>
@@ -325,7 +325,7 @@ export function AddressField({ country, value, onChange, onPickCity }: { country
             placeholder={`Commence à taper une adresse en ${country.fr}`}
             placeholderTextColor={colors.muted}
             autoCorrect={false}
-            style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0 }}
+            style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0, ...noOutline }}
           />
           {loading ? <ActivityIndicator size="small" color={colors.muted} /> : null}
         </View>
