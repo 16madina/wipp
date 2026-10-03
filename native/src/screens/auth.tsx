@@ -214,7 +214,10 @@ function nationalToE164(country: Country, phone: string) {
 }
 
 function phonePlaceholder(country: Country) {
-  return country.id === "CI" ? "07 00 00 00 00" : "(514) 123-4567";
+  // Zeros only: a real-looking number made people type it as is.
+  if (country.id === "CI") return "00 00 00 00 00";
+  if (country.dial === "+1") return "(000) 000-0000";
+  return "000 000 0000";
 }
 
 /** Keep every auth action reachable while an iOS keyboard is open. */
@@ -439,6 +442,7 @@ export function PhoneEntryScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const phoneBlockRef = useRef<View>(null);
+  const [phoneFocused, setPhoneFocused] = useState(false);
   const phoneAccessoryId = "wipp-phone-entry-keyboard";
 
   async function continueWithPhone() {
@@ -491,7 +495,11 @@ export function PhoneEntryScreen() {
               <ChevronDown size={14} color={colors.muted} />
             </Pressable>
             <TextInput
-              onFocus={() => reveal(phoneBlockRef.current)}
+              onFocus={() => {
+                setPhoneFocused(true);
+                reveal(phoneBlockRef.current);
+              }}
+              onBlur={() => setPhoneFocused(false)}
               value={phone}
               onChangeText={(v) => {
                 setPhone(v);
@@ -501,7 +509,7 @@ export function PhoneEntryScreen() {
               inputAccessoryViewID={Platform.OS === "ios" ? phoneAccessoryId : undefined}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
-              placeholder={phonePlaceholder(country)}
+              placeholder={phoneFocused ? "" : phonePlaceholder(country)}
               placeholderTextColor={colors.muted}
               underlineColorAndroid="transparent"
               textAlignVertical="center"
@@ -551,6 +559,7 @@ export function LoginScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const phoneBlockRef = useRef<View>(null);
+  const [phoneFocused, setPhoneFocused] = useState(false);
   const phoneAccessoryId = "wipp-login-keyboard";
 
   async function tryLogin() {
@@ -620,7 +629,11 @@ export function LoginScreen() {
               <ChevronDown size={14} color={colors.muted} />
             </Pressable>
             <TextInput
-              onFocus={() => reveal(phoneBlockRef.current)}
+              onFocus={() => {
+                setPhoneFocused(true);
+                reveal(phoneBlockRef.current);
+              }}
+              onBlur={() => setPhoneFocused(false)}
               value={phone}
               onChangeText={(v) => {
                 setPhone(v);
@@ -630,7 +643,7 @@ export function LoginScreen() {
               inputAccessoryViewID={Platform.OS === "ios" ? phoneAccessoryId : undefined}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
-              placeholder={phonePlaceholder(country)}
+              placeholder={phoneFocused ? "" : phonePlaceholder(country)}
               placeholderTextColor={colors.muted}
               underlineColorAndroid="transparent"
               textAlignVertical="center"
