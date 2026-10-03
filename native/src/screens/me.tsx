@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Modal, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, ScrollView, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import {
   BadgeCheck,
@@ -28,6 +28,7 @@ import {
   Tag,
   User,
   UserPlus,
+  Store,
 } from "lucide-react-native";
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
@@ -35,7 +36,9 @@ import { BusinessCardExperience, CoverCameraHint, EmptyBusinessCard } from "../c
 import { WippWordmark } from "../components/Logo";
 import { Btn, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
 import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
-import { COUNTRIES } from "../lib/countries";
+import { DEFAULT_COUNTRY } from "../lib/countries";
+import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
+import { CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
   CARD_CATEGORIES,
   cardToShop,
@@ -979,7 +982,7 @@ function cardErrorMessage(e: unknown, fallback: string): string {
 type Draft = CardInput & { coverUrl: string | null; logoUrl: string | null; photoUrls: string[] };
 const emptyDraft: Draft = {
   name: "",
-  category: "Mode & accessoires",
+  category: "",
   description: "",
   country: "Canada",
   city: "",
@@ -996,6 +999,13 @@ const emptyDraft: Draft = {
   photoUrls: [],
 };
 
+/** Country from a verified E.164 number: longest calling code wins, "+1" means Canada. */
+function countryFromPhone(phone?: string | null) {
+  if (!phone) return undefined;
+  if (phone.startsWith("+1")) return findWorldCountry("CA");
+  return [...WORLD_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length).find((c) => phone.startsWith(c.dial));
+}
+
 export function BusinessCardEditorScreen() {
   const pop = useWippStore((s) => s.pop);
   const replace = useWippStore((s) => s.replace);
@@ -1009,6 +1019,9 @@ export function BusinessCardEditorScreen() {
   const [uploadLabel, setUploadLabel] = useState("");
   const [error, setError] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const cardCountry = findWorldCountry(draft.country) ?? DEFAULT_COUNTRY;
   function rememberProfile(id: string) {
     profileRef.current = id;
     setProfileId(id);
@@ -1024,7 +1037,11 @@ export function BusinessCardEditorScreen() {
         }
         const r = await getMyBusinessCard();
         if (r.profileId) rememberProfile(r.profileId);
-        if (r.userCountry && !r.card) setDraft((d) => ({ ...d, country: r.userCountry! }));
+        if (!r.card) {
+          // Default to the country the account signed up with (from the verified phone number).
+          const signup = findWorldCountry(r.userCountry) ?? countryFromPhone(user.phoneNumber);
+          if (signup) setDraft((d) => ({ ...d, country: signup.fr }));
+        }
         if (r.card) {
           setHasCard(true);
           pathRef.current = { cover: r.card.coverPath, logo: r.card.logoPath };
@@ -1226,11 +1243,20 @@ export function BusinessCardEditorScreen() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
         <View>
           <Press accessibilityLabel="Bannière" onPress={() => void pick("cover")} style={{ height: 168, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
-            {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : <ImagePlus size={28} color={colors.accent} />}
-            {uploadLabel ? <Text style={{ position: "absolute", top: 8, color: colors.paper, fontSize: 13 }}>{uploadLabel}</Text> : <CoverCameraHint />}
+            {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
+            {uploadLabel ? (
+              <Text style={{ position: "absolute", top: 8, color: colors.paper, fontSize: 13 }}>{uploadLabel}</Text>
+            ) : draft.coverUrl ? (
+              <CoverCameraHint />
+            ) : (
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <ImagePlus size={28} color={colors.accent} />
+                <Text style={{ color: colors.fg, fontSize: 13 }}>Ajouter une bannière</Text>
+              </View>
+            )}
           </Press>
           <Press accessibilityLabel="Photo" onPress={() => void pick("logo")} style={{ marginTop: -36, marginLeft: 16, width: 84, height: 84, borderRadius: 42, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 3, borderColor: colors.ink, alignItems: "center", justifyContent: "center" }}>
-            {draft.logoUrl ? <Image source={{ uri: draft.logoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : <ImagePlus size={24} color={colors.accent} />}
+            {draft.logoUrl ? <Image source={{ uri: draft.logoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : <Store size={30} color="rgba(249,250,251,0.45)" />}
             <View style={{ position: "absolute", right: 0, bottom: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
               <Camera size={14} color={colors.accentFg} />
             </View>
@@ -1248,36 +1274,32 @@ export function BusinessCardEditorScreen() {
         ) : null}
         <View style={{ marginTop: 16, gap: 12 }}>
           <Field label="Nom de la boutique *" value={draft.name} onChangeText={(v) => set("name", v)} />
-          <Text style={{ fontSize: 12, color: colors.muted }}>Catégorie *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {CARD_CATEGORIES.map((c) => (
-              <Press
-                key={c}
-                onPress={() => set("category", c)}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  backgroundColor: draft.category === c ? colors.accent : colors.navy,
-                }}
-              >
-                <Text style={{ color: draft.category === c ? colors.accentFg : colors.fg, fontSize: 13 }}>{c}</Text>
-              </Press>
-            ))}
-          </ScrollView>
-          <Field label="Description" value={draft.description} onChangeText={(v) => set("description", v)} multiline />
-          <Press onPress={() => setCountryOpen(true)} style={{ borderRadius: 8, backgroundColor: colors.navy, padding: 16 }}>
-            <Text style={{ fontSize: 12, color: colors.muted }}>Pays *</Text>
-            <Text style={{ marginTop: 4, color: colors.fg }}>{draft.country}</Text>
-          </Press>
+          <SelectField label="Catégorie *" value={draft.category} placeholder="Choisis ta catégorie" onPress={() => setCategoryOpen(true)} />
+          <Field
+            label="Description"
+            value={draft.description}
+            onChangeText={(v) => set("description", v.slice(0, 600))}
+            placeholder="Ex. Salon de tresses à Abidjan depuis 2019. Box braids, nattes collées, perruques sur mesure. Sur rendez-vous, déplacement possible."
+            multiline
+          />
+          <Text style={{ marginTop: -6, fontSize: 11, color: "rgba(249,250,251,0.45)" }}>
+            Dis ce que tu proposes, pour qui, et ce qui te rend unique. {draft.description.length}/600
+          </Text>
+          <SelectField
+            label="Pays *"
+            value={cardCountry.fr}
+            placeholder="Choisis un pays"
+            left={<FlagImage id={cardCountry.id} />}
+            onPress={() => setCountryOpen(true)}
+          />
           <Field label="Ville *" value={draft.city} onChangeText={(v) => set("city", v)} />
           <Field label="Adresse (facultative)" value={draft.address ?? ""} onChangeText={(v) => set("address", v || null)} />
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 8 }}>
             <Text style={{ color: colors.fg, fontSize: 13 }}>Publier l’adresse précise</Text>
             <Toggle value={draft.showAddress} onChange={(v) => set("showAddress", v)} />
           </View>
-          <Field label="Horaires (facultatifs)" value={draft.hours ?? ""} placeholder="Lun–Sam · 10 h–19 h" onChangeText={(v) => set("hours", v || null)} />
-          <Field label="Téléphone professionnel (facultatif)" value={draft.businessPhone ?? ""} keyboardType="phone-pad" onChangeText={(v) => set("businessPhone", v || null)} />
+          <SelectField label="Horaires (facultatifs)" value={draft.hours} placeholder="Choisir les jours et les heures" onPress={() => setHoursOpen(true)} />
+          <DialPhoneField country={cardCountry} value={draft.businessPhone ?? ""} onChange={(v) => set("businessPhone", v)} />
           <Text style={{ fontSize: 11, color: "rgba(249,250,251,0.45)" }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
           <Field label="Lien site web (optionnel)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
         </View>
@@ -1293,29 +1315,22 @@ export function BusinessCardEditorScreen() {
           ) : null}
         </ScrollView>
         {error ? <Text style={{ marginTop: 16, color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
-        <Btn label={busy ? "Enregistrement…" : "Enregistrer les modifications"} disabled={busy || !draft.name.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
+        <Btn label={busy ? "Enregistrement…" : hasCard ? "Enregistrer les modifications" : "Créer ma carte de visite"} disabled={busy || !draft.name.trim() || !draft.category.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
       </ScrollView>
-      <Modal visible={countryOpen} transparent animationType="slide" onRequestClose={() => setCountryOpen(false)}>
-        <Press onPress={() => setCountryOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Press onPress={() => undefined} style={{ maxHeight: "70%", backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>Choisir un pays</Text>
-            <ScrollView>
-              {COUNTRIES.map((c) => (
-                <Press
-                  key={c.id}
-                  onPress={() => {
-                    set("country", c.fr);
-                    setCountryOpen(false);
-                  }}
-                  style={{ paddingVertical: 12 }}
-                >
-                  <Text style={{ color: colors.fg }}>{c.fr}</Text>
-                </Press>
-              ))}
-            </ScrollView>
-          </Press>
-        </Press>
-      </Modal>
+      <WorldCountrySheet
+        open={countryOpen}
+        selectedId={cardCountry.id}
+        onClose={() => setCountryOpen(false)}
+        onPick={(c) => {
+          // Keep the phone number, switch its calling code to the new country.
+          setDraft((d) => {
+            const local = d.businessPhone ? d.businessPhone.replace(/^\+\d+\s*/, "") : "";
+            return { ...d, country: c.fr, businessPhone: local ? `${c.dial} ${local}` : d.businessPhone };
+          });
+        }}
+      />
+      <CategorySheet open={categoryOpen} categories={CARD_CATEGORIES} selected={draft.category} onClose={() => setCategoryOpen(false)} onPick={(c) => set("category", c)} />
+      <HoursSheet open={hoursOpen} onClose={() => setHoursOpen(false)} onSave={(v) => set("hours", v)} />
     </ScreenRoot>
     </EdgeBack>
   );
