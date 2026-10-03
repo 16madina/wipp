@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Linking, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import {
   BadgeCheck,
@@ -1206,9 +1206,12 @@ export function BusinessCardEditorScreen() {
         setError("Le serveur n’a pas renvoyé la carte enregistrée.");
         return;
       }
-      Alert.alert("Carte enregistrée", "Ta carte est enregistrée. La photo et la bannière se rechargent à l’ouverture.", [
-        { text: "Voir ma carte", onPress: () => replace({ name: "business-card" }) },
-      ]);
+      // Alert.alert does nothing in a browser: on web, open the card directly.
+      if (Platform.OS === "web") replace({ name: "business-card" });
+      else
+        Alert.alert("Carte enregistrée", "Ta carte est enregistrée. La photo et la bannière se rechargent à l’ouverture.", [
+          { text: "Voir ma carte", onPress: () => replace({ name: "business-card" }) },
+        ]);
     } catch (e) {
       const status = cardHttpStatus(e);
       console.warn("[wipp] card save failed", status || "no-status", e instanceof Error ? e.message : "unknown");
