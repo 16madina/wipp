@@ -1,27 +1,29 @@
 import { useState, type ReactNode } from "react";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Share, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import { cacheDirectory, writeAsStringAsync } from "expo-file-system/legacy";
 import {
   Camera,
+  ChevronLeft,
   Clock,
   Download,
   Globe,
   HelpCircle,
   MapPin,
-  MessageCircle,
   MoreHorizontal,
   Pencil,
   Phone,
   QrCode,
   Share2,
-  Store,
 } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { QrCard } from "./QrCard";
 import { WippWordmark } from "./Logo";
+
+const businessIntro = require("../../assets/business/business-intro.png");
 import { EdgeBack, GlassHeader, Header, Press, ScreenRoot, SearchField } from "./ui";
 import { cardLink } from "../lib/business-card";
 import type { BusinessCardView } from "../lib/business-card";
@@ -58,54 +60,29 @@ function InfoRow({ icon, text }: { icon: ReactNode; text: string }) {
 
 export function EmptyBusinessCard({ onCreate, onHelp, onBack }: { onCreate: () => void; onHelp: () => void; onBack: () => void }) {
   const insets = useSafeAreaInsets();
-  const cards = [
-    { icon: Camera, title: "Présente ton activité", sub: "Photos, description, horaires..." },
-    { icon: QrCode, title: "Partage ton QR professionnel", sub: "À imprimer ou à partager sur WIPP." },
-    { icon: MessageCircle, title: "Reçois des messages sur WIPP", sub: "Les clients te contactent directement sur l’application." },
-  ];
   return (
     <EdgeBack onBack={onBack}>
-    <ScreenRoot>
-      <GlassHeader>
-        <Header
-          title="Ma carte de visite"
-          onBack={onBack}
-          right={
-            <Press accessibilityLabel="Aide" onPress={onHelp} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
-              <HelpCircle size={22} color={colors.fg} />
-            </Press>
-          }
-        />
-      </GlassHeader>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom, 16) + 20, paddingTop: 18 }}>
-        <View style={{ alignSelf: "center", width: 84, height: 84, borderRadius: 24, backgroundColor: "rgba(255,216,77,0.12)", alignItems: "center", justifyContent: "center" }}>
-          <Store size={40} color={colors.accent} />
-        </View>
-        <Text style={{ marginTop: 28, fontSize: 34, lineHeight: 38, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
-          Crée ta carte{"\n"}
-          <Text style={{ color: colors.accent }}>professionnelle</Text>
-        </Text>
-        <Text style={{ marginTop: 14, fontSize: 16, lineHeight: 23, color: "rgba(249,250,251,0.62)" }}>
-          Fais découvrir ton activité sur WIPP et permets aux gens de te contacter sans partager ton numéro personnel.
-        </Text>
-        <View style={{ marginTop: 22, gap: 12 }}>
-          {cards.map((item) => (
-            <View key={item.title} style={{ flexDirection: "row", gap: 14, padding: 16, borderRadius: 18, backgroundColor: colors.navy }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,216,77,0.12)", alignItems: "center", justifyContent: "center" }}>
-                <item.icon size={18} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{item.title}</Text>
-                <Text style={{ marginTop: 3, color: "rgba(249,250,251,0.55)", fontSize: 13, lineHeight: 18 }}>{item.sub}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-        <Press onPress={onCreate} style={{ marginTop: 28, height: 54, borderRadius: 16, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>Créer ma carte de visite →</Text>
+    <View style={{ flex: 1, backgroundColor: "#05070d" }}>
+      {/* The artwork already holds the title, text and the three points: only the controls are drawn here. */}
+      <View style={{ width: "100%", aspectRatio: 941 / 1670 }}>
+        <Image source={businessIntro} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+        <LinearGradient pointerEvents="none" colors={["rgba(5,7,13,0)", "#05070d"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 90 }} />
+      </View>
+      <View style={{ position: "absolute", top: insets.top + 6, left: 8, right: 8, flexDirection: "row", justifyContent: "space-between" }}>
+        <Press accessibilityLabel="Retour" onPress={onBack} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
+          <ChevronLeft size={24} color={colors.fg} />
         </Press>
-      </ScrollView>
-    </ScreenRoot>
+        <Press accessibilityLabel="Aide" onPress={onHelp} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
+          <HelpCircle size={22} color={colors.fg} />
+        </Press>
+      </View>
+      <Press
+        onPress={onCreate}
+        style={{ position: "absolute", left: 22, right: 22, bottom: Math.max(insets.bottom, 16) + 8, height: 56, borderRadius: 18, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}
+      >
+        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 17 }}>Créer ma carte de visite →</Text>
+      </Press>
+    </View>
     </EdgeBack>
   );
 }
