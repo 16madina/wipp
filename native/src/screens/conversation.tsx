@@ -364,8 +364,10 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const peer = chatPeer(chat, users);
   const headerRing = chat.type !== "group" && peer ? storyRing(stories, peer.id) : "none";
   const sealed = isChatSealed(chat);
-  const shopFace = shop ? { displayName: shop.name, avatar: shop.logo || shop.image, online: true } : undefined;
-  const title = chat.type === "group" ? chat.name : shop ? shop.name : peer?.displayName;
+  // The owner of the shop talks to a client: show the client, not their own shop.
+  const clientSide = Boolean(shop && shop.ownerId !== "me");
+  const shopFace = shop && clientSide ? { displayName: shop.name, avatar: shop.logo || shop.image, online: true } : undefined;
+  const title = chat.type === "group" ? chat.name : shop && clientSide ? shop.name : peer?.displayName;
   const subtitle = typing
     ? "écrit…"
     : chat.type === "group"
@@ -807,7 +809,9 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       {shop ? (
         <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 14, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
           <Text style={{ color: "rgba(249,250,251,0.72)", fontSize: 13, lineHeight: 18 }}>
-            Ce compte représente une activité professionnelle sur WIPP. Vous discutez avec {shop.name}.
+            {shop.ownerId === "me"
+              ? `Un client vous écrit à propos de ${shop.name}.`
+              : `Ce compte représente une activité professionnelle sur WIPP. Vous discutez avec ${shop.name}.`}
           </Text>
         </View>
       ) : null}

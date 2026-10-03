@@ -358,7 +358,7 @@ function ChatRow({
         ? t("tempChatEnded")
         : ephemeral
           ? peer?.firstName ?? t("someone")
-          : shop
+          : shop && !mineShop
             ? shop.name
             : peer?.displayName;
   const preview = sealed ? t("sealedKeepsNone") : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
