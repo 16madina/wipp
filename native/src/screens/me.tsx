@@ -987,7 +987,8 @@ const emptyDraft: Draft = {
   country: "Canada",
   city: "",
   address: null,
-  showAddress: false,
+  // A shop address is public by default; the owner can hide it (e.g. home-based business).
+  showAddress: true,
   hours: null,
   businessPhone: null,
   website: null,
@@ -1306,8 +1307,15 @@ export function BusinessCardEditorScreen() {
           />
           <Field label="Ville *" value={draft.city} onChangeText={(v) => set("city", v)} />
           <AddressField country={cardCountry} value={draft.address ?? ""} onChange={(v) => set("address", v)} onPickCity={(c) => set("city", c)} />
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 8 }}>
-            <Text style={{ color: colors.fg, fontSize: 13 }}>Publier l’adresse précise</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Afficher l’adresse sur ma carte</Text>
+              <Text style={{ marginTop: 3, color: colors.muted, fontSize: 12, lineHeight: 16 }}>
+                {draft.showAddress
+                  ? "Les clients voient ton adresse et peuvent venir te voir."
+                  : "Adresse masquée : seuls la ville et le pays sont visibles. Utile si tu travailles à domicile."}
+              </Text>
+            </View>
             <Toggle value={draft.showAddress} onChange={(v) => set("showAddress", v)} />
           </View>
           <SelectField label="Horaires (facultatifs)" value={draft.hours} placeholder="Choisir les jours et les heures" onPress={() => setHoursOpen(true)} />
