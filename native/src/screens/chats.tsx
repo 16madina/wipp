@@ -74,6 +74,14 @@ export function ChatsScreen() {
   );
   const push = useWippStore((s) => s.push);
   const markRead = useWippStore((s) => s.markRead);
+  const serverOn = useWippStore((s) => s.serverConnected);
+  useEffect(() => {
+    if (!serverOn) return;
+    // New connection requests show up without reopening the app.
+    void useWippStore.getState().refreshIncomingRequests();
+    const tick = setInterval(() => void useWippStore.getState().refreshIncomingRequests(), 20_000);
+    return () => clearInterval(tick);
+  }, [serverOn]);
   const verifiedIds = useWippStore((s) => s.verifiedIds);
   const blockedIds = useWippStore((s) => s.blockedIds);
   const { compact, headerIcon } = useDeviceLayout();

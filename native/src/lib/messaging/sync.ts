@@ -463,6 +463,26 @@ export function mergeServerMessagesIntoState(
 }
 
 /** After merge, decrypt E2E envelopes that still lack plaintext. */
+/** List preview for a message without text, like WhatsApp. */
+function mediaPreview(type: Message["type"]) {
+  switch (type) {
+    case "image":
+      return "📷 Photo";
+    case "video":
+      return "🎥 Vidéo";
+    case "voice":
+      return "🎤 Message vocal";
+    case "file":
+      return "📄 Document";
+    case "gif":
+      return "GIF";
+    case "sticker":
+      return "Sticker";
+    default:
+      return "";
+  }
+}
+
 export async function decryptMergedMessages(
   state: StoreSlice,
   localChatId: string,
@@ -533,7 +553,7 @@ export async function decryptMergedMessages(
       c.id === localChatId && last
         ? {
             ...c,
-            preview: last.text ?? (last.enc ? "🔒 Message chiffré" : c.preview),
+            preview: last.text || mediaPreview(last.type) || (last.enc ? "🔒 Message chiffré" : c.preview),
             lastAt: last.createdAt,
           }
         : c,

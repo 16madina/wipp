@@ -457,14 +457,24 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
   useEffect(() => {
     const raw = userId.startsWith("srvuser:") ? userId.slice(8) : userId;
     if (!raw.startsWith("p_") && !userId.startsWith("srvuser:")) return;
-    void getRelation(raw).then((r) => {
-      setRelation(r);
-      if (r === "connected") {
-        useWippStore.setState((s) => ({
-          users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
-        }));
-      }
-    });
+    let stop = false;
+    const check = () =>
+      void getRelation(raw).then((r) => {
+        if (stop) return;
+        setRelation(r);
+        if (r === "connected") {
+          useWippStore.setState((s) => ({
+            users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
+          }));
+        }
+      });
+    check();
+    // While a request is pending, notice the acceptance without reopening the profile.
+    const tick = setInterval(check, 5_000);
+    return () => {
+      stop = true;
+      clearInterval(tick);
+    };
   }, [userId]);
   const viaLabel =
     via === "code"

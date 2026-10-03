@@ -947,6 +947,27 @@ export const useWippStore = create<Store>((set, get) => ({
         });
         void get().syncBusinessContexts();
         void get().refreshIncomingRequests();
+        // The chat list only has ciphertext for the last message: decrypt it so the
+        // preview shows the real text instead of "Message chiffré".
+        void (async () => {
+          const { syncChatMessages, mergeServerMessagesIntoState, decryptMergedMessages, toServerChatId } = await import(
+            "./messaging/sync"
+          );
+          const locked = get()
+            .chats.filter((c) => c.id.startsWith("srv:") && c.type !== "group" && /chiffré/.test(c.preview ?? ""))
+            .slice(0, 15);
+          for (const chat of locked) {
+            try {
+              const synced = await syncChatMessages(chat.id);
+              if (!synced || !("messages" in synced)) continue;
+              set((st) => mergeServerMessagesIntoState(st, toServerChatId(chat.id), synced.messages, synced.meServerId));
+              const dec = await decryptMergedMessages(get(), chat.id, get().identity);
+              if (Object.keys(dec).length) set(() => dec);
+            } catch {
+              /* keep the locked preview */
+            }
+          }
+        })();
         const { flushAllOutbox } = await import("./messaging/flush-outbox");
         await flushAllOutbox(get as never, set as never);
         void import("./push").then(({ syncAppBadge }) => syncAppBadge());
@@ -1425,7 +1446,13 @@ export const useWippStore = create<Store>((set, get) => ({
       const id = await createServerGroup(trimmed, participantIds);
       await get().syncServerInbox();
       const localId = id.startsWith("srv:") ? id : `srv:${id}`;
-      get().push({ name: "conversation", chatId: localId });
+      // Back from the new group returns to the chat list, not to "Nouveau groupe".
+      set((st) => ({
+        stack: [
+          ...st.stack.filter((sc) => sc.name !== "new-group" && sc.name !== "new-chat"),
+          { name: "conversation", chatId: localId },
+        ],
+      }));
     })().catch(async (err) => {
       console.warn("[wipp] group create failed", err);
       const { Alert } = await import("react-native");

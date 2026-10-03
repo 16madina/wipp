@@ -15,6 +15,10 @@ import { colors, layout } from "../theme";
 
 const CATS = ["all", "auto", "home", "goods", "jobs", "services"] as const;
 const GEO = { lat: 45.531, lng: -73.518 };
+/** Real cards and events have no GPS yet (0,0). Their distance is unknown, not 8 000 km. */
+function knownMeters(p: { lat?: number; lng?: number }) {
+  return p.lat && p.lng ? metersBetween(GEO, { lat: p.lat, lng: p.lng }) : null;
+}
 type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
 const HUB_BACKGROUNDS = {
@@ -163,9 +167,11 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
   const near = [
     ...shops.map((s) => ({
       key: `s-${s.id}`,
-      meters: metersBetween(GEO, s),
+      meters: knownMeters(s),
+      city: s.city,
       title: s.name,
-      sub: shopCatLabel(s.category, t),
+      // A real card keeps the exact category its owner picked (e.g. « Mode & accessoires »).
+      sub: s.id.startsWith("business:") && s.tags?.[0] ? s.tags[0] : shopCatLabel(s.category, t),
       image: s.image,
       onPress: () =>
         push(
@@ -176,22 +182,24 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
     })),
     ...events.map((e) => ({
       key: `e-${e.id}`,
-      meters: metersBetween(GEO, e),
+      meters: knownMeters(e),
+      city: (e as { city?: string }).city,
       title: e.title,
-      sub: e.kind,
+      sub: t("hubEvents"),
       image: e.image,
       onPress: () => push({ name: "lifestyle" as const, itemId: e.id }),
     })),
     ...pharmacies.filter((p) => p.onDuty).map((p) => ({
       key: `p-${p.id}`,
-      meters: metersBetween(GEO, p),
+      meters: knownMeters(p),
+      city: (p as { city?: string }).city,
       title: p.name,
       sub: t("onDuty"),
       image: "",
       onPress: () => push({ name: "pharmacy" as const, pharmacyId: p.id }),
     })),
   ]
-    .sort((a, b) => a.meters - b.meters)
+    .sort((a, b) => (a.meters ?? Number.MAX_SAFE_INTEGER) - (b.meters ?? Number.MAX_SAFE_INTEGER))
     .slice(0, 6);
   const hubs = [
     { icon: Tag, title: t("hubListings"), sub: t("hubListingsSub"), kind: "listings" as const, go: () => go("listings") },
@@ -229,7 +237,7 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
               {src ? <Image source={src} style={{ height: 80, width: 144 }} contentFit="cover" /> : <View style={{ height: 80, backgroundColor: colors.navy }} />}
               <View style={{ padding: 8 }}>
                 <Text numberOfLines={1} style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{row.title}</Text>
-                <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>{formatMeters(row.meters, lang)} · {row.sub}</Text>
+                <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>{[row.meters != null ? formatMeters(row.meters, lang) : row.city, row.sub].filter(Boolean).join(" · ")}</Text>
               </View>
             </Press>
           );

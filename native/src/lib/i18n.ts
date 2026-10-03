@@ -351,10 +351,10 @@ const fr = {
   e2e: "Chiffrement de bout en bout",
   e2eAlways: "Toujours activé",
   e2eBanner:
-    "Les DM sont chiffrés de bout en bout. Groupes et médias : bientôt. Touchez pour en savoir plus.",
+    "Messages, photos et vidéos privés chiffrés de bout en bout. Touchez pour en savoir plus.",
   e2eInfoTitle: "Chiffrement",
   e2eInfoBody:
-    "Sur les messages privés (DM), seul toi et ton contact avez les clés. Le serveur ne stocke que du ciphertext AES-256-GCM. Groupes et médias : phase suivante.",
+    "Sur les messages privés (DM), seul toi et ton contact avez les clés. Le serveur ne stocke que du contenu chiffré (AES-256-GCM), photos et vidéos comprises. Les groupes ne sont pas encore chiffrés de bout en bout.",
   e2eSafety: "Numéro de sécurité",
   e2eSafetyHint:
     "Comparez-le en personne. S’il est identique, personne ne s’est glissé au milieu.",
@@ -385,7 +385,7 @@ const fr = {
   e2eHow3: "Chaque message texte DM est scellé en AES-256-GCM avant l’envoi.",
   e2eKeyChanged: "Clé renouvelée. Les anciens messages sont illisibles.",
   e2eCompare: "Numéro de sécurité",
-  e2eBody: "Les DM serveur sont chiffrés de bout en bout. Groupes et médias suivront.",
+  e2eBody: "Les messages privés, photos et vidéos comprises, sont chiffrés de bout en bout. Les groupes suivront.",
 
   themeLight: "Clair",
   themeDark: "Sombre",
@@ -1350,10 +1350,10 @@ const en: Record<keyof typeof fr, string> = {
   viewOnceOpened: "Opened",
   e2e: "End-to-end encryption",
   e2eAlways: "Always on",
-  e2eBanner: "DMs are end-to-end encrypted. Groups and media: coming next. Tap to learn more.",
+  e2eBanner: "Private messages, photos and videos are end-to-end encrypted. Tap to learn more.",
   e2eInfoTitle: "Encryption",
   e2eInfoBody:
-    "On private DMs, only you and your contact hold the keys. The server stores AES-256-GCM ciphertext only. Groups and media come next.",
+    "On private DMs, only you and your contact hold the keys. The server only stores encrypted content (AES-256-GCM), photos and videos included. Groups are not end-to-end encrypted yet.",
   e2eSafety: "Safety number",
   e2eSafetyHint: "Compare it in person. If it matches, nobody is in the middle.",
   e2eVerify: "Mark as verified",
@@ -1383,7 +1383,7 @@ const en: Record<keyof typeof fr, string> = {
   e2eHow3: "Each DM text message is sealed with AES-256-GCM before send.",
   e2eKeyChanged: "Key renewed. Older messages are unreadable.",
   e2eCompare: "Safety number",
-  e2eBody: "Server DMs are end-to-end encrypted. Groups and media come next.",
+  e2eBody: "Private messages, photos and videos included, are end-to-end encrypted. Groups come next.",
 
   themeLight: "Light",
   themeDark: "Dark",
