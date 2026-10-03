@@ -454,7 +454,7 @@ export function PhoneEntryScreen() {
       <Abs t={4.5} l={32} h={7} w={36}>
         <Image source={logoGold} style={{ width: "100%", height: "100%" }} contentFit="contain" />
       </Abs>
-      <Abs t={68} l={3} h={30} w={94}>
+      <Abs t={63.5} l={3} h={34.5} w={94}>
         <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </Abs>
       <Abs t={6} l={4} h={6} w={12}>
@@ -462,7 +462,7 @@ export function PhoneEntryScreen() {
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
       </Abs>
-      <Abs t={69.5} l={7} h={9.5} w={86}>
+      <Abs t={65} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
           <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
@@ -496,7 +496,8 @@ export function PhoneEntryScreen() {
           </View>
         </View>
       </Abs>
-      <Abs t={80.3} l={8} w={84}>
+      <Abs t={76.3} l={8} w={84}>
+        <View style={{ gap: 10 }}>
         <CheckLine
           checked={legal}
           onToggle={setLegal}
@@ -509,6 +510,7 @@ export function PhoneEntryScreen() {
           end="."
         />
         <CheckLine checked={adult} onToggle={setAdult} labelStart="Je reconnais avoir " linkA="18 ans et plus" onA={() => push({ name: "legal", doc: "age" })} end="." />
+        </View>
       </Abs>
       {error ? (
         <Abs t={85.3} l={10} h={4} w={80}>
