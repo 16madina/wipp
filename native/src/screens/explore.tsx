@@ -560,7 +560,7 @@ function ShopsPane() {
   }, []);
   const shown = shops.filter((s) => {
     if (cat === "all") return true;
-    if (cat === "mode") return /mode|fashion|vêtement|vetement/i.test(`${s.name} ${s.tags?.join(" ") ?? ""} ${s.bio}`);
+    if (cat === "mode") return /mode|fashion|vêtement|vetement|chaussure|bijou|montre|accessoire/i.test(`${s.name} ${s.tags?.join(" ") ?? ""} ${s.bio}`);
     return s.category === cat;
   });
   const shortcuts: { id: ShopCategory | "mode"; label: string }[] = [
@@ -571,7 +571,7 @@ function ShopsPane() {
     { id: "beauty", label: "Beauté" },
   ];
   function coverFor(id: ShopCategory | "mode") {
-    const match = shops.find((s) => (id === "mode" ? /mode|fashion|vêtement|vetement/i.test(`${s.name} ${s.tags?.join(" ") ?? ""}`) : s.category === id) && s.image);
+    const match = shops.find((s) => (id === "mode" ? /mode|fashion|vêtement|vetement|chaussure|bijou|montre|accessoire/i.test(`${s.name} ${s.tags?.join(" ") ?? ""}`) : s.category === id) && s.image);
     if (!match?.image) return null;
     return match.image.startsWith("http") ? { uri: match.image } : wippSrc(match.image);
   }

@@ -287,6 +287,12 @@ function mapCard(row: CardRow) {
   };
 }
 
+/** Public view: the precise address stays private unless the owner chose to publish it. */
+function publicCard(row: CardRow) {
+  const card = mapCard(row);
+  return card.showAddress ? card : { ...card, address: null };
+}
+
 function galleryPaths(meId: string, paths: string[] | undefined, previous: string[]) {
   if (!paths) return previous;
   const next = paths.map((path) => path.trim()).filter(Boolean).slice(0, 8);
@@ -418,7 +424,7 @@ export async function listPublicBusinessCards(q = "") {
     order by updated_at desc
     limit 60
   `;
-  return Promise.all(rows.map((row) => withServerMedia(mapCard(row))));
+  return Promise.all(rows.map((row) => withServerMedia(publicCard(row))));
 }
 
 export async function getPublicBusinessCard(publicId: string) {
@@ -432,7 +438,7 @@ export async function getPublicBusinessCard(publicId: string) {
     where lower(public_id) = ${id} and is_published = true
     limit 1
   `;
-  return rows[0] ? withServerMedia(mapCard(rows[0])) : null;
+  return rows[0] ? withServerMedia(publicCard(rows[0])) : null;
 }
 
 export async function issueTempQr(meId: string) {

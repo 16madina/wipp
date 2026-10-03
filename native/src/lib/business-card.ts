@@ -109,10 +109,10 @@ export function cardToShop(
 ) {
   const cat = card.category.toLowerCase();
   const category =
-    /ongle|nail/.test(cat) ? "nails" as const
-    : /coiff|hair/.test(cat) ? "hair" as const
-    : /beauté|beauty/.test(cat) ? "beauty" as const
-    : /restau|food|traiteur/.test(cat) ? "restaurant" as const
+    /ongle|onglerie|nail/.test(cat) ? "nails" as const
+    : /coiff|hair|tress|perruq|barb/.test(cat) ? "hair" as const
+    : /beauté|beaute|beauty|cosm|maquill|soin/.test(cat) ? "beauty" as const
+    : /restau|food|traiteur|épicerie|epicerie|aliment/.test(cat) ? "restaurant" as const
     : /plomb/.test(cat) ? "plumbing" as const
     : /immo/.test(cat) ? "realty" as const
     : /boulang|pâtiss|patiss/.test(cat) ? "bakery" as const
