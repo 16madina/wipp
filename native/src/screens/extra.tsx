@@ -522,7 +522,7 @@ function StoryPlayback({ uri, paused, onEnd, onProgress }: { uri: string; paused
 export function NewGroupFlow() {
   const pop = useWippStore((s) => s.pop);
   const usersById = useWippStore((s) => s.users);
-  const users = Object.values(usersById).filter((u) => u.connected);
+  const users = Object.values(usersById).filter((u) => u?.connected);
   const [picked, setPicked] = useState<string[]>([]);
   const [name, setName] = useState("");
   return (

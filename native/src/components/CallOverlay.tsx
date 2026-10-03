@@ -105,6 +105,28 @@ export function CallOverlay() {
     return () => clearInterval(id);
   }, [serverConnected]);
 
+  // Safety net: if the server says the call is over (other side hung up), close it here too.
+  useEffect(() => {
+    if (!session?.callId || session.group || (session.phase !== "connected" && session.phase !== "reconnecting")) return;
+    const id = session.callId;
+    const tick = setInterval(() => {
+      void import("../lib/calls/livekit-client").then(async ({ callStatus }) => {
+        try {
+          const st = (await callStatus(id)).invite.status;
+          const live = useCallSession.getState().session;
+          if (live?.callId !== id) return;
+          if (st === "ended" || st === "cancelled" || st === "missed" || st === "rejected") {
+            void roomRef.current?.disconnect();
+            useCallSession.getState().patch({ phase: "ended", url: undefined, token: undefined });
+          }
+        } catch {
+          /* offline: LiveKit events still apply */
+        }
+      });
+    }, 4000);
+    return () => clearInterval(tick);
+  }, [session?.callId, session?.phase, session?.group]);
+
   useEffect(() => {
     if (!session || session.phase !== "connected" || !session.startedAt) return;
     const id = setInterval(() => setSec(Math.floor((Date.now() - session.startedAt) / 1000)), 1000);
@@ -143,6 +165,13 @@ export function CallOverlay() {
     room.on(RoomEvent.Reconnected, () => patch({ phase: "connected" }));
     room.on(RoomEvent.Disconnected, () => {
       if (!cancelled) patch({ phase: "ended", url: undefined, token: undefined });
+    });
+    // One-to-one call: when the other person leaves the room, the call is over for us too.
+    room.on(RoomEvent.ParticipantDisconnected, () => {
+      if (!cancelled && !session.group && room.remoteParticipants.size === 0) {
+        void room.disconnect();
+        patch({ phase: "ended", url: undefined, token: undefined });
+      }
     });
     void (async () => {
       const mic = await Audio.requestPermissionsAsync();
@@ -230,7 +259,7 @@ export function CallOverlay() {
   }
 
   return (
-    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.navy, alignItems: "center", justifyContent: "space-between", paddingVertical: 48 }}>
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: colors.navy, alignItems: "center", justifyContent: "space-between", paddingVertical: 48 }}>
       <Press onPress={() => patch({ pip: true })} style={{ alignSelf: "flex-start", marginLeft: 20 }}>
         <Text style={{ color: "rgba(247,249,252,0.7)" }}>Réduire</Text>
       </Press>

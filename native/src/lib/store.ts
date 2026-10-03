@@ -1158,7 +1158,7 @@ export const useWippStore = create<Store>((set, get) => ({
       messages: { ...s.messages, [chat.id]: [] },
       users: {
         ...s.users,
-        [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId],
+        ...(s.users[userId] ? { [userId]: { ...s.users[userId], connected: true } } : {}),
       },
     }));
     get().push({ name: "conversation", chatId: chat.id });
@@ -1180,7 +1180,7 @@ export const useWippStore = create<Store>((set, get) => ({
         const status = await sendRequest(user.username, channel, userId);
         if (status === "already_connected" || status === "accepted_existing" || status === "accepted") {
           set((s) => ({
-            users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
+            users: { ...s.users, ...(s.users[userId] ? { [userId]: { ...s.users[userId], connected: true } } : {}) },
             sentRequestIds: s.sentRequestIds.filter((id) => id !== userId),
           }));
           return;
@@ -1207,7 +1207,7 @@ export const useWippStore = create<Store>((set, get) => ({
             requests: s.requests.filter((r) => r.id !== id),
             users: {
               ...s.users,
-              [req.fromId]: s.users[req.fromId] ? { ...s.users[req.fromId], connected: true } : s.users[req.fromId],
+              ...(s.users[req.fromId] ? { [req.fromId]: { ...s.users[req.fromId], connected: true } } : {}),
             },
           }));
           await get().refreshIncomingRequests();
@@ -1221,7 +1221,7 @@ export const useWippStore = create<Store>((set, get) => ({
       requests: s.requests.map((r) => (r.id === id ? { ...r, status: "accepted" } : r)),
       users: {
         ...s.users,
-        [req.fromId]: s.users[req.fromId] ? { ...s.users[req.fromId], connected: true } : s.users[req.fromId],
+        ...(s.users[req.fromId] ? { [req.fromId]: { ...s.users[req.fromId], connected: true } } : {}),
       },
     }));
     get().openOrCreateDm(req.fromId);

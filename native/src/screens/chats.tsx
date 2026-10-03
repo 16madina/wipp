@@ -422,7 +422,7 @@ export function NewChatScreen() {
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
   const [q, setQ] = useState("");
   const contacts = Object.values(users).filter(
-    (u) => u.connected && !blocked.includes(u.id) && `${u.displayName} ${u.username}`.toLowerCase().includes(q.toLowerCase()),
+    (u) => u?.connected && !blocked.includes(u.id) && `${u.displayName} ${u.username}`.toLowerCase().includes(q.toLowerCase()),
   );
   const actions = [
     { icon: ScanLine, label: t("scanQr"), go: () => push({ name: "scanner" }) },
@@ -585,6 +585,7 @@ export function GlobalSearchScreen() {
   // Once signed in, only real WIPP profiles are searchable: the demo people stay out.
   const localPeople = Object.values(users).filter(
     (u) =>
+      Boolean(u) &&
       needle.length >= 1 &&
       (!serverConnected || u.id.startsWith("srvuser:")) &&
       `${u.displayName} ${u.username}`.toLowerCase().includes(needle.replace(/^@/, "")),

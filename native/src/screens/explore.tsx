@@ -440,7 +440,7 @@ function ShopSearch({ q }: { q: string }) {
   const people = useMemo(
     () =>
       Object.values(users).filter(
-        (u) => (!serverConnected || u.id.startsWith("srvuser:")) && fold(`${u.displayName} ${u.username}`).includes(needle),
+        (u) => Boolean(u) && (!serverConnected || u.id.startsWith("srvuser:")) && fold(`${u.displayName} ${u.username}`).includes(needle),
       ),
     [users, needle, serverConnected],
   );

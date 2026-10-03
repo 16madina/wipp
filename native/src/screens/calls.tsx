@@ -126,7 +126,7 @@ export function CallsScreen() {
         <Press onPress={() => setPicker(false)} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: "#121722", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 16, paddingBottom: 32 }}>
             <Text style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 12 }}>{t("newCall")}</Text>
-            {Object.values(users).filter((u) => u.connected).map((u) => (
+            {Object.values(users).filter((u) => u?.connected).map((u) => (
               <Press key={u.id} onPress={() => { setPicker(false); push({ name: "active-call", userId: u.id, kind: "audio", dir: "out" }); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
                 <Avatar user={u} size={40} />
                 <Text style={{ color: colors.fg, fontSize: 15 }}>{u.displayName}</Text>

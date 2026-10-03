@@ -139,7 +139,7 @@ export function ShareSurpriseSheet({
   const insets = useSafeAreaInsets();
   const { tile, compact } = useDeviceLayout();
   const users = useWippStore((s) => s.users);
-  const contacts = Object.values(users).filter((u) => u.connected);
+  const contacts = Object.values(users).filter((u) => u?.connected);
   const [stage, setStage] = useState<Stage>(initialStage);
   const [secret, setSecret] = useState("");
   const [kind, setKind] = useState<SurpriseType>("scratch");

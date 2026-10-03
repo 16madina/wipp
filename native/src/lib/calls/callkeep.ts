@@ -1,3 +1,4 @@
+import * as Device from "expo-device";
 import { Platform } from "react-native";
 
 type Keep = {
@@ -18,7 +19,9 @@ export function callKeepAvailable() {
 }
 
 export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (callId: string) => void) {
-  if (Platform.OS === "web" || keep) return;
+  // CallKit does not run on the iOS simulator: it reports every call as ended,
+  // which the app turned into an automatic "decline". Use the in-app screen there.
+  if (Platform.OS === "web" || keep || !Device.isDevice) return;
   try {
     const mod = require("react-native-callkeep") as { default: Keep };
     keep = mod.default;

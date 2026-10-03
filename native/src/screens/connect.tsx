@@ -314,6 +314,7 @@ export function SearchUserScreen() {
           if (!serverConnected) {
             setHits(
               Object.values(useWippStore.getState().users)
+                .filter(Boolean)
                 .filter((u) => u.username.includes(needle) || u.displayName.toLowerCase().includes(needle))
                 .map((u) => u.id),
             );
@@ -464,7 +465,7 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
         setRelation(r);
         if (r === "connected") {
           useWippStore.setState((s) => ({
-            users: { ...s.users, [userId]: s.users[userId] ? { ...s.users[userId], connected: true } : s.users[userId] },
+            users: { ...s.users, ...(s.users[userId] ? { [userId]: { ...s.users[userId], connected: true } } : {}) },
           }));
         }
       });

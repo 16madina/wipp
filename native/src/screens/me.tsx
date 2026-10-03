@@ -76,7 +76,7 @@ export function MeScreen() {
   const listings = useWippStore((s) => s.listings);
   const lifestyle = useWippStore((s) => s.lifestyle);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const contacts = Object.values(users).filter((u) => u.connected).length;
+  const contacts = Object.values(users).filter((u) => u?.connected).length;
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   void vaultEpoch;
   const groups = chats.filter((c) => c.type === "group" && c.participantIds.includes("me") && !isPrivateChat(c.id)).length;
