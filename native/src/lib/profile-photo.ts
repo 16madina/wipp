@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./firebase-config";
@@ -7,6 +8,25 @@ import { cachedProfile, setCachedProfile } from "./messaging/supa";
 import { useWippStore } from "./store";
 import { supabase } from "./supabase";
 
+/** Native upload task on phones; plain fetch in the browser (no upload task on web). */
+async function uploadPublicMedia(endpoint: string, uri: string, mime: string, token: string) {
+  const headers = { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, "Content-Type": mime, "x-upsert": "false" };
+  if (Platform.OS === "web") {
+    const body = await (await fetch(uri)).blob();
+    const res = await fetch(endpoint, { method: "POST", headers, body });
+    if (!res.ok) throw new Error("Envoi de la photo impossible");
+    return;
+  }
+  const task = createUploadTask(endpoint, uri, {
+    httpMethod: "POST",
+    uploadType: FileSystemUploadType.BINARY_CONTENT,
+    sessionType: FileSystemSessionType.FOREGROUND,
+    headers,
+  });
+  const result = await task.uploadAsync();
+  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de la photo impossible");
+}
+
 export async function saveProfilePhotoFromUri(uri: string, mime = "image/jpeg") {
   const me = await myProfileId();
   const token = await firebaseIdToken();
@@ -14,23 +34,7 @@ export async function saveProfilePhotoFromUri(uri: string, mime = "image/jpeg") 
   const ext = mime.includes("png") ? "png" : "jpg";
   const path = `business/${me}/avatar-${crypto.randomUUID()}.${ext}`;
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-public-media/${path}`;
-  const task = createUploadTask(
-    endpoint,
-    uri,
-    {
-      httpMethod: "POST",
-      uploadType: FileSystemUploadType.BINARY_CONTENT,
-      sessionType: FileSystemSessionType.FOREGROUND,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        "Content-Type": mime,
-        "x-upsert": "false",
-      },
-    },
-  );
-  const result = await task.uploadAsync();
-  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de la photo impossible");
+  await uploadPublicMedia(endpoint, uri, mime, token);
   const { data, error } = await supabase.from("wipp_profiles").update({ avatar_url: path }).eq("id", me).select("id");
   if (error || !data?.length) throw new Error("La photo a été envoyée, mais le profil n’a pas pu être mis à jour.");
   const known = cachedProfile();
@@ -53,23 +57,7 @@ export async function changeProfilePhoto() {
   const ext = mime.includes("png") ? "png" : "jpg";
   const path = `business/${me}/avatar-${crypto.randomUUID()}.${ext}`;
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-public-media/${path}`;
-  const task = createUploadTask(
-    endpoint,
-    asset.uri,
-    {
-      httpMethod: "POST",
-      uploadType: FileSystemUploadType.BINARY_CONTENT,
-      sessionType: FileSystemSessionType.FOREGROUND,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        "Content-Type": mime,
-        "x-upsert": "false",
-      },
-    },
-  );
-  const result = await task.uploadAsync();
-  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de la photo impossible");
+  await uploadPublicMedia(endpoint, asset.uri, mime, token);
   const { data, error } = await supabase.from("wipp_profiles").update({ avatar_url: path }).eq("id", me).select("id");
   if (error || !data?.length) throw new Error("La photo a été envoyée, mais le profil n’a pas pu être mis à jour.");
   const known = cachedProfile();

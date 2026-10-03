@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./firebase-config";
 import { firebaseIdToken } from "./firebase-phone";
@@ -226,6 +227,25 @@ export async function uploadBusinessImageFile(
   const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
   const path = `${profileId}/${role}-${crypto.randomUUID()}.${ext}`;
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-business-cards/${path}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    apikey: SUPABASE_ANON_KEY,
+    "Content-Type": mime,
+    "x-upsert": "false",
+  };
+  if (Platform.OS === "web") {
+    // No native upload task in the browser: send the picked file (blob: or data: URI) with fetch.
+    const body = await (await fetch(uri)).blob();
+    onProgress?.(0, body.size);
+    const res = await fetch(endpoint, { method: "POST", headers, body });
+    if (!res.ok) throw new Error("Envoi de l’image impossible");
+    onProgress?.(body.size, body.size);
+    try {
+      return { path, url: await signBusinessImage(path) };
+    } catch {
+      return { path, url: uri };
+    }
+  }
   const task = createUploadTask(
     endpoint,
     uri,
