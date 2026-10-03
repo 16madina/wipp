@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -530,6 +531,7 @@ export function PhoneEntryScreen() {
 export function LoginScreen() {
   const t = useT();
   const push = useWippStore((s) => s.push);
+  const pop = useWippStore((s) => s.pop);
   const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [menuOpen, setMenuOpen] = useState(false);
   const [phone, setPhone] = useState("");
@@ -562,7 +564,37 @@ export function LoginScreen() {
   return (
     <Artwork source={authLogin}>
       {(reveal) => <>
-      <Abs t={57.2} l={5.5} h={10.5} w={89}>
+      {/* The background is decor only: everything else is drawn here. */}
+      <Abs t={0} l={0} h={100} w={100}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(2,5,14,0.82)", "rgba(2,5,14,0.45)", "rgba(2,5,14,0)"]}
+          locations={[0, 0.55, 0.85]}
+          start={{ x: 0, y: 0.3 }}
+          end={{ x: 1, y: 0.3 }}
+          style={{ flex: 1 }}
+        />
+      </Abs>
+      <Abs t={6} l={4} h={6} w={12}>
+        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ChevronLeft size={24} color={colors.fg} />
+        </Pressable>
+      </Abs>
+      <Abs t={11} l={6} w={84}>
+        <Image source={logoGold} style={{ width: 120, height: 52 }} contentFit="contain" contentPosition="left" />
+        <Text style={{ marginTop: 6, color: colors.accent, fontSize: 10, letterSpacing: 2, fontFamily: "Inter_600SemiBold" }}>DISCUTE · PARTAGE · DÉCOUVRE</Text>
+        <Text style={{ marginTop: 20, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.fg, fontSize: 34, lineHeight: 38, fontFamily: "Inter_700Bold" }}>
+          Content{"\n"}de te <Text style={{ color: colors.accent }}>revoir</Text> 👋
+        </Text>
+        <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.85)", fontSize: 17, fontFamily: "Inter_500Medium" }}>Retrouve ton WIPP</Text>
+        <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.82)", fontSize: 13, lineHeight: 19, maxWidth: 230 }}>
+          Entre le numéro associé à ton compte. Nous t’enverrons un code par SMS pour vérifier que c’est bien toi.
+        </Text>
+      </Abs>
+      <Abs t={58} l={3} h={30.5} w={94}>
+        <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+      </Abs>
+      <Abs t={59.5} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
           <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
@@ -596,16 +628,8 @@ export function LoginScreen() {
           </View>
         </View>
       </Abs>
-      <Abs t={67.15} l={5} h={6.5} w={90}>
-        <View pointerEvents="none" style={{ flex: 1, backgroundColor: colors.bg }} />
-      </Abs>
-      {error ? (
-        <Abs t={66.8} l={8} w={84}>
-          <Text style={{ color: colors.danger, fontSize: 10 }}>{error}</Text>
-        </Abs>
-      ) : null}
-      <Abs t={67.2} l={6} h={6.4} w={88}>
-        <View style={{ flex: 1, overflow: "hidden", justifyContent: "space-between", paddingVertical: 1 }}>
+      <Abs t={70.6} l={8} w={84}>
+        <View style={{ gap: 10 }}>
           <CheckLine
             checked={legal}
             onToggle={setLegal}
@@ -618,21 +642,22 @@ export function LoginScreen() {
             end="."
           />
           <CheckLine checked={adult} onToggle={setAdult} labelStart="Je reconnais avoir " linkA="18 ans et plus" onA={() => push({ name: "legal", doc: "age" })} end="." />
+          {error ? <Text style={{ color: colors.danger, fontSize: 11 }}>{error}</Text> : null}
         </View>
       </Abs>
-      <Abs t={73.45} l={5.1} h={7.6} w={89.8}>
-        <View style={{ flex: 1, borderRadius: 999, overflow: "hidden", backgroundColor: legal && adult ? "transparent" : colors.bg }}>
-          <ContinueHit ready={legal && adult} busy={busy} label={t("continue")} onPress={() => void tryLogin()} />
-        </View>
+      <Abs t={80.5} l={6} h={7} w={88}>
+        <ContinueHit ready={legal && adult} busy={busy} label={t("continue")} onPress={() => void tryLogin()} />
       </Abs>
-      <Abs t={89} l={20} h={4} w={60}>
+      <Abs t={90} l={10} h={6} w={80}>
         <Pressable
           accessibilityLabel="Je n’ai pas encore de compte"
           onPress={() => {
             void startFreshSignup().then(() => push({ name: "phone-entry" }));
           }}
-          style={{ flex: 1 }}
-        />
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
+          <Text style={{ textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.accent, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Je n’ai pas encore de compte</Text>
+        </Pressable>
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
       <KeyboardDone nativeID={phoneAccessoryId} />
