@@ -68,7 +68,24 @@ export const countdownChoices = [
   { seconds: 3600, label: "1 heure" },
 ];
 
+const clip = (id: string, label: string): SurpriseAnimationItem => ({
+  id,
+  label,
+  art: `fx/surprise/anims/${id}-poster.png`,
+  anim: `fx/surprise/anims/${id}.webp`,
+  enter: "pop",
+  durationMs: 10_000,
+});
+
 export const amourAnimations: SurpriseAnimationItem[] = [
+  clip("amour-je-taime", "Je t’aime"),
+  clip("amour-nounours", "Nounours"),
+  clip("amour-rose", "Rose"),
+  clip("amour-lettre", "Lettre d’amour"),
+  clip("amour-montgolfiere", "Je pense à toi"),
+  clip("amour-bisou", "Mon amour"),
+  clip("amour-buee", "Buée"),
+  clip("amour-mains-coeur", "Mains cœur"),
   {
     id: "amour-pluie-cristal",
     label: "Pluie d’amour",
@@ -130,6 +147,34 @@ const bonjourAnimations: SurpriseAnimationItem[] = [
     enter: "pop",
     durationMs: 10_000,
   },
+  clip("bonjour-reveil", "Réveil"),
+  clip("bonjour-soleil", "Soleil"),
+  clip("bonjour-croissant", "Petit-déj"),
+  clip("bonjour-tournesol", "Tournesol"),
+  clip("bonjour-avion", "Avion en papier"),
+  clip("bonjour-coucou", "Coucou"),
+  clip("bonjour-couette", "Debout !"),
+];
+
+const anniversaireAnimations: SurpriseAnimationItem[] = [
+  clip("anniversaire-gateau", "Gâteau"),
+  clip("anniversaire-cadeau", "Cadeau"),
+  clip("anniversaire-ballons", "Ballons"),
+  clip("anniversaire-cupcake", "Cupcake"),
+  clip("anniversaire-feux", "Feu d’artifice"),
+  clip("anniversaire-dechirure", "Surprise"),
+  clip("anniversaire-ecran", "Écran brisé"),
+  clip("anniversaire-ecran-2", "Écran brisé 2"),
+];
+
+const retablissementAnimations: SurpriseAnimationItem[] = [
+  clip("retablissement-soupe", "Soupe"),
+  clip("retablissement-nounours", "Câlin"),
+  clip("retablissement-bouquet", "Bouquet"),
+  clip("retablissement-nuage", "Après la pluie"),
+  clip("retablissement-coeur", "Cœur pansé"),
+  clip("retablissement-cadre", "Cadre"),
+  clip("retablissement-bulle", "Bulle"),
 ];
 
 const nuitAnimations: SurpriseAnimationItem[] = [
@@ -148,7 +193,19 @@ const nuitAnimations: SurpriseAnimationItem[] = [
 
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
   { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/bonjour-bonne-journee-poster.png", collection: "bonjour" },
+  {
+    id: "anniversaire",
+    label: "Anniversaire",
+    art: "fx/surprise/anims/anniversaire-gateau-poster.png",
+    collection: "anniversaire",
+  },
   { id: "amour", label: "Amour", art: "fx/surprise/anims/animation-amour.jpg", collection: "amour" },
+  {
+    id: "bon-retablissement",
+    label: "Bon rétablissement",
+    art: "fx/surprise/anims/retablissement-bouquet-poster.png",
+    collection: "bon-retablissement",
+  },
   { id: "beaute", label: "Beauté", art: "fx/surprise/anims/animation-beaute.jpg" },
   { id: "bonne-journee", label: "Bonne journée", art: "fx/surprise/anims/animation-journee.jpg", collection: "bonne-journee" },
   { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/animation-nuit.jpg", collection: "bonne-nuit" },
@@ -158,7 +215,9 @@ export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
 
 export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
   bonjour: bonjourAnimations,
+  anniversaire: anniversaireAnimations,
   amour: amourAnimations,
+  "bon-retablissement": retablissementAnimations,
   "bonne-journee": journeeAnimations,
   "bonne-nuit": nuitAnimations,
 };
@@ -172,7 +231,9 @@ export const surpriseKindArt: Record<SurpriseType, string> = {
 
 export const surpriseAnimations: SurpriseAnimationItem[] = [
   ...bonjourAnimations,
+  ...anniversaireAnimations,
   ...amourAnimations,
+  ...retablissementAnimations,
   ...journeeAnimations,
   ...nuitAnimations,
   ...surpriseAnimationCategories.filter((item) => !item.collection),

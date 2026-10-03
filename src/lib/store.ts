@@ -2390,7 +2390,7 @@ export const useWgoStore = create<WgoState>()(
         }),
     }),
     {
-      name: "wgo-store-v14",
+      name: "wgo-store-v15",
       skipHydration: true,
       partialize: (s) => ({
         onboarded: s.onboarded,
