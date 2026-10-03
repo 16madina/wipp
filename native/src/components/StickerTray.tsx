@@ -68,8 +68,8 @@ export function StickerTray({
   const title = TABS.find((item) => item.id === tab)?.label ?? "Stickers";
   const minCell = !query && tab === "pop" ? 132 : !query && tab === "moji" ? 64 : 80;
   const cols = Math.max(!query && tab === "pop" ? 2 : !query && tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
-  const stickerSize = tab === "pop" ? 88 : tab === "moji" ? 48 : 60;
-  const trayH = Math.min(tablet ? 340 : 300, Math.round(height * 0.36));
+  const stickerSize = tab === "pop" ? 96 : tab === "moji" ? 52 : 68;
+  const trayH = Math.min(tablet ? 420 : 360, Math.round(height * 0.42));
 
   useEffect(() => {
     if (tab === "pop") prefetchMoments();
@@ -115,60 +115,56 @@ export function StickerTray({
         borderTopWidth: 1,
         borderTopColor: colors.hair,
         paddingHorizontal: 12,
-        paddingTop: 6,
+        paddingTop: 8,
         transform: [{ translateY: slideY }],
       }}
     >
-      <View style={{ alignItems: "center", marginBottom: 6 }}>
-        <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.accent }}>{title}</Text>
-        <Press onPress={() => setSearch((v) => !v)} style={{ position: "absolute", right: 0, top: -4, width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
-          <Search size={20} color={colors.muted} />
-        </Press>
+      <View style={{ alignItems: "center", paddingBottom: 8 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.hair }} />
       </View>
       {search ? (
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Rechercher"
+          autoFocus
+          onBlur={() => {
+            if (!q.trim()) setSearch(false);
+          }}
+          placeholder={`Rechercher dans ${title}`}
           placeholderTextColor={colors.muted}
-          style={{ height: 40, borderRadius: 12, backgroundColor: colors.surface2, paddingHorizontal: 12, color: colors.fg, marginBottom: 6 }}
+          style={{ height: 36, borderRadius: 10, backgroundColor: colors.surface2, paddingHorizontal: 12, color: colors.fg, marginBottom: 8, fontSize: 15 }}
         />
-      ) : null}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
-        {TABS.map((item) => {
-          const on = tab === item.id && !query;
-          return (
-            <Press
-              key={item.id}
-              onPress={() => goto(item.id)}
-              style={{
-                minHeight: 28,
-                paddingHorizontal: 10,
-                borderRadius: 999,
-                backgroundColor: on ? colors.accent : "rgba(11,18,32,0.5)",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: on ? colors.accentFg : colors.muted }}>{item.label}</Text>
-            </Press>
-          );
-        })}
-      </ScrollView>
+      ) : (
+        <Press
+          onPress={() => setSearch(true)}
+          accessibilityLabel="Rechercher"
+          style={{ height: 36, borderRadius: 10, backgroundColor: colors.surface2, paddingHorizontal: 12, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 }}
+        >
+          <Search size={16} color={colors.muted} />
+          <Text style={{ fontSize: 15, color: colors.muted }}>{`Rechercher dans ${title}`}</Text>
+        </Press>
+      )}
       {tab === "wippie" && !query ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ flexGrow: 0, flexShrink: 0, height: 36 }}
+          contentContainerStyle={{ gap: 6, alignItems: "center", paddingBottom: 6 }}
+        >
           {(["tous", "femme", "homme", "comique", "emo"] as const).map((id) => (
             <Press
               key={id}
               onPress={() => setWippie(id)}
               style={{
-                minHeight: 26,
-                paddingHorizontal: 8,
+                height: 28,
+                paddingHorizontal: 12,
                 borderRadius: 999,
                 backgroundColor: wippie === id ? colors.accent : colors.navy,
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: wippie === id ? colors.accentFg : colors.muted }}>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: wippie === id ? colors.accentFg : colors.muted }}>
                 {id === "tous" ? "Tous" : id === "femme" ? "Elle" : id === "homme" ? "Lui" : id === "comique" ? "Comique" : "EMO"}
               </Text>
             </Press>
@@ -228,8 +224,7 @@ export function StickerTray({
                 flex: 1,
                 aspectRatio: 1,
                 margin: 2,
-                borderRadius: 14,
-                backgroundColor: "rgba(11,18,32,0.5)",
+                borderRadius: 12,
                 alignItems: "center",
                 justifyContent: "center",
                 overflow: "hidden",
@@ -240,7 +235,7 @@ export function StickerTray({
           )}
         />
       )}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderRadius: 16, backgroundColor: "rgba(11,18,32,0.5)", paddingVertical: 4 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: colors.hair, marginHorizontal: -12, paddingTop: 2, paddingBottom: 6 }}>
         {(
           [
             { id: "recent" as const, label: "Récents", icon: Clock },
@@ -257,24 +252,14 @@ export function StickerTray({
               accessibilityLabel={item.label}
               onPress={() => goto(item.id)}
               style={{
-                width: 40,
-                height: 40,
+                flex: 1,
+                height: 44,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <View
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 13,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: on ? colors.accent : "transparent",
-                }}
-              >
-                <item.icon size={16} color={on ? colors.accentFg : colors.fg} />
-              </View>
+              <item.icon size={22} color={on ? colors.accent : colors.muted} />
+              <View style={{ marginTop: 4, width: 18, height: 2, borderRadius: 1, backgroundColor: on ? colors.accent : "transparent" }} />
             </Press>
           );
         })}
