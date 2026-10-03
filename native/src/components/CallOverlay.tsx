@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AppState, Platform, Pressable, View, Text } from "react-native";
+import { Animated, AppState, PanResponder, Platform, Pressable, View, Text, useWindowDimensions } from "react-native";
 import { Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
 import { Audio } from "expo-av";
 import { Camera } from "expo-camera";
@@ -65,6 +65,21 @@ export function CallOverlay() {
   const [remoteMuted, setRemoteMuted] = useState(false);
   const [swapped, setSwapped] = useState(false);
   const lastTap = useRef(0);
+  const win = useWindowDimensions();
+  const pipPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const pipDrag = useRef(
+    PanResponder.create({
+      // Small moves stay a tap (reopen the call); bigger ones drag the mini player.
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) + Math.abs(g.dy) > 6,
+      onPanResponderGrant: () => {
+        pipPos.extractOffset();
+      },
+      onPanResponderMove: Animated.event([null, { dx: pipPos.x, dy: pipPos.y }], { useNativeDriver: false }),
+      onPanResponderRelease: () => {
+        pipPos.flattenOffset();
+      },
+    }),
+  ).current;
   const [sec, setSec] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const shownSystem = useRef<string | null>(null);
@@ -270,17 +285,23 @@ export function CallOverlay() {
       if (!room || live?.phase !== "connected" || live.kind !== "video" || live.camOff) return;
       const track = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
       if (!track) return;
+      // Only when iOS really stopped the capture; restarting a live camera freezes the call.
+      if (track.mediaStreamTrack?.readyState !== "ended") {
+        setLocalUrl(streamURL(track));
+        return;
+      }
       void track
         .restartTrack({ facingMode: live.facing === "environment" ? "environment" : "user" })
         .then(() => setLocalUrl(streamURL(track)))
         .catch(() => undefined);
     };
+    let prev = AppState.currentState;
     const sub = AppState.addEventListener("change", (st) => {
-      if (st === "active") revive();
+      if (st === "active" && prev === "background") revive();
+      prev = st;
     });
-    if (!session?.pip) revive();
     return () => sub.remove();
-  }, [session?.pip]);
+  }, []);
 
   useEffect(() => {
     const room = roomRef.current;
@@ -308,20 +329,27 @@ export function CallOverlay() {
   const terminal = ["ended", "declined", "missed", "busy", "failed"].includes(session.phase);
 
   if (session.pip && !terminal) {
+    const w = session.kind === "video" ? 132 : 220;
+    const h = session.kind === "video" && remoteUrl ? 176 : 64;
+    // Keep the mini player on screen: start top-right, clamp to the window while dragging.
+    const x = pipPos.x.interpolate({ inputRange: [-(win.width - w - 24), 0], outputRange: [-(win.width - w - 24), 0], extrapolate: "clamp" });
+    const y = pipPos.y.interpolate({ inputRange: [0, win.height - h - 120], outputRange: [0, win.height - h - 120], extrapolate: "clamp" });
     return (
-      <Press
-        onPress={() => patch({ pip: false })}
-        style={{ position: "absolute", top: 56, right: 12, width: session.kind === "video" ? 132 : 220, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy }}
+      <Animated.View
+        {...pipDrag.panHandlers}
+        style={{ position: "absolute", top: 56, right: 12, zIndex: 100, elevation: 100, width: w, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, transform: [{ translateX: x }, { translateY: y }] }}
       >
-        {session.kind === "video" && remoteUrl ? (
-          <RTCView streamURL={remoteUrl} style={{ width: 132, height: 176 }} objectFit="cover" />
-        ) : (
-          <View style={{ padding: 12 }}>
-            <Text numberOfLines={1} style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>{title}</Text>
-            <Text style={{ color: "rgba(247,249,252,0.7)", fontSize: 12 }}>{formatDuration(sec)}</Text>
-          </View>
-        )}
-      </Press>
+        <Press onPress={() => patch({ pip: false })}>
+          {session.kind === "video" && remoteUrl && !remoteMuted ? (
+            <RTCView streamURL={remoteUrl} style={{ width: 132, height: 176 }} objectFit="cover" zOrder={1} />
+          ) : (
+            <View style={{ padding: 12 }}>
+              <Text numberOfLines={1} style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>{title}</Text>
+              <Text style={{ color: "rgba(247,249,252,0.7)", fontSize: 12 }}>{formatDuration(sec)}</Text>
+            </View>
+          )}
+        </Press>
+      </Animated.View>
     );
   }
 
