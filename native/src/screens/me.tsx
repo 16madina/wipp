@@ -38,7 +38,7 @@ import { Btn, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, Scr
 import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
 import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
-import { CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
+import { AddressField, CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
   CARD_CATEGORIES,
   cardToShop,
@@ -1302,7 +1302,7 @@ export function BusinessCardEditorScreen() {
             onPress={() => setCountryOpen(true)}
           />
           <Field label="Ville *" value={draft.city} onChangeText={(v) => set("city", v)} />
-          <Field label="Adresse (facultative)" value={draft.address ?? ""} onChangeText={(v) => set("address", v || null)} />
+          <AddressField country={cardCountry} value={draft.address ?? ""} onChange={(v) => set("address", v)} onPickCity={(c) => set("city", c)} />
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 8 }}>
             <Text style={{ color: colors.fg, fontSize: 13 }}>Publier l’adresse précise</Text>
             <Toggle value={draft.showAddress} onChange={(v) => set("showAddress", v)} />

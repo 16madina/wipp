@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
-import { Modal, ScrollView, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Modal, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
-import { Check, ChevronDown, Clock, Search } from "lucide-react-native";
+import { Check, ChevronDown, Clock, MapPin, Search } from "lucide-react-native";
 import { Press } from "./ui";
 import { colors } from "../theme";
 import { flagUri, type Country } from "../lib/countries";
 import { WORLD_COUNTRIES } from "../lib/countries-world";
+
+// Browsers add an orange focus ring to inputs on web; the field background is enough.
+const noOutline = (Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) as object;
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -45,7 +48,7 @@ function SearchBox({ value, onChange, placeholder }: { value: string; onChange: 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, height: 44, marginBottom: 8 }}>
       <Search size={18} color={colors.muted} />
-      <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} autoCorrect={false} style={{ flex: 1, color: colors.fg, fontSize: 15 }} />
+      <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} autoCorrect={false} style={{ flex: 1, color: colors.fg, fontSize: 15 , ...noOutline }} />
     </View>
   );
 }
@@ -116,7 +119,7 @@ export function CategorySheet({ open, categories, selected, onClose, onPick }: {
             placeholder="Ex. Location de voitures"
             placeholderTextColor={colors.muted}
             maxLength={60}
-            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg, fontSize: 15 }}
+            style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg, fontSize: 15 , ...noOutline }}
           />
           <Press disabled={!custom.trim()} onPress={() => pick(custom.trim())} style={{ height: 44, paddingHorizontal: 16, borderRadius: 12, backgroundColor: custom.trim() ? colors.accent : colors.navy, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: custom.trim() ? colors.accentFg : colors.muted, fontFamily: "Inter_600SemiBold" }}>OK</Text>
@@ -250,6 +253,106 @@ export function DialPhoneField({ country, value, onChange }: { country: Country;
           style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0 }}
         />
       </View>
+    </View>
+  );
+}
+
+type AddressHit = { id: string; line: string; detail: string; city: string };
+
+/** OpenStreetMap address search (Photon): free, worldwide, filtered to the chosen country. */
+async function searchAddresses(q: string, countryId: string, signal: AbortSignal): Promise<AddressHit[]> {
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=15&lang=fr`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { features?: { properties: Record<string, string | undefined> }[] };
+  const seen = new Set<string>();
+  const out: AddressHit[] = [];
+  for (const f of data.features ?? []) {
+    const p = f.properties;
+    if ((p.countrycode ?? "").toUpperCase() !== countryId) continue;
+    const street = [p.housenumber, p.street].filter(Boolean).join(" ");
+    const line = p.name && p.name !== p.street ? (street ? `${p.name}, ${street}` : p.name) : street || p.name || "";
+    const city = p.city || p.town || p.village || p.county || "";
+    const detail = [p.district || p.locality, city, p.postcode].filter(Boolean).join(", ");
+    const key = `${line}|${detail}`;
+    if (!line || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ id: key, line, detail, city });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+/** Address input with suggestions as you type; picking one also fills the city. */
+export function AddressField({ country, value, onChange, onPickCity }: { country: Country; value: string; onChange: (v: string | null) => void; onPickCity: (city: string) => void }) {
+  const [hits, setHits] = useState<AddressHit[]>([]);
+  const [focused, setFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [picked, setPicked] = useState(false);
+  useEffect(() => {
+    const q = value.trim();
+    if (!focused || picked || q.length < 3) {
+      setHits([]);
+      return;
+    }
+    const ctrl = new AbortController();
+    const id = setTimeout(() => {
+      setLoading(true);
+      void searchAddresses(q, country.id, ctrl.signal)
+        .then(setHits)
+        .catch(() => undefined)
+        .finally(() => setLoading(false));
+    }, 350);
+    return () => {
+      clearTimeout(id);
+      ctrl.abort();
+    };
+  }, [value, country.id, focused, picked]);
+  return (
+    <View>
+      <View style={{ borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 12 }}>
+        <Text style={{ fontSize: 12, color: colors.muted }}>Adresse (facultative)</Text>
+        <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <MapPin size={16} color={colors.accent} />
+          <TextInput
+            value={value}
+            onChangeText={(v) => {
+              setPicked(false);
+              onChange(v || null);
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 200)}
+            placeholder={`Commence à taper une adresse en ${country.fr}`}
+            placeholderTextColor={colors.muted}
+            autoCorrect={false}
+            style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0 }}
+          />
+          {loading ? <ActivityIndicator size="small" color={colors.muted} /> : null}
+        </View>
+      </View>
+      {hits.length ? (
+        <View style={{ marginTop: 6, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+          {hits.map((h, i) => (
+            <Press
+              key={h.id}
+              onPress={() => {
+                onChange(h.line);
+                if (h.city) onPickCity(h.city);
+                setPicked(true);
+                setHits([]);
+              }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: i ? 1 : 0, borderTopColor: "rgba(255,255,255,0.06)" }}
+            >
+              <MapPin size={16} color={colors.muted} />
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 14 }}>{h.line}</Text>
+                {h.detail ? <Text numberOfLines={1} style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>{h.detail}</Text> : null}
+              </View>
+            </Press>
+          ))}
+          <Text style={{ paddingHorizontal: 14, paddingVertical: 6, color: "rgba(249,250,251,0.35)", fontSize: 10 }}>© OpenStreetMap</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
