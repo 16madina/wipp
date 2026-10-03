@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
-import { Alert, ScrollView, Text, TextInput, View } from "react-native";
-import { Calendar, ChevronLeft, Cross, Heart, Plus, Store, Tag } from "lucide-react-native";
+import { Alert, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { Calendar, CalendarPlus, ChevronLeft, Cross, Heart, MapPin, Plus, Search, Store, Tag } from "lucide-react-native";
+import { EventCard } from "../components/event-parts";
 import { Btn, Chip, Empty, GlassHeader, Header, IconBtn, PendingNote, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { useDeviceLayout } from "../lib/device-layout";
@@ -633,11 +634,31 @@ function ShopsPane() {
   );
 }
 
+const EVENT_FILTERS = ["Tous", "Musique", "Soirée", "Affaires", "Sport", "Culture", "Food", "Communauté"];
+
 function LifestylePane() {
   const lifestyle = useWippStore((s) => s.lifestyle);
-  const items = useMemo(() => lifestyle.filter(isUpcomingEvent), [lifestyle]);
+  const myCity = useWippStore((s) => (s.me.city || "").split(",")[0].trim());
+  const saves = useWippStore((s) => s.saves);
   const push = useWippStore((s) => s.push);
   const [loadError, setLoadError] = useState("");
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState("Tous");
+  const items = useMemo(() => {
+    const needle = fold(q.trim());
+    const near = fold(myCity);
+    return lifestyle
+      .filter(isUpcomingEvent)
+      .filter((e) => cat === "Tous" || fold(e.category ?? "") === fold(cat))
+      .filter((e) => !needle || fold(`${e.title} ${e.city} ${e.place} ${e.category ?? ""} ${e.details ?? ""} ${e.note}`).includes(needle))
+      // Events in my city first, then soonest first.
+      .sort((x, y) => {
+        const nx = near && fold(x.city) === near ? 0 : 1;
+        const ny = near && fold(y.city) === near ? 0 : 1;
+        if (nx !== ny) return nx - ny;
+        return (Date.parse(x.startsAt ?? "") || Infinity) - (Date.parse(y.startsAt ?? "") || Infinity);
+      });
+  }, [lifestyle, q, cat, myCity]);
   useEffect(() => {
     let cancel = false;
     void (async () => {
@@ -658,23 +679,70 @@ function LifestylePane() {
   }, []);
   return (
     <View style={{ paddingHorizontal: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.fg, fontSize: 28, fontFamily: "Inter_800ExtraBold" }}>Événements</Text>
+          <Text style={{ marginTop: 2, color: "rgba(249,250,251,0.7)", fontSize: 13 }}>Découvre, participe et vis des expériences sur WIPP.</Text>
+        </View>
+        <Press accessibilityLabel="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} style={{ width: 48, height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+          <CalendarPlus size={24} color={colors.accent} />
+        </Press>
+      </View>
+      <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 8, height: 46, borderRadius: 999, paddingHorizontal: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+        <Search size={18} color={colors.muted} />
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder="Rechercher un événement, une ville…"
+          placeholderTextColor={colors.muted}
+          style={{ flex: 1, color: colors.fg, fontSize: 15, ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) } as object}
+        />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+        {EVENT_FILTERS.map((c) => (
+          <Press key={c} onPress={() => setCat(c)} style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: cat === c ? colors.accent : "transparent", borderWidth: 1, borderColor: cat === c ? colors.accent : "rgba(255,255,255,0.18)" }}>
+            <Text style={{ color: cat === c ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{c}</Text>
+          </Press>
+        ))}
+      </ScrollView>
+      <View style={{ marginTop: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <MapPin size={18} color={colors.accent} />
+        <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{q || cat !== "Tous" ? "Résultats" : myCity ? `Événements près de toi` : "À venir"}</Text>
+      </View>
       {loadError ? <Empty title={loadError} /> : null}
       {!loadError && items.length === 0 ? (
         <View>
-          <Empty title="Aucun événement à venir" />
+          <Empty title={q || cat !== "Tous" ? "Aucun événement trouvé" : "Aucun événement à venir"} />
           <Btn label="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} />
         </View>
       ) : null}
       {items.map((e) => {
-        const src = wippSrc(e.image);
+        const src = e.image ? (e.image.startsWith("http") ? { uri: e.image } : wippSrc(e.image)) : null;
+        const start = e.startsAt ? new Date(e.startsAt) : null;
+        const end = e.endsAt ? new Date(e.endsAt) : null;
+        const saved = saves.some((x) => x.kind === "event" && x.id === e.id);
         return (
-          <Press key={e.id} onPress={() => push({ name: "lifestyle", itemId: e.id })} style={{ marginBottom: 12, borderRadius: 16, overflow: "hidden", backgroundColor: colors.glassCard }}>
-            {src ? <Image source={src} style={{ height: 120, width: "100%" }} contentFit="cover" /> : <View style={{ height: 80, backgroundColor: colors.navy }} />}
-            <View style={{ padding: 12 }}>
-              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{e.title}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>{e.when} · {e.isOnline ? "En ligne" : e.place} · {eventAccessText(e)}</Text>
-            </View>
-          </Press>
+          <EventCard
+            key={e.id}
+            title={e.title}
+            subtitle={(e.details || e.note || e.place || "").split("\n")[0]}
+            image={src}
+            starts={start && !Number.isNaN(start.getTime()) ? start : null}
+            ends={end && !Number.isNaN(end.getTime()) ? end : null}
+            city={e.city}
+            online={e.isOnline}
+            priceLabel={eventAccessText(e).toUpperCase()}
+            saved={saved}
+            onPress={() => push({ name: "lifestyle", itemId: e.id })}
+            onSave={() => {
+              void import("../lib/lot7/api").then(async ({ toggleSave }) => {
+                await toggleSave("event", e.id, !saved);
+                useWippStore.setState((s) => ({
+                  saves: saved ? s.saves.filter((x) => !(x.kind === "event" && x.id === e.id)) : [...s.saves, { kind: "event", id: e.id }],
+                }));
+              });
+            }}
+          />
         );
       })}
     </View>

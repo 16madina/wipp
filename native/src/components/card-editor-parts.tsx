@@ -322,7 +322,7 @@ export function AddressField({ country, value, onChange, onPickCity }: { country
             }}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 200)}
-            placeholder={`Commence à taper une adresse en ${country.fr}`}
+            placeholder="Commence à taper l’adresse"
             placeholderTextColor={colors.muted}
             autoCorrect={false}
             style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0, ...noOutline }}

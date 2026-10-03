@@ -22,8 +22,7 @@ import {
 import { Avatar } from "./Avatar";
 import { QrCard } from "./QrCard";
 import { WippWordmark } from "./Logo";
-
-const businessIntro = require("../../assets/business/business-intro.png");
+import { businessIntro } from "../lib/assets";
 import { EdgeBack, GlassHeader, Header, Press, ScreenRoot, SearchField } from "./ui";
 import { cardLink } from "../lib/business-card";
 import type { BusinessCardView } from "../lib/business-card";
