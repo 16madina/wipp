@@ -336,7 +336,13 @@ export async function captureLaunchIntents() {
 export async function onSessionReady() {
   await flushPendingNav();
   try {
-    const perm = await Notifications.getPermissionsAsync();
+    let perm = await Notifications.getPermissionsAsync();
+    // First session on this phone: ask right away (iOS popup, Android 13+ popup), like any messaging app.
+    if (perm.status === "undetermined" && Device.isDevice) {
+      await ensurePushChannels();
+      perm = await Notifications.requestPermissionsAsync();
+      if (perm.status === "granted") useWippStore.getState().setPushMaster(true);
+    }
     if (perm.status === "granted") {
       const prefs = useWippStore.getState();
       if (prefs.pushMaster) await registerDeviceToken();

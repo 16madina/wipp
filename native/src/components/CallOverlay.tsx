@@ -65,6 +65,8 @@ export function CallOverlay() {
   const [remoteMuted, setRemoteMuted] = useState(false);
   const [swapped, setSwapped] = useState(false);
   const lastTap = useRef(0);
+  // iOS video views can come back black after being unmounted (mini player, background): remount them.
+  const [viewEpoch, setViewEpoch] = useState(0);
   const win = useWindowDimensions();
   const pipPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const pipDrag = useRef(
@@ -83,6 +85,7 @@ export function CallOverlay() {
   const [sec, setSec] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const shownSystem = useRef<string | null>(null);
+  const reviveRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     void setupCallKeep(
@@ -282,9 +285,21 @@ export function CallOverlay() {
     const revive = () => {
       const room = roomRef.current;
       const live = useCallSession.getState().session;
+      setViewEpoch((n) => n + 1);
       if (!room || live?.phase !== "connected" || live.kind !== "video" || live.camOff) return;
       const track = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
-      if (!track) return;
+      if (!track) {
+        // Camera publication lost while away: publish it again.
+        void room.localParticipant
+          .setCameraEnabled(true, { facingMode: live.facing === "environment" ? "environment" : "user" })
+          .then((pub) => setLocalUrl(streamURL(pub?.track ?? null)))
+          .catch(() => undefined);
+        return;
+      }
+      if (track.isMuted) {
+        void track.unmute().then(() => setLocalUrl(streamURL(track))).catch(() => undefined);
+        return;
+      }
       // Only when iOS really stopped the capture; restarting a live camera freezes the call.
       if (track.mediaStreamTrack?.readyState !== "ended") {
         setLocalUrl(streamURL(track));
@@ -300,8 +315,13 @@ export function CallOverlay() {
       if (st === "active" && prev === "background") revive();
       prev = st;
     });
+    reviveRef.current = revive;
     return () => sub.remove();
   }, []);
+
+  useEffect(() => {
+    if (session && !session.pip) reviveRef.current?.();
+  }, [session?.pip]);
 
   useEffect(() => {
     const room = roomRef.current;
@@ -379,7 +399,7 @@ export function CallOverlay() {
       {/* Full-screen video, double tap swaps who is big and who is small. */}
       <Pressable onPress={doubleTap} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
         {main ? (
-          <RTCView streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={flip} zOrder={0} />
+          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={flip} zOrder={0} />
         ) : (
           <View style={{ alignItems: "center" }}>
             <Avatar user={user} size={112} />
@@ -389,7 +409,7 @@ export function CallOverlay() {
       </Pressable>
       {mini ? (
         <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", top: 110, right: 16, width: 108, height: 160, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", backgroundColor: "#000" }}>
-          <RTCView streamURL={mini} style={{ width: 108, height: 160 }} objectFit="cover" mirror={!flip} zOrder={1} />
+          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 108, height: 160 }} objectFit="cover" mirror={!flip} zOrder={1} />
         </Press>
       ) : null}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: 56, paddingHorizontal: 20, alignItems: "center" }}>
