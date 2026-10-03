@@ -295,11 +295,14 @@ function ContinueHit({
   busy,
   label,
   onPress,
+  solid,
 }: {
   ready: boolean;
   busy: boolean;
   label: string;
   onPress: () => void;
+  /** Draw the yellow button (backgrounds without a baked-in button). */
+  solid?: boolean;
 }) {
   return (
     <Pressable
@@ -311,12 +314,19 @@ function ContinueHit({
         borderRadius: 999,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: ready ? "transparent" : "#3a404c",
+        backgroundColor: ready ? (solid ? colors.accent : "transparent") : "#3a404c",
       }}
     >
       {busy ? (
-        <ActivityIndicator color={colors.accent} />
-      ) : ready ? null : (
+        <ActivityIndicator color={solid ? "#0b1220" : colors.accent} />
+      ) : ready ? (
+        solid ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Text style={{ color: "#0b1220", fontSize: 17, fontFamily: "Inter_700Bold" }}>{label}</Text>
+            <ArrowRight size={20} color="#0b1220" />
+          </View>
+        ) : null
+      ) : (
         <Text style={{ color: "rgba(247,249,252,0.62)", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{label}</Text>
       )}
     </Pressable>
@@ -519,7 +529,7 @@ export function PhoneEntryScreen() {
         </Abs>
       ) : null}
       <Abs t={87.05} l={4.8} h={7} w={90.4}>
-        <ContinueHit ready={legal && adult} busy={busy} label="Continuer" onPress={() => void continueWithPhone()} />
+        <ContinueHit ready={legal && adult} busy={busy} label="Continuer" onPress={() => void continueWithPhone()} solid />
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
       <KeyboardDone nativeID={phoneAccessoryId} />
@@ -632,7 +642,7 @@ export function LoginScreen() {
         </Abs>
       ) : null}
       <Abs t={72} l={6} h={7} w={88}>
-        <ContinueHit ready={phone.replace(/\D/g, "").length >= 6} busy={busy} label={t("continue")} onPress={() => void tryLogin()} />
+        <ContinueHit ready={phone.replace(/\D/g, "").length >= 6} busy={busy} label={t("continue")} onPress={() => void tryLogin()} solid />
       </Abs>
       {/* Consent was given at sign-up: a passive reminder is enough here. */}
       <Abs t={80.3} l={8} w={84}>
