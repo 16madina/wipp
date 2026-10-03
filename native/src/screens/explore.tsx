@@ -36,7 +36,7 @@ function listingPriceText(listing: Listing) {
   const negotiable = Boolean(listing.negotiable);
   if (/^gratuit/i.test(raw)) return negotiable ? "Gratuit · négociable" : raw || "Gratuit";
   const money = listing.currency && raw && !raw.includes(listing.currency) ? `${raw} ${listing.currency}` : raw;
-  if (!money) return negotiable ? "Prix négociable" : "";
+  if (!money) return negotiable ? "Prix négociable" : "Prix à préciser";
   return negotiable && !/négociable/i.test(money) ? `${money} · négociable` : money;
 }
 
@@ -682,6 +682,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
   const saved = useWippStore((s) => s.saves.some((item) => item.kind === "listing" && item.id === listingId));
   const src = listing?.image?.startsWith("http") ? { uri: listing.image } : wippSrc(listing?.image);
   if (!listing) return <Missing onBack={pop} />;
+  const mine = listing.sellerId === "me" || listing.sellerId === useWippStore.getState().serverProfileId;
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -702,12 +703,11 @@ export function ListingScreen({ listingId }: { listingId: string }) {
           {listing.condition ? <Text style={{ marginTop: 8, color: colors.fg }}>{CONDITION_LABEL[listing.condition]}</Text> : null}
           <Text style={{ marginTop: 12, color: colors.fg, lineHeight: 20 }}>{listing.description}</Text>
           <Text style={{ marginTop: 12, color: colors.muted }}>{listing.contactPhone ? listing.contactPhone : "Contact par message WIPP"}</Text>
-          <Btn label="Contacter" onPress={() => seller && openOrCreateDm(seller.id)} style={{ marginTop: 20 }} />
+          {mine ? null : <Btn label="Contacter" onPress={() => seller && openOrCreateDm(seller.id)} style={{ marginTop: 20 }} />}
           <Btn
-            label="Options"
+            label={mine ? "Modifier ou supprimer" : "Options"}
             variant="secondary"
             onPress={() => {
-              const mine = listing.sellerId === "me" || listing.sellerId === useWippStore.getState().serverProfileId;
               if (mine) {
                 Alert.alert("Annonce", undefined, [
                   { text: "Modifier", onPress: () => push({ name: "create-listing", listingId: listing.id }) },
@@ -778,7 +778,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             }}
             style={{ marginTop: 8 }}
           />
-          <Btn
+          {mine ? null : <Btn
             label={saved ? "Retirer des enregistrés" : "Enregistrer"}
             onPress={() => {
               const on = saved;
@@ -794,7 +794,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               });
             }}
             style={{ marginTop: 8 }}
-          />
+          />}
           {listing.sellerId === "me" ? (
             <Btn
               label="Retirer l’annonce"

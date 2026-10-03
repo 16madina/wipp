@@ -210,7 +210,7 @@ export function BusinessCardExperience({
     <ScreenRoot>
       <GlassHeader>
         <Header
-          title="Ma carte de visite"
+          title={owner ? "Ma carte de visite" : card.name || "Carte professionnelle"}
           onBack={onBack}
           right={<MoreHorizontal size={22} color={colors.fg} />}
         />
@@ -220,12 +220,15 @@ export function BusinessCardExperience({
           <View style={{ height: 168, backgroundColor: colors.navy }}>
             {card.coverUrl ? (
               <Image source={{ uri: card.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 168 }} contentFit="cover" />
-            ) : (
+            ) : owner ? (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ color: card.coverUnresolved ? colors.danger : colors.muted, textAlign: "center", paddingHorizontal: 16 }}>
                   {card.coverUnresolved ? "La bannière est enregistrée, mais son affichage a échoué." : "Ajoute une photo de couverture"}
                 </Text>
               </View>
+            ) : (
+              // A visitor never sees owner instructions: an empty banner is just the brand color.
+              <View style={{ flex: 1, backgroundColor: colors.surface2 }} />
             )}
           </View>
           <View style={{ paddingHorizontal: 16, paddingBottom: 18 }}>

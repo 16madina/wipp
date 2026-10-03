@@ -911,7 +911,7 @@ export const useWippStore = create<Store>((set, get) => ({
           // Signed in for real: the demo people stay in memory for old references,
           // but they are no longer contacts (new chat, new group, call picker, counts).
           for (const [id, u] of Object.entries(users)) {
-            if (id !== "me" && !id.startsWith("srvuser:") && u.connected) users[id] = { ...u, connected: false };
+            if (u && id !== "me" && !id.startsWith("srvuser:") && u.connected) users[id] = { ...u, connected: false };
           }
           if (profile.avatarUrl) {
             if (users.me) users.me = { ...users.me, avatar: profile.avatarUrl };

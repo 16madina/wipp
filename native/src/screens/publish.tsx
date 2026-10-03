@@ -422,10 +422,10 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
               <Text style={{ color: colors.muted }}>{city.trim() || "Ville"} · {LISTING_CATS.find((item) => item.id === category)?.label}</Text>
             </View>
           </Section>
-          {error ? <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text> : null}
           {status ? <Text style={{ color: colors.muted, marginTop: 8 }}>{status}</Text> : null}
         </ScrollView>
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
+          {error ? <Text style={{ color: colors.danger, marginBottom: 8, textAlign: "center" }}>{error}</Text> : null}
           <Btn label={busy ? "Publication…" : listingId ? "Enregistrer" : "Publier l’annonce"} disabled={busy} onPress={() => void publish()} />
         </View>
       </KeyboardAvoidingView>
@@ -617,10 +617,10 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <Input value={access} onChangeText={setAccess} placeholder={free ? "Entrée libre, places limitées…" : "Lien externe, sans paiement dans WIPP"} />
             <Text style={{ color: colors.muted, fontSize: 12 }}>WIPP n’encaisse pas les billets. Le prix est une information.</Text>
           </Section>
-          {error ? <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text> : null}
           {status ? <Text style={{ color: colors.muted, marginTop: 8 }}>{status}</Text> : null}
         </ScrollView>
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
+          {error ? <Text style={{ color: colors.danger, marginBottom: 8, textAlign: "center" }}>{error}</Text> : null}
           <Btn label={busy ? "Publication…" : eventId ? "Enregistrer" : "Publier l’événement"} disabled={busy} onPress={() => void publish()} />
         </View>
       </KeyboardAvoidingView>

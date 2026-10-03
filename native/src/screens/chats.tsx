@@ -376,7 +376,7 @@ function ChatRow({
         {chat.type === "group" ? (
           <GroupAvatar users={groupUsers} size={52} fallback={chat.avatar} />
         ) : (
-          <Avatar user={shop ? shopFace(shop) : peer} size={52} ring={ring} />
+          <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} ring={ring} />
         )}
       </Press>
       <Press onPress={onOpen} onLongPress={onMenu} style={{ flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: colors.hair, paddingBottom: 10 }}>

@@ -66,9 +66,9 @@ export function StickerTray({
             ? moments
             : [];
   const title = TABS.find((item) => item.id === tab)?.label ?? "Stickers";
-  const minCell = !query && tab === "pop" ? 132 : !query && tab === "moji" ? 64 : 80;
-  const cols = Math.max(!query && tab === "pop" ? 2 : !query && tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
-  const stickerSize = tab === "pop" ? 96 : tab === "moji" ? 52 : 68;
+  const minCell = !query && tab === "pop" ? 104 : !query && tab === "moji" ? 64 : 80;
+  const cols = Math.max(!query && tab === "pop" ? 3 : !query && tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
+  const stickerSize = tab === "pop" ? 84 : tab === "moji" ? 52 : 68;
   const trayH = Math.min(tablet ? 420 : 360, Math.round(height * 0.42));
 
   useEffect(() => {
