@@ -287,6 +287,8 @@ async function applyScreen(screen: Screen, eventId?: string) {
 
 export async function enqueueUrl(url: string) {
   if (!url || url.startsWith("exp+")) return;
+  // Only WIPP links are deep links (on web the page's own address arrives here too).
+  if (!/^wipp:\/\//i.test(url) && !/^https:\/\/(www\.)?wippapp\.com\//i.test(url)) return;
   const st = useWippStore.getState();
   if (!st.onboarded) {
     setPendingNav({ kind: "url", url });
