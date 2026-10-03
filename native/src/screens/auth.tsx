@@ -25,6 +25,7 @@ import {
   authSms,
   authWelcome,
   brandOfficial,
+  logoGold,
   wippSrc,
 } from "../lib/assets";
 import { haptic } from "../lib/haptics";
@@ -449,12 +450,19 @@ export function PhoneEntryScreen() {
   return (
     <Artwork source={authPhone}>
       {(reveal) => <>
-      <Abs t={11.5} l={4} h={6} w={12}>
+      {/* The background is decor only (title included): logo and form are drawn here. */}
+      <Abs t={4.5} l={32} h={7} w={36}>
+        <Image source={logoGold} style={{ width: "100%", height: "100%" }} contentFit="contain" />
+      </Abs>
+      <Abs t={68} l={3} h={30} w={94}>
+        <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+      </Abs>
+      <Abs t={6} l={4} h={6} w={12}>
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
       </Abs>
-      <Abs t={63.2} l={5.5} h={11.5} w={89}>
+      <Abs t={69.5} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
           <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
@@ -488,10 +496,7 @@ export function PhoneEntryScreen() {
           </View>
         </View>
       </Abs>
-      <Abs t={76.8} l={6} h={10} w={88}>
-        <View pointerEvents="none" style={{ flex: 1, borderRadius: 8, backgroundColor: colors.bg }} />
-      </Abs>
-      <Abs t={77.6} l={8} w={84}>
+      <Abs t={80.3} l={8} w={84}>
         <CheckLine
           checked={legal}
           onToggle={setLegal}
