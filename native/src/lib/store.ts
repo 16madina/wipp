@@ -38,7 +38,6 @@ import {
   seedShops,
   seedStories,
   seedUsers,
-  seedFictionalInbox,
   withGroupMeta,
   isSeedDemoChat,
   defaultNotifs,
@@ -391,15 +390,14 @@ export const useWippStore = create<Store>((set, get) => ({
   },
   resetDemo: () => set({ ...fresh(), language: get().language, stack: [{ name: "onboarding" }] }),
   completeSetup: (data, freshAccount = false) => {
-    const fict = seedFictionalInbox();
     set((s) => ({
       onboarded: true,
       me: { ...s.me, ...s.pendingSignup, ...data, id: "me", online: true },
       stack: [{ name: "chats" }],
       ...(freshAccount
         ? {
-            chats: fict.chats,
-            messages: fict.messages,
+            chats: [],
+            messages: {},
             requests: [],
             intros: [],
             calls: [],

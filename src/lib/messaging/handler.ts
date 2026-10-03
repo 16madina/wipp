@@ -510,6 +510,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    // Password accounts are a local demo path. In production every account comes
+    // from Firebase phone auth (auth/profile), so these two would skip the SMS.
+    if (method === "POST" && (a === "register" || a === "login") && process.env.NODE_ENV === "production") {
+      return json({ error: "password_auth_disabled", message: "Connecte-toi avec ton numéro de téléphone." }, 410);
+    }
+
     if (method === "POST" && a === "register") {
       const body = await readBody<{ username?: string; password?: string; displayName?: string }>(request);
       const session = await registerProfile({

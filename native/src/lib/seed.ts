@@ -252,12 +252,12 @@ const SEED_DEMO_CHAT_IDS = new Set([
 	"c-shop-deena",
 ]);
 
-/** Static demo threads from seed.ts — not real DMs. Live `uid("c")` chats are not in this set. */
+/** Static demo threads from seed.ts, fictional `fict-` threads included — not real DMs. Live `uid("c")` chats are not in this set. */
 export function isSeedDemoChat(id: string) {
-	return SEED_DEMO_CHAT_IDS.has(id);
+	return SEED_DEMO_CHAT_IDS.has(id) || id.startsWith("fict-");
 }
 
-/** Fils fictifs qui restent après un compte test (pas dans SEED_DEMO_CHAT_IDS). */
+/** Fils fictifs du mode démo. Un vrai compte ne les reçoit pas. */
 export function seedFictionalChats(): Chat[] {
 	return [
 		{
