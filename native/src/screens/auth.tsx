@@ -335,18 +335,15 @@ export function OnboardingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#070a0f" }}>
-      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, overflow: "hidden" }}>
-        {hero ? (
-          <Image source={hero} style={{ position: "absolute", width: "124%", height: "124%", top: "-12%", left: "-12%" }} contentFit="contain" />
-        ) : null}
-      </View>
       <SafeTop />
       <View style={{ alignItems: "flex-end", paddingRight: 8 }}>
         <Press onPress={() => replace({ name: "welcome" })} style={{ minHeight: 44, paddingHorizontal: 12, justifyContent: "center" }}>
           <Text style={{ color: "rgba(255,255,255,0.78)", fontSize: 14, fontFamily: "Inter_500Medium" }}>{t("skip")}</Text>
         </Press>
       </View>
-      <View style={{ flex: 1 }} />
+      <View style={{ flex: 1, minHeight: 0, paddingHorizontal: 10, paddingBottom: 8 }}>
+        {hero ? <Image source={hero} style={{ width: "100%", height: "100%" }} contentFit="contain" /> : null}
+      </View>
       <View style={{ paddingHorizontal: 22, paddingBottom: 22 }}>
         <Text style={{ textAlign: "center", fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.paper, lineHeight: 26 }}>
           {t(slide.title)} <Text style={{ color: colors.accent }}>{t(slide.accent)}</Text>
