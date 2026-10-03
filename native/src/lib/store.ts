@@ -956,11 +956,10 @@ export const useWippStore = create<Store>((set, get) => ({
         set({ serverConnected: false });
       }
       try {
-        const { fetchStories, fetchListings, fetchEvents, fetchSaves } = await import("./lot7/api");
+        const { refreshStoriesInStore, fetchListings, fetchEvents, fetchSaves } = await import("./lot7/api");
         const profileId = get().serverProfileId;
-        const stories = await fetchStories(profileId);
+        await refreshStoriesInStore(profileId);
         if (ticket !== inboxSyncTicket) return;
-        set({ stories });
         const [listings, lifestyle, saves] = await Promise.all([
           fetchListings(profileId),
           fetchEvents(profileId),

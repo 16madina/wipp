@@ -70,7 +70,7 @@ export function NewStoryScreen() {
     let uploadMs = 0;
     let rpcMs = 0;
     try {
-      const { publishStory, fetchStories, uploadPrivateMedia, uploadPrivateMediaFile, myProfileId } = await import("../lib/lot7/api");
+      const { publishStory, refreshStoriesInStore, uploadPrivateMedia, uploadPrivateMediaFile, myProfileId } = await import("../lib/lot7/api");
       let kind: "text" | "image" | "video" = "text";
       let mediaUrl = uploadedPath.current ?? undefined;
       let mime = "image/jpeg";
@@ -135,8 +135,7 @@ export function NewStoryScreen() {
       rpcMs = Date.now() - rpcStarted;
       setPublishLabel("Publié");
       const refreshStarted = Date.now();
-      const stories = await fetchStories(useWippStore.getState().serverProfileId);
-      useWippStore.setState({ stories });
+      await refreshStoriesInStore(useWippStore.getState().serverProfileId);
       if (__DEV__ && kind === "video") {
         console.warn("[wipp] story video publish", {
           finalBytes,

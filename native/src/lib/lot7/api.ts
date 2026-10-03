@@ -233,6 +233,23 @@ export async function fetchStories(meHint: string | null) {
   );
 }
 
+let storiesRequested = 0;
+let storiesApplied = 0;
+
+/**
+ * Reload stories into the store. Two reloads can overlap (publish + inbox sync);
+ * an older answer that lands last must not overwrite a newer list.
+ */
+export async function refreshStoriesInStore(meHint: string | null) {
+  const seq = ++storiesRequested;
+  const stories = await fetchStories(meHint);
+  if (seq < storiesApplied) return null;
+  storiesApplied = seq;
+  const { useWippStore } = await import("../store");
+  useWippStore.setState({ stories });
+  return stories;
+}
+
 export async function markStoryView(id: string) {
   return rpc<string>("wipp_lot7_view_story", { p_id: id });
 }

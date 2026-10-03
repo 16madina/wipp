@@ -55,6 +55,8 @@ export function StoriesScreen({ userId }: { userId: string }) {
   const startAt = Math.max(0, groups.findIndex((group) => group.id === userId));
   const [cursor, setCursor] = useState({ u: startAt, i: 0 });
   const [ratio, setRatio] = useState(0);
+  // Image stories wait for their picture before the 5 s timer starts.
+  const [loadedId, setLoadedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [composing, setComposing] = useState(false);
   const [tray, setTray] = useState<"quick" | "all" | null>(null);
@@ -146,6 +148,13 @@ export function StoriesScreen({ userId }: { userId: string }) {
   useEffect(() => {
     if (!story || story.type === "video" || hold) return;
     setRatio(0);
+    const needsImage = story.type !== "text" && Boolean(story.imageUrl || story.mediaPath);
+    if (needsImage && loadedId !== story.id) {
+      // Never stay stuck on a picture that fails to load: start anyway after 8 s.
+      const id = story.id;
+      const fallback = setTimeout(() => setLoadedId(id), 8000);
+      return () => clearTimeout(fallback);
+    }
     const started = Date.now();
     const tick = setInterval(() => setRatio(Math.min(1, (Date.now() - started) / 5000)), 50);
     const timer = setTimeout(() => move(1), 5000);
@@ -153,7 +162,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
       clearInterval(tick);
       clearTimeout(timer);
     };
-  }, [story?.id, hold]);
+  }, [story?.id, hold, loadedId]);
   useEffect(() => {
     setViewsOpen(false);
     setTray(null);
@@ -270,9 +279,11 @@ export function StoriesScreen({ userId }: { userId: string }) {
       ) : null}
       {story.type !== "video" && src ? (
         <Image
+          key={story.id}
           source={src}
           style={{ position: "absolute", width: "100%", height: "100%" }}
           contentFit="contain"
+          onLoad={() => setLoadedId(story.id)}
           onError={() => {
             const id = story.id;
             void import("../lib/lot7/api").then(async ({ hydrateStoryMedia }) => {
