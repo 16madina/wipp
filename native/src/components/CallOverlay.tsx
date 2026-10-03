@@ -353,6 +353,12 @@ export function CallOverlay() {
     );
   }
 
+  // The caller also has an empty "active-call" page under the overlay: close it so the app is usable again.
+  const minimize = () => {
+    const state = useWippStore.getState();
+    if (state.stack.at(-1)?.name === "active-call") state.pop();
+    patch({ pip: true });
+  };
   const remoteVid = remoteUrl && !remoteMuted ? remoteUrl : null;
   const localVid = localUrl && session.kind === "video" && !session.camOff ? localUrl : null;
   const flip = swapped && !!remoteVid && !!localVid;
@@ -387,7 +393,7 @@ export function CallOverlay() {
         </Press>
       ) : null}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: 56, paddingHorizontal: 20, alignItems: "center" }}>
-        <Press onPress={() => patch({ pip: true })} style={{ alignSelf: "flex-start" }}>
+        <Press onPress={minimize} style={{ alignSelf: "flex-start" }}>
           <Text style={{ color: dim }}>Réduire</Text>
         </Press>
         <Text style={{ marginTop: onVideo ? 4 : 0, fontSize: onVideo ? 20 : 24, fontFamily: "Inter_600SemiBold", color: colors.paper, textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: onVideo ? 4 : 0 }}>{title}</Text>
