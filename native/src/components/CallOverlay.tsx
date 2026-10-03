@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, View, Text } from "react-native";
+import { AppState, Platform, Pressable, View, Text } from "react-native";
 import { Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
 import { Audio } from "expo-av";
 import { Camera } from "expo-camera";
@@ -19,7 +19,7 @@ import {
   type CallPhase,
 } from "../lib/calls/session";
 import { playBusyTone, playCallerWaiting, playIncomingRing, stopCallTones } from "../lib/calls/tones";
-import { endSystemCall, setupCallKeep, showSystemIncoming } from "../lib/calls/callkeep";
+import { dismissSystemRinging, endSystemCall, setupCallKeep, showSystemIncoming } from "../lib/calls/callkeep";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -139,7 +139,10 @@ export function CallOverlay() {
   useEffect(() => {
     if (session?.phase === "ringing" && session.dir === "in" && session.callId && shownSystem.current !== session.callId) {
       shownSystem.current = session.callId;
-      showSystemIncoming(session.callId, session.kind === "video");
+      showSystemIncoming(session.callId, session.kind === "video", session.displayName);
+    }
+    if ((session?.phase === "connecting" || session?.phase === "connected") && session.dir === "in" && session.callId) {
+      dismissSystemRinging(session.callId);
     }
     if (!session || session.phase === "ended" || session.phase === "declined" || session.phase === "missed") {
       if (session?.callId) endSystemCall(session.callId);
@@ -258,6 +261,26 @@ export function CallOverlay() {
       stale = true;
     };
   }, [session?.camOff, session?.kind, session?.phase]);
+
+  // iOS stops the camera in the background: restart it and rebind the preview when we come back.
+  useEffect(() => {
+    const revive = () => {
+      const room = roomRef.current;
+      const live = useCallSession.getState().session;
+      if (!room || live?.phase !== "connected" || live.kind !== "video" || live.camOff) return;
+      const track = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+      if (!track) return;
+      void track
+        .restartTrack({ facingMode: live.facing === "environment" ? "environment" : "user" })
+        .then(() => setLocalUrl(streamURL(track)))
+        .catch(() => undefined);
+    };
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active") revive();
+    });
+    if (!session?.pip) revive();
+    return () => sub.remove();
+  }, [session?.pip]);
 
   useEffect(() => {
     const room = roomRef.current;
