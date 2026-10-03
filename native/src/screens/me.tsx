@@ -1255,11 +1255,20 @@ export function BusinessCardEditorScreen() {
               </View>
             )}
           </Press>
-          <Press accessibilityLabel="Photo" onPress={() => void pick("logo")} style={{ marginTop: -36, marginLeft: 16, width: 84, height: 84, borderRadius: 42, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 3, borderColor: colors.ink, alignItems: "center", justifyContent: "center" }}>
-            {draft.logoUrl ? <Image source={{ uri: draft.logoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : <Store size={30} color="rgba(249,250,251,0.45)" />}
-            <View style={{ position: "absolute", right: 0, bottom: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-              <Camera size={14} color={colors.accentFg} />
+          <Press accessibilityLabel="Photo" onPress={() => void pick("logo")} style={{ marginTop: -36, marginLeft: 16, width: 84, height: 84 }}>
+            <View style={{ flex: 1, borderRadius: 42, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 3, borderColor: colors.ink, alignItems: "center", justifyContent: "center" }}>
+              {draft.logoUrl ? (
+                <Image source={{ uri: draft.logoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" />
+              ) : (
+                <Camera size={26} color={colors.accent} />
+              )}
             </View>
+            {/* Edit badge only once a photo exists, outside the clipped circle so it is fully visible. */}
+            {draft.logoUrl ? (
+              <View style={{ position: "absolute", right: -2, bottom: -2, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.ink, alignItems: "center", justifyContent: "center" }}>
+                <Camera size={14} color={colors.accentFg} />
+              </View>
+            ) : null}
           </Press>
         </View>
         {draft.coverUrl ? (
