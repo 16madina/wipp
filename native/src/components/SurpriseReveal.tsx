@@ -54,6 +54,7 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
   const frame = Math.min(windowW, 430);
   const openW = Math.max(260, Math.round((frame - 36) * 0.94));
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  const [foilReady, setFoilReady] = useState(false);
 
   function playChosenAnimation() {
     if (!surprise.animationId || started.current) return;
@@ -111,7 +112,7 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
           if (w > 8 && h > 8) setBox((prev) => (prev && Math.abs(prev.w - w) < 1 && Math.abs(prev.h - h) < 1 ? prev : { w, h }));
         }}
       >
-        {phase === "open" || (phase === "scratch" && scratch) ? (
+        {phase === "open" || (phase === "scratch" && scratch && box && foilReady) ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
             <Text style={{ fontSize: 30, color: colors.surpriseGoldDeep }}>{MOTIFS[surprise.designId ?? "heart"] ?? "♥"}</Text>
             <Text style={{ marginTop: 8, fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.surpriseInk, textAlign: "center" }}>
@@ -124,7 +125,7 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
         ) : null}
 
         {phase === "scratch" && scratch && foil && box ? (
-          <ScratchFoil source={foil} width={box.w} height={box.h} onCleared={showMessage} />
+          <ScratchFoil source={foil} width={box.w} height={box.h} onCleared={showMessage} onReady={() => setFoilReady(true)} />
         ) : null}
 
         {phase === "sealed" ? (
@@ -132,6 +133,7 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
             <GiftParcel
               onPress={() => {
                 setBox(null);
+                setFoilReady(false);
                 setPhase("scratch");
               }}
             />

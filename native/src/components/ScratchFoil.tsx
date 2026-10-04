@@ -14,12 +14,16 @@ export function ScratchFoil({
   width,
   height,
   onCleared,
+  onReady,
 }: {
   source: number | { uri: string };
   width: number;
   height: number;
   onCleared: () => void;
+  /** The foil image is loaded: only now may the hidden message be drawn underneath. */
+  onReady?: () => void;
 }) {
+  const [ready, setReady] = useState(false);
   const cells = useRef(new Uint8Array(COLS * ROWS));
   const [gone, setGone] = useState<boolean[]>(() => Array(COLS * ROWS).fill(false));
   const [hint, setHint] = useState(true);
@@ -81,12 +85,26 @@ export function ScratchFoil({
       style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
       onStartShouldSetResponder={() => true}
       onMoveShouldSetResponder={() => true}
+      // Keep the finger on the card: the chat list must not scroll while scratching.
+      onStartShouldSetResponderCapture={() => true}
+      onMoveShouldSetResponderCapture={() => true}
+      onResponderTerminationRequest={() => false}
       onResponderGrant={(e) => stroke(e.nativeEvent.locationX, e.nativeEvent.locationY)}
       onResponderMove={(e) => stroke(e.nativeEvent.locationX, e.nativeEvent.locationY)}
       onResponderRelease={() => {
         last.current = null;
       }}
     >
+      {/* Loads the foil once; until then the whole card stays covered by an opaque layer. */}
+      <Image
+        source={source}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+        onLoad={() => {
+          setReady(true);
+          onReady?.();
+        }}
+      />
+      {!ready ? <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.surpriseInk }} /> : null}
       {gone.map((scratched, i) => {
         if (scratched) return null;
         const col = i % COLS;
