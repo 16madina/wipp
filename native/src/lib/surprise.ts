@@ -89,7 +89,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   {
     id: "amour-pluie-cristal",
     label: "Pluie d’amour",
-    art: "fx/surprise/anims/amour-pluie-cristal.png",
+    art: "fx/surprise/anims/amour-pluie-cristal-poster.png",
     anim: "fx/surprise/anims/amour-pluie-cristal.webp",
     enter: "pop",
     durationMs: 7042,
@@ -97,7 +97,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   {
     id: "amour-fusion",
     label: "Fusion",
-    art: "fx/surprise/anims/amour-fusion.png",
+    art: "fx/surprise/anims/amour-fusion-poster.png",
     anim: "fx/surprise/anims/amour-fusion.webp",
     enter: "pop",
     durationMs: 6200,
@@ -105,7 +105,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   {
     id: "amour-bisous",
     label: "Bisous",
-    art: "fx/surprise/anims/amour-bisous.png",
+    art: "fx/surprise/anims/amour-bisous-poster.png",
     anim: "fx/surprise/anims/amour-bisous.webp",
     enter: "bottom",
     durationMs: 3200,

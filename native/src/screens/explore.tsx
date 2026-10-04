@@ -27,10 +27,10 @@ function knownMeters(p: { lat?: number; lng?: number }) {
 type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
 const HUB_BACKGROUNDS = {
-  listings: require("../../assets/wipp/media/apt.webp"),
-  utilities: require("../../assets/wipp/media/chair.webp"),
-  shops: require("../../assets/wipp/media/shop-chen-hero.webp"),
-  lifestyle: require("../../assets/wipp/media/soccer.webp"),
+  listings: require("../../assets/wipp/media/apt.jpg"),
+  utilities: require("../../assets/wipp/media/chair.jpg"),
+  shops: require("../../assets/wipp/media/shop-chen-hero.jpg"),
+  lifestyle: require("../../assets/wipp/media/soccer.jpg"),
 } as const;
 
 const CONDITION_LABEL: Record<NonNullable<Listing["condition"]>, string> = {
