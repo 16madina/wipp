@@ -760,11 +760,16 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                 {m.editedAt ? <Text style={{ fontSize: 10, color: colors.muted, marginRight: 4 }}>modifié</Text> : null}
                 <Text style={{ fontSize: 10, color: colors.muted }}>{formatClock(m.createdAt)}</Text>
-                {mine ? <ReceiptTicks status={m.status} /> : null}
               </View>
             </View>
           </Press>
         </SwipeableBubble>
+        {/* Status sits under the bubble, on the right, outside the message itself. */}
+        {mine ? (
+          <View style={{ alignSelf: "flex-end", marginTop: 2, marginRight: 2 }}>
+            <ReceiptTicks status={m.status} />
+          </View>
+        ) : null}
         {(m.reactions ?? []).length ? (
           <View style={{ flexDirection: "row", marginTop: 4, gap: 4, alignSelf: mine ? "flex-end" : "flex-start" }}>
             {(m.reactions ?? []).map((r, i) => (
