@@ -391,8 +391,8 @@ export async function createCallInvite(input: {
   if (!dto) throw new WippHttpError(500, "invite_failed", "Impossible de créer l’appel.");
 
   // Fire Expo push to callee devices (best-effort)
-  const label = kind === "video" ? "Appel vidéo" : "Appel audio";
-  await pushCall(calleeId, `${dto.caller.displayName} · ${label}`, {
+  const label = kind === "video" ? "Appel vidéo WIPP" : "Appel audio WIPP";
+  await pushCall(calleeId, `${dto.caller.displayName} vous appelle · ${label}`, {
     type: "call",
     eventId: dto.id,
     inviteId: dto.id,

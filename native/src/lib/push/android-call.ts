@@ -50,7 +50,7 @@ export async function showIncomingCall(data: CallData) {
   const video = data.kind === "video";
   await n.displayNotification({
     id: callId,
-    title: data.callerName || "WIPP",
+    title: `${data.callerName || "Quelqu’un"} vous appelle`,
     body: video ? "Appel vidéo WIPP" : "Appel audio WIPP",
     data,
     android: {

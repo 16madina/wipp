@@ -44,10 +44,13 @@ export function Avatar({
   user,
   size = 48,
   ring,
+  square,
 }: {
   user?: User | MeProfile | { displayName?: string; avatar?: string; firstName?: string };
   size?: number;
   ring?: "accent" | "muted" | "none";
+  /** Fill a rectangular frame (parent clips) instead of a circle. */
+  square?: boolean;
 }) {
   const { source: src, unresolved } = useAvatarSource(user?.avatar);
   const initial = (user && "firstName" in user && user.firstName
@@ -61,8 +64,8 @@ export function Avatar({
     <View
       style={{
         width: size,
-        height: size,
-        borderRadius: size / 2,
+        height: square ? "100%" : size,
+        borderRadius: square ? 0 : size / 2,
         overflow: "hidden",
         backgroundColor: colors.navy,
         borderWidth: ringOn || unresolved ? 2 : 0,
@@ -72,7 +75,7 @@ export function Avatar({
       }}
     >
       {src ? (
-        <Image source={src} style={{ width: size, height: size }} contentFit="cover" />
+        <Image source={src} style={{ width: size, height: square ? "100%" : size }} contentFit="cover" />
       ) : (
         <Text style={{ color: colors.accent, fontSize: size * 0.38, fontFamily: "Inter_600SemiBold" }}>
           {initial}

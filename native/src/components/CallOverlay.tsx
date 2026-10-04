@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, AppState, PanResponder, Platform, Pressable, View, Text, useWindowDimensions } from "react-native";
+import { Animated, AppState, PanResponder, Platform, View, Text, useWindowDimensions } from "react-native";
 import { Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
 import { Audio } from "expo-av";
 import { Camera } from "expo-camera";
-import { Mic, MicOff, Phone, PhoneOff, SwitchCamera, Video, VideoOff, Volume2 } from "lucide-react-native";
-import { Avatar } from "./Avatar";
 import { Press } from "./ui";
+import { CallScreen } from "./CallScreen";
 import { formatDuration } from "../lib/format";
 import { useWippStore } from "../lib/store";
 import { colors } from "../theme";
 import {
   acceptCurrentCall,
-  declineCurrentCall,
   endCurrentCall,
   pollIncoming,
-  upgradeToVideo,
   useCallSession,
   type CallPhase,
 } from "../lib/calls/session";
@@ -42,19 +39,6 @@ function leaveCall() {
   useCallSession.getState().clear();
 }
 
-function phaseLabel(phase: CallPhase, note?: string) {
-  if (note && phase !== "connected" && phase !== "connecting") return note;
-  if (phase === "outgoing" || phase === "ringing") return phase === "outgoing" ? "Appel sortant" : "Appel entrant";
-  if (phase === "connecting") return "Connexion…";
-  if (phase === "reconnecting") return "Reconnexion…";
-  if (phase === "connected") return "En ligne";
-  if (phase === "declined") return "Refusé";
-  if (phase === "missed") return "Manqué";
-  if (phase === "busy") return "Occupé";
-  if (phase === "failed") return note || "Échec";
-  return "Terminé";
-}
-
 export function CallOverlay() {
   const session = useCallSession((s) => s.session);
   const patch = useCallSession((s) => s.patch);
@@ -64,7 +48,6 @@ export function CallOverlay() {
   const [localUrl, setLocalUrl] = useState<string | null>(null);
   const [remoteMuted, setRemoteMuted] = useState(false);
   const [swapped, setSwapped] = useState(false);
-  const lastTap = useRef(0);
   // iOS video views can come back black after being unmounted (mini player, background): remount them.
   const [viewEpoch, setViewEpoch] = useState(0);
   const win = useWindowDimensions();
@@ -386,104 +369,29 @@ export function CallOverlay() {
     if (state.stack.at(-1)?.name === "active-call") state.pop();
     patch({ pip: true });
   };
-  const remoteVid = remoteUrl && !remoteMuted ? remoteUrl : null;
-  const localVid = localUrl && session.kind === "video" && !session.camOff ? localUrl : null;
-  const flip = swapped && !!remoteVid && !!localVid;
-  const main = flip ? localVid : remoteVid;
-  const mini = flip ? remoteVid : localVid;
-  const onVideo = !!main;
-  const dim = onVideo ? "rgba(247,249,252,0.85)" : "rgba(247,249,252,0.6)";
-  const doubleTap = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 300) setSwapped((v) => !v);
-    lastTap.current = now;
+  const peer = {
+    displayName: title,
+    username: user?.username || session.peerUsername,
+    avatar: user?.avatar || session.peerAvatar,
   };
-  const roundBtn = { width: 56, height: 56, borderRadius: 28, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: onVideo ? "rgba(0,0,0,0.45)" : colors.surface };
-  const iconColor = onVideo ? "#fff" : colors.fg;
-
   return (
-    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: colors.navy }}>
-      {/* Full-screen video, double tap swaps who is big and who is small. */}
-      <Pressable onPress={doubleTap} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
-        {main ? (
-          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={flip} zOrder={0} />
-        ) : (
-          <View style={{ alignItems: "center" }}>
-            <Avatar user={user} size={112} />
-            {remoteUrl && remoteMuted ? <Text style={{ marginTop: 12, color: dim }}>Caméra coupée</Text> : null}
-          </View>
-        )}
-      </Pressable>
-      {mini ? (
-        <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", top: 110, right: 16, width: 108, height: 160, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", backgroundColor: "#000" }}>
-          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 108, height: 160 }} objectFit="cover" mirror={!flip} zOrder={1} />
-        </Press>
-      ) : null}
-      <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: 56, paddingHorizontal: 20, alignItems: "center" }}>
-        <Press onPress={minimize} style={{ alignSelf: "flex-start" }}>
-          <Text style={{ color: dim }}>Réduire</Text>
-        </Press>
-        <Text style={{ marginTop: onVideo ? 4 : 0, fontSize: onVideo ? 20 : 24, fontFamily: "Inter_600SemiBold", color: colors.paper, textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: onVideo ? 4 : 0 }}>{title}</Text>
-        <Text style={{ marginTop: 4, color: dim, textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: onVideo ? 4 : 0 }}>
-          {session.kind === "video" ? "Appel vidéo" : "Appel audio"}
-          {session.group ? " · groupe" : ""}
-          {" · "}
-          {phaseLabel(session.phase, session.note)}
-          {session.phase === "connected" ? ` · ${formatDuration(sec)}` : ""}
-        </Text>
-      </View>
-      <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 48, alignItems: "center" }}>
-        {session.phase === "ringing" && session.dir === "in" ? (
-          <View style={{ flexDirection: "row", gap: 28 }}>
-            <Press onPress={() => void declineCurrentCall()} accessibilityLabel="Refuser" style={{ alignItems: "center", gap: 8 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" }}>
-                <PhoneOff size={22} color="#fff" />
-              </View>
-              <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Refuser</Text>
-            </Press>
-            <Press onPress={() => void acceptCurrentCall()} accessibilityLabel="Accepter" style={{ alignItems: "center", gap: 8 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#1f8f4e", alignItems: "center", justifyContent: "center" }}>
-                <Phone size={22} color="#fff" />
-              </View>
-              <Text style={{ color: colors.paper, fontFamily: "Inter_600SemiBold" }}>Accepter</Text>
-            </Press>
-          </View>
-        ) : (
-          <View style={{ flexDirection: "row", gap: 16 }}>
-            <Press onPress={() => patch({ muted: !session.muted })} accessibilityLabel="Micro" style={roundBtn}>
-              {session.muted ? <MicOff size={22} color={iconColor} /> : <Mic size={22} color={iconColor} />}
-            </Press>
-            <Press onPress={() => patch({ speaker: !session.speaker })} accessibilityLabel="Haut-parleur" style={roundBtn}>
-              <Volume2 size={22} color={session.speaker ? colors.accent : iconColor} />
-            </Press>
-            <Press
-              accessibilityLabel="Caméra"
-              onPress={() => {
-                if (session.kind === "audio") void upgradeToVideo();
-                else patch({ camOff: !session.camOff });
-              }}
-              style={roundBtn}
-            >
-              {session.camOff || session.kind === "audio" ? <VideoOff size={22} color={iconColor} /> : <Video size={22} color={iconColor} />}
-            </Press>
-            {session.kind === "video" && !session.camOff ? (
-              <Press onPress={() => patch({ facing: session.facing === "user" ? "environment" : "user" })} accessibilityLabel="Retourner la caméra" style={roundBtn}>
-                <SwitchCamera size={22} color={iconColor} />
-              </Press>
-            ) : null}
-            <Press
-              onPress={() => {
-                if (!terminal) void endCurrentCall();
-                leaveCall();
-              }}
-              accessibilityLabel="Terminer l’appel"
-              style={{ ...roundBtn, backgroundColor: colors.danger }}
-            >
-              <PhoneOff size={22} color="#fff" />
-            </Press>
-          </View>
-        )}
-      </View>
-    </View>
+    <CallScreen
+      session={session}
+      peer={peer}
+      sec={sec}
+      terminal={terminal}
+      remoteUrl={remoteUrl}
+      remoteMuted={remoteMuted}
+      localUrl={localUrl}
+      swapped={swapped}
+      setSwapped={setSwapped}
+      viewEpoch={viewEpoch}
+      onMinimize={minimize}
+      RTCView={RTCView as never}
+      onHangup={() => {
+        if (!terminal) void endCurrentCall();
+        leaveCall();
+      }}
+    />
   );
 }

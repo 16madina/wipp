@@ -26,6 +26,9 @@ export type CallPhase =
 export type CallSession = {
   userId: string;
   displayName: string;
+  /** Real profile of the other person (from the call invite or the local contact). */
+  peerUsername?: string;
+  peerAvatar?: string;
   kind: "audio" | "video";
   dir: "in" | "out";
   callId?: string;
@@ -177,6 +180,8 @@ export async function openCall(input: {
       useCallSession.getState().patch({
         displayName: invite.caller.displayName || "WIPP",
         userId: `srvuser:${invite.caller.id}`,
+        peerUsername: invite.caller.username || undefined,
+        peerAvatar: invite.caller.avatarUrl || undefined,
         kind: invite.kind,
         group: Boolean(invite.group),
         chatId: invite.chatId,

@@ -47,8 +47,8 @@ export type CallStatusInvite = {
   id: string;
   status: string;
   kind: "audio" | "video";
-  caller: { id: string; displayName: string; username: string };
-  callee: { id: string; displayName: string; username: string };
+  caller: { id: string; displayName: string; username: string; avatarUrl?: string | null };
+  callee: { id: string; displayName: string; username: string; avatarUrl?: string | null };
   group?: boolean;
   chatId?: string;
 };
