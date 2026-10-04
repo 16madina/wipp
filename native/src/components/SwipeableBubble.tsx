@@ -65,13 +65,13 @@ export function SwipeableBubble({
         <Animated.View style={[styles.icon, iconStyle]}>
           <CornerUpLeft size={18} color={colors.accent} />
         </Animated.View>
-        <Animated.View style={bubbleStyle}>{children}</Animated.View>
+        <Animated.View style={[{ flexShrink: 1 }, bubbleStyle]}>{children}</Animated.View>
       </View>
     </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center" },
+  row: { flexDirection: "row", alignItems: "center", maxWidth: "100%" },
   icon: { position: "absolute", left: 4, width: 28, height: 28, alignItems: "center", justifyContent: "center" },
 });

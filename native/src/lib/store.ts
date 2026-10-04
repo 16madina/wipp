@@ -1111,6 +1111,15 @@ export const useWippStore = create<Store>((set, get) => ({
           await postReceipts(event.chatId, incoming, receiptsOn ? "read" : "delivered");
         }
       } else if (event.kind === "message" && !open) {
+        // Arrived on this phone but not opened yet: "reçu" (two grey dots), never "lu".
+        const me = (await import("./messaging/client")).getStoredProfile()?.id;
+        const arrived = (synced && "messages" in synced ? synced.messages : [])
+          .filter((m) => m.senderId !== me && !m.deletedAt && !m.deliveredAt)
+          .map((m) => m.id);
+        if (arrived.length) {
+          const { postReceipts } = await import("./messaging/client");
+          void postReceipts(event.chatId, arrived, "delivered").catch(() => undefined);
+        }
         const { fetchServerChats } = await import("./messaging/client");
         const chats = await fetchServerChats();
         set((st) => mergeServerChatsIntoState(st, chats, get().serverProfileId ?? undefined));
