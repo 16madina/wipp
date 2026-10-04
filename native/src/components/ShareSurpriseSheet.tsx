@@ -317,7 +317,7 @@ export function ShareSurpriseSheet({
                   <Press
                     key={u.id}
                     onPress={() => {
-                      onShare(`👤 ${u.displayName}`);
+                      onShare(`contact:${u.id}`);
                       close();
                     }}
                     style={{ height: 48, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: colors.hair }}

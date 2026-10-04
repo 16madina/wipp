@@ -51,6 +51,7 @@
     "expo-secure-store": "~15.0.7",
     "expo-sensors": "~15.0.8",
     "expo-share-intent": "^5.1.1",
+    "expo-sharing": "~14.0.8",
     "expo-splash-screen": "~31.0.10",
     "expo-status-bar": "~3.0.8",
     "expo-video": "~3.0.11",

@@ -16,6 +16,7 @@ import {
   Text,
   TextInput,
   View,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
@@ -70,6 +71,24 @@ function surpriseFromMessage(m: Message): Surprise {
     time: "",
     mine: m.fromId === "me",
   };
+}
+
+/** Message text with tappable links (maps, WIPP profiles, websites). */
+function LinkedText({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <Text key={i} onPress={() => void Linking.openURL(part)} style={{ textDecorationLine: "underline", color: colors.accent }}>
+            {/maps\.google\.com/.test(part) ? "Voir sur la carte" : part.replace(/^https?:\/\//, "")}
+          </Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        ),
+      )}
+    </>
+  );
 }
 
 function VoiceBubble({ uri, duration, mine }: { uri?: string; duration?: number; mine: boolean }) {
@@ -513,6 +532,38 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
     sendMediaFiles(res.assets, true);
   }
 
+  async function sendLocation() {
+    const { getMyPosition, reverseGeocode } = await import("../lib/geo");
+    const pos = await getMyPosition();
+    if (!pos) {
+      Alert.alert("Localisation", "Position indisponible. Autorise la localisation de WIPP dans les réglages.");
+      return;
+    }
+    const place = await reverseGeocode(pos).catch(() => null);
+    const label = [place?.area, place?.city].filter(Boolean).join(", ");
+    sendText(chatId, `📍 ${label || "Ma position"}\nhttps://maps.google.com/?q=${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`);
+  }
+
+  /** Documents: decrypt/download when needed, then open with the system viewer. */
+  async function openFile(m: Message) {
+    try {
+      let uri = m.file?.url ?? "";
+      if (m.attachmentId && m.mediaKey && m.mediaChunks?.length) {
+        const { downloadCipherFile } = await import("../lib/messaging/media-upload");
+        uri = await downloadCipherFile({ attachmentId: m.attachmentId, fileKey: m.mediaKey, chunks: m.mediaChunks, mime: m.file?.mime });
+      }
+      if (!uri) throw new Error("Fichier introuvable.");
+      if (Platform.OS === "web") {
+        window.open(uri, "_blank");
+        return;
+      }
+      const Sharing = await import("expo-sharing");
+      await Sharing.shareAsync(uri, { mimeType: m.file?.mime || undefined, dialogTitle: m.file?.name });
+    } catch (err) {
+      Alert.alert("Document", errorText(err, "Impossible d’ouvrir ce document."));
+    }
+  }
+
   async function pickDocument() {
     const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
     if (res.canceled || !res.assets?.[0]) return;
@@ -666,14 +717,15 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               ) : null}
               {m.type === "voice" ? <VoiceBubble uri={m.audioUrl} duration={m.duration} mine={mine} /> : null}
               {m.type === "file" && m.file ? (
-                <View>
+                <Press onPress={() => void openFile(m)} accessibilityLabel={`Ouvrir ${m.file.name}`}>
                   <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontFamily: "Inter_500Medium" }}>{m.file.name}</Text>
                   <Text style={{ color: colors.muted, fontSize: 12 }}>
                     {m.file.mime || "Document"}
                     {m.file.size ? ` · ${Math.round(m.file.size / 1024)} Ko` : ""}
                     {m.mediaState === "uploading" ? ` · ${Math.round((m.progress ?? 0) * 100)}%` : ""}
                   </Text>
-                </View>
+                  <Text style={{ marginTop: 4, color: colors.accent, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
+                </Press>
               ) : null}
               {m.type === "scratch" ? <SurpriseReveal surprise={surpriseFromMessage(m)} onReveal={() => useWippStore.getState().markScratch(chatId, m.id)} onPlayAnimation={(id) => setSurprisePlay({ id, n: ++surpriseSequence.current })} /> : null}
               {m.type === "shop" ? (
@@ -689,7 +741,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 </View>
               ) : null}
               {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.type !== "shop" && m.text ? (
-                <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : m.text}</Text>
+                <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} />}</Text>
               ) : null}
               {m.encFailed && !m.text ? <Text style={{ color: colors.muted }}>🔒 Message chiffré</Text> : null}
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
@@ -1013,8 +1065,10 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             setShareOpen(false);
             setStickerBar(true);
           }
-          else if (label === "Contact" && peer) {
-            sendText(chatId, `👤 ${peer.displayName} @${peer.username}`);
+          else if (label === "Localisation") void sendLocation();
+          else if (label.startsWith("contact:")) {
+            const u = useWippStore.getState().users[label.slice(8)];
+            if (u) sendText(chatId, `👤 ${u.displayName}${u.username ? `\nhttps://wippapp.com/@${u.username}` : ""}`);
           }
         }}
         onSurprise={(surprise) =>

@@ -16,7 +16,7 @@ export function addLocalGif(url: string): LocalGif {
   return gif;
 }
 
-export const GIF_INTEGRATION_PENDING = "GIF PROVIDER CREDENTIAL = EXTERNAL BLOCKER";
+export const GIF_INTEGRATION_PENDING = "Recherche de GIF bientôt disponible. Tu peux déjà coller le lien d’un GIF.";
 
 const GIF_KEY = process.env.EXPO_PUBLIC_GIF_API_KEY?.trim() ?? "";
 
