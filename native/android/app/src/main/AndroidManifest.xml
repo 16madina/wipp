@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30"/>
-  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
   <uses-permission android:name="android.permission.BLUETOOTH"/>
   <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
   <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
@@ -58,6 +58,13 @@
         <data android:scheme="wipp"/>
         <data android:scheme="exp+wipp"/>
       </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.SEND"/>
+        <data android:mimeType="text/*"/>
+        <data android:mimeType="image/*"/>
+        <data android:mimeType="video/*"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
       <intent-filter android:autoVerify="true" data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/@"/>
@@ -68,8 +75,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
       <intent-filter>
-        <action android:name="android.intent.action.SEND"/>
-        <data android:mimeType="text/*"/>
+        <action android:name="android.intent.action.SEND_MULTIPLE"/>
         <data android:mimeType="image/*"/>
         <data android:mimeType="video/*"/>
         <category android:name="android.intent.category.DEFAULT"/>

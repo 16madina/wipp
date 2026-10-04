@@ -37,26 +37,44 @@ async function byteSize(uri: string, reported: number | null) {
   return info.exists && "size" in info && typeof info.size === "number" ? info.size : 0;
 }
 
-/** Turns an OS share into one WIPP draft. Does not send. */
-export async function draftFromShare(intent: ShareIntent): Promise<ShareDraft> {
-  const file = intent.files?.[0];
-  if (file) {
-    if ((intent.files?.length ?? 0) > 1) {
-      throw new Error("Un seul fichier à la fois.");
+export const SHARE_MAX_FILES = 10;
+
+async function fileDraft(file: ShareIntentFile): Promise<ShareDraft> {
+  const mime = mimeOf(file);
+  const kind = IMAGE.has(mime) ? "image" : VIDEO.has(mime) ? "video" : null;
+  if (!kind) throw new Error("Ce type de fichier n’est pas pris en charge.");
+  const ext = kind === "video" ? "mp4" : mime.includes("png") ? "png" : "jpg";
+  const uri = await localFile(file.path, ext);
+  const size = await byteSize(uri, file.size);
+  const limit = kind === "video" ? LIMITS.video : LIMITS.image;
+  if (!size) throw new Error("Fichier introuvable.");
+  if (size > limit) throw new Error(kind === "video" ? "Une vidéo dépasse 100 Mo." : "Une image dépasse 16 Mo.");
+  return { kind, uri, mime, name: file.fileName || (kind === "video" ? "video.mp4" : "image.jpg"), size };
+}
+
+/**
+ * Turns an OS share into WIPP drafts (up to 10 photos/videos, or one text). Does not send.
+ * Unsupported or too-large files are skipped; `skipped` says how many.
+ */
+export async function draftsFromShare(intent: ShareIntent): Promise<{ drafts: ShareDraft[]; skipped: number }> {
+  const files = intent.files ?? [];
+  if (files.length) {
+    const drafts: ShareDraft[] = [];
+    let skipped = Math.max(0, files.length - SHARE_MAX_FILES);
+    let lastError: unknown = null;
+    for (const file of files.slice(0, SHARE_MAX_FILES)) {
+      try {
+        drafts.push(await fileDraft(file));
+      } catch (err) {
+        skipped += 1;
+        lastError = err;
+      }
     }
-    const mime = mimeOf(file);
-    const kind = IMAGE.has(mime) ? "image" : VIDEO.has(mime) ? "video" : null;
-    if (!kind) throw new Error("Ce type de fichier n’est pas pris en charge.");
-    const ext = kind === "video" ? "mp4" : mime.includes("png") ? "png" : "jpg";
-    const uri = await localFile(file.path, ext);
-    const size = await byteSize(uri, file.size);
-    const limit = kind === "video" ? LIMITS.video : LIMITS.image;
-    if (!size) throw new Error("Fichier introuvable.");
-    if (size > limit) throw new Error(kind === "video" ? "Cette vidéo dépasse 100 Mo." : "Cette image dépasse 16 Mo.");
-    return { kind, uri, mime, name: file.fileName || (kind === "video" ? "video.mp4" : "image.jpg"), size };
+    if (!drafts.length) throw lastError instanceof Error ? lastError : new Error("Rien à envoyer.");
+    return { drafts, skipped };
   }
   const text = (intent.webUrl || intent.text || "").trim();
   if (!text) throw new Error("Rien à envoyer.");
   if (text.length > 8000) throw new Error("Ce texte est trop long.");
-  return { kind: "text", text };
+  return { drafts: [{ kind: "text", text }], skipped: 0 };
 }

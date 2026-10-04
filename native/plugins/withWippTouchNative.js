@@ -9,7 +9,7 @@ const {
 /**
  * WIPP Touch native config:
  * - BLUETOOTH_SCAN neverForLocation (API 31+)
- * - LOCATION only maxSdkVersion=30 (legacy BLE scan)
+ * - LOCATION on every version: Explorer/annonces use the position (expo-location), BLE scan stays neverForLocation
  * - NFC for optional HCE fallback
  */
 function withWippTouchNative(config) {
@@ -66,13 +66,11 @@ function withWippTouchNative(config) {
       {
         $: {
           "android:name": "android.permission.ACCESS_FINE_LOCATION",
-          "android:maxSdkVersion": "30",
         },
       },
       {
         $: {
           "android:name": "android.permission.ACCESS_COARSE_LOCATION",
-          "android:maxSdkVersion": "30",
         },
       },
     );
