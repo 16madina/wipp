@@ -157,8 +157,6 @@ export function ExploreScreen() {
 
 function ExploreHome({ go }: { go: (h: Hub) => void }) {
   const t = useT();
-  const { tile } = useDeviceLayout();
-  const hubW = tile(2, 16, 12);
   const lang = useWippStore((s) => s.language);
   const listings = useWippStore((s) => s.listings);
   const allShops = useWippStore((s) => s.shops);
@@ -216,7 +214,7 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
       <Text style={{ fontSize: 13, lineHeight: 18, color: colors.muted }}>{t("exploreSplit")}</Text>
       <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
         {hubs.map((h) => (
-          <Press key={h.title} onPress={h.go} style={{ width: hubW, minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
+          <Press key={h.title} onPress={h.go} style={{ width: "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
             <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
             <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
             <View style={{ zIndex: 1 }}>
