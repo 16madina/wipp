@@ -148,7 +148,7 @@ export function CallOverlay() {
   useEffect(() => {
     if (session?.phase === "ringing" && session.dir === "in" && session.callId && shownSystem.current !== session.callId) {
       shownSystem.current = session.callId;
-      showSystemIncoming(session.callId, session.kind === "video", session.displayName);
+      showSystemIncoming(session.callId, session.kind === "video", session.peerUsername ? `${session.displayName} @${session.peerUsername}` : session.displayName);
     }
     if ((session?.phase === "connecting" || session?.phase === "connected") && session.dir === "in" && session.callId) {
       dismissSystemRinging(session.callId);

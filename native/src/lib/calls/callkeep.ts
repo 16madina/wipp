@@ -31,6 +31,7 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
     await keep.setup({
       ios: {
         appName: "WIPP",
+        imageName: "CallKitLogo",
         supportsVideo: true,
         maximumCallGroups: "1",
         maximumCallsPerCallGroup: "1",

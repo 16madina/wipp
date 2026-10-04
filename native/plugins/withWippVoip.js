@@ -63,6 +63,14 @@ module.exports = function withWippVoip(config) {
           fs.writeFileSync(file, h);
         }
       }
+      // Logo WIPP (template monochrome) shown on the CallKit in-call button
+      const set = path.join(dir, "Images.xcassets", "CallKitLogo.imageset");
+      fs.mkdirSync(set, { recursive: true });
+      fs.copyFileSync(path.join(cfg.modRequest.projectRoot, "assets", "wipp-logo.png"), path.join(set, "CallKitLogo.png"));
+      fs.writeFileSync(
+        path.join(set, "Contents.json"),
+        JSON.stringify({ images: [{ idiom: "universal", filename: "CallKitLogo.png" }], info: { version: 1, author: "expo" }, properties: { "template-rendering-intent": "template" } }),
+      );
       return cfg;
     },
   ]);
