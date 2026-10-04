@@ -137,7 +137,7 @@ export function ShareSurpriseSheet({
   initialStage?: "share" | "compose";
 }) {
   const insets = useSafeAreaInsets();
-  const { tile, compact } = useDeviceLayout();
+  const { compact } = useDeviceLayout();
   const users = useWippStore((s) => s.users);
   const contacts = Object.values(users).filter((u) => u?.connected);
   const [stage, setStage] = useState<Stage>(initialStage);
@@ -158,7 +158,7 @@ export function ShareSurpriseSheet({
   const [occasion, setOccasion] = useState("");
   const [tone, setTone] = useState<(typeof TONES)[number]>("Tendre");
   const gift = wippSrc("fx/surprise/cadeau.jpg");
-  const shareW = tile(3, 16, 8);
+  const shareW = "31.5%" as const;
   const picker = designPicker[kind];
   const PickerIcon = picker.icon;
   const selectedAnim = findAnimation(animation);

@@ -13,7 +13,6 @@ import { openWippLink } from "../lib/deep-links";
 import { searchPublicProfiles, upsertRemoteProfile } from "../lib/public-profiles";
 import { profileQr, tempQr } from "../lib/qr-payload";
 import { issueTemp } from "../lib/qr-remote";
-import { useDeviceLayout } from "../lib/device-layout";
 import { useWippTouch } from "../lib/proximity/use-wipp-touch";
 import { applyNearbyMode } from "../lib/proximity/nearby-visibility";
 import { startNearbyScan, stopNearbyScan } from "../lib/proximity/nearby-scan";
@@ -28,8 +27,8 @@ import { colors, layout } from "../theme";
 export function ConnectScreen() {
   const t = useT();
   const push = useWippStore((s) => s.push);
-  const { tile } = useDeviceLayout();
-  const cardW = tile(2, 16, 12);
+  // Percent of the column, not of the window: on web the app column is narrower than the window.
+  const cardW = "48.5%" as const;
   const cards = [
     { name: "scanner" as const, icon: ScanLine, title: t("scan"), sub: t("scanSub") },
     { name: "my-qr" as const, icon: QrCode, title: t("myQr"), sub: t("myQrSub") },
