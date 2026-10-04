@@ -335,6 +335,13 @@ export async function createCallInvite(input: {
   const kind = input.kind === "video" ? "video" : "audio";
   const sqlBusy = await getSql();
   try {
+    // A call between these same two people still "accepted" is stale (hang-up lost): close it
+    await sqlBusy`
+      update wipp_call_invites set status = 'ended', ended_at = now()
+      where status = 'accepted' and ended_at is null
+        and ((caller_id = ${input.callerId} and callee_id = ${calleeId})
+          or (caller_id = ${calleeId} and callee_id = ${input.callerId}))
+    `;
     const busy = await sqlBusy<{ id: string }>`
       select id from wipp_call_invites
       where status = 'accepted' and ended_at is null
