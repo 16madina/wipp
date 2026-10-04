@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Text, View } from "react-native";
+import { Animated, Image, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { colors } from "../theme";
 
@@ -28,45 +28,10 @@ export function WippMark({
   );
 }
 
-export function WippWordmark({ size = 22, color = colors.fg }: { size?: number; color?: string }) {
-  const w = size * 2.96;
-  return (
-    <Svg width={w} height={size} viewBox="0 0 172 58">
-      <Path
-        d="M13 14c0 0-1 24 12.5 24 10.5 0 13-16.5 16.5-16.5S48 38 58.5 38C73 38 72 14 72 14"
-        fill="none"
-        stroke={color}
-        strokeWidth="10.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="M88 23.5v18" fill="none" stroke={color} strokeWidth="10.5" strokeLinecap="round" />
-      <Path d="M108 12v38" fill="none" stroke={color} strokeWidth="10.5" strokeLinecap="round" />
-      <Path
-        d="M108 16.5c18.5 0 23 4.5 23 12.5s-4.5 12.5-23 12.5"
-        fill="none"
-        stroke={color}
-        strokeWidth="10.5"
-        strokeLinecap="round"
-      />
-      <Path d="M142 12v38" fill="none" stroke={color} strokeWidth="10.5" strokeLinecap="round" />
-      <Path
-        d="M142 16.5c18.5 0 23 4.5 23 12.5s-4.5 12.5-23 12.5"
-        fill="none"
-        stroke={color}
-        strokeWidth="10.5"
-        strokeLinecap="round"
-      />
-      <Circle cx="88" cy="12" r="5.8" fill={colors.accent} />
-      <Path
-        d="M20 52c32 8 98 8 132 0"
-        stroke={colors.accent}
-        strokeWidth="5.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </Svg>
-  );
+export function WippWordmark({ size = 22 }: { size?: number; color?: string }) {
+  // Logo officiel (PNG fourni) : lettres blanches + sourire jaune.
+  const h = size * 1.35;
+  return <Image source={require("../../assets/wipp-logo.png")} style={{ width: h * (402 / 165), height: h }} resizeMode="contain" accessibilityLabel="WIPP" />;
 }
 
 export function WippPhonesGlyph({ size = 28, color = colors.navy }: { size?: number; color?: string }) {
