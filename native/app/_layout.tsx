@@ -1,5 +1,6 @@
 import "../src/lib/crypto-polyfill";
 import "../src/lib/alert-web";
+import "../src/lib/push/android-call";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { Stack } from "expo-router";

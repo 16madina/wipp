@@ -37,6 +37,10 @@ function withWippCallNative(config) {
       if (!names.has(name)) manifest.manifest["uses-permission"].push({ $: { "android:name": name } });
     }
     AndroidConfig.Manifest.ensureToolsAvailable(manifest);
+    // Full-screen incoming call: let the call screen appear over the lock screen.
+    const main = AndroidConfig.Manifest.getMainActivityOrThrow(manifest);
+    main.$["android:showWhenLocked"] = "true";
+    main.$["android:turnScreenOn"] = "true";
     return cfg;
   });
 

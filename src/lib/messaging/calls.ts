@@ -107,7 +107,11 @@ async function pushCall(profileId: string, body: string, data: Record<string, un
   const flat = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? "")]));
   const jobs: Promise<unknown>[] = [];
   // iPhone with VoIP: the CallKit screen replaces the visible "ring" notification.
-  const expoTargets = ring && voip.length ? [] : expoTokens;
+  // Native call screens replace the "ring" notification: CallKit (iPhone VoIP), full-screen call (Android FCM).
+  const nativeRing = new Set<string>([...(voip.length ? ["ios"] : []), ...(fcm.length ? ["android"] : [])]);
+  const expoTargets = ring
+    ? tokens.filter((t) => (t.kind === "expo" || t.token.startsWith("ExponentPushToken")) && !nativeRing.has(t.platform)).map((t) => t.token)
+    : expoTokens;
   if (expoTargets.length) {
     jobs.push(
       sendExpoPush(expoTargets, {

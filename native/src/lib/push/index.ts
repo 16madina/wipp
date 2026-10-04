@@ -368,6 +368,14 @@ export function bootstrapPush() {
     handleCallData((notification.request.content.data ?? {}) as Record<string, unknown>);
   });
   void import("./voip").then(({ startVoip }) => startVoip());
+  void import("./android-call").then(({ startAndroidCalls }) =>
+    startAndroidCalls(async (token) => {
+      await wippApi("devices/push", {
+        method: "POST",
+        body: JSON.stringify({ token, platform: "android", kind: "fcm", installationId: await getInstallationId() }),
+      });
+    }),
+  );
   const link = Linking.addEventListener("url", (e) => {
     void enqueueUrl(e.url);
   });
@@ -390,6 +398,7 @@ export function handleCallData(data: Record<string, unknown>) {
       const action = String(data.action || "");
       const live = useCallSession.getState().session;
       if (action === "cancel" || action === "reject" || action === "end") {
+        void import("./android-call").then(({ clearIncomingCall }) => clearIncomingCall(callId));
         if (live?.callId === callId && live.phase !== "connected") {
           useCallSession.getState().patch({
             phase: action === "reject" ? "declined" : "ended",

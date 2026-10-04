@@ -94,6 +94,11 @@ export function showSystemIncoming(callId: string, video: boolean, callerName?: 
 }
 
 /** The CallKit screen was opened natively by a VoIP push: remember which WIPP call it is. */
+/** Accepted from the Android call notification before the call was loaded. */
+export function markAnsweredBySystem(callId: string) {
+  answeredBySystem.add(callId);
+}
+
 /** Answered on the lock screen before the call was loaded in the app. */
 export function wasAnsweredBySystem(callId: string) {
   return answeredBySystem.has(callId);
