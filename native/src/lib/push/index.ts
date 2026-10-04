@@ -348,6 +348,7 @@ export async function onSessionReady() {
     if (perm.status === "granted") {
       const prefs = useWippStore.getState();
       if (prefs.pushMaster) await registerDeviceToken();
+      void import("./voip").then(({ registerVoipTokenNow }) => registerVoipTokenNow());
     }
   } catch {
     /* ignore */
@@ -364,7 +365,23 @@ export function bootstrapPush() {
     void handleResponse(r);
   });
   const received = Notifications.addNotificationReceivedListener((notification) => {
-    const data = (notification.request.content.data ?? {}) as Record<string, unknown>;
+    handleCallData((notification.request.content.data ?? {}) as Record<string, unknown>);
+  });
+  void import("./voip").then(({ startVoip }) => startVoip());
+  const link = Linking.addEventListener("url", (e) => {
+    void enqueueUrl(e.url);
+  });
+  return () => {
+    sub.remove();
+    received.remove();
+    link.remove();
+    started = false;
+  };
+}
+
+/** Call push (Expo notification or iOS VoIP payload): ring, or stop ringing. */
+export function handleCallData(data: Record<string, unknown>) {
+  {
     const type = String(data.type || "");
     if (type !== "call" && type !== "incoming_call") return;
     const callId = String(data.eventId || data.inviteId || "");
@@ -394,16 +411,7 @@ export function bootstrapPush() {
         chatId: typeof data.chatId === "string" ? data.chatId : undefined,
       });
     });
-  });
-  const link = Linking.addEventListener("url", (e) => {
-    void enqueueUrl(e.url);
-  });
-  return () => {
-    sub.remove();
-    received.remove();
-    link.remove();
-    started = false;
-  };
+  }
 }
 
 export function debugPushStatus() {

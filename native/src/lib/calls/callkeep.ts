@@ -14,6 +14,8 @@ type Keep = {
 let keep: Keep | null = null;
 const uuidToCall = new Map<string, string>();
 const answeredBySystem = new Set<string>();
+/** CallKit UUIDs answered before the VoIP payload linked them to a WIPP call. */
+const pendingAnswers = new Set<string>();
 
 export function callKeepAvailable() {
   return keep != null && Platform.OS !== "web";
@@ -52,9 +54,23 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
       if (id) {
         answeredBySystem.add(id);
         onAnswer(id);
-      }
+      } else if (callUUID) pendingAnswers.add(callUUID.toLowerCase());
       if (callUUID) keep?.backToForeground?.();
     });
+    // App launched by answering on the lock screen: CallKit events from before JS was ready.
+    (keep.addEventListener as unknown as (e: string, cb: (events: { name: string; data: { callUUID?: string } }[]) => void) => void)(
+      "didLoadWithEvents",
+      (events) => {
+        for (const e of events ?? []) {
+          if (e.name !== "RNCallKeepPerformAnswerCallAction" || !e.data?.callUUID) continue;
+          const id = uuidToCall.get(e.data.callUUID);
+          if (id) {
+            answeredBySystem.add(id);
+            onAnswer(id);
+          } else pendingAnswers.add(e.data.callUUID.toLowerCase());
+        }
+      },
+    );
     keep.addEventListener("endCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) onEnd(id);
@@ -67,12 +83,26 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
 export function showSystemIncoming(callId: string, video: boolean, callerName?: string) {
   // App open: the in-app screen rings. CallKit only when WIPP is in the background.
   if (!keep || AppState.currentState === "active") return;
+  // Already on screen: a VoIP push opened CallKit natively for this call.
+  if ([...uuidToCall.values()].includes(callId)) return;
   const uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const n = (Math.random() * 16) | 0;
     return (c === "x" ? n : (n & 0x3) | 0x8).toString(16);
   });
   uuidToCall.set(uuid, callId);
   keep.displayIncomingCall(uuid, "wipp", callerName || "WIPP", "generic", video);
+}
+
+/** The CallKit screen was opened natively by a VoIP push: remember which WIPP call it is. */
+/** Answered on the lock screen before the call was loaded in the app. */
+export function wasAnsweredBySystem(callId: string) {
+  return answeredBySystem.has(callId);
+}
+
+export function linkSystemCall(uuid: string, callId: string) {
+  uuidToCall.set(uuid.toLowerCase(), callId);
+  uuidToCall.set(uuid.toUpperCase(), callId);
+  if (pendingAnswers.delete(uuid.toLowerCase())) answeredBySystem.add(callId);
 }
 
 export function endSystemCall(callId: string) {

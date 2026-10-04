@@ -19,7 +19,7 @@ import {
   type CallPhase,
 } from "../lib/calls/session";
 import { playBusyTone, playCallerWaiting, playIncomingRing, stopCallTones } from "../lib/calls/tones";
-import { dismissSystemRinging, endSystemCall, setupCallKeep, showSystemIncoming } from "../lib/calls/callkeep";
+import { dismissSystemRinging, endSystemCall, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -99,6 +99,13 @@ export function CallOverlay() {
       },
     );
   }, []);
+
+  // Answered from the iPhone lock screen (VoIP) before the call finished loading: accept it now.
+  useEffect(() => {
+    if (session?.dir === "in" && session.phase === "ringing" && session.callId && wasAnsweredBySystem(session.callId)) {
+      void acceptCurrentCall();
+    }
+  }, [session?.callId, session?.phase, session?.dir]);
 
   useEffect(() => {
     if (!session) {

@@ -2,6 +2,8 @@
  * Call invite signaling + push token registration.
  * Works with LiveKit room names minted at invite time.
  */
+import { createHash } from "node:crypto";
+import { sendFcmCall, sendVoipCall } from "@/lib/push/native";
 import { getSql } from "@/lib/db";
 import { sendExpoPush } from "@/lib/push/expo";
 import { WippHttpError, assertNotBlocked, ensureMessagingReady } from "@/lib/messaging/server";
@@ -99,17 +101,40 @@ async function pushCall(profileId: string, body: string, data: Record<string, un
   const expoTokens = tokens
     .filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken"))
     .map((t) => t.token);
-  if (!expoTokens.length) return;
-  const result = await sendExpoPush(expoTokens, {
-    title: "WIPP",
-    body,
-    priority: "high",
-    channelId: "incoming_calls",
-    categoryId: "incoming_call",
-    collapseId: String(data.eventId || data.inviteId || "call"),
-    data,
-  });
-  if (result.invalidTokens.length) await disablePushTokens(result.invalidTokens);
+  const fcm = tokens.filter((t) => t.kind === "fcm").map((t) => t.token);
+  const voip = tokens.filter((t) => t.kind === "voip").map((t) => t.token);
+  const ring = data.action === "ring";
+  const flat = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? "")]));
+  const jobs: Promise<unknown>[] = [];
+  // iPhone with VoIP: the CallKit screen replaces the visible "ring" notification.
+  const expoTargets = ring && voip.length ? [] : expoTokens;
+  if (expoTargets.length) {
+    jobs.push(
+      sendExpoPush(expoTargets, {
+        title: "WIPP",
+        body,
+        priority: "high",
+        channelId: "incoming_calls",
+        categoryId: "incoming_call",
+        collapseId: String(data.eventId || data.inviteId || "call"),
+        data,
+      }).then((r) => (r.invalidTokens.length ? disablePushTokens(r.invalidTokens) : undefined)),
+    );
+  }
+  if (fcm.length) {
+    jobs.push(sendFcmCall(fcm, { ...flat, body }).then((r) => (r.invalid.length ? disablePushTokens(r.invalid) : undefined)));
+  }
+  // Apple requires every VoIP push to report a call, so only "ring" goes over VoIP.
+  if (ring && voip.length) {
+    jobs.push(sendVoipCall(voip, { ...flat, body, uuid: callUuid(String(data.inviteId || data.eventId || "")) }).then((r) => (r.invalid.length ? disablePushTokens(r.invalid) : undefined)));
+  }
+  await Promise.allSettled(jobs);
+}
+
+/** Stable UUID for CallKit, derived from the WIPP call id. */
+function callUuid(id: string) {
+  const h = createHash("sha1").update(id).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
 function roomFor(a: string, b: string) {
@@ -189,6 +214,7 @@ export async function registerPushToken(input: {
         set disabled_at = now()
         where profile_id = ${input.profileId}
           and installation_id = ${installationId}
+          and kind = ${kind}
           and token <> ${token}
           and disabled_at is null
       `;
@@ -362,7 +388,7 @@ export async function createCallInvite(input: {
 
   // Fire Expo push to callee devices (best-effort)
   const label = kind === "video" ? "Appel vidéo" : "Appel audio";
-  void pushCall(calleeId, `${dto.caller.displayName} · ${label}`, {
+  await pushCall(calleeId, `${dto.caller.displayName} · ${label}`, {
     type: "call",
     eventId: dto.id,
     inviteId: dto.id,
@@ -476,7 +502,7 @@ export async function answerCallInvite(input: {
   if (!updated) throw new WippHttpError(404, "not_found", "Appel introuvable.");
 
   // Notify caller that call was answered/rejected
-  void pushCall(row.caller_id, input.accept ? "Appel accepté" : "Appel refusé", {
+  await pushCall(row.caller_id, input.accept ? "Appel accepté" : "Appel refusé", {
     type: "call",
     eventId: input.callId,
     inviteId: input.callId,
@@ -510,7 +536,7 @@ export async function hangupCallInvite(input: { meId: string; callId: string }):
   if (!updated) throw new WippHttpError(404, "not_found", "Appel introuvable.");
   const otherId = invite.caller.id === input.meId ? invite.callee.id : invite.caller.id;
   const action = next === "cancelled" ? "cancel" : next === "rejected" ? "reject" : "end";
-  void pushCall(otherId, next === "cancelled" ? "Appel annulé" : next === "rejected" ? "Appel refusé" : "Appel terminé", {
+  await pushCall(otherId, next === "cancelled" ? "Appel annulé" : next === "rejected" ? "Appel refusé" : "Appel terminé", {
     type: "call",
     eventId: input.callId,
     inviteId: input.callId,

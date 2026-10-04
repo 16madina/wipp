@@ -279,7 +279,8 @@
         {
           "locationWhenInUsePermission": "WIPP utilise ta position pour afficher les annonces, offres et pros près de toi."
         }
-      ]
+      ],
+      "./plugins/withWippVoip"
     ],
     "web": {
       "favicon": "./assets/brand/favicon-48.png"
