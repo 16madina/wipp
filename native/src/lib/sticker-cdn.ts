@@ -1,3 +1,4 @@
+import { remoteMedia } from "../generated/remote-media";
 export const stickerCdn: Record<string, string> = {
   "stickers/emo/emo-01.webp": "https://wippapp.com/__l5e/assets-v1/0fe9d5ea-2f7b-48c3-8772-e15ecb847413/emo-01.webp",
   "stickers/emo/emo-02.webp": "https://wippapp.com/__l5e/assets-v1/f23b8813-e9a3-47e2-9c16-fe14a7375ff3/emo-02.webp",
@@ -175,7 +176,11 @@ export const stickerCdn: Record<string, string> = {
   "stickers/sig/sig-waaah.png": "https://wippapp.com/__l5e/assets-v1/bc94f6ce-0a78-4b51-a0f2-075ca0c587a3/sig-waaah.png",
 };
 
+const REMOTE = new Set(remoteMedia);
+
+/** Heavy animations live on the website (see scripts/move-heavy-media.mjs), not in the app. */
 export function stickerRemoteUri(path: string) {
   const key = path.replace(/^\//, "").split("?")[0];
-  return stickerCdn[key];
+  // The old stickerCdn host (/__l5e/) no longer serves files: only the website copy is used.
+  return REMOTE.has(key) ? `https://wippapp.com/wipp-media/${key}` : undefined;
 }
