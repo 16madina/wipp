@@ -23,6 +23,8 @@ export type SurpriseAnimationItem = {
   anim?: string;
   enter?: SurpriseEnter;
   durationMs?: number;
+  /** Soundtrack played with the animation (can be muted). */
+  sound?: string;
 };
 export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: string };
 
@@ -73,6 +75,7 @@ const clip = (id: string, label: string): SurpriseAnimationItem => ({
   label,
   art: `fx/surprise/anims/${id}-poster.png`,
   anim: `fx/surprise/anims/${id}.webp`,
+  sound: `fx/surprise/anims/${id}.m4a`,
   enter: "pop",
   durationMs: 10_000,
 });
@@ -139,14 +142,7 @@ const journeeAnimations: SurpriseAnimationItem[] = [
 ];
 
 const bonjourAnimations: SurpriseAnimationItem[] = [
-  {
-    id: "bonjour-bonne-journee",
-    label: "Bonne journée",
-    art: "fx/surprise/anims/bonjour-bonne-journee-poster.png",
-    anim: "fx/surprise/anims/bonjour-bonne-journee.webp",
-    enter: "pop",
-    durationMs: 10_000,
-  },
+  clip("bonjour-bonne-journee", "Bonne journée"),
   clip("bonjour-reveil", "Réveil"),
   clip("bonjour-soleil", "Soleil"),
   clip("bonjour-croissant", "Petit-déj"),
@@ -173,7 +169,7 @@ const retablissementAnimations: SurpriseAnimationItem[] = [
   clip("retablissement-bouquet", "Bouquet"),
   clip("retablissement-nuage", "Après la pluie"),
   clip("retablissement-coeur", "Cœur pansé"),
-  clip("retablissement-cadre", "Cadre"),
+  clip("retablissement-cadre", "Pousse"),
   clip("retablissement-bulle", "Bulle"),
 ];
 

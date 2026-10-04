@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { AccessibilityInfo, Animated, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Volume2, VolumeX } from "lucide-react-native";
+import { animSoundOn, setAnimSound, useAnimSound } from "../lib/anim-sound";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
@@ -30,6 +32,8 @@ export function SurpriseAnimOverlay({
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.82)).current;
   const done = useRef(onDone);
+  const soundRef = useRef<() => void>(() => undefined);
+  const soundOn = useAnimSound();
   done.current = onDone;
 
   useEffect(() => {
@@ -45,7 +49,27 @@ export function SurpriseAnimOverlay({
       Animated.timing(opacity, { toValue: 0, duration: 320, useNativeDriver: true }).start();
     }, hold);
     const end = setTimeout(() => done.current(), hold + 360);
+    // Soundtrack (remote .m4a), unless the user muted animation sounds.
+    let sound: { stopAsync: () => Promise<unknown>; unloadAsync: () => Promise<unknown> } | null = null;
+    let cancelled = false;
+    const soundSrc = item.sound ? wippSrc(item.sound) : undefined;
+    if (soundSrc && animSoundOn()) {
+      void import("expo-av")
+        .then(async ({ Audio }) => {
+          await Audio.setAudioModeAsync({ playsInSilentModeIOS: false }).catch(() => undefined);
+          const { sound: s } = await Audio.Sound.createAsync(soundSrc as never, { shouldPlay: true, volume: 1 });
+          if (cancelled) void s.unloadAsync();
+          else sound = s;
+        })
+        .catch(() => undefined);
+    }
+    soundRef.current = () => {
+      void sound?.stopAsync().catch(() => undefined);
+    };
     return () => {
+      cancelled = true;
+      void sound?.stopAsync().catch(() => undefined);
+      void sound?.unloadAsync().catch(() => undefined);
       clearTimeout(fadeAt);
       clearTimeout(end);
       opacity.stopAnimation();
@@ -56,8 +80,20 @@ export function SurpriseAnimOverlay({
   if (!item || !src) return null;
 
   return (
-    <View pointerEvents="none" style={centered ? [StyleSheet.absoluteFillObject, { zIndex: 30, alignItems: "center", justifyContent: "center" }] : { marginTop: 8, width: "100%", alignItems: "center" }}>
-      <Animated.View style={{ width: centered ? Math.min(width - 32, 360) : 200, height: centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
+    <View pointerEvents="box-none" style={centered ? [StyleSheet.absoluteFillObject, { zIndex: 30, alignItems: "center", justifyContent: "center" }] : { marginTop: 8, width: "100%", alignItems: "center" }}>
+      {item.sound && centered ? (
+        <Pressable
+          accessibilityLabel={soundOn ? "Couper le son des animations" : "Activer le son des animations"}
+          onPress={() => {
+            if (soundOn) soundRef.current();
+            setAnimSound(!soundOn);
+          }}
+          style={{ position: "absolute", top: 60, right: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", zIndex: 2 }}
+        >
+          {soundOn ? <Volume2 size={20} color="#fff" /> : <VolumeX size={20} color="#fff" />}
+        </Pressable>
+      ) : null}
+      <Animated.View pointerEvents="none" style={{ width: centered ? Math.min(width - 32, 360) : 200, height: centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
         <Image
           ref={img}
           key={`${item.id}:${playKey}`}
