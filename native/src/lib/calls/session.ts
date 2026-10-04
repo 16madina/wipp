@@ -167,7 +167,19 @@ export async function openCall(input: {
   useCallSession.setState({ session: seed(input) });
   try {
     if (input.dir === "in" && input.callId) {
-      const status = await callStatus(input.callId);
+      // Woken by a VoIP push with WIPP closed, the session may not be ready yet: retry a few times
+      // instead of failing (a failure would close the iOS call screen while it rings).
+      let status: Awaited<ReturnType<typeof callStatus>> | null = null;
+      for (let attempt = 0; attempt < 8 && !status; attempt++) {
+        try {
+          status = await callStatus(input.callId);
+        } catch (err) {
+          if (attempt === 7) throw err;
+          await new Promise((r) => setTimeout(r, 1500));
+          if (useCallSession.getState().session?.callId !== input.callId) return;
+        }
+      }
+      if (!status) return;
       const invite = status.invite;
       if (invite.status === "missed" || invite.status === "ended" || invite.status === "cancelled") {
         useCallSession.getState().patch({ phase: "missed", note: "Appel expiré." });
