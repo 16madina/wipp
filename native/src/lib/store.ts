@@ -411,7 +411,11 @@ export const useWippStore = create<Store>((set, get) => ({
     void import("./push").then(({ onSessionReady }) => onSessionReady());
   },
   updateMe: (data) => set((s) => ({ me: { ...s.me, ...data } })),
-  changeAvatar: (avatar) => set((s) => ({ me: { ...s.me, avatar } })),
+  changeAvatar: (avatar) => {
+    set((s) => ({ me: { ...s.me, avatar } }));
+    const id = get().serverProfileId;
+    if (id) void import("./media-url-cache").then(({ rememberMyAvatar }) => rememberMyAvatar(id, avatar));
+  },
   signOut: () => {
     void import("./firebase-phone").then(({ signOutFirebase }) => signOutFirebase());
     void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
@@ -945,6 +949,10 @@ export const useWippStore = create<Store>((set, get) => ({
             requests: [],
             intros: [],
           };
+        });
+        void import("./media-url-cache").then(({ rememberMyAvatar }) => {
+          const st = get();
+          if (st.serverProfileId) rememberMyAvatar(st.serverProfileId, st.me.avatar || "");
         });
         void get().syncBusinessContexts();
         void get().refreshIncomingRequests();

@@ -33,6 +33,16 @@ export function enterLinkedProfile(profile: LinkedProfile, phone: string) {
 
 /** Reopen an already authenticated Firebase user. Does not create a profile and does not reseed the inbox. */
 export function restoreFirebaseSession(profile: LinkedProfile | null, phone: string) {
+  // Show my last known photo right away (the server copy replaces it a moment later).
+  if (profile?.id) {
+    const id = profile.id;
+    void import("./media-url-cache").then(async ({ myCachedAvatar }) => {
+      const avatar = await myCachedAvatar(id);
+      if (avatar && useWippStore.getState().serverProfileId === id && !useWippStore.getState().me.avatar) {
+        useWippStore.setState((s) => ({ me: { ...s.me, avatar } }));
+      }
+    });
+  }
   if (!profile?.username) {
     useWippStore.setState({ onboarded: true, stack: [{ name: "chats" }] });
     return;
