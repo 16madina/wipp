@@ -257,14 +257,14 @@ export function DialPhoneField({ country, value, onChange }: { country: Country;
   );
 }
 
-type AddressHit = { id: string; line: string; detail: string; city: string };
+type AddressHit = { id: string; line: string; detail: string; city: string; lat?: number; lng?: number };
 
 /** OpenStreetMap address search (Photon): free, worldwide, filtered to the chosen country. */
 async function searchAddresses(q: string, countryId: string, signal: AbortSignal): Promise<AddressHit[]> {
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=15&lang=fr`;
   const res = await fetch(url, { signal });
   if (!res.ok) return [];
-  const data = (await res.json()) as { features?: { properties: Record<string, string | undefined> }[] };
+  const data = (await res.json()) as { features?: { geometry?: { coordinates?: [number, number] }; properties: Record<string, string | undefined> }[] };
   const seen = new Set<string>();
   const out: AddressHit[] = [];
   for (const f of data.features ?? []) {
@@ -277,14 +277,27 @@ async function searchAddresses(q: string, countryId: string, signal: AbortSignal
     const key = `${line}|${detail}`;
     if (!line || seen.has(key)) continue;
     seen.add(key);
-    out.push({ id: key, line, detail, city });
+    const c = f.geometry?.coordinates;
+    out.push({ id: key, line, detail, city, lat: c?.[1], lng: c?.[0] });
     if (out.length >= 6) break;
   }
   return out;
 }
 
 /** Address input with suggestions as you type; picking one also fills the city. */
-export function AddressField({ country, value, onChange, onPickCity }: { country: Country; value: string; onChange: (v: string | null) => void; onPickCity: (city: string) => void }) {
+export function AddressField({
+  country,
+  value,
+  onChange,
+  onPickCity,
+  onPickCoords,
+}: {
+  country: Country;
+  value: string;
+  onChange: (v: string | null) => void;
+  onPickCity: (city: string) => void;
+  onPickCoords?: (lat: number, lng: number) => void;
+}) {
   const [hits, setHits] = useState<AddressHit[]>([]);
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -338,6 +351,7 @@ export function AddressField({ country, value, onChange, onPickCity }: { country
               onPress={() => {
                 onChange(h.line);
                 if (h.city) onPickCity(h.city);
+                if (h.lat != null && h.lng != null) onPickCoords?.(h.lat, h.lng);
                 setPicked(true);
                 setHits([]);
               }}

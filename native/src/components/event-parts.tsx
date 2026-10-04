@@ -83,7 +83,7 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
 const TIMES = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`);
 
 /** Start time and optional end time, by quarter hour. */
-export function TimeSheet({ open, start, end, onClose, onSave }: { open: boolean; start: string; end: string; onClose: () => void; onSave: (start: string, end: string) => void }) {
+export function TimeSheet({ open, start, end, single, title = "Heure", onClose, onSave }: { open: boolean; start: string; end: string; single?: boolean; title?: string; onClose: () => void; onSave: (start: string, end: string) => void }) {
   const [a, setA] = useState(start || "20:00");
   const [b, setB] = useState(end);
   useEffect(() => {
@@ -112,16 +112,18 @@ export function TimeSheet({ open, start, end, onClose, onSave }: { open: boolean
     </View>
   );
   return (
-    <BottomSheet open={open} title="Heure" onClose={onClose}>
+    <BottomSheet open={open} title={title} onClose={onClose}>
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Début</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{single ? "Heure de publication" : "Début"}</Text>
           {column(a, setA, false)}
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Fin (facultative)</Text>
-          {column(b, setB, true)}
-        </View>
+        {single ? null : (
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Fin (facultative)</Text>
+            {column(b, setB, true)}
+          </View>
+        )}
       </View>
       <Press onPress={() => onSave(a, b)} style={{ marginTop: 16, height: 50, borderRadius: 14, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
         <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 16 }}>Valider</Text>

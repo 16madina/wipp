@@ -292,6 +292,11 @@ type ListingRow = {
   currency?: string | null;
   condition?: string | null;
   photo_urls?: string[] | null;
+  lat?: number | null;
+  lng?: number | null;
+  boosted?: boolean | null;
+  publish_at?: string | null;
+  views?: number | null;
 };
 
 const CATS = new Set(["auto", "realty", "electronics", "fashion", "home", "jobs", "leisure", "goods", "services"]);
@@ -381,6 +386,11 @@ function mapListing(row: ListingRow, me: string | null, shown: string[]): Listin
     negotiable: Boolean(row.negotiable) || legacyNegotiable,
     currency: row.currency || "",
     createdAt: Date.parse(row.created_at),
+    lat: typeof row.lat === "number" ? row.lat : undefined,
+    lng: typeof row.lng === "number" ? row.lng : undefined,
+    boosted: Boolean(row.boosted),
+    publishAt: row.publish_at ? Date.parse(row.publish_at) : undefined,
+    views: row.views ?? 0,
   };
 }
 
@@ -422,6 +432,52 @@ export async function saveListing(input: {
     p_currency: input.currency ?? "",
     p_condition: input.condition ?? "",
     p_photos: input.photos ?? null,
+  });
+}
+
+/** Counts one view per person (never the owner). */
+export async function viewListing(id: string) {
+  try {
+    await rpc<null>("wipp_lot7_view_listing", { p_id: id });
+  } catch {
+    /* a missed view is harmless */
+  }
+}
+
+export type ListingStats = {
+  views: number;
+  memberSince: number | null;
+  sellerListings: number;
+  rating: number | null;
+  ratingCount: number;
+  myRating: number | null;
+};
+
+export async function listingStats(id: string): Promise<ListingStats | null> {
+  const raw = await rpc<Record<string, unknown> | null>("wipp_lot7_listing_stats", { p_id: id });
+  if (!raw) return null;
+  return {
+    views: Number(raw.views ?? 0),
+    memberSince: raw.member_since ? Date.parse(String(raw.member_since)) : null,
+    sellerListings: Number(raw.seller_listings ?? 0),
+    rating: raw.rating == null ? null : Number(raw.rating),
+    ratingCount: Number(raw.rating_count ?? 0),
+    myRating: raw.my_rating == null ? null : Number(raw.my_rating),
+  };
+}
+
+export async function rateSeller(sellerProfileId: string, stars: number) {
+  return rpc<null>("wipp_lot7_rate_seller", { p_seller: sellerProfileId.replace(/^srvuser:/, ""), p_stars: stars });
+}
+
+/** Position, "mettre en avant" (7 days, one listing at a time) and scheduled publication. */
+export async function saveListingExtras(id: string, extras: { lat?: number | null; lng?: number | null; boost: boolean; publishAt?: Date | null }) {
+  return rpc<null>("wipp_lot7_listing_extras", {
+    p_id: id,
+    p_lat: extras.lat ?? null,
+    p_lng: extras.lng ?? null,
+    p_boost: extras.boost,
+    p_publish_at: extras.publishAt ? extras.publishAt.toISOString() : null,
   });
 }
 

@@ -26,6 +26,9 @@ import {
   Image as ImageIcon,
   ImagePlus,
   LayoutGrid,
+  LocateFixed,
+  Pin,
+  SlidersHorizontal,
   MapPin,
   MessageCircle,
   Settings,
@@ -105,6 +108,11 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
   const [description, setDescription] = useState(existing?.description ?? "");
   const [country, setCountry] = useState(existing?.country ?? "");
   const [countryOpen, setCountryOpen] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(existing?.lat != null && existing?.lng != null ? { lat: existing.lat, lng: existing.lng } : null);
+  const [locating, setLocating] = useState(false);
+  const [boost, setBoost] = useState(Boolean(existing?.boosted));
+  const [publishAt, setPublishAt] = useState<Date | null>(existing?.publishAt && existing.publishAt > Date.now() ? new Date(existing.publishAt) : null);
+  const [scheduling, setScheduling] = useState<"day" | "time" | null>(null);
   const [city, setCity] = useState(existing?.city ?? "");
   const [area, setArea] = useState(existing?.area ?? "");
   const [contactMode, setContactMode] = useState<"wipp" | "phone">(existing?.contactPhone ? "phone" : "wipp");
@@ -191,8 +199,17 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         condition: showCondition ? condition : "",
         photos: paths,
       });
+      const savedId = id || listingId || "";
+      if (savedId) {
+        setStatus("Finalisation…");
+        const { saveListingExtras } = await import("../lib/lot7/api");
+        const { geocodeCity } = await import("../lib/geo");
+        // No precise address picked: place the listing at its city so distance still works.
+        const where = coords ?? (await geocodeCity(city.trim(), listingCountry.id));
+        await saveListingExtras(savedId, { lat: where?.lat ?? null, lng: where?.lng ?? null, boost, publishAt });
+      }
       useWippStore.setState({ listings: await fetchListings(owner) });
-      useWippStore.getState().replace({ name: "listing", listingId: id || listingId || "" });
+      useWippStore.getState().replace({ name: "listing", listingId: savedId });
     } catch (err) {
       setError(errorText(err, "Publication impossible."));
     } finally {
@@ -365,7 +382,32 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                 <Text style={{ flex: 1, color: colors.fg, fontSize: 14 }}>{listingCountry.fr}</Text>
                 <ChevronDown size={16} color={colors.muted} />
               </Press>
-              <AddressField country={listingCountry} value={area} onChange={(v) => setArea(v ?? "")} onPickCity={setCity} />
+              <AddressField country={listingCountry} value={area} onChange={(v) => setArea(v ?? "")} onPickCity={setCity} onPickCoords={(lat, lng) => setCoords({ lat, lng })} />
+              <Press
+                disabled={locating}
+                onPress={() => {
+                  setLocating(true);
+                  setError("");
+                  void (async () => {
+                    const { getMyPosition, reverseGeocode } = await import("../lib/geo");
+                    const pos = await getMyPosition();
+                    if (!pos) {
+                      setError("Position indisponible. Autorise la localisation, ou tape ta ville.");
+                      return;
+                    }
+                    setCoords(pos);
+                    const place = await reverseGeocode(pos).catch(() => null);
+                    if (place?.city) setCity(place.city);
+                    if (place?.area) setArea(place.area);
+                    const c = place?.countryCode ? findWorldCountry(place.countryCode) : undefined;
+                    if (c) setCountry(c.fr);
+                  })().finally(() => setLocating(false));
+                }}
+                style={[box, { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,216,77,0.5)", backgroundColor: "transparent" }]}
+              >
+                <LocateFixed size={18} color={colors.accent} />
+                <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{locating ? "Localisation…" : coords ? "Position enregistrée ✓" : "Utiliser ma position"}</Text>
+              </Press>
               <View style={box}>
                 <TextInput value={city} onChangeText={setCity} placeholder="Ville *" placeholderTextColor={colors.muted} style={inputStyle} />
               </View>
@@ -396,6 +438,30 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
               {contactMode === "phone" ? <DialPhoneField country={listingCountry} value={phone} onChange={(v) => setPhone(v ?? "")} /> : null}
             </View>
           </View>
+          <View style={row}>
+            <View style={iconBox}><SlidersHorizontal size={20} color={colors.accent} /></View>
+            <View style={{ flex: 1, gap: 12 }}>
+              <Text style={rowTitle}>Options</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Pin size={18} color={colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.fg }}>Mettre en avant mon annonce</Text>
+                  <Text style={{ color: colors.muted, fontSize: 11 }}>En haut des résultats pendant 7 jours · une annonce à la fois</Text>
+                </View>
+                <Toggle value={boost} onChange={setBoost} />
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Clock size={18} color={colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.fg }}>Programmer la publication</Text>
+                  <Text style={{ color: publishAt ? colors.accent : colors.muted, fontSize: 11 }}>
+                    {publishAt ? `Visible le ${dayLabel(publishAt)} à ${String(publishAt.getHours()).padStart(2, "0")}:${String(publishAt.getMinutes()).padStart(2, "0")}` : "Choisir une date et une heure"}
+                  </Text>
+                </View>
+                <Toggle value={Boolean(publishAt)} onChange={(on) => (on ? setScheduling("day") : setPublishAt(null))} />
+              </View>
+            </View>
+          </View>
           {status ? <Text style={{ color: colors.muted, marginTop: 8 }}>{status}</Text> : null}
         </ScrollView>
         <View style={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
@@ -407,6 +473,37 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         </View>
       </KeyboardAvoidingView>
       <WorldCountrySheet open={countryOpen} selectedId={listingCountry.id} onClose={() => setCountryOpen(false)} onPick={(c) => setCountry(c.fr)} />
+      <CalendarSheet
+        open={scheduling === "day"}
+        value={publishAt}
+        onClose={() => setScheduling(null)}
+        onPick={(day) => {
+          const next = new Date(day);
+          next.setHours(publishAt?.getHours() ?? 9, publishAt?.getMinutes() ?? 0, 0, 0);
+          setPublishAt(next);
+          setScheduling("time");
+        }}
+      />
+      <TimeSheet
+        open={scheduling === "time"}
+        start={publishAt ? `${String(publishAt.getHours()).padStart(2, "0")}:${String(publishAt.getMinutes()).padStart(2, "0")}` : "09:00"}
+        end=""
+        single
+        title="Heure de publication"
+        onClose={() => setScheduling(null)}
+        onSave={(a) => {
+          if (publishAt) {
+            const [h, m] = a.split(":").map(Number);
+            const next = new Date(publishAt);
+            next.setHours(h || 0, m || 0, 0, 0);
+            if (next.getTime() <= Date.now()) {
+              setError("Choisis une date et une heure dans le futur.");
+              setPublishAt(null);
+            } else setPublishAt(next);
+          }
+          setScheduling(null);
+        }}
+      />
     </ScreenRoot>
   );
 }

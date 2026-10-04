@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
-import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, Plus, Search, Share2, ShieldAlert, Store, Tag } from "lucide-react-native";
+import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
 import { Avatar } from "../components/Avatar";
 import { listingCatLabel } from "../lib/listing-cats";
+import { kmBetween, kmLabel, osmTile } from "../lib/geo";
 import { Btn, Chip, Empty, GlassHeader, Header, IconBtn, PendingNote, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { useDeviceLayout } from "../lib/device-layout";
@@ -260,9 +261,21 @@ function ListingRow({ listing }: { listing: Listing }) {
     <Press onPress={() => push({ name: "listing", listingId: listing.id })} style={{ flexDirection: "row", gap: 12, paddingVertical: 10 }}>
       {src ? <Image source={src} style={{ width: 72, height: 72, borderRadius: 10 }} contentFit="cover" /> : <View style={{ width: 72, height: 72, borderRadius: 10, backgroundColor: colors.navy }} />}
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{listing.title}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{listing.title}</Text>
+          {listing.boosted ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.15)" }}>
+              <Pin size={10} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>En avant</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={{ color: colors.accent, marginTop: 2 }}>{listingPriceText(listing)}</Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>{listing.city} · {listing.distance}</Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>
+          {[listing.city, listing.distance].filter(Boolean).join(" · ")}
+          {listing.views ? ` · ${listing.views} vue${listing.views > 1 ? "s" : ""}` : ""}
+          {listing.publishAt && listing.publishAt > Date.now() ? " · programmée" : ""}
+        </Text>
       </View>
     </Press>
   );
@@ -760,8 +773,25 @@ export function ListingScreen({ listingId }: { listingId: string }) {
   const saved = useWippStore((s) => s.saves.some((item) => item.kind === "listing" && item.id === listingId));
   const [index, setIndex] = useState(0);
   const { width } = useDeviceLayout();
+  const [stats, setStats] = useState<import("../lib/lot7/api").ListingStats | null>(null);
+  const [myPos, setMyPos] = useState<{ lat: number; lng: number } | null>(null);
+  const mine = Boolean(listing) && (listing!.sellerId === "me" || listing!.sellerId === useWippStore.getState().serverProfileId);
+  useEffect(() => {
+    if (!listingId) return;
+    let off = false;
+    void import("../lib/lot7/api").then(async ({ viewListing, listingStats }) => {
+      if (!mine) await viewListing(listingId);
+      const st = await listingStats(listingId).catch(() => null);
+      if (!off) setStats(st);
+    });
+    void import("../lib/geo").then(({ myPositionOnce }) => myPositionOnce()).then((p) => {
+      if (!off && p) setMyPos(p);
+    });
+    return () => {
+      off = true;
+    };
+  }, [listingId, mine]);
   if (!listing) return <Missing onBack={pop} />;
-  const mine = listing.sellerId === "me" || listing.sellerId === useWippStore.getState().serverProfileId;
   const pics = (listing.photos?.length ? listing.photos : listing.image ? [listing.image] : []).map((u) => (u.startsWith("http") ? { uri: u } : wippSrc(u)));
   const similar = all.filter((l) => l.id !== listing.id && l.category === listing.category).slice(0, 8);
   const ago = listing.createdAt ? timeAgo(listing.createdAt) : "";
@@ -922,10 +952,26 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               <MapPin size={14} color={colors.muted} />
               <Text style={{ color: colors.muted, fontSize: 12 }}>{[listing.area, listing.city].filter(Boolean).join(", ") || "Ville à préciser"}</Text>
             </View>
+            {myPos && listing.lat != null && listing.lng != null ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Navigation size={14} color={colors.muted} />
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{kmLabel(kmBetween(myPos, { lat: listing.lat, lng: listing.lng }))}</Text>
+              </View>
+            ) : null}
             {ago ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Clock size={14} color={colors.muted} />
-                <Text style={{ color: colors.muted, fontSize: 12 }}>Publié {ago}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{listing.publishAt && listing.publishAt > Date.now() ? `Programmée ${ago.replace("il y a", "dans")}` : `Publié ${ago}`}</Text>
+              </View>
+            ) : null}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Eye size={14} color={colors.muted} />
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{stats?.views ?? listing.views ?? 0} vue{(stats?.views ?? listing.views ?? 0) > 1 ? "s" : ""}</Text>
+            </View>
+            {listing.boosted ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.15)" }}>
+                <Pin size={12} color={colors.accent} />
+                <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>En avant</Text>
               </View>
             ) : null}
           </View>
@@ -936,7 +982,25 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             <Avatar user={seller} size={52} />
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{seller.displayName}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>@{seller.username} · Membre WIPP</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                Membre WIPP{stats?.memberSince ? ` depuis ${new Date(stats.memberSince).getFullYear()}` : ""}
+              </Text>
+              <View style={{ marginTop: 3, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <StarsInput value={stats?.myRating ?? 0} average={stats?.rating ?? null} onRate={(n) => {
+                  void import("../lib/lot7/api").then(async ({ rateSeller, listingStats }) => {
+                    try {
+                      await rateSeller(listing.sellerId, n);
+                      setStats(await listingStats(listing.id));
+                    } catch (err) {
+                      Alert.alert("Note", errorText(err, "Note impossible."));
+                    }
+                  });
+                }} />
+                <Text style={{ color: colors.fg, fontSize: 12 }}>
+                  {stats?.rating != null ? `${String(stats.rating).replace(".", ",")} (${stats.ratingCount})` : "Pas encore noté"}
+                  {stats ? ` · ${stats.sellerListings} annonce${stats.sellerListings > 1 ? "s" : ""}` : ""}
+                </Text>
+              </View>
             </View>
             <Press onPress={() => push({ name: "found-profile", userId: seller.id, via: "username" })} style={{ paddingHorizontal: 12, height: 36, borderRadius: 999, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Voir le profil</Text>
@@ -997,14 +1061,31 @@ export function ListingScreen({ listingId }: { listingId: string }) {
           </View>
         </View>
 
-        <View style={[card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
-          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(255,216,77,0.1)", alignItems: "center", justifyContent: "center" }}>
-            <MapPin size={22} color={colors.accent} />
+        <View style={card}>
+          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 10 }}>Lieu</Text>
+          {listing.lat != null && listing.lng != null ? <MiniMap lat={listing.lat} lng={listing.lng} /> : null}
+          <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <MapPin size={18} color={colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{[listing.area, listing.city].filter(Boolean).join(", ") || "À préciser par message"}</Text>
+              {myPos && listing.lat != null && listing.lng != null ? (
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{kmLabel(kmBetween(myPos, { lat: listing.lat, lng: listing.lng }))} de ta position</Text>
+              ) : listing.country ? <Text style={{ color: colors.muted, fontSize: 12 }}>{listing.country}</Text> : null}
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Lieu</Text>
-            <Text style={{ color: colors.muted, fontSize: 13 }}>{[listing.area, listing.city, listing.country].filter(Boolean).join(", ") || "À préciser par message"}</Text>
-          </View>
+          {listing.lat != null && listing.lng != null ? (
+            <Press
+              onPress={() => {
+                const q = encodeURIComponent([listing.area, listing.city].filter(Boolean).join(", "));
+                const url = Platform.OS === "ios" ? `http://maps.apple.com/?ll=${listing.lat},${listing.lng}&q=${q}` : `https://www.google.com/maps/search/?api=1&query=${listing.lat},${listing.lng}`;
+                void Linking.openURL(url);
+              }}
+              style={{ marginTop: 12, height: 46, borderRadius: 999, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+            >
+              <Navigation size={16} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Voir sur la carte</Text>
+            </Press>
+          ) : null}
         </View>
 
         {mine ? null : (
@@ -1036,6 +1117,45 @@ export function ListingScreen({ listingId }: { listingId: string }) {
         ) : null}
       </ScrollView>
     </ScreenRoot>
+  );
+}
+
+/** 5 stars: shows the average, tap to give your own rating. */
+function StarsInput({ value, average, onRate }: { value: number; average: number | null; onRate: (n: number) => void }) {
+  const shown = value || Math.round(average ?? 0);
+  return (
+    <View style={{ flexDirection: "row", gap: 1 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Press key={n} accessibilityLabel={`Noter ${n} sur 5`} onPress={() => onRate(n)} style={{ padding: 2 }}>
+          <Star size={14} color={colors.accent} fill={n <= shown ? colors.accent : "transparent"} />
+        </Press>
+      ))}
+    </View>
+  );
+}
+
+/** Static OpenStreetMap mini-map (5×3 tiles) with a pin; no native map module needed. */
+function MiniMap({ lat, lng }: { lat: number; lng: number }) {
+  const { zoom, x, y, fx, fy } = osmTile({ lat, lng }, 14);
+  const T = 120;
+  return (
+    <View style={{ height: 150, borderRadius: 14, overflow: "hidden", backgroundColor: colors.navy }}>
+      <View style={{ position: "absolute", left: "50%", top: 75, width: T * 5, height: T * 3, marginLeft: -(2 * T + fx * T), marginTop: -(T + fy * T) }}>
+        {[-1, 0, 1].map((dy) =>
+          [-2, -1, 0, 1, 2].map((dx) => (
+            <Image
+              key={`${dx}${dy}`}
+              source={{ uri: `https://tile.openstreetmap.org/${zoom}/${x + dx}/${y + dy}.png` }}
+              style={{ position: "absolute", left: (dx + 2) * T, top: (dy + 1) * T, width: T, height: T, opacity: 0.85 }}
+            />
+          )),
+        )}
+      </View>
+      <View style={{ position: "absolute", left: "50%", top: 75, marginLeft: -14, marginTop: -30 }}>
+        <MapPin size={28} color={colors.accent} fill="rgba(255,216,77,0.35)" />
+      </View>
+      <Text style={{ position: "absolute", right: 6, bottom: 4, color: "rgba(0,0,0,0.6)", fontSize: 9 }}>© OpenStreetMap</Text>
+    </View>
   );
 }
 

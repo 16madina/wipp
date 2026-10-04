@@ -269,6 +269,12 @@
             "video/*"
           ]
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "WIPP utilise ta position pour afficher les annonces, offres et pros près de toi."
+        }
       ]
     ],
     "web": {

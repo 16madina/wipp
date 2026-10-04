@@ -458,6 +458,13 @@ export type Listing = {
   negotiable?: boolean;
   currency?: string;
   createdAt?: number;
+  lat?: number;
+  lng?: number;
+  /** "Mettre en avant": shown first for 7 days. */
+  boosted?: boolean;
+  /** Scheduled publication time (only the owner sees it before). */
+  publishAt?: number;
+  views?: number;
 };
 
 export type ConnectRequest = {
