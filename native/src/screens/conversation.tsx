@@ -53,6 +53,7 @@ import { storyRing } from "../lib/story-status";
 import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { useScratching } from "../lib/scratch-state";
 
 const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"));
 const NO_MESSAGES: Message[] = [];
@@ -214,6 +215,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const surpriseSequence = useRef(0);
   const [jumpId, setJumpId] = useState<string | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
+  const scratching = useScratching();
   const seenMoment = useRef<string | null>(null);
 
   function playMoment(id: string) {
@@ -644,7 +646,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           : [];
     return (
       <View style={{ marginBottom: 8, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: m.type === "scratch" ? "96%" : "82%", opacity: jumpId === m.id ? 0.7 : 1 }}>
-        <SwipeableBubble enabled={!m.deletedForAll} onReply={() => setReply(m)}>
+        <SwipeableBubble enabled={!m.deletedForAll && m.type !== "scratch"} onReply={() => setReply(m)}>
           <Press
             disabled={m.type === "scratch"}
             onPress={() => {
@@ -871,6 +873,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <FlatList
           ref={listRef}
+          scrollEnabled={!scratching}
           data={messages}
           keyExtractor={(m) => m.id}
           renderItem={renderMessage}
