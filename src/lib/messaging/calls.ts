@@ -399,7 +399,7 @@ export async function createCallInvite(input: {
     eventId: dto.id,
     inviteId: dto.id,
     kind,
-    callerName: `${dto.caller.displayName} @${dto.caller.username}`,
+    callerName: `@${dto.caller.username}`,
     action: "ring",
   }).catch((err) => console.warn("[wipp-call] push", err));
 
