@@ -432,6 +432,10 @@ export function mergeServerMessagesIntoState(
       byId.set(sm.id, {
         ...mapped,
         text: prev.text,
+        // A decrypted surprise must stay a surprise (the server copy only says "text").
+        ...(prev.type === "scratch"
+          ? { type: "scratch" as const, scratchCardId: prev.scratchCardId, scratchDesign: prev.scratchDesign, effectId: prev.effectId, duration: prev.duration }
+          : {}),
         replyPreview: mapped.replyPreview ?? prev.replyPreview,
         forwarded: mapped.forwarded ?? prev.forwarded,
         storyRef: mapped.storyRef ?? prev.storyRef,
