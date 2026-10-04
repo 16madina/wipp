@@ -16,7 +16,7 @@ import {
   type CallPhase,
 } from "../lib/calls/session";
 import { playBusyTone, playCallerWaiting, playIncomingRing, stopCallTones } from "../lib/calls/tones";
-import { dismissSystemRinging, endSystemCall, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
+import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -68,6 +68,7 @@ export function CallOverlay() {
   const [sec, setSec] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const shownSystem = useRef<string | null>(null);
+  const lastCallId = useRef<string | null>(null);
   const reviveRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -152,10 +153,15 @@ export function CallOverlay() {
     if ((session?.phase === "connecting" || session?.phase === "connected") && session.dir === "in" && session.callId) {
       dismissSystemRinging(session.callId);
     }
-    if (!session || session.phase === "ended" || session.phase === "declined" || session.phase === "missed") {
-      if (session?.callId) endSystemCall(session.callId);
+    if (session?.phase === "connected" && session.callId) markSystemCallConnected(session.callId);
+    if (session?.callId) lastCallId.current = session.callId;
+    // Any end (hang-up here, the other side, refused, busy, failed, or the session cleared) closes the iOS/Android call too.
+    if (!session || terminalPhases(session.phase)) {
+      const id = session?.callId ?? lastCallId.current;
+      if (id) endSystemCall(id);
+      if (!session) lastCallId.current = null;
     }
-  }, [session?.phase, session?.callId, session?.dir, session?.kind]);
+  }, [session?.phase, session?.callId, session?.dir, session?.kind, session]);
 
   useEffect(() => {
     if (!session?.url || !session.token) return;

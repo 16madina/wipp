@@ -36,6 +36,10 @@ function patchAppDelegate(src) {
     let video = (data["kind"] as? String) == "video"
     RNVoipPushNotificationManager.didReceiveIncomingPush(with: payload, forType: type.rawValue)
     RNCallKeep.reportNewIncomingCall(uuid, handle: "wipp", handleType: "generic", hasVideo: video, localizedCallerName: caller, supportsHolding: false, supportsDTMF: false, supportsGrouping: false, supportsUngrouping: false, fromPushKit: true, payload: data, withCompletionHandler: completion)
+    // The caller hung up / call answered elsewhere: iOS still requires the report above, then we end it at once.
+    if let action = data["action"] as? String, action != "ring" {
+      RNCallKeep.endCall(withUUID: uuid, reason: 2)
+    }
   }`,
   );
   return src;

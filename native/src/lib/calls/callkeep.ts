@@ -110,6 +110,12 @@ export function linkSystemCall(uuid: string, callId: string) {
   if (pendingAnswers.delete(uuid.toLowerCase())) answeredBySystem.add(callId);
 }
 
+/** Tells CallKit the call is really connected (system call timer, audio route). */
+export function markSystemCallConnected(callId: string) {
+  if (!keep?.setCurrentCallActive) return;
+  for (const [uuid, id] of uuidToCall) if (id === callId) keep.setCurrentCallActive(uuid);
+}
+
 export function endSystemCall(callId: string) {
   if (!keep) return;
   for (const [uuid, id] of uuidToCall) {

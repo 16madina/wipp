@@ -128,8 +128,10 @@ async function pushCall(profileId: string, body: string, data: Record<string, un
   if (fcm.length) {
     jobs.push(sendFcmCall(fcm, { ...flat, body }).then((r) => (r.invalid.length ? disablePushTokens(r.invalid) : undefined)));
   }
-  // Apple requires every VoIP push to report a call, so only "ring" goes over VoIP.
-  if (ring && voip.length) {
+  // "ring" opens CallKit; "cancel" (caller hung up before an answer) is reported then ended at once
+  // natively, so a phone ringing with WIPP closed stops. Other actions stay off VoIP: they would make
+  // the receiving iPhone flash an incoming-call screen.
+  if (voip.length && (ring || data.action === "cancel")) {
     jobs.push(sendVoipCall(voip, { ...flat, body, uuid: callUuid(String(data.inviteId || data.eventId || "")) }).then((r) => (r.invalid.length ? disablePushTokens(r.invalid) : undefined)));
   }
   await Promise.allSettled(jobs);
