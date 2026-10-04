@@ -50,7 +50,8 @@ export function demoMe(): MeProfile {
 		displayName: "Deena",
 		username: "deena",
 		bio: "Connecter. Inspirer. Créer des opportunités.",
-		avatar: "/avatars/deena.jpg",
+		// No photo until the real profile loads (a demo face flashed at startup).
+		avatar: "",
 		online: true,
 		city: "Longueuil",
 		connected: true,
