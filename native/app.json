@@ -139,7 +139,8 @@
             ]
           }
         ]
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.wipp.app",
