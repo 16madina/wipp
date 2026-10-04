@@ -36,6 +36,12 @@ type NativeShape = {
   canAdvertise: () => boolean;
   platformCapabilities: () => PlatformCapabilities;
   getBluetoothState: () => Promise<string>;
+  getCapabilities: () => TouchCapabilities;
+  startBumpDetection: (thresholdG: number, maxDurMs: number) => boolean;
+  stopBumpDetection: () => void;
+  uwbPrepare: () => string | null;
+  uwbStart: (peerTokenB64: string) => boolean;
+  uwbStop: () => void;
   addListener: (event: string) => void;
   removeListeners: (count: number) => void;
 };
@@ -52,12 +58,12 @@ function getNative(): (NativeShape & NativeModule) | null {
 }
 
 export function isWippTouchNativeAvailable(): boolean {
-  return getNative() != null;
+  return false; // Bluetooth path removed
 }
 
 export function canNativeAdvertise(): boolean {
   try {
-    return Boolean(getNative()?.canAdvertise?.());
+    return false;
   } catch {
     return false;
   }
@@ -73,7 +79,7 @@ export function getNativeCapabilities(): PlatformCapabilities | null {
 
 export async function nativeGetBluetoothState(): Promise<BluetoothState> {
   try {
-    const raw = (await getNative()?.getBluetoothState()) ?? "unknown";
+    const raw: string = "unsupported";
     if (raw === "on" || raw === "off" || raw === "unauthorized" || raw === "unsupported") return raw;
     return "unknown";
   } catch {
@@ -81,51 +87,25 @@ export async function nativeGetBluetoothState(): Promise<BluetoothState> {
   }
 }
 
-export async function nativeStartAdvertise(
-  serviceUuid: string,
-  codeCharacteristicUuid: string,
-  code: string,
-): Promise<AdvertiseResult> {
-  const n = getNative();
-  if (!n) return { ok: false, reason: "ble_native_missing" };
-  return n.startAdvertise(serviceUuid, codeCharacteristicUuid, code);
+// WIPP no longer uses Bluetooth: the old BLE / NFC entry points stay as inert stubs so legacy
+// callers (Nearby) degrade cleanly instead of crashing.
+export async function nativeStartAdvertise(_serviceUuid: string, _codeCharacteristicUuid: string, _code: string): Promise<AdvertiseResult> {
+  return { ok: false, reason: "ble_removed" };
 }
 
-export async function nativeStopAdvertise(): Promise<void> {
-  try {
-    await getNative()?.stopAdvertise();
-  } catch {
-    /* ignore */
-  }
+export async function nativeStopAdvertise(): Promise<void> {}
+
+export async function nativeStartScan(_serviceUuid: string): Promise<{ ok: boolean; reason?: string }> {
+  return { ok: false, reason: "ble_removed" };
 }
 
-export async function nativeStartScan(serviceUuid: string): Promise<{ ok: boolean; reason?: string }> {
-  const n = getNative();
-  if (!n) return { ok: false, reason: "ble_native_missing" };
-  return n.startScan(serviceUuid);
+export async function nativeStopScan(): Promise<void> {}
+
+export async function nativeStartNfcShare(_uri: string): Promise<{ ok: boolean; reason?: string }> {
+  return { ok: false, reason: "nfc_unavailable" };
 }
 
-export async function nativeStopScan(): Promise<void> {
-  try {
-    await getNative()?.stopScan();
-  } catch {
-    /* ignore */
-  }
-}
-
-export async function nativeStartNfcShare(uri: string): Promise<{ ok: boolean; reason?: string }> {
-  const n = getNative();
-  if (!n?.startNfcShare) return { ok: false, reason: "nfc_unavailable" };
-  return n.startNfcShare(uri);
-}
-
-export async function nativeStopNfcShare(): Promise<void> {
-  try {
-    await getNative()?.stopNfcShare?.();
-  } catch {
-    /* ignore */
-  }
-}
+export async function nativeStopNfcShare(): Promise<void> {}
 
 type Unsub = { remove: () => void };
 
@@ -156,5 +136,93 @@ export function subscribeBluetoothState(onState: (state: BluetoothState) => void
     return { remove: () => sub.remove() };
   } catch {
     return { remove: () => undefined };
+  }
+}
+
+// ---------- WIPP Touch (no Bluetooth): motion bump + UWB ----------
+
+export type TouchCapabilities = {
+  platform: "ios" | "android" | "web";
+  motion: boolean;
+  uwb: boolean;
+  uwbKind: string | null;
+  uwbHardware?: boolean;
+};
+
+export type BumpEvent = { at: number; peak: number; durMs: number; energy: number };
+
+export function getTouchCapabilities(): TouchCapabilities {
+  try {
+    const c = getNative()?.getCapabilities?.();
+    if (c) return { ...c, uwbKind: c.uwbKind ?? null };
+  } catch {
+    /* fall through */
+  }
+  return { platform: Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web", motion: false, uwb: false, uwbKind: null };
+}
+
+function emitter() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { EventEmitter, requireNativeModule } = require("expo-modules-core");
+  return new EventEmitter(requireNativeModule("WippTouchNative"));
+}
+
+export function startBumpDetection(thresholdG: number, maxDurMs: number, onBump: (e: BumpEvent) => void): Unsub | null {
+  const n = getNative();
+  if (!n?.startBumpDetection) return null;
+  let sub: { remove: () => void } | null = null;
+  try {
+    sub = emitter().addListener("onBump", (e: BumpEvent) => onBump(e));
+    if (!n.startBumpDetection(thresholdG, maxDurMs)) {
+      sub?.remove();
+      return null;
+    }
+  } catch {
+    sub?.remove();
+    return null;
+  }
+  return {
+    remove: () => {
+      sub?.remove();
+      try {
+        n.stopBumpDetection();
+      } catch {
+        /* ignore */
+      }
+    },
+  };
+}
+
+export function uwbPrepare(): string | null {
+  try {
+    return getNative()?.uwbPrepare?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function uwbStart(peerTokenB64: string, onDistance: (cm: number) => void, onState: (s: string) => void): Unsub | null {
+  const n = getNative();
+  if (!n?.uwbStart) return null;
+  try {
+    const em = emitter();
+    const a = em.addListener("onUwbDistance", (e: { distanceCm: number }) => onDistance(e.distanceCm));
+    const b = em.addListener("onUwbState", (e: { state: string }) => onState(e.state));
+    if (!n.uwbStart(peerTokenB64)) {
+      a.remove();
+      b.remove();
+      return null;
+    }
+    return { remove: () => { a.remove(); b.remove(); } };
+  } catch {
+    return null;
+  }
+}
+
+export function uwbStop() {
+  try {
+    getNative()?.uwbStop?.();
+  } catch {
+    /* ignore */
   }
 }

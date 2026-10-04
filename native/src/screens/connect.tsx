@@ -10,10 +10,11 @@ import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField }
 import { wippSrc } from "../lib/assets";
 import { getRelation, sendRequest, type Relation } from "../lib/connections";
 import { openWippLink } from "../lib/deep-links";
-import { searchPublicProfiles, upsertRemoteProfile } from "../lib/public-profiles";
+import { findPublicByUsername, searchPublicProfiles, upsertRemoteProfile } from "../lib/public-profiles";
 import { profileQr, tempQr } from "../lib/qr-payload";
 import { issueTemp } from "../lib/qr-remote";
-import { useWippTouch } from "../lib/proximity/use-wipp-touch";
+import { useTouchSession } from "../lib/proximity/touch-session";
+import { TouchStage } from "../components/TouchStage";
 import { applyNearbyMode } from "../lib/proximity/nearby-visibility";
 import { startNearbyScan, stopNearbyScan } from "../lib/proximity/nearby-scan";
 import { getLastTouchMatch } from "../lib/proximity/match-bus";
@@ -527,81 +528,210 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
   );
 }
 
+const TOUCH_COPY = {
+  fr: {
+    title: "Rapprochez vos téléphones",
+    sub: "Connectez-vous sans partager votre numéro.",
+    start: "Commencer",
+    searching: "Recherche d’un WIPP à proximité…",
+    searchingSub: "Touchez doucement l’autre téléphone, WIPP ouvert des deux côtés.",
+    felt: "Contact détecté…",
+    ask: (n: string) => `Se connecter avec ${n} ?`,
+    connect: "Se connecter",
+    refuse: "Refuser",
+    waiting: "En attente de confirmation…",
+    connected: "WIPP connecté",
+    connectedSub: "Aucun numéro n’a été partagé.",
+    already: "Vous êtes déjà connectés sur WIPP.",
+    message: "Envoyer un message",
+    declined: "Connexion refusée",
+    expired: "Session expirée",
+    timeout: "Personne détectée.",
+    ambiguous: "Impossible d’identifier le bon WIPP.",
+    unavailable: "Connexion impossible.",
+    tooFar: "L’autre téléphone est trop loin.",
+    offline: "Connexion Internet requise pour WIPP Touch.",
+    noMotion: "Les capteurs de mouvement ne sont pas disponibles sur cet appareil.",
+    failed: "WIPP Touch n’a pas pu démarrer.",
+    retry: "Réessayer",
+    scanQr: "Scanner un QR",
+    useQr: "Utiliser le QR WIPP",
+    showQr: "Afficher mon QR",
+    uwbMeasuring: "Vérification de la distance…",
+    uwbNear: "Proximité confirmée",
+    back: "Retour",
+  },
+  en: {
+    title: "Bring your phones together",
+    sub: "Connect without sharing your number.",
+    start: "Start",
+    searching: "Looking for a WIPP nearby…",
+    searchingSub: "Gently tap the other phone, with WIPP open on both.",
+    felt: "Contact detected…",
+    ask: (n: string) => `Connect with ${n}?`,
+    connect: "Connect",
+    refuse: "Decline",
+    waiting: "Waiting for confirmation…",
+    connected: "WIPP connected",
+    connectedSub: "No phone number was shared.",
+    already: "You’re already connected on WIPP.",
+    message: "Send a message",
+    declined: "Connection declined",
+    expired: "Session expired",
+    timeout: "Nobody detected.",
+    ambiguous: "Couldn’t identify the right WIPP.",
+    unavailable: "Connection not possible.",
+    tooFar: "The other phone is too far away.",
+    offline: "WIPP Touch needs an Internet connection.",
+    noMotion: "Motion sensors aren’t available on this device.",
+    failed: "WIPP Touch couldn’t start.",
+    retry: "Try again",
+    scanQr: "Scan a QR",
+    useQr: "Use the WIPP QR",
+    showQr: "Show my QR",
+    uwbMeasuring: "Checking distance…",
+    uwbNear: "Proximity confirmed",
+    back: "Back",
+  },
+};
+
 export function WgoTouchScreen() {
   const t = useT();
+  const c = TOUCH_COPY[t("all") === "All" ? "en" : "fr"];
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const me = useWippStore((s) => s.me);
-  const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
-  const touch = useWippTouch();
   const users = useWippStore((s) => s.users);
-  const peerUser = touch.peerId ? users[touch.peerId] : undefined;
-  const searching = touch.state === "searching";
-  const detected = touch.state === "detected" || touch.state === "confirming";
-  const failed = touch.state === "failed" || touch.state === "expired" || touch.state === "declined";
-  const title =
-    touch.state === "searching"
-      ? t("touchSearching")
-      : detected
-        ? t("touchDetected")
-        : touch.state === "multiple_devices"
-          ? t("touchPick")
-          : touch.state === "request_sent"
-            ? t("touchWaiting")
-            : touch.state === "accepted"
-              ? t("touchConnected")
-              : failed
-                ? t("touchNobody")
-                : t("wgoTouch");
-  const sub =
-    touch.hint === "bluetooth_off"
-      ? t("touchNeedBt")
-      : touch.hint === "permission"
-        ? t("touchPermBody")
-        : touch.state === "accepted"
-          ? t("touchBothOk")
-          : failed
-            ? t("touchFail")
-            : t("wgoTouchSub");
+  const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
+  const touch = useTouchSession();
+  const [peerId, setPeerId] = useState<string | null>(null);
+
+  // Start right away: the screen IS the "ready to touch" state.
+  useEffect(() => {
+    void touch.start();
+  }, []);
+
+  // Resolve the public card into a local profile (avatar signing, DM) — public data only.
+  useEffect(() => {
+    const p = touch.peer;
+    if (!p) {
+      setPeerId(null);
+      return;
+    }
+    let off = false;
+    void findPublicByUsername(p.username).then((found) => {
+      if (off) return;
+      const connected = touch.phase === "connected" || touch.phase === "already_connected";
+      setPeerId(
+        upsertRemoteProfile(found ?? { id: `touch:${p.username}`, username: p.username, displayName: p.displayName, avatarUrl: p.avatarUrl, bio: "" }, connected || undefined),
+      );
+    });
+    return () => {
+      off = true;
+    };
+  }, [touch.peer?.username, touch.phase]);
+
+  const peerUser = peerId ? users[peerId] : undefined;
+  const ph = touch.phase;
+  const searching = ph === "starting" || ph === "searching";
+  const matched = ph === "candidate" || ph === "waiting_peer";
+  const done = ph === "connected" || ph === "already_connected";
+  const failure: Record<string, string> = {
+    declined: c.declined,
+    expired: c.expired,
+    timeout: c.timeout,
+    ambiguous: c.ambiguous,
+    unavailable: c.unavailable,
+    too_far: c.tooFar,
+    offline: c.offline,
+    no_motion: c.noMotion,
+    failed: c.failed,
+  };
+  const failText = failure[ph];
+  const qrFirst = ph === "ambiguous" || ph === "timeout" || ph === "too_far" || ph === "no_motion" || ph === "failed" || ph === "expired";
+  const name = peerUser?.displayName || touch.peer?.displayName || "";
+  const handle = touch.peer?.username ? `@${touch.peer.username}` : "";
+
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("wgoTouch")} onBack={pop} />
       </GlassHeader>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <TouchHero width={140} height={110} />
-        <Text style={{ marginTop: 16, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{title}</Text>
-        <Text style={{ marginTop: 6, textAlign: "center", color: colors.muted }}>{sub}</Text>
-        <View style={{ marginTop: 24, flexDirection: "row", gap: 24 }}>
-          <Avatar user={me} size={56} />
-          {peerUser ? (
-            <Avatar user={peerUser} size={56} />
-          ) : (
-            <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: colors.accent }}>?</Text>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+        {matched || done ? (
+          <View style={{ alignItems: "center" }}>
+            <View style={{ padding: 4, borderRadius: 999, borderWidth: 2, borderColor: colors.accent }}>
+              {peerUser ? <Avatar user={peerUser} size={96} /> : <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(255,255,255,0.08)" }} />}
             </View>
-          )}
-        </View>
-        {peerUser && detected ? (
-          <Text style={{ marginTop: 8, color: colors.fg, fontFamily: "Inter_500Medium" }}>{peerUser.displayName}</Text>
-        ) : null}
-        <View style={{ width: "100%", marginTop: 28, gap: 8 }}>
-          {touch.state === "ready" ? <Btn label="Rapprocher les téléphones" onPress={() => void touch.startSearch()} /> : null}
-          {searching ? <Btn label="En recherche…" onPress={() => undefined} /> : null}
-          {detected ? <Btn label={t("connectWith")} onPress={() => void touch.sendConnect()} /> : null}
-          {touch.state === "request_sent" ? <Btn label={t("touchWaiting")} onPress={() => undefined} /> : null}
-          {touch.state === "accepted" && touch.peerId ? (
+            <Text style={{ marginTop: 14, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>{name}</Text>
+            <Text style={{ marginTop: 2, color: colors.accent, fontFamily: "Inter_500Medium" }}>{handle}</Text>
+            {done ? (
+              <>
+                <Text style={{ marginTop: 22, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
+                  {ph === "connected" ? `${c.connected} ✓` : c.already}
+                </Text>
+                {ph === "connected" ? <Text style={{ marginTop: 6, color: colors.muted }}>{c.connectedSub}</Text> : null}
+              </>
+            ) : (
+              <>
+                <Text style={{ marginTop: 22, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>
+                  {ph === "waiting_peer" ? c.waiting : c.ask(name.split(" ")[0] || handle)}
+                </Text>
+                {touch.uwbLabel === "measuring" ? <Text style={{ marginTop: 6, color: colors.muted }}>{c.uwbMeasuring}</Text> : null}
+                {touch.uwbLabel === "near" ? <Text style={{ marginTop: 6, color: colors.accent }}>{c.uwbNear}</Text> : null}
+              </>
+            )}
+          </View>
+        ) : (
+          <View style={{ alignItems: "center" }}>
+            <TouchStage mode="search" pulseKey={touch.bumps} />
+            <Text style={{ marginTop: 18, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>
+              {failText ?? c.title}
+            </Text>
+            <Text style={{ marginTop: 8, textAlign: "center", color: colors.muted, maxWidth: 300 }}>
+              {failText ? "" : searching ? (touch.bumps ? c.felt : c.searching) : c.sub}
+            </Text>
+            {searching && !touch.bumps ? <Text style={{ marginTop: 4, textAlign: "center", color: colors.muted, fontSize: 13, maxWidth: 300 }}>{c.searchingSub}</Text> : null}
+          </View>
+        )}
+
+        <View style={{ width: "100%", marginTop: 32, gap: 10 }}>
+          {ph === "candidate" ? (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Btn label={c.refuse} variant="secondary" style={{ flex: 1 }} onPress={() => void touch.decline()} />
+              <Btn label={c.connect} style={{ flex: 1 }} onPress={() => void touch.accept()} />
+            </View>
+          ) : null}
+          {ph === "waiting_peer" ? <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} /> : null}
+          {done && peerId ? <Btn label={c.message} onPress={() => openOrCreateDm(peerId)} /> : null}
+          {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
+          {failText && ph !== "offline" ? (
+            qrFirst ? (
+              <>
+                <Btn label={c.useQr} onPress={() => push({ name: "scanner" })} />
+                <Btn label={c.retry} variant="secondary" onPress={() => void touch.start()} />
+              </>
+            ) : (
+              <>
+                <Btn label={c.retry} onPress={() => void touch.start()} />
+                <Btn label={c.scanQr} variant="secondary" onPress={() => push({ name: "scanner" })} />
+              </>
+            )
+          ) : null}
+          {ph === "offline" ? (
             <>
-              <Btn label={t("write")} onPress={() => openOrCreateDm(touch.peerId!)} />
-              <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: touch.peerId!, via: "touch" })} />
+              <Btn label={c.retry} onPress={() => void touch.start()} />
+              <Btn label={c.back} variant="secondary" onPress={pop} />
             </>
           ) : null}
-          {touch.state === "multiple_devices" ? <Btn label={t("touchRetry")} onPress={() => void touch.retry()} /> : null}
-          {failed ? <Btn label={t("touchRetry")} onPress={() => void touch.retry()} /> : null}
-          <Btn label={t("touchScanQr")} variant="secondary" onPress={() => push({ name: "scanner" })} />
-          <Btn label={t("touchShowQr")} variant="secondary" onPress={() => push({ name: "my-qr" })} />
+          {searching ? (
+            <>
+              <Btn label={c.scanQr} variant="secondary" onPress={() => push({ name: "scanner" })} />
+              <Btn label={c.showQr} variant="ghost" onPress={() => push({ name: "my-qr" })} />
+            </>
+          ) : null}
         </View>
-      </View>
+      </ScrollView>
     </ScreenRoot>
   );
 }

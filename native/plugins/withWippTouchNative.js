@@ -8,9 +8,9 @@ const {
 
 /**
  * WIPP Touch native config:
- * - BLUETOOTH_SCAN neverForLocation (API 31+)
- * - LOCATION on every version: Explorer/annonces use the position (expo-location), BLE scan stays neverForLocation
- * - NFC for optional HCE fallback
+ * - WIPP Touch uses NO Bluetooth and NO NFC: motion sensors + UWB (Nearby Interaction) only.
+ * - LOCATION on every version: Explorer/annonces use the position (expo-location)
+ * - BLUETOOTH / BLUETOOTH_CONNECT are kept for CALLS only (audio routing to a headset), not Touch.
  */
 function withWippTouchNative(config) {
   config = withInfoPlist(config, (cfg) => {
@@ -19,8 +19,6 @@ function withWippTouchNative(config) {
       "audio",
       "voip",
       "remote-notification",
-      "bluetooth-central",
-      "bluetooth-peripheral",
     ]);
     const current = plist.UIBackgroundModes || [];
     plist.UIBackgroundModes = [...new Set(current.filter((m) => allowed.has(m)).concat([...allowed]))];
@@ -29,15 +27,11 @@ function withWippTouchNative(config) {
     const existing = plist["com.apple.developer.associated-domains"] || [];
     plist["com.apple.developer.associated-domains"] = [...new Set([...existing, applinks])];
 
-    plist.NSBluetoothAlwaysUsageDescription =
-      plist.NSBluetoothAlwaysUsageDescription ||
-      "WIPP Touch utilise le Bluetooth pour détecter un téléphone WIPP tout près, sans numéro ni e-mail.";
-    plist.NSBluetoothPeripheralUsageDescription =
-      plist.NSBluetoothPeripheralUsageDescription ||
-      "WIPP Touch utilise le Bluetooth pour partager un identifiant temporaire à proximité.";
-    plist.NFCReaderUsageDescription =
-      plist.NFCReaderUsageDescription ||
-      "WIPP peut lire une puce NFC WIPP comme complément à la proximité physique.";
+    delete plist.NSBluetoothAlwaysUsageDescription;
+    delete plist.NSBluetoothPeripheralUsageDescription;
+    delete plist.NFCReaderUsageDescription;
+    plist.NSNearbyInteractionUsageDescription =
+      "WIPP Touch mesure la distance avec l’autre téléphone, uniquement pendant WIPP Touch, pour confirmer que vous êtes côte à côte.";
     plist.NSFaceIDUsageDescription =
       plist.NSFaceIDUsageDescription ||
       "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil.";
@@ -51,18 +45,15 @@ function withWippTouchNative(config) {
       "android.permission.ACCESS_FINE_LOCATION",
       "android.permission.ACCESS_COARSE_LOCATION",
       "android.permission.BLUETOOTH_SCAN",
+      "android.permission.BLUETOOTH_ADVERTISE",
+      "android.permission.BLUETOOTH_ADMIN",
+      "android.permission.NFC",
     ]);
     manifest.manifest["uses-permission"] = manifest.manifest["uses-permission"].filter(
       (p) => !strip.has(p.$?.["android:name"]),
     );
 
     manifest.manifest["uses-permission"].push(
-      {
-        $: {
-          "android:name": "android.permission.BLUETOOTH_SCAN",
-          "android:usesPermissionFlags": "neverForLocation",
-        },
-      },
       {
         $: {
           "android:name": "android.permission.ACCESS_FINE_LOCATION",
@@ -79,11 +70,8 @@ function withWippTouchNative(config) {
       manifest.manifest["uses-permission"].map((p) => p.$?.["android:name"]).filter(Boolean),
     );
     for (const name of [
-      "android.permission.BLUETOOTH_ADVERTISE",
       "android.permission.BLUETOOTH_CONNECT",
       "android.permission.BLUETOOTH",
-      "android.permission.BLUETOOTH_ADMIN",
-      "android.permission.NFC",
       "android.permission.USE_BIOMETRIC",
       "android.permission.USE_FINGERPRINT",
     ]) {

@@ -1,7 +1,7 @@
 {
   "name": "wipp-touch-native",
   "version": "1.0.0",
-  "description": "WIPP Touch BLE advertise/scan and Android NFC HCE — opaque token only",
+  "description": "WIPP Touch: motion bump detection + UWB proximity (no Bluetooth)",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "author": "WIPP",

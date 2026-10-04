@@ -308,6 +308,37 @@ export async function handleWippApi(request: Request): Promise<Response> {
       }
     }
 
+    if (a === "touch" && b === "session") {
+      const me = await resolveSession(bearer(request));
+      const ts = await import("@/lib/messaging/touch-session");
+      if (method === "POST" && !c) {
+        const rl = touchRateLimit(`touch:session:${me.id}`, 20, 60_000);
+        if (!rl.ok) throw new WippHttpError(429, "rate_limited", `Trop de tentatives. Réessaie dans ${rl.retryAfterSec}s.`);
+        const body = await readBody<{ platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string } }>(request);
+        return json(await ts.startTouchSession(me.id, body), 201);
+      }
+      if (method === "GET" && c && !d) return json(await ts.view(me.id, c));
+      if (method === "POST" && c && d === "bump") {
+        const body = await readBody<{ at?: number; peak?: number; durMs?: number; energy?: number; rtt?: number }>(request);
+        return json(await ts.reportTouchBump(me.id, c, body));
+      }
+      if (method === "POST" && c && d === "uwb-token") {
+        const body = await readBody<{ token?: string }>(request);
+        return json(await ts.postTouchUwbToken(me.id, c, body.token ?? ""));
+      }
+      if (method === "POST" && c && d === "uwb-result") {
+        const body = await readBody<{ distanceCm?: number | null; status?: string }>(request);
+        return json(await ts.postTouchUwbResult(me.id, c, body));
+      }
+      if (method === "POST" && c && d === "accept") return json(await ts.acceptTouchSession(me.id, c));
+      if (method === "POST" && c && d === "decline") return json(await ts.declineTouchSession(me.id, c));
+      if (method === "POST" && c && d === "cancel") return json(await ts.cancelTouchSession(me.id, c));
+    }
+
+    if (method === "GET" && a === "touch" && b === "time") {
+      return json({ serverNow: Date.now() });
+    }
+
     if (method === "POST" && a === "touch" && b === "share" && c && d === "shock") {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ shockedAt?: number }>(request);
