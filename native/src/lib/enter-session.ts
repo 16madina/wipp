@@ -12,10 +12,12 @@ export function enterLinkedProfile(profile: LinkedProfile, phone: string) {
   const displayName = profile.displayName || "";
   const [firstName, ...rest] = displayName.split(" ");
   if (profile.username) {
-    useWippStore.setState({
+    // Fresh sign-in: never show the previous account's photo while ours loads.
+    useWippStore.setState((s) => ({
       serverUsername: profile.username,
       serverProfileId: profile.id,
-    });
+      me: { ...s.me, avatar: "" },
+    }));
   }
   useWippStore.getState().completeSetup(
     {
@@ -44,6 +46,8 @@ export function restoreFirebaseSession(profile: LinkedProfile | null, phone: str
     serverProfileId: profile.id,
     me: {
       ...s.me,
+      // Another account was last used on this phone: drop its photo.
+      avatar: s.serverProfileId && s.serverProfileId !== profile.id ? "" : s.me.avatar,
       firstName: firstName || s.me.firstName,
       lastName: rest.join(" ") || s.me.lastName,
       displayName: displayName || s.me.displayName,
