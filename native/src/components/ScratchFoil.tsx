@@ -41,6 +41,7 @@ export function ScratchFoil({
   onReady?: () => void;
 }) {
   const [ready, setReady] = useState(false);
+  const [drawn, setDrawn] = useState(false);
   const [path, setPath] = useState("");
   const [hint, setHint] = useState(true);
   const d = useRef("");
@@ -113,15 +114,8 @@ export function ScratchFoil({
   return (
     <GestureDetector gesture={pan}>
       <View collapsable={false} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
-        {/* Preload: the card stays covered until the foil image is ready. */}
-        <Image
-          source={source}
-          style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
-          onLoad={() => {
-            setReady(true);
-            onReady?.();
-          }}
-        />
+        {/* Preload first, then draw the SVG foil; an opaque cover stays until the foil is really drawn. */}
+        <Image source={source} style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} onLoad={() => setReady(true)} />
         {ready && href ? (
           <Svg width={width} height={height} pointerEvents="none">
             <Defs>
@@ -130,12 +124,26 @@ export function ScratchFoil({
                 <Path d={path || "M0 0"} stroke="#000" strokeWidth={BRUSH} strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </Mask>
             </Defs>
-            <SvgImage href={href} x="0" y="0" width={width} height={height} preserveAspectRatio="xMidYMid slice" mask="url(#scratch)" />
+            <SvgImage
+              href={href}
+              x="0"
+              y="0"
+              width={width}
+              height={height}
+              preserveAspectRatio="xMidYMid slice"
+              mask="url(#scratch)"
+              onLoad={() => {
+                // Give the native view one frame to paint before uncovering anything.
+                requestAnimationFrame(() => {
+                  setDrawn(true);
+                  onReady?.();
+                });
+              }}
+            />
           </Svg>
-        ) : (
-          <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.surpriseInk }} />
-        )}
-        {hint && ready ? (
+        ) : null}
+        {!drawn ? <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.surpriseInk }} /> : null}
+        {hint && drawn ? (
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
             <View style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(8,6,4,0.42)" }}>
               <Text style={{ color: colors.surprisePaper, fontFamily: "Inter_700Bold", fontSize: 14 }}>Gratte avec le doigt</Text>
