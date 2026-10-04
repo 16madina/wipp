@@ -5,6 +5,7 @@
 import { getSql } from "@/lib/db";
 import { listPushTokens, disablePushTokens } from "@/lib/messaging/calls";
 import { sendExpoPush } from "@/lib/push/expo";
+import { sendApnsAlert, sendFcmAlert } from "@/lib/push/native";
 import { assertNoSensitivePush, sanitizePushData, type PushData } from "@/lib/push/payload";
 
 const PRIVATE_TITLE = "WIPP";
@@ -49,22 +50,39 @@ export async function sendProfilePush(input: {
   const data = sanitizePushData(input.data as unknown as Record<string, unknown>);
   assertNoSensitivePush(data, input.title, input.body);
   const tokens = await listPushTokens(input.profileId);
+  const apns = tokens.filter((t) => t.kind === "apns").map((t) => t.token);
+  const fcm = tokens.filter((t) => t.kind === "fcm").map((t) => t.token);
+  // A phone that registered a native token gets it directly from Apple/Google, not twice via Expo.
+  const native = new Set<string>([...(apns.length ? ["ios"] : []), ...(fcm.length ? ["android"] : [])]);
   const expo = tokens
-    .filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken"))
+    .filter((t) => (t.kind === "expo" || t.token.startsWith("ExponentPushToken")) && !native.has(t.platform))
     .map((t) => t.token);
-  if (!expo.length) return { sent: 0, deduped: false as const };
-  const result = await sendExpoPush(expo, {
-    title: input.title,
-    body: input.body,
-    data,
-    channelId: input.channelId,
-    collapseId: input.data.eventId,
-    priority: input.channelId === "calls" ? "high" : "default",
-  });
-  if (result.invalidTokens.length) {
-    await disablePushTokens(result.invalidTokens);
+  const collapseId = input.data.eventId;
+  const jobs: Promise<{ sent: number; invalid: string[] }>[] = [];
+  if (expo.length) {
+    jobs.push(
+      sendExpoPush(expo, {
+        title: input.title,
+        body: input.body,
+        data,
+        channelId: input.channelId,
+        collapseId,
+        priority: input.channelId === "calls" ? "high" : "default",
+      }).then((r) => ({ sent: r.sent, invalid: r.invalidTokens })),
+    );
   }
-  return { sent: result.sent, deduped: false as const };
+  if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId }));
+  if (fcm.length) jobs.push(sendFcmAlert(fcm, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId }));
+  const results = await Promise.allSettled(jobs);
+  let sent = 0;
+  const invalid: string[] = [];
+  for (const r of results) {
+    if (r.status !== "fulfilled") continue;
+    sent += r.value.sent;
+    invalid.push(...r.value.invalid);
+  }
+  if (invalid.length) await disablePushTokens(invalid);
+  return { sent, deduped: false as const };
 }
 
 export function privateCopy() {

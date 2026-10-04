@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { ChevronLeft, ChevronRight, Clock, Heart, MapPin } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Clock, Heart, MapPin, Navigation } from "lucide-react-native";
+import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { colors } from "../theme";
 
@@ -145,6 +146,8 @@ export function EventCard({
   saved,
   onPress,
   onSave,
+  interested,
+  distance,
 }: {
   title: string;
   subtitle?: string;
@@ -157,6 +160,8 @@ export function EventCard({
   saved?: boolean;
   onPress: () => void;
   onSave?: () => void;
+  interested?: { count: number; avatars: string[] };
+  distance?: string;
 }) {
   return (
     <Press onPress={onPress} style={{ height: 200, marginBottom: 14, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 1, borderColor: "rgba(255,216,77,0.25)" }}>
@@ -178,7 +183,19 @@ export function EventCard({
           </Press>
         ) : null}
       </View>
-      <View style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
+      {interested && interested.count > 0 ? (
+        <View style={{ position: "absolute", right: 12, bottom: 12, flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ flexDirection: "row" }}>
+            {interested.avatars.slice(0, 3).map((a, i) => (
+              <View key={`${a}-${i}`} style={{ marginLeft: i ? -10 : 0, borderRadius: 14, borderWidth: 2, borderColor: colors.accent }}>
+                <Avatar user={{ avatar: a, displayName: "·" }} size={24} />
+              </View>
+            ))}
+          </View>
+          <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>+{interested.count} intéressé{interested.count > 1 ? "s" : ""}</Text>
+        </View>
+      ) : null}
+      <View style={{ position: "absolute", left: 14, right: interested && interested.count > 0 ? 130 : 14, bottom: 12 }}>
         <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 19, fontFamily: "Inter_800ExtraBold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>{title}</Text>
         {subtitle ? <Text numberOfLines={1} style={{ marginTop: 2, color: "rgba(249,250,251,0.8)", fontSize: 13 }}>{subtitle}</Text> : null}
         <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -192,6 +209,12 @@ export function EventCard({
             <MapPin size={14} color={colors.accent} />
             <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 12 }}>{online ? "En ligne" : city || "Lieu à préciser"}</Text>
           </View>
+          {distance ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Navigation size={13} color={colors.accent} />
+              <Text style={{ color: colors.fg, fontSize: 12 }}>{distance}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </Press>

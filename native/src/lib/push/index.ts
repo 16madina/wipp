@@ -191,6 +191,20 @@ export async function registerDeviceToken(): Promise<boolean> {
     await ensurePushChannels();
     const perm = await Notifications.getPermissionsAsync();
     if (perm.status !== "granted") return false;
+    // Native token first (APNs on iPhone): the server sends straight to Apple, without Expo.
+    if (Platform.OS === "ios") {
+      try {
+        const native = await Notifications.getDevicePushTokenAsync();
+        if (native?.data) {
+          await wippApi("devices/push", {
+            method: "POST",
+            body: JSON.stringify({ token: String(native.data), platform: "ios", kind: "apns", installationId: await getInstallationId() }),
+          });
+        }
+      } catch {
+        /* keep the Expo path below */
+      }
+    }
     const pid = projectId();
     const tokenData = await Notifications.getExpoPushTokenAsync(pid ? { projectId: pid } : undefined);
     const token = tokenData.data;

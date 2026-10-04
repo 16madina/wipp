@@ -7,6 +7,8 @@ import { supabase } from "./supabase";
 import { errorText } from "./error-fr";
 
 export type BusinessCardView = {
+  lat?: number | null;
+  lng?: number | null;
   id: string;
   publicId: string;
   ownerProfileId: string;
@@ -105,7 +107,7 @@ export function cardToShop(
   card: Pick<
     BusinessCardView,
     "publicId" | "name" | "category" | "description" | "city" | "country" | "address" | "hours" | "businessPhone" | "coverUrl" | "logoUrl" | "ownerProfileId"
-  >,
+  > & { lat?: number | null; lng?: number | null },
   ownerId?: string,
 ) {
   const cat = card.category.toLowerCase();
@@ -131,8 +133,8 @@ export function cardToShop(
     city: card.city,
     country: card.country,
     phone: card.businessPhone ?? "",
-    lat: 0,
-    lng: 0,
+    lat: card.lat ?? 0,
+    lng: card.lng ?? 0,
     hours: card.hours ?? "",
     plan: "vitrine" as const,
     image: card.coverUrl || card.logoUrl || "",

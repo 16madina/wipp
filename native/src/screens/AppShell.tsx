@@ -370,6 +370,10 @@ export function AppShell() {
         void useWippStore.getState().syncServerInbox();
       }
     });
+    // Contacts' new profile photos and names show up within ~2 minutes while WIPP is open.
+    const refresh = setInterval(() => {
+      if (AppState.currentState === "active") void useWippStore.getState().syncServerInbox();
+    }, 120_000);
     let unbind = () => {};
     let offMatch = () => {};
     void import("../lib/proximity/lifecycle").then(({ bindProximityLifecycle, syncProximityLifecycle }) => {
@@ -387,6 +391,7 @@ export function AppShell() {
     return () => {
       stop();
       sub.remove();
+      clearInterval(refresh);
       unbind();
       offMatch();
     };

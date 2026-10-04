@@ -216,6 +216,8 @@ type CardRow = {
   logo_url: string | null;
   photo_urls: string[] | null;
   is_published: boolean;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 function likeQuery(raw: string) {
@@ -281,6 +283,8 @@ function mapCard(row: CardRow) {
     logoPath: row.logo_url && !http(row.logo_url) ? row.logo_url : null,
     photoPaths: (row.photo_urls ?? []).filter((path) => path && !http(path)).slice(0, 8),
     isPublished: Boolean(row.is_published),
+    lat: typeof row.lat === "number" ? row.lat : null,
+    lng: typeof row.lng === "number" ? row.lng : null,
     coverUrl: http(row.cover_url),
     logoUrl: http(row.logo_url),
     photoUrls: (row.photo_urls ?? []).filter((path) => http(path)).slice(0, 8),
@@ -312,7 +316,7 @@ export async function getMyBusinessCard(meId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
     from wipp_business_cards where owner_profile_id = ${meId} limit 1
   `;
   return { profileId: meId, userCountry: null as string | null, card: rows[0] ? await withServerMedia(mapCard(rows[0])) : null };
@@ -343,7 +347,7 @@ export async function saveMyBusinessCard(
   const sql = await getSql();
   const current = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
     from wipp_business_cards where owner_profile_id = ${meId} limit 1
   `;
   const fields = {
@@ -381,7 +385,7 @@ export async function saveMyBusinessCard(
     `;
     const next = await sql<CardRow>`
       select id, public_id, owner_profile_id, name, category, description, country, city,
-             address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+             address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
       from wipp_business_cards where id = ${current[0].id} and owner_profile_id = ${meId} limit 1
     `;
     if (!next[0]) throw new WippHttpError(404, "not_found", "Carte introuvable.");
@@ -400,7 +404,7 @@ export async function saveMyBusinessCard(
       true
     )
     returning id, public_id, owner_profile_id, name, category, description, country, city,
-      address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+      address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
   `;
   if (!created[0]) throw new WippHttpError(500, "profile_missing", "Carte introuvable.");
   return withServerMedia(mapCard(created[0]));
@@ -411,7 +415,7 @@ export async function listPublicBusinessCards(q = "") {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
     from wipp_business_cards
     where is_published = true
       and (
@@ -433,7 +437,7 @@ export async function getPublicBusinessCard(publicId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
     from wipp_business_cards
     where lower(public_id) = ${id} and is_published = true
     limit 1

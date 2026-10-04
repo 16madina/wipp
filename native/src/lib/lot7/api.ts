@@ -506,6 +506,13 @@ type EventRow = {
   is_free?: boolean | null;
   price?: string | null;
   currency?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  capacity?: number | null;
+  adult_only?: boolean | null;
+  interested_count?: number | null;
+  interested_me?: boolean | null;
+  interested_avatars?: string[] | null;
 };
 
 const EVENT_CAT = /^Catégorie : (.+)\n/;
@@ -554,8 +561,13 @@ function mapEvent(row: EventRow, me: string | null, image: string): LifestyleIte
     when: row.starts_at ? new Date(row.starts_at).toLocaleString() : "",
     place: row.place,
     city: row.city,
-    lat: 0,
-    lng: 0,
+    lat: typeof row.lat === "number" ? row.lat : 0,
+    lng: typeof row.lng === "number" ? row.lng : 0,
+    capacity: row.capacity ?? undefined,
+    adultOnly: Boolean(row.adult_only),
+    interestedCount: row.interested_count ?? 0,
+    interestedMe: Boolean(row.interested_me),
+    interestedAvatars: row.interested_avatars ?? [],
     hostId: me && row.owner_id === me ? "me" : `srvuser:${row.owner_id}`,
     hostName: row.display_name || row.username || "",
     image,
@@ -580,6 +592,24 @@ function mapEvent(row: EventRow, me: string | null, image: string): LifestyleIte
     isFree: free,
     currency,
   };
+}
+
+export async function toggleInterest(eventId: string, on: boolean) {
+  return rpc<null>("wipp_lot7_toggle_interest", { p_id: eventId, p_on: on });
+}
+
+export async function saveEventExtras(id: string, extras: { lat?: number | null; lng?: number | null; capacity?: number | null; adult: boolean }) {
+  return rpc<null>("wipp_lot7_event_extras", {
+    p_id: id,
+    p_lat: extras.lat ?? null,
+    p_lng: extras.lng ?? null,
+    p_capacity: extras.capacity ?? null,
+    p_adult: extras.adult,
+  });
+}
+
+export async function saveCardPosition(lat: number, lng: number) {
+  return rpc<null>("wipp_lot7_card_position", { p_lat: lat, p_lng: lng });
 }
 
 export async function fetchEvents(me: string | null, q = "") {

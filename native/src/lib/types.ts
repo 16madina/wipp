@@ -568,6 +568,12 @@ export type LifestyleItem = {
   isFree?: boolean;
   currency?: string;
   hostName?: string;
+  capacity?: number;
+  adultOnly?: boolean;
+  interestedCount?: number;
+  interestedMe?: boolean;
+  /** Up to 3 avatar paths of people interested. */
+  interestedAvatars?: string[];
 };
 
 export type RedeemResult =

@@ -19,10 +19,14 @@ import { colors, layout } from "../theme";
 import { errorText } from "../lib/error-fr";
 
 const CATS = ["all", "auto", "realty", "electronics", "fashion", "home", "jobs", "leisure", "goods"] as const;
-const GEO = { lat: 45.531, lng: -73.518 };
-/** Real cards and events have no GPS yet (0,0). Their distance is unknown, not 8 000 km. */
+/** My real position (asked once); no distance is shown until it is known. */
+let GEO: { lat: number; lng: number } | null = null;
+void import("../lib/geo").then(({ myPositionOnce }) => myPositionOnce()).then((p) => {
+  if (p) GEO = p;
+});
+/** Items without coordinates (0,0) have an unknown distance, not 8 000 km. */
 function knownMeters(p: { lat?: number; lng?: number }) {
-  return p.lat && p.lng ? metersBetween(GEO, { lat: p.lat, lng: p.lng }) : null;
+  return GEO && p.lat && p.lng ? metersBetween(GEO, { lat: p.lat, lng: p.lng }) : null;
 }
 type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
@@ -508,7 +512,7 @@ function ShopSearch({ q }: { q: string }) {
 
 function shopPlace(shop: Shop, t: ReturnType<typeof useT>) {
   const bits = [shop.tags?.[0] || shopCatLabel(shop.category, t), shop.city].filter(Boolean);
-  if (shop.lat && shop.lng) bits.push(formatMeters(metersBetween(GEO, { lat: shop.lat, lng: shop.lng }), "fr"));
+  if (GEO && shop.lat && shop.lng) bits.push(formatMeters(metersBetween(GEO, { lat: shop.lat, lng: shop.lng }), "fr"));
   return bits.join(" · ");
 }
 
@@ -658,6 +662,10 @@ function LifestylePane() {
   const [loadError, setLoadError] = useState("");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Tous");
+  const [myPos, setMyPos] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    void import("../lib/geo").then(({ myPositionOnce }) => myPositionOnce()).then((p) => p && setMyPos(p));
+  }, []);
   const items = useMemo(() => {
     const needle = fold(q.trim());
     const near = fold(myCity);
@@ -665,14 +673,19 @@ function LifestylePane() {
       .filter(isUpcomingEvent)
       .filter((e) => cat === "Tous" || fold(e.category ?? "") === fold(cat))
       .filter((e) => !needle || fold(`${e.title} ${e.city} ${e.place} ${e.category ?? ""} ${e.details ?? ""} ${e.note}`).includes(needle))
-      // Events in my city first, then soonest first.
+      // Nearest first when both have a position, else my city first, then soonest first.
       .sort((x, y) => {
+        if (myPos && x.lat && y.lat && !x.isOnline && !y.isOnline) {
+          const dx = kmBetween(myPos, { lat: x.lat, lng: x.lng });
+          const dy = kmBetween(myPos, { lat: y.lat, lng: y.lng });
+          if (Math.abs(dx - dy) > 1) return dx - dy;
+        }
         const nx = near && fold(x.city) === near ? 0 : 1;
         const ny = near && fold(y.city) === near ? 0 : 1;
         if (nx !== ny) return nx - ny;
         return (Date.parse(x.startsAt ?? "") || Infinity) - (Date.parse(y.startsAt ?? "") || Infinity);
       });
-  }, [lifestyle, q, cat, myCity]);
+  }, [lifestyle, q, cat, myCity, myPos]);
   useEffect(() => {
     let cancel = false;
     void (async () => {
@@ -746,6 +759,8 @@ function LifestylePane() {
             city={e.city}
             online={e.isOnline}
             priceLabel={eventAccessText(e).toUpperCase()}
+            interested={{ count: e.interestedCount ?? 0, avatars: e.interestedAvatars ?? [] }}
+            distance={myPos && e.lat && !e.isOnline ? kmLabel(kmBetween(myPos, { lat: e.lat, lng: e.lng })) : undefined}
             saved={saved}
             onPress={() => push({ name: "lifestyle", itemId: e.id })}
             onSave={() => {
@@ -1252,6 +1267,34 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
           {item.hostName ? <Text style={{ marginTop: 8, color: colors.muted }}>Organisé par {item.hostName}</Text> : null}
           <Text style={{ marginTop: 12, color: colors.fg }}>{item.details || item.note}</Text>
           {item.contact ? <Text style={{ marginTop: 8, color: colors.muted }}>{item.contact}</Text> : null}
+          {item.adultOnly || item.capacity ? (
+            <Text style={{ marginTop: 8, color: colors.muted }}>
+              {[item.adultOnly ? "🔞 Réservé aux 18 ans et plus" : "", item.capacity ? `${item.capacity} places` : ""].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
+          {mine ? (
+            <Text style={{ marginTop: 16, color: colors.fg }}>
+              {item.interestedCount ? `${item.interestedCount} personne${item.interestedCount > 1 ? "s" : ""} intéressée${item.interestedCount > 1 ? "s" : ""}` : "Personne n’est encore intéressé."}
+            </Text>
+          ) : (
+            <Btn
+              label={item.interestedMe ? `✓ Intéressé·e (${item.interestedCount ?? 1})` : `Je suis intéressé·e${item.interestedCount ? ` · ${item.interestedCount}` : ""}`}
+              variant={item.interestedMe ? "secondary" : undefined}
+              onPress={() => {
+                const on = !item.interestedMe;
+                // Optimistic: flip now, the server confirms in the background.
+                useWippStore.setState((s) => ({
+                  lifestyle: s.lifestyle.map((x) =>
+                    x.id === item.id ? { ...x, interestedMe: on, interestedCount: Math.max(0, (x.interestedCount ?? 0) + (on ? 1 : -1)) } : x,
+                  ),
+                }));
+                void import("../lib/lot7/api").then(({ toggleInterest }) =>
+                  toggleInterest(item.id, on).catch((err) => Alert.alert("Événement", errorText(err, "Action impossible."))),
+                );
+              }}
+              style={{ marginTop: 20 }}
+            />
+          )}
           <Btn
             label={saved ? "Retirer des enregistrés" : "Enregistrer"}
             onPress={() => {

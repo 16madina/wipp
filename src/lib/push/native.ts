@@ -129,3 +129,96 @@ export async function sendVoipCall(tokens: string[], payload: Record<string, unk
   );
   return { sent, invalid };
 }
+
+/** Visible APNs notification (messages, requests). Custom data goes under "body" for expo-notifications. */
+export async function sendApnsAlert(
+  tokens: string[],
+  msg: { title: string; body: string; data: Record<string, unknown>; collapseId?: string; sound?: boolean },
+) {
+  const jwt = await apnsAuth();
+  if (!jwt || !tokens.length) return { sent: 0, invalid: [] as string[] };
+  const payload = JSON.stringify({
+    aps: { alert: { title: msg.title, body: msg.body }, sound: msg.sound === false ? undefined : "default", "mutable-content": 1 },
+    body: msg.data,
+    ...msg.data,
+  });
+  const invalid: string[] = [];
+  let sent = 0;
+  await Promise.all(
+    tokens.map(async (token) => {
+      let status = await apnsAlertPost("api.push.apple.com", token, jwt, payload, msg.collapseId);
+      if (status === 400 || status === 410) status = await apnsAlertPost("api.sandbox.push.apple.com", token, jwt, payload, msg.collapseId);
+      if (status === 200) sent += 1;
+      else if (status === 410) invalid.push(token);
+    }),
+  );
+  return { sent, invalid };
+}
+
+function apnsAlertPost(host: string, token: string, jwt: string, body: string, collapseId?: string) {
+  return new Promise<number>((resolve) => {
+    const client = connect(`https://${host}`);
+    client.on("error", () => resolve(0));
+    const headers: Record<string, string> = {
+      ":method": "POST",
+      ":path": `/3/device/${token}`,
+      authorization: `bearer ${jwt}`,
+      "apns-topic": BUNDLE_ID,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "content-type": "application/json",
+    };
+    if (collapseId) headers["apns-collapse-id"] = collapseId.slice(0, 64);
+    const req = client.request(headers);
+    let status = 0;
+    req.on("response", (h) => {
+      status = Number(h[":status"]) || 0;
+    });
+    req.on("data", () => undefined);
+    req.on("end", () => {
+      client.close();
+      resolve(status);
+    });
+    req.on("error", () => {
+      client.close();
+      resolve(0);
+    });
+    req.end(body);
+  });
+}
+
+/** Visible FCM notification on Android (messages, requests), on the given channel. */
+export async function sendFcmAlert(
+  tokens: string[],
+  msg: { title: string; body: string; data: Record<string, unknown>; channelId: string; collapseId?: string },
+) {
+  const sa = serviceAccount();
+  if (!sa || !tokens.length) return { sent: 0, invalid: [] as string[] };
+  const access = await fcmAccessToken(sa);
+  const data: Record<string, string> = { body: JSON.stringify(msg.data) };
+  for (const [k, v] of Object.entries(msg.data)) if (k !== "body") data[k] = String(v ?? "");
+  const invalid: string[] = [];
+  let sent = 0;
+  await Promise.all(
+    tokens.map(async (token) => {
+      const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: {
+            token,
+            notification: { title: msg.title, body: msg.body },
+            data,
+            android: {
+              priority: "HIGH",
+              notification: { channel_id: msg.channelId, sound: "default", tag: msg.collapseId?.slice(0, 64) },
+            },
+          },
+        }),
+      });
+      if (res.ok) sent += 1;
+      else if (res.status === 404 || res.status === 400) invalid.push(token);
+    }),
+  );
+  return { sent, invalid };
+}

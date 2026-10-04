@@ -540,9 +540,11 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
   const [error, setError] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   // Extra rules travel in the "contact" text (no dedicated columns yet).
-  const [limitOn, setLimitOn] = useState(/places max/.test(existing?.contact ?? ""));
-  const [limit, setLimit] = useState(/(\d+) places max/.exec(existing?.contact ?? "")?.[1] ?? "");
-  const [adultOnly, setAdultOnly] = useState(/^18\+/.test(existing?.contact ?? ""));
+  const legacyLimit = /(\d+) places max/.exec(existing?.contact ?? "")?.[1];
+  const [limitOn, setLimitOn] = useState(Boolean(existing?.capacity || legacyLimit));
+  const [limit, setLimit] = useState(existing?.capacity ? String(existing.capacity) : legacyLimit ?? "");
+  const [adultOnly, setAdultOnly] = useState(Boolean(existing?.adultOnly) || /^18\+/.test(existing?.contact ?? ""));
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(existing?.lat ? { lat: existing.lat, lng: existing.lng } : null);
   const insets = useSafeAreaInsets();
 
   async function addCover() {
@@ -604,7 +606,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
         place: online ? "En ligne" : venue.trim(),
         starts: starts.toISOString(),
         photo,
-        contact: [adultOnly ? "18+" : "", limitOn && limit ? `${limit} places max` : "", access.trim()].filter(Boolean).join(" · "),
+        contact: access.trim(),
         ends: ends ? ends.toISOString() : "",
         category: category.trim(),
         country: country.trim(),
@@ -615,8 +617,15 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
         price: free ? "" : amount.trim(),
         currency: free ? "" : currency,
       });
+      const savedId = id || eventId || "";
+      if (savedId) {
+        const { saveEventExtras } = await import("../lib/lot7/api");
+        const { geocodeCity } = await import("../lib/geo");
+        const where = online ? null : coords ?? (city.trim() ? await geocodeCity(city.trim(), eventCountry.id) : null);
+        await saveEventExtras(savedId, { lat: where?.lat ?? null, lng: where?.lng ?? null, capacity: limitOn && limit ? Number(limit) : null, adult: adultOnly });
+      }
       useWippStore.setState({ lifestyle: await fetchEvents(owner) });
-      useWippStore.getState().replace({ name: "lifestyle", itemId: id || eventId || "" });
+      useWippStore.getState().replace({ name: "lifestyle", itemId: savedId });
     } catch (err) {
       setError(errorText(err, "Publication impossible."));
     } finally {
@@ -745,7 +754,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                     <Text style={{ flex: 1, color: colors.fg, fontSize: 14 }}>{eventCountry.fr}</Text>
                     <ChevronDown size={16} color={colors.muted} />
                   </Press>
-                  <AddressField country={eventCountry} value={address} onChange={(v) => setAddress(v ?? "")} onPickCity={setCity} />
+                  <AddressField country={eventCountry} value={address} onChange={(v) => setAddress(v ?? "")} onPickCity={setCity} onPickCoords={(lat, lng) => setCoords({ lat, lng })} />
                   <View style={box}>
                     <TextInput value={city} onChangeText={setCity} placeholder="Ville *" placeholderTextColor={colors.muted} style={inputStyle} />
                   </View>

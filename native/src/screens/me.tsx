@@ -1041,6 +1041,7 @@ export function BusinessCardEditorScreen() {
   const [countryOpen, setCountryOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [hoursOpen, setHoursOpen] = useState(false);
+  const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const cardCountry = findWorldCountry(draft.country) ?? DEFAULT_COUNTRY;
   function rememberProfile(id: string) {
     profileRef.current = id;
@@ -1222,6 +1223,15 @@ export function BusinessCardEditorScreen() {
         logoPath,
         photoPaths: draft.photoPaths,
       });
+      // Position for "à proximité": the picked address, else the city centre.
+      void (async () => {
+        const { geocodeCity } = await import("../lib/geo");
+        const where = coordsRef.current ?? (await geocodeCity(draft.city.trim(), cardCountry.id));
+        if (where) {
+          const { saveCardPosition } = await import("../lib/lot7/api");
+          await saveCardPosition(where.lat, where.lng).catch(() => undefined);
+        }
+      })();
       if (!saved?.publicId && !saved?.name) {
         setError("Le serveur n’a pas renvoyé la carte enregistrée.");
         return;
@@ -1325,7 +1335,7 @@ export function BusinessCardEditorScreen() {
             onPress={() => setCountryOpen(true)}
           />
           <Field label="Ville *" value={draft.city} onChangeText={(v) => set("city", v)} />
-          <AddressField country={cardCountry} value={draft.address ?? ""} onChange={(v) => set("address", v)} onPickCity={(c) => set("city", c)} />
+          <AddressField country={cardCountry} value={draft.address ?? ""} onChange={(v) => set("address", v)} onPickCity={(c) => set("city", c)} onPickCoords={(lat, lng) => (coordsRef.current = { lat, lng })} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Afficher l’adresse sur ma carte</Text>
