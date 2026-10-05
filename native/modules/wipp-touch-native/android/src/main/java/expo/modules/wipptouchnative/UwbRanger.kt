@@ -39,8 +39,17 @@ class UwbRanger(
   private val sessionKey = ByteArray(8)
   private var job: Job? = null
 
-  /** UWB present AND switched on (Samsung has a UWB toggle in Settings). */
-  suspend fun isAvailable(): Boolean = UwbManager.createInstance(context).isAvailable()
+  /**
+   * UWB present AND switched on (Samsung has a UWB toggle in Settings). This library version has
+   * no availability API: opening a session scope fails when the radio is off.
+   */
+  suspend fun isAvailable(): Boolean =
+    try {
+      UwbManager.createInstance(context).controleeSessionScope()
+      true
+    } catch (e: Exception) {
+      false
+    }
 
   /** Opens the local UWB scope and returns this phone's OOB parameters as a base64 token. */
   suspend fun prepare(newRole: String): String {
