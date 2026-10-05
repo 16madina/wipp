@@ -23,6 +23,7 @@ export type PharmacyPlace = {
   weekdayText: string[];
   website: string | null;
   mapsUri: string | null;
+  utcOffsetMinutes?: number | null;
 };
 
 type DutyPharmacy = {
@@ -47,16 +48,22 @@ type Load =
 let lastResult: { at: number; key: string; places: PharmacyPlace[]; origin: LatLng | null } | null = null;
 const CACHE_MS = 10 * 60_000;
 
-function hhmm(iso: string | null) {
+/** Time in the PHARMACY's local time (its UTC offset from Google), not the phone's. */
+function hhmm(iso: string | null, offsetMin?: number | null) {
   if (!iso) return null;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (Number.isNaN(d.getTime())) return null;
+  if (typeof offsetMin !== "number") return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const local = new Date(d.getTime() + offsetMin * 60_000);
+  return `${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 function statusOf(p: PharmacyPlace): { label: string; tone: "open" | "closed" | "unknown"; detail: string | null } {
   if (p.open24h) return { label: "Ouverte 24 h/24", tone: "open", detail: null };
-  if (p.openNow === true) return { label: "Ouverte maintenant", tone: "open", detail: hhmm(p.nextCloseTime) ? `Ferme à ${hhmm(p.nextCloseTime)}` : null };
-  if (p.openNow === false) return { label: "Fermée", tone: "closed", detail: hhmm(p.nextOpenTime) ? `Ouvre à ${hhmm(p.nextOpenTime)}` : null };
+  const close = hhmm(p.nextCloseTime, p.utcOffsetMinutes);
+  const open = hhmm(p.nextOpenTime, p.utcOffsetMinutes);
+  if (p.openNow === true) return { label: "Ouverte maintenant", tone: "open", detail: close ? `Ferme à ${close}` : null };
+  if (p.openNow === false) return { label: "Fermée", tone: "closed", detail: open ? `Ouvre à ${open}` : null };
   // Unknown hours are never shown as "closed".
   return { label: "Horaires non communiqués", tone: "unknown", detail: null };
 }
@@ -137,8 +144,7 @@ function PharmacyCard({ p, origin, duty }: { p: PharmacyPlace; origin: LatLng | 
         {st.detail ? <Text style={{ color: colors.muted, fontFamily: "Inter_400Regular" }}>{`  ·  ${st.detail}`}</Text> : null}
       </Text>
       <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={2}>
-        {km != null ? `📍 ${kmLabel(km)}` : "📍"}
-        {p.address ? `  ·  ${p.address}` : ""}
+        {km != null ? `📍 ${kmLabel(km)}${p.address ? `  ·  ${p.address}` : ""}` : `📍 ${p.address ?? ""}`}
       </Text>
       {duty ? <Text style={{ color: colors.muted, fontSize: 12 }}>Source vérifiée : {duty.source}</Text> : null}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
@@ -161,6 +167,8 @@ export function PharmaciesScreen() {
   const pop = useWippStore((s) => s.pop);
   const [tab, setTab] = useState<Tab>("open");
   const [origin, setOrigin] = useState<LatLng | null>(lastResult?.origin ?? null);
+  // A city search centres the map but distances are only shown from the user's real position.
+  const [fromGps, setFromGps] = useState(Boolean(lastResult?.origin));
   const [load, setLoad] = useState<Load>(lastResult ? { state: "ready", places: lastResult.places } : { state: "locating" });
   const [duty, setDuty] = useState<{ loading: boolean; available: boolean; source: string | null; list: DutyPharmacy[] } | null>(null);
   const [query, setQuery] = useState("");
@@ -192,6 +200,7 @@ export function PharmaciesScreen() {
       return;
     }
     setOrigin(pos);
+    setFromGps(true);
     await fetchNear(pos, force);
   }
 
@@ -203,6 +212,7 @@ export function PharmaciesScreen() {
       const r = await wippApi<{ places: PharmacyPlace[] }>(`/places/pharmacies?q=${encodeURIComponent(q)}&lang=fr`);
       const first = r.places[0];
       if (first) setOrigin({ lat: first.lat, lng: first.lng });
+      setFromGps(false);
       setLoad({ state: "ready", places: r.places });
     } catch (err) {
       setLoad({ state: "error", message: (err as Error).message || "Erreur" });
@@ -254,7 +264,7 @@ export function PharmaciesScreen() {
             <Text style={{ color: colors.muted, textAlign: "center", lineHeight: 19 }}>
               WIPP utilise votre position pour trouver les pharmacies ouvertes près de vous. Autorise la localisation, ou cherche une ville ou une adresse.
             </Text>
-            <Btn label="Autoriser la localisation" onPress={() => void Linking.openSettings()} />
+            <Btn label="Autoriser la localisation" onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
             <Btn label="Réessayer" variant="secondary" onPress={() => void locate(true)} />
           </View>
         ) : null}
@@ -318,7 +328,7 @@ export function PharmaciesScreen() {
 
         {load.state === "ready" && tab !== "duty" ? (
           ordered.length ? (
-            ordered.map((p) => <PharmacyCard key={p.id} p={p} origin={origin} />)
+            ordered.map((p) => <PharmacyCard key={p.id} p={p} origin={fromGps ? origin : null} />)
           ) : (
             <View style={{ gap: 10, marginTop: 8 }}>
               <Empty title={tab === "open" ? "Aucune pharmacie ouverte trouvée" : "Aucune pharmacie trouvée"} />

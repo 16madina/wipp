@@ -748,7 +748,7 @@ export function WgoTouchScreen() {
           {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
           {ph === "uwb_denied" ? (
             <>
-              <Btn label={Platform.OS === "android" ? c.openSettingsAndroid : c.openSettings} onPress={() => void Linking.openSettings()} />
+              <Btn label={Platform.OS === "android" ? c.openSettingsAndroid : c.openSettings} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
               <Btn label={c.useQr} variant="secondary" onPress={() => push({ name: "scanner" })} />
             </>
           ) : null}

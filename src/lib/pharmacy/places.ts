@@ -20,6 +20,8 @@ export type PharmacyPlace = {
   website: string | null;
   mapsUri: string | null;
   regionCode: string | null;
+  /** The pharmacy's own UTC offset, to show "Ferme à 22:00" in local time. */
+  utcOffsetMinutes: number | null;
 };
 
 const FIELD_MASK = [
@@ -33,6 +35,7 @@ const FIELD_MASK = [
   "places.websiteUri",
   "places.googleMapsUri",
   "places.postalAddress",
+  "places.utcOffsetMinutes",
 ].join(",");
 
 const RADII = [5_000, 10_000, 25_000];
@@ -62,6 +65,7 @@ type RawPlace = {
   websiteUri?: string;
   googleMapsUri?: string;
   postalAddress?: { regionCode?: string };
+  utcOffsetMinutes?: number;
 };
 
 function map(p: RawPlace): PharmacyPlace | null {
@@ -87,6 +91,7 @@ function map(p: RawPlace): PharmacyPlace | null {
     website: p.websiteUri ?? null,
     mapsUri: p.googleMapsUri ?? null,
     regionCode: p.postalAddress?.regionCode ?? null,
+    utcOffsetMinutes: typeof p.utcOffsetMinutes === "number" ? p.utcOffsetMinutes : null,
   };
 }
 

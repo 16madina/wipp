@@ -367,7 +367,7 @@ function TouchPermissionSection() {
       <Row
         label={android ? "Appareils à proximité" : "Interactions à proximité"}
         value={denied ? "Désactivées" : perm === "granted" ? "Activées" : "Demandées au premier WIPP Touch"}
-        onPress={denied ? () => void Linking.openSettings() : undefined}
+        onPress={denied ? () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) : undefined}
       />
       {denied ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 10 }}>
@@ -376,7 +376,7 @@ function TouchPermissionSection() {
               ? "Autorisation de proximité désactivée. WIPP Touch utilise « Appareils à proximité » pour confirmer que les deux téléphones sont réellement proches. Paramètres → Applications → WIPP → Autorisations → Appareils à proximité."
               : "WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches. Réglages → WIPP → Interactions à proximité."}
           </Text>
-          <Btn label={android ? "Activer dans les réglages" : "Activer dans les réglages de l’iPhone"} onPress={() => void Linking.openSettings()} />
+          <Btn label={android ? "Activer dans les réglages" : "Activer dans les réglages de l’iPhone"} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
         </View>
       ) : null}
     </Section>
@@ -1235,7 +1235,7 @@ export function BusinessCardEditorScreen() {
       setError("Accès aux photos refusé.");
       Alert.alert("Photos", "WIPP a besoin d’accéder à tes photos pour la carte.", [
         { text: "Annuler", style: "cancel" },
-        { text: "Réglages", onPress: () => void Linking.openSettings() },
+        { text: "Réglages", onPress: () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) },
       ]);
       return;
     }
