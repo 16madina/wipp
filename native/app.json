@@ -279,7 +279,23 @@
           "locationWhenInUsePermission": "WIPP utilise ta position pour afficher les annonces, offres et pros près de toi."
         }
       ],
-      "./plugins/withWippVoip"
+      "./plugins/withWippVoip",
+      [
+        "expo-quick-actions",
+        {
+          "iosActions": [
+            {
+              "id": "wipp-touch",
+              "title": "WIPP Touch",
+              "subtitle": "Rapprochez vos téléphones",
+              "icon": "symbol:hand.tap.fill",
+              "params": {
+                "screen": "wgo-touch"
+              }
+            }
+          ]
+        }
+      ]
     ],
     "web": {
       "favicon": "./assets/brand/favicon-48.png"

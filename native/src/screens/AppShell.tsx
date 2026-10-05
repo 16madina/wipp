@@ -374,6 +374,22 @@ export function AppShell() {
     const refresh = setInterval(() => {
       if (AppState.currentState === "active") void useWippStore.getState().syncServerInbox();
     }, 120_000);
+    // Long-press on the WIPP icon → "WIPP Touch" opens the Touch screen directly.
+    let offQuick = () => {};
+    void import("expo-quick-actions")
+      .then((QA) => {
+        const open = (a?: { id?: string } | null) => {
+          if (a?.id !== "wipp-touch") return;
+          if (useWippStore.getState().stack.at(-1)?.name !== "wgo-touch") useWippStore.getState().push({ name: "wgo-touch" });
+        };
+        if (Platform.OS === "android") {
+          void QA.setItems([{ id: "wipp-touch", title: "WIPP Touch", subtitle: "Rapprochez vos téléphones", params: { screen: "wgo-touch" } }]).catch(() => undefined);
+        }
+        open(QA.initial);
+        const sub = QA.addListener(open);
+        offQuick = () => sub.remove();
+      })
+      .catch(() => undefined);
     let unbind = () => {};
     let offMatch = () => {};
     void import("../lib/proximity/lifecycle").then(({ bindProximityLifecycle, syncProximityLifecycle }) => {
@@ -393,6 +409,7 @@ export function AppShell() {
       sub.remove();
       clearInterval(refresh);
       unbind();
+      offQuick();
       offMatch();
     };
   }, [onboarded]);
