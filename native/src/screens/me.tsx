@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { getTouchCapabilities, uwbPermission, uwbProbe, type UwbPermission } from "wipp-touch-native";
 import * as ImagePicker from "expo-image-picker";
 import {
   BadgeCheck,
@@ -309,6 +310,43 @@ function SettingsList({ title, rows }: { title: string; rows: { label: string; v
   );
 }
 
+/** WIPP Touch → iOS "Nearby Interactions" permission: real state + shortcut to the iPhone settings. */
+function TouchPermissionSection() {
+  const caps = useMemo(() => getTouchCapabilities(), []);
+  const [perm, setPerm] = useState<UwbPermission>(() => uwbPermission());
+  useEffect(() => {
+    if (!caps.uwb) return;
+    const refresh = () => {
+      // Only re-probe when it was refused (avoids triggering the first-time iOS prompt here).
+      if (uwbPermission() === "denied") void uwbProbe().then(setPerm);
+      else setPerm(uwbPermission());
+    };
+    refresh();
+    const sub = AppState.addEventListener("change", (st) => st === "active" && refresh());
+    return () => sub.remove();
+  }, [caps.uwb]);
+  if (Platform.OS !== "ios" || !caps.uwb) return null;
+  const denied = perm === "denied";
+  return (
+    <Section title="WIPP Touch">
+      <Row
+        label="Interactions à proximité"
+        value={denied ? "Désactivées" : perm === "granted" ? "Activées" : "Demandées au premier WIPP Touch"}
+        onPress={denied ? () => void Linking.openSettings() : undefined}
+      />
+      {denied ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 10 }}>
+          <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+            WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches.
+            Réglages → WIPP → Interactions à proximité.
+          </Text>
+          <Btn label="Activer dans les réglages de l’iPhone" onPress={() => void Linking.openSettings()} />
+        </View>
+      ) : null}
+    </Section>
+  );
+}
+
 export function PrivacyScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
@@ -502,6 +540,7 @@ export function PrivacyScreen() {
           <Row label="WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
           <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>
+        <TouchPermissionSection />
       </ScrollView>
     </ScreenRoot>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Text, View, ScrollView } from "react-native";
+import { Linking, Text, View, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
@@ -557,6 +557,10 @@ const TOUCH_COPY = {
     tooFar: "Proximité non confirmée",
     offline: "Connexion Internet requise pour WIPP Touch.",
     noMotion: "Les capteurs de mouvement ne sont pas disponibles sur cet appareil.",
+    uwbDenied: "Interactions à proximité désactivées",
+    uwbDeniedBody: "WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches.",
+    uwbHow: "Réglages → WIPP → Interactions à proximité",
+    openSettings: "Activer dans Réglages",
     failed: "WIPP Touch n’a pas pu démarrer.",
     retry: "Réessayer",
     scanQr: "Scanner un QR",
@@ -594,6 +598,10 @@ const TOUCH_COPY = {
     tooFar: "Proximity not confirmed",
     offline: "WIPP Touch needs an Internet connection.",
     noMotion: "Motion sensors aren’t available on this device.",
+    uwbDenied: "Nearby Interactions turned off",
+    uwbDeniedBody: "WIPP Touch uses your iPhone’s Nearby Interactions to confirm both phones are really close.",
+    uwbHow: "Settings → WIPP → Nearby Interactions",
+    openSettings: "Turn on in Settings",
     failed: "WIPP Touch couldn’t start.",
     retry: "Try again",
     scanQr: "Scan a QR",
@@ -655,6 +663,7 @@ export function WgoTouchScreen() {
     too_far: c.tooFar,
     offline: c.offline,
     no_motion: c.noMotion,
+    uwb_denied: c.uwbDenied,
     failed: c.failed,
   };
   const failText = failure[ph];
@@ -713,7 +722,7 @@ export function WgoTouchScreen() {
               {failText ?? (ph === "verifying" ? c.verifying : searching ? c.title : c.title)}
             </Text>
             <Text style={{ marginTop: 8, textAlign: "center", color: colors.muted, maxWidth: 300 }}>
-              {failText ? "" : ph === "verifying" ? c.felt : searching ? (touch.bumps ? c.felt : `${c.ready} · ${c.waitingContact}`) : c.sub}
+              {ph === "uwb_denied" ? `${c.uwbDeniedBody}\n\n${c.uwbHow}` : failText ? "" : ph === "verifying" ? c.felt : searching ? (touch.bumps ? c.felt : `${c.ready} · ${c.waitingContact}`) : c.sub}
             </Text>
             {searching && !touch.bumps ? <Text style={{ marginTop: 4, textAlign: "center", color: colors.muted, fontSize: 13, maxWidth: 300 }}>{c.searchingSub}</Text> : null}
           </View>
@@ -729,7 +738,13 @@ export function WgoTouchScreen() {
           {ph === "waiting_peer" ? <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} /> : null}
           {done && peerId ? <Btn label={c.message} onPress={() => openOrCreateDm(peerId)} /> : null}
           {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
-          {failText && ph !== "offline" ? (
+          {ph === "uwb_denied" ? (
+            <>
+              <Btn label={c.openSettings} onPress={() => void Linking.openSettings()} />
+              <Btn label={c.useQr} variant="secondary" onPress={() => push({ name: "scanner" })} />
+            </>
+          ) : null}
+          {failText && ph !== "offline" && ph !== "uwb_denied" ? (
             qrFirst ? (
               <>
                 <Btn label={c.useQr} onPress={() => push({ name: "scanner" })} />

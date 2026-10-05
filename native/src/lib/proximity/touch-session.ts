@@ -4,6 +4,7 @@
  * The app never decides who it touched: the server pairs the sessions.
  */
 import { useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 import * as Haptics from "expo-haptics";
 import {
   getTouchCapabilities,
@@ -11,6 +12,8 @@ import {
   uwbPrepare,
   uwbStart,
   uwbStop,
+  uwbPermission,
+  uwbProbe,
   type BumpEvent,
   type TouchCapabilities,
 } from "wipp-touch-native";
@@ -51,6 +54,7 @@ export type TouchPhase =
   | "unavailable"
   | "too_far"
   | "offline"
+  | "uwb_denied"
   | "no_motion"
   | "failed";
 
@@ -109,6 +113,7 @@ export function useTouchSession() {
   const caps = useRef<TouchCapabilities | null>(null);
   const diag = useRef({ spikes: 0, maxPeak: 0 });
   const openedAt = useRef(Date.now());
+  const uwbDenied = useRef(false);
   const [proximity, setProximity] = useState<"near" | "unverified" | null>(null);
 
   function set(next: TouchPhase) {
@@ -142,6 +147,14 @@ export function useTouchSession() {
     sessionId.current = null;
     if (cancelServer && id) await api.cancel(id, diag.current).catch(() => undefined);
   }
+
+  useEffect(() => {
+    // Back from iOS Settings: re-check the permission and retry right away.
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active" && phaseRef.current === "uwb_denied") void start();
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     alive.current = true;
@@ -197,6 +210,7 @@ export function useTouchSession() {
           else if (Date.now() - firstFarAt > 2500 && u.best > maxCm) void reportUwb({ distanceCm: u.best });
         },
         (state) => {
+          if (state === "denied") uwbDenied.current = true;
           if (state === "denied" || state === "error") {
             setUwbLabel("unavailable");
             void reportUwb({ status: "unavailable" });
@@ -254,7 +268,7 @@ export function useTouchSession() {
         break;
       case "failed":
         stopAll();
-        set(uwbState.current.posted ? "too_far" : "failed");
+        set(uwbDenied.current ? "uwb_denied" : uwbState.current.posted ? "too_far" : "failed");
         break;
       case "declined":
         stopAll();
@@ -312,6 +326,14 @@ export function useTouchSession() {
     caps.current = c;
     if (!c.motion) {
       set("no_motion");
+      return;
+    }
+    // UWB-capable iPhone whose "Nearby Interactions" permission was refused: never bypass the
+    // proof silently — explain and offer Settings (re-checked each time, nothing is permanent).
+    uwbDenied.current = false;
+    if (c.uwb && uwbPermission() === "denied" && (await uwbProbe()) === "denied") {
+      uwbDenied.current = true;
+      set("uwb_denied");
       return;
     }
     try {

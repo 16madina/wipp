@@ -42,6 +42,8 @@ type NativeShape = {
   uwbPrepare: () => string | null;
   uwbStart: (peerTokenB64: string) => boolean;
   uwbStop: () => void;
+  uwbPermission: () => string;
+  uwbProbe: () => Promise<string>;
   addListener: (event: string) => void;
   removeListeners: (count: number) => void;
 };
@@ -226,5 +228,27 @@ export function uwbStop() {
     getNative()?.uwbStop?.();
   } catch {
     /* ignore */
+  }
+}
+
+export type UwbPermission = "granted" | "denied" | "unknown" | "unsupported";
+
+/** Last known Nearby Interaction authorization (no prompt). */
+export function uwbPermission(): UwbPermission {
+  try {
+    const v = getNative()?.uwbPermission?.();
+    return v === "granted" || v === "denied" || v === "unsupported" ? v : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/** Re-checks the authorization by briefly running Nearby Interaction (may show the iOS prompt the first time). */
+export async function uwbProbe(): Promise<UwbPermission> {
+  try {
+    const v = await getNative()?.uwbProbe?.();
+    return v === "granted" || v === "denied" || v === "unsupported" ? v : "unknown";
+  } catch {
+    return "unknown";
   }
 }

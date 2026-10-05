@@ -85,6 +85,8 @@ class WippTouchNativeModule : Module() {
     Function("uwbPrepare") { null as String? }
     Function("uwbStart") { _: String -> false }
     Function("uwbStop") { }
+    Function("uwbPermission") { "unsupported" }
+    AsyncFunction("uwbProbe") { "unsupported" }
 
     OnDestroy { stopSensors() }
   }
