@@ -511,6 +511,9 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
         {src ? <Image source={src} style={{ width: 96, height: 96, borderRadius: 48 }} /> : <Avatar user={user} size={96} />}
         <Text style={{ marginTop: 12, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{user.displayName}</Text>
         <Text style={{ color: colors.muted }}>@{user.username}</Text>
+        {user.motto ? (
+          <Text style={{ marginTop: 8, fontFamily: "GreatVibes_400Regular", fontSize: 24, color: colors.accent, textAlign: "center" }}>{user.motto}</Text>
+        ) : null}
         {viaLabel ? <Text style={{ marginTop: 8, fontSize: 12, color: colors.accent }}>{viaLabel}</Text> : null}
         <Text style={{ marginTop: 12, textAlign: "center", color: colors.muted }}>{user.bio}</Text>
         <View style={{ width: "100%", marginTop: 24, gap: 8 }}>

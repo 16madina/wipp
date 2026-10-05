@@ -973,6 +973,7 @@ export const useWippStore = create<Store>((set, get) => ({
           if (st.serverProfileId) rememberMyAvatar(st.serverProfileId, st.me.avatar || "");
         });
         scheduleInboxSave(get);
+        void import("./profile-motto").then(({ loadMyMotto }) => loadMyMotto());
         void get().syncBusinessContexts();
         void get().refreshIncomingRequests();
         // The chat list only has ciphertext for the last message: decrypt it so the

@@ -3,7 +3,7 @@ import { useWippStore } from "./store";
 import type { User } from "./types";
 import type { RemoteProfile } from "./qr-remote";
 
-export const PUBLIC_PROFILE_COLS = "id,username,display_name,avatar_url,bio";
+export const PUBLIC_PROFILE_COLS = "id,username,display_name,avatar_url,bio,motto";
 
 export function rawProfileId(id: string) {
   return id.startsWith("srvuser:") ? id.slice("srvuser:".length) : id;
@@ -14,7 +14,7 @@ export function srvUserId(profileId: string) {
 }
 
 export function userFromPublic(
-  profile: { id: string; username: string; displayName: string; avatarUrl?: string | null; bio?: string | null },
+  profile: { id: string; username: string; displayName: string; avatarUrl?: string | null; bio?: string | null; motto?: string | null },
   connected = false,
 ): User {
   const id = srvUserId(profile.id);
@@ -27,6 +27,7 @@ export function userFromPublic(
     displayName,
     avatar: profile.avatarUrl || "",
     bio: profile.bio || "",
+    motto: profile.motto || "",
     online: true,
     connected,
     city: "",
@@ -53,6 +54,7 @@ function mapRow(p: {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  motto?: string | null;
 }): RemoteProfile {
   return {
     id: p.id,
@@ -60,6 +62,7 @@ function mapRow(p: {
     displayName: p.display_name || p.username,
     avatarUrl: p.avatar_url,
     bio: p.bio ?? "",
+    motto: p.motto ?? null,
   };
 }
 

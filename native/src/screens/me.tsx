@@ -39,6 +39,8 @@ import { Btn, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, Scr
 import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
 import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
+import { Sheet } from "../components/card-editor-parts";
+import { MOTTO_MAX } from "../lib/profile-motto";
 import { AddressField, CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
   CARD_CATEGORIES,
@@ -73,6 +75,12 @@ import { errorText } from "../lib/error-fr";
 import { EventCard } from "../components/event-parts";
 import { wippSrc } from "../lib/assets";
 
+/** Bigger script for short phrases, smaller for long ones (it always fits the corner). */
+function mottoSize(text: string) {
+  const n = text.length;
+  return n <= 14 ? 22 : n <= 22 ? 19 : n <= 30 ? 17 : 15;
+}
+
 export function MeScreen() {
   const t = useT();
   const me = useWippStore((s) => s.me);
@@ -83,6 +91,9 @@ export function MeScreen() {
   const listings = useWippStore((s) => s.listings);
   const lifestyle = useWippStore((s) => s.lifestyle);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [mottoOpen, setMottoOpen] = useState(false);
+  const [mottoDraft, setMottoDraft] = useState("");
+  const [mottoSaving, setMottoSaving] = useState(false);
   const contacts = Object.values(users).filter((u) => u?.connected).length;
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   void vaultEpoch;
@@ -111,9 +122,6 @@ export function MeScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
           <View style={{ borderRadius: 16, backgroundColor: colors.navy, padding: 14, overflow: "hidden" }}>
-            <Text style={{ position: "absolute", top: 12, right: 12, fontFamily: "GreatVibes_400Regular", fontSize: 22, color: colors.accent, maxWidth: 120, textAlign: "right" }}>
-              {t("goodVibes")}
-            </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Press
                 accessibilityLabel="Changer la photo de profil"
@@ -132,7 +140,7 @@ export function MeScreen() {
                   <Camera size={14} color={colors.accentFg} />
                 </View>
               </Press>
-              <View style={{ flex: 1, paddingRight: 72, paddingTop: 2 }}>
+              <View style={{ flex: 1, paddingTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Text numberOfLines={1} style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
                   <BadgeCheck size={16} color={colors.accent} />
@@ -144,6 +152,27 @@ export function MeScreen() {
                 </View>
               </View>
             </View>
+            <Press
+              accessibilityLabel="Modifier ma phrase"
+              onPress={() => {
+                setMottoDraft(me.motto ?? "");
+                setMottoOpen(true);
+              }}
+              style={{ alignSelf: "flex-end", maxWidth: "80%", marginTop: 6 }}
+            >
+              {me.motto ? (
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                  style={{ fontFamily: "GreatVibes_400Regular", fontSize: mottoSize(me.motto), lineHeight: mottoSize(me.motto) * 1.15, color: colors.accent, textAlign: "right" }}
+                >
+                  {me.motto}
+                </Text>
+              ) : (
+                <Text style={{ fontFamily: "GreatVibes_400Regular", fontSize: 20, color: "rgba(255,216,77,0.45)", textAlign: "right" }}>Ta phrase ✎</Text>
+              )}
+            </Press>
             {me.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: "rgba(247,249,252,0.8)" }}>{me.bio}</Text> : null}
             <View style={{ marginTop: 12, flexDirection: "row" }}>
               {[
@@ -257,6 +286,51 @@ export function MeScreen() {
           />
         </View>
       </ScrollView>
+      <Sheet open={mottoOpen} title="Ta phrase" onClose={() => setMottoOpen(false)}>
+        <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 10 }}>
+          Un petit message personnel affiché sur ton profil. {MOTTO_MAX} caractères maximum.
+        </Text>
+        <View style={{ borderRadius: 14, backgroundColor: colors.navy, padding: 14, minHeight: 70, alignItems: "flex-end", justifyContent: "center", marginBottom: 10 }}>
+          <Text style={{ fontFamily: "GreatVibes_400Regular", fontSize: mottoSize(mottoDraft || "Good Vibes Only"), color: mottoDraft ? colors.accent : "rgba(255,216,77,0.4)", textAlign: "right" }}>
+            {mottoDraft || "Good Vibes Only"}
+          </Text>
+        </View>
+        <TextInput
+          value={mottoDraft}
+          onChangeText={(v) => setMottoDraft(v.slice(0, MOTTO_MAX))}
+          placeholder="Ex. Good Vibes Only"
+          placeholderTextColor={colors.muted}
+          maxLength={MOTTO_MAX}
+          autoFocus
+          style={{ height: 46, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 14, color: colors.fg, fontSize: 15 }}
+        />
+        <Text style={{ alignSelf: "flex-end", color: mottoDraft.length >= MOTTO_MAX ? colors.accent : colors.muted, fontSize: 12, marginTop: 4 }}>
+          {mottoDraft.length}/{MOTTO_MAX}
+        </Text>
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+          {me.motto ? (
+            <Btn
+              label="Effacer"
+              variant="secondary"
+              style={{ flex: 1 }}
+              onPress={() => setMottoDraft("")}
+            />
+          ) : null}
+          <Btn
+            label={mottoSaving ? "…" : "Enregistrer"}
+            disabled={mottoSaving}
+            style={{ flex: 1 }}
+            onPress={() => {
+              setMottoSaving(true);
+              void import("../lib/profile-motto")
+                .then(({ saveMyMotto }) => saveMyMotto(mottoDraft))
+                .then(() => setMottoOpen(false))
+                .catch((err) => Alert.alert("Ta phrase", errorText(err, "Enregistrement impossible")))
+                .finally(() => setMottoSaving(false));
+            }}
+          />
+        </View>
+      </Sheet>
     </ScreenRoot>
   );
 }

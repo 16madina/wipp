@@ -251,6 +251,8 @@ export type User = {
   displayName: string;
   username: string;
   bio: string;
+  /** Personal phrase on the profile card (max 40 chars). */
+  motto?: string;
   avatar: string;
   online: boolean;
   lastSeen?: number;

@@ -4,6 +4,7 @@ export type RemoteProfile = {
   displayName: string;
   avatarUrl: string | null;
   bio: string;
+  motto?: string | null;
 };
 
 export const isServerToken = (t: string) => /^[A-Za-z0-9_-]{43}$/.test(t);
