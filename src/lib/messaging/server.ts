@@ -1210,7 +1210,7 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
     const { connectionsFor, expireDue } = await import("@/lib/messaging/connection");
     await expireDue();
     const map = await connectionsFor(meId, out.map((c) => c.peer.id));
-    for (const c of out) c.connection = map.get(c.peer.id) ?? null;
+    for (const c of out) if (!c.id.startsWith("g_")) c.connection = map.get(c.peer.id) ?? null;
   } catch (err) {
     console.warn("[wipp] connections for chats", err);
   }

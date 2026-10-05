@@ -1,3 +1,4 @@
+import { ConnectionBanner } from "../components/ConnectionBanner";
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import * as Clipboard from "expo-clipboard";
@@ -848,6 +849,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           }
         />
       </GlassHeader>
+      {chat && chat.type === "dm" ? <ConnectionBanner chat={chat} peer={peer} /> : null}
       {pinned.length ? (
         <Press onPress={() => jumpTo(pinned[0]!.id)} style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 10, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 8 }}>
           <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 13 }}>

@@ -165,7 +165,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "qr-group":
       return <QrGroupScreen handoffKey={screen.key} />;
     case "found-profile":
-      return <FoundProfileScreen userId={screen.userId} via={screen.via} />;
+      return <FoundProfileScreen userId={screen.userId} via={screen.via} offerToken={screen.offerToken} offerMinutes={screen.offerMinutes} />;
     case "explore":
       return <ExploreScreen />;
     case "listing":

@@ -121,13 +121,75 @@ export async function sendRequest(
   return res.status;
 }
 
-export async function respondRequest(id: string, action: "accept" | "decline" | "ignore"): Promise<string> {
+export async function respondRequest(
+  id: string,
+  action: "accept" | "decline" | "ignore",
+  choice?: import("./types").ConnectionChoice,
+): Promise<string> {
   const { wippApi } = await import("./proximity/wipp-session");
   const res = await wippApi<{ status: string }>(`connections/requests/${id}`, {
     method: "POST",
-    body: JSON.stringify({ action }),
+    // The person who accepts chooses permanent / ephemeral; the server computes the expiry.
+    body: JSON.stringify({ action, ...(choice ?? {}) }),
   });
   return res.status;
+}
+
+function rawId(peerId: string) {
+  return peerId.startsWith("srvuser:") ? peerId.slice("srvuser:".length) : peerId;
+}
+
+/** My connection with one person (server truth: active / expired, permanent / ephemeral, upgrade requests). */
+export async function fetchConnectionWith(peerId: string): Promise<import("./types").ConnectionInfo | null> {
+  const { wippApi } = await import("./proximity/wipp-session");
+  const res = await wippApi<{ connection: import("./types").ConnectionInfo | null }>(`connections/with/${encodeURIComponent(rawId(peerId))}`);
+  return res.connection;
+}
+
+/** "Garder ce contact": asks the other person to make the ephemeral connection permanent. */
+export async function requestKeepContact(peerId: string) {
+  const { wippApi } = await import("./proximity/wipp-session");
+  return wippApi<{ status: string }>(`connections/with/${encodeURIComponent(rawId(peerId))}/upgrade`, { method: "POST", body: "{}" });
+}
+
+export async function answerKeepContact(peerId: string, accept: boolean) {
+  const { wippApi } = await import("./proximity/wipp-session");
+  return wippApi<{ status: string }>(`connections/with/${encodeURIComponent(rawId(peerId))}/upgrade-respond`, {
+    method: "POST",
+    body: JSON.stringify({ accept }),
+  });
+}
+
+/** All my ACTIVE contacts, used to mark who is really a contact. */
+export async function fetchActiveConnections() {
+  const { wippApi } = await import("./proximity/wipp-session");
+  return wippApi<{
+    connections: { profile: { id: string; username: string; displayName: string; avatarUrl: string | null; bio: string }; connection: import("./types").ConnectionInfo }[];
+  }>("connections/active");
+}
+
+/** B accepts / refuses the ephemeral connection offered by a temporary QR. */
+export async function answerTempQrOffer(token: string, accept: boolean) {
+  const { wippApi } = await import("./proximity/wipp-session");
+  return wippApi<{ status: string; connectionType?: string; expiresAt?: number | null }>("qr/temp/offer", {
+    method: "POST",
+    body: JSON.stringify({ token, accept }),
+  });
+}
+
+/** Human duration: 15 min, 1 h, 24 h, 7 jours, 3 jours 4 h… */
+export function durationLabel(minutes: number) {
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 1440) return minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60}` : `${minutes / 60} h`;
+  const d = Math.floor(minutes / 1440);
+  const h = Math.round((minutes % 1440) / 60);
+  return `${d} jour${d > 1 ? "s" : ""}${h ? ` ${h} h` : ""}`;
+}
+
+/** "expire dans 3 h" */
+export function remainingLabel(expiresAt: number) {
+  const m = Math.max(0, Math.round((expiresAt - Date.now()) / 60000));
+  return durationLabel(Math.max(1, m));
 }
 
 export async function blockProfile(profileId: string): Promise<boolean> {
@@ -169,8 +231,15 @@ export async function getRelation(peerId: string): Promise<Relation> {
   const raw = peerId.startsWith("srvuser:") ? peerId.slice("srvuser:".length) : peerId;
   if (me === raw) return "self";
   const [a, b] = [me, raw].sort();
-  const { data: conn } = await supabase.from("wipp_connections").select("id").eq("user_a", a).eq("user_b", b).maybeSingle();
-  if (conn) return "connected";
+  const { data: conn } = await supabase
+    .from("wipp_connections")
+    .select("status, expires_at")
+    .eq("user_a", a)
+    .eq("user_b", b)
+    .maybeSingle();
+  // An expired ephemeral connection is not a contact any more.
+  const c = conn as { status?: string; expires_at?: string | null } | null;
+  if (c && c.status === "active" && (!c.expires_at || Date.parse(c.expires_at) > Date.now())) return "connected";
   const { data: out } = await supabase
     .from("wipp_connection_requests")
     .select("id")

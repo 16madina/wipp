@@ -52,7 +52,8 @@ function peerToUser(peer: WippChatSummary["peer"]): User {
     avatar: peer.avatarUrl || "",
     bio: peer.bio || "",
     online: true,
-    connected: true,
+    // Being in a chat does NOT make someone a contact: the server's connection list decides.
+    connected: false,
     city: "",
   };
 }
@@ -328,7 +329,9 @@ export function mergeServerChatsIntoState(
   for (const sc of serverChats) {
     const localId = toLocalChatId(sc.id);
     const user = peerToUser(sc.peer);
-    users[user.id] = { ...users[user.id], ...user };
+    const known = users[user.id];
+    const dmConnected = sc.kind !== "group" && sc.connection ? sc.connection.status === "active" : undefined;
+    users[user.id] = { ...known, ...user, connected: dmConnected ?? known?.connected ?? false };
     if (sc.peer.e2ePublicJwk) {
       peerPublicKeys[user.id] = sc.peer.e2ePublicJwk;
       peerPublicKeys[sc.peer.id] = sc.peer.e2ePublicJwk;
@@ -340,7 +343,7 @@ export function mergeServerChatsIntoState(
       for (const member of sc.members ?? []) {
         const user = peerToUser(member);
         if (meServerId && member.id === meServerId) continue;
-        users[user.id] = { ...users[user.id], ...user };
+        users[user.id] = { ...users[user.id], ...user, connected: users[user.id]?.connected ?? false };
       }
       const muted =
         sc.mutedUntil === "always" || (typeof sc.mutedUntil === "number" && sc.mutedUntil > Date.now());
@@ -382,6 +385,7 @@ export function mergeServerChatsIntoState(
       manuallyUnreadAt: sc.manuallyUnreadAt ?? null,
       archived: vault ? Boolean(prev?.archived) : Boolean(sc.archivedAt),
       isRequest: false,
+      connection: sc.connection !== undefined ? sc.connection : (prev?.connection ?? null),
       shopId: prev?.shopId,
       disappearAfterMs: sc.disappearAfterMs ?? prev?.disappearAfterMs,
     });

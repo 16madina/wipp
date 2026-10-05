@@ -41,7 +41,7 @@ export async function openResolvedQr(raw: string, mode: "push" | "replace" = "pu
   }
   if (dest.kind === "remote-profile") {
     const userId = upsertRemoteProfile(dest.profile, dest.connected);
-    go({ name: "found-profile", userId, via: "qr" });
+    go({ name: "found-profile", userId, via: "qr", offerToken: dest.offer?.token, offerMinutes: dest.offer?.minutes });
     return dest;
   }
   if (dest.kind === "business") {

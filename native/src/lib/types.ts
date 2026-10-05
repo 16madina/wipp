@@ -195,7 +195,7 @@ export type Screen =
   | { name: "scanner"; error?: string }
   | { name: "search-user" }
   | { name: "nearby" }
-  | { name: "found-profile"; userId: string; via?: FoundVia }
+  | { name: "found-profile"; userId: string; via?: FoundVia; offerToken?: string; offerMinutes?: number }
   | { name: "explore" }
   | { name: "listing"; listingId: string }
   | { name: "me" }
@@ -269,6 +269,19 @@ export type MeProfile = User & {
   discoverability: Discoverability;
 };
 
+/** WIPP connection with a person (server truth). Only status "active" means "contact". */
+export type ConnectionInfo = {
+  status: "active" | "expired" | "ended" | string;
+  type: "permanent" | "ephemeral";
+  expiresAt: number | null;
+  via: string;
+  upgradeRequestedByMe: boolean;
+  upgradeRequestedByPeer: boolean;
+};
+
+/** What the person who accepts / proposes chooses. Minutes only for ephemeral (server bounds 15 min–30 days). */
+export type ConnectionChoice = { type: "permanent" } | { type: "ephemeral"; minutes: number };
+
 export type Chat = {
   id: string;
   type: "dm" | "group";
@@ -284,6 +297,8 @@ export type Chat = {
   pinned: boolean;
   archived: boolean;
   isRequest: boolean;
+  /** DM only: the WIPP connection with the peer. */
+  connection?: ConnectionInfo | null;
   preview: string;
   lastAt: number;
   joinBy?: "qr";

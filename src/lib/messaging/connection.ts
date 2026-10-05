@@ -187,3 +187,23 @@ export async function connectionsFor(meId: string, peerIds: string[]) {
   for (const r of rows) map.set(r.user_a === meId ? r.user_b : r.user_a, connectionInfo(r, meId));
   return map;
 }
+
+/** My ACTIVE contacts (permanent or not-yet-expired ephemeral) with their public profile. */
+export async function listActiveConnections(meId: string) {
+  await expireDue();
+  const sql = await getSql();
+  const rows = await sql<ConnectionRow & { peer_id: string; username: string; display_name: string; avatar_url: string | null; bio: string | null }>`
+    select c.id::text, c.user_a, c.user_b, c.via, c.status, c.connection_type, c.expires_at::text, c.created_at::text, c.upgrade_requested_by,
+           p.id as peer_id, p.username, p.display_name, p.avatar_url, p.bio
+    from wipp_connections c
+    join wipp_profiles p on p.id = case when c.user_a = ${meId} then c.user_b else c.user_a end
+    where (c.user_a = ${meId} or c.user_b = ${meId})
+      and c.status = 'active' and (c.expires_at is null or c.expires_at > now())
+    order by c.updated_at desc
+    limit 1000
+  `;
+  return rows.map((r) => ({
+    profile: { id: r.peer_id, username: r.username, displayName: r.display_name, avatarUrl: r.avatar_url, bio: r.bio ?? "" },
+    connection: connectionInfo(r, meId),
+  }));
+}

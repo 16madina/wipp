@@ -231,7 +231,9 @@ type Store = {
   openOrCreateDm: (userId: string, asRequest?: boolean) => string;
   forwardMessage: (targetChatId: string, source: Message) => void;
   connectWith: (userId: string, via?: FoundVia) => void;
-  acceptRequest: (id: string) => void;
+  acceptRequest: (id: string, choice?: import("./types").ConnectionChoice) => void;
+  /** Server truth: who is an ACTIVE contact (ephemeral ones disappear when they expire). */
+  refreshConnections: () => Promise<void>;
   ignoreRequest: (id: string) => void;
   declineRequest: (id: string) => void;
   blockUser: (userId: string) => void;
@@ -293,6 +295,7 @@ function fresh(): Omit<
   | "forwardMessage"
   | "connectWith"
   | "acceptRequest"
+  | "refreshConnections"
   | "ignoreRequest"
   | "declineRequest"
   | "blockUser"
@@ -975,6 +978,7 @@ export const useWippStore = create<Store>((set, get) => ({
         scheduleInboxSave(get);
         void import("./profile-motto").then(({ loadMyMotto }) => loadMyMotto());
         void get().syncBusinessContexts();
+        void get().refreshConnections();
         void get().refreshIncomingRequests();
         // The chat list only has ciphertext for the last message: decrypt it so the
         // preview shows the real text instead of "Message chiffré".
@@ -1233,13 +1237,73 @@ export const useWippStore = create<Store>((set, get) => ({
       }
     })();
   },
-  acceptRequest: (id) => {
+  refreshConnections: async () => {
+    try {
+      const me = get().serverProfileId;
+      if (!me) return;
+      const { supabase } = await import("./supabase");
+      const { fetchActiveConnections } = await import("./connections");
+      const { upsertRemoteProfile } = await import("./public-profiles");
+      // 1. Every connection row of mine (RLS: read own) → per-peer status for chats (banner, expiry).
+      const { data } = await supabase
+        .from("wipp_connections")
+        .select("user_a,user_b,status,connection_type,expires_at,via,upgrade_requested_by")
+        .or(`user_a.eq.${me},user_b.eq.${me}`);
+      const byPeer = new Map<string, import("./types").ConnectionInfo>();
+      for (const r of (data ?? []) as {
+        user_a: string;
+        user_b: string;
+        status: string;
+        connection_type: "permanent" | "ephemeral";
+        expires_at: string | null;
+        via: string;
+        upgrade_requested_by: string | null;
+      }[]) {
+        const peer = r.user_a === me ? r.user_b : r.user_a;
+        const exp = r.expires_at ? Date.parse(r.expires_at) : null;
+        const active = r.status === "active" && (exp == null || exp > Date.now());
+        byPeer.set(`srvuser:${peer}`, {
+          status: active ? "active" : r.status === "active" ? "expired" : r.status,
+          type: r.connection_type,
+          expiresAt: exp,
+          via: r.via,
+          upgradeRequestedByMe: r.upgrade_requested_by === me,
+          upgradeRequestedByPeer: Boolean(r.upgrade_requested_by && r.upgrade_requested_by !== me),
+        });
+      }
+      // 2. Public profiles of active contacts without a chat yet.
+      try {
+        const { connections } = await fetchActiveConnections();
+        for (const c of connections) upsertRemoteProfile(c.profile, true);
+      } catch {
+        /* profiles of chat peers are known anyway */
+      }
+      set((s) => {
+        const users = { ...s.users };
+        for (const [id, u] of Object.entries(users)) {
+          if (!u || !id.startsWith("srvuser:")) continue;
+          const on = byPeer.get(id)?.status === "active";
+          if (u.connected !== on) users[id] = { ...u, connected: on };
+        }
+        const chats = s.chats.map((c) => {
+          if (c.type !== "dm") return c;
+          const peer = c.participantIds.find((p) => p !== "me");
+          const info = peer ? (byPeer.get(peer) ?? null) : null;
+          return JSON.stringify(c.connection ?? null) === JSON.stringify(info) ? c : { ...c, connection: info };
+        });
+        return { users, chats };
+      });
+    } catch {
+      /* keep the last known list */
+    }
+  },
+  acceptRequest: (id, choice) => {
     const req = get().requests.find((r) => r.id === id);
     if (!req) return;
     if (get().serverConnected) {
       void (async () => {
         const { respondRequest } = await import("./connections");
-        const status = await respondRequest(id, "accept");
+        const status = await respondRequest(id, "accept", choice);
         if (status === "accepted" || status === "already_handled") {
           set((s) => ({
             requests: s.requests.filter((r) => r.id !== id),

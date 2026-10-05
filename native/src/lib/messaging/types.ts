@@ -50,6 +50,8 @@ export type WippChatSummary = {
   mutedUntil?: number | "always" | null;
   manuallyUnreadAt?: number | null;
   disappearAfterMs?: number | null;
+  /** WIPP connection with the peer (null = never connected). Only "active" means contact. */
+  connection?: import("../types").ConnectionInfo | null;
 };
 
 export type WippReaction = {

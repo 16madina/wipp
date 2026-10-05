@@ -9,18 +9,22 @@ export type RemoteProfile = {
 
 export const isServerToken = (t: string) => /^[A-Za-z0-9_-]{43}$/.test(t);
 
-export async function issueTemp(): Promise<{ token: string; expiresAt: number } | { error: string }> {
+/** Ephemeral QR (75 s, single use) offering a connection of `minutes` (server validates 15 min–30 days). */
+export async function issueTemp(minutes = 1440): Promise<{ token: string; expiresAt: number; connectionMinutes: number } | { error: string }> {
   const { wippApi } = await import("./proximity/wipp-session");
-  const r = await wippApi<{ token?: string; expiresAt?: number }>("qr/temp", { method: "POST", body: "{}" });
+  const r = await wippApi<{ token?: string; expiresAt?: number; connectionMinutes?: number }>("qr/temp", {
+    method: "POST",
+    body: JSON.stringify({ minutes }),
+  });
   if (!r.token || !r.expiresAt) return { error: "invalid" };
-  return { token: r.token, expiresAt: r.expiresAt };
+  return { token: r.token, expiresAt: r.expiresAt, connectionMinutes: r.connectionMinutes ?? minutes };
 }
 
 export async function redeemTemp(
   token: string,
-): Promise<{ status: string; profile?: RemoteProfile; connected?: boolean }> {
+): Promise<{ status: string; profile?: RemoteProfile; connected?: boolean; offer?: { type: "ephemeral"; minutes: number } }> {
   const { wippApi } = await import("./proximity/wipp-session");
-  return wippApi<{ status: string; profile?: RemoteProfile; connected?: boolean }>("qr/temp/redeem", {
+  return wippApi<{ status: string; profile?: RemoteProfile; connected?: boolean; offer?: { type: "ephemeral"; minutes: number } }>("qr/temp/redeem", {
     method: "POST",
     body: JSON.stringify({ token }),
   });

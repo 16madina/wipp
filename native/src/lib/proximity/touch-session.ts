@@ -28,6 +28,7 @@ type ServerSession = {
   expiresAt: number;
   acceptedByMe: boolean;
   acceptedByPeer: boolean;
+  proposal?: { type: "permanent" | "ephemeral" | null; minutes: number | null; byMe: boolean } | null;
   peer: TouchPeerCard | null;
   proximity?: "verifying" | "near" | "unverified" | null;
   uwb: {
@@ -53,6 +54,9 @@ export type TouchPhase =
   | "verifying"
   | "candidate"
   | "waiting_peer"
+  | "choose"
+  | "proposal_out"
+  | "proposal_in"
   | "connected"
   | "already_connected"
   | "declined"
@@ -83,6 +87,10 @@ const api = {
   uwbResult: (id: string, body: object) =>
     wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/uwb-result`, { method: "POST", body: JSON.stringify(body) }),
   accept: (id: string) => wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/accept`, { method: "POST", body: "{}" }),
+  propose: (id: string, choice: object) =>
+    wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/propose`, { method: "POST", body: JSON.stringify(choice) }),
+  answer: (id: string, accept: boolean) =>
+    wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/proposal`, { method: "POST", body: JSON.stringify({ accept }) }),
   decline: (id: string) => wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/decline`, { method: "POST", body: "{}" }),
   cancel: (id: string, d?: object) =>
     wippApi<{ ok: boolean }>(`/touch/session/${encodeURIComponent(id)}/cancel`, { method: "POST", body: JSON.stringify({ diag: d ?? null }) }),
@@ -124,6 +132,7 @@ export function useTouchSession() {
   const uwbDenied = useRef(false);
   const pausedInBackground = useRef(false);
   const [proximity, setProximity] = useState<"near" | "unverified" | null>(null);
+  const [proposal, setProposal] = useState<ServerSession["proposal"]>(null);
 
   function set(next: TouchPhase) {
     phaseRef.current = next;
@@ -179,7 +188,7 @@ export function useTouchSession() {
     alive.current = true;
     return () => {
       alive.current = false;
-      const live = ["starting", "searching", "verifying", "candidate", "waiting_peer"].includes(phaseRef.current);
+      const live = ["starting", "searching", "verifying", "candidate", "waiting_peer", "choose", "proposal_out", "proposal_in"].includes(phaseRef.current);
       void teardown(live);
     };
   }, []);
@@ -268,6 +277,12 @@ export function useTouchSession() {
         }
         setProximity(s.proximity === "near" ? "near" : "unverified");
         set(s.acceptedByMe ? "waiting_peer" : "candidate");
+        break;
+      case "agreed":
+        // Both confirmed the person: one proposes permanent / ephemeral, the other confirms.
+        setPeer(s.peer);
+        setProposal(s.proposal ?? null);
+        set(!s.proposal ? "choose" : s.proposal.byMe ? "proposal_out" : "proposal_in");
         break;
       case "connected":
       case "already_connected":
@@ -430,6 +445,26 @@ export function useTouchSession() {
     }
   }
 
+  async function propose(choice: { type: "permanent" } | { type: "ephemeral"; minutes: number }) {
+    const id = sessionId.current;
+    if (!id) return;
+    try {
+      apply((await api.propose(id, choice)).session);
+    } catch (err) {
+      set(isOffline(err) ? "offline" : "failed");
+    }
+  }
+
+  async function answerProposal(accept: boolean) {
+    const id = sessionId.current;
+    if (!id) return;
+    try {
+      apply((await api.answer(id, accept)).session);
+    } catch (err) {
+      set(isOffline(err) ? "offline" : "failed");
+    }
+  }
+
   async function decline() {
     const id = sessionId.current;
     stopAll();
@@ -439,5 +474,5 @@ export function useTouchSession() {
     scheduleReady();
   }
 
-  return { phase, peer, bumps, uwbLabel, proximity, start: () => start(), accept, decline, stop: () => teardown(true) };
+  return { phase, peer, bumps, uwbLabel, proximity, proposal, start: () => start(), accept, decline, propose, answerProposal, stop: () => teardown(true) };
 }

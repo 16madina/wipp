@@ -14,6 +14,9 @@ import { findPublicByUsername, searchPublicProfiles, upsertRemoteProfile } from 
 import { profileQr, tempQr } from "../lib/qr-payload";
 import { issueTemp } from "../lib/qr-remote";
 import { useTouchSession } from "../lib/proximity/touch-session";
+import { ConnectionChoicePicker } from "../components/ConnectionChoice";
+import { Sheet } from "../components/card-editor-parts";
+import { answerTempQrOffer, durationLabel } from "../lib/connections";
 import { TouchStage } from "../components/TouchStage";
 import { applyNearbyMode } from "../lib/proximity/nearby-visibility";
 import { startNearbyScan, stopNearbyScan } from "../lib/proximity/nearby-scan";
@@ -22,7 +25,7 @@ import { rejectTouchCode } from "../lib/proximity/touch-api";
 import { shareWippPublic } from "../lib/share-public";
 import { signinOtp } from "../lib/auth-api";
 import { useT, useWippStore } from "../lib/store";
-import type { FoundVia, NearbyMode } from "../lib/types";
+import type { ConnectionChoice, FoundVia, NearbyMode } from "../lib/types";
 import { colors, layout } from "../theme";
 
 export function ConnectScreen() {
@@ -151,7 +154,10 @@ export function MyQrScreen() {
     };
   }, [username]);
   const [copied, setCopied] = useState(false);
-  const [temp, setTemp] = useState<{ token: string; expiresAt: number } | null>(null);
+  const [temp, setTemp] = useState<{ token: string; expiresAt: number; connectionMinutes?: number } | null>(null);
+  // Ephemeral QR: first choose how long the CONNECTION will last (the QR itself lives 75 s).
+  const [durationOpen, setDurationOpen] = useState(false);
+  const [tempChoice, setTempChoice] = useState<ConnectionChoice | null>({ type: "ephemeral", minutes: 1440 });
   const [expired, setExpired] = useState(false);
   const [tempErr, setTempErr] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -171,7 +177,7 @@ export function MyQrScreen() {
     setExpired(false);
     setTemp(null);
     try {
-      const r = await issueTemp();
+      const r = await issueTemp(tempChoice?.type === "ephemeral" ? tempChoice.minutes : 1440);
       if ("error" in r) {
         setTempErr(r.error === "no_session" ? "Connecte-toi avec un vrai compte pour un QR temporaire." : "QR temporaire indisponible, réessaie.");
       } else {
@@ -203,7 +209,7 @@ export function MyQrScreen() {
         {expired ? (
           <View style={{ marginTop: 20, width: "100%", alignItems: "center" }}>
             <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>QR expiré</Text>
-            <Btn label="Générer un nouveau QR" onPress={() => void renewTemp()} style={{ marginTop: 12, alignSelf: "stretch" }} />
+            <Btn label="Générer un nouveau QR" onPress={() => setDurationOpen(true)} style={{ marginTop: 12, alignSelf: "stretch" }} />
           </View>
         ) : qrValue ? (
           <View style={{ marginTop: 20 }}>
@@ -223,7 +229,9 @@ export function MyQrScreen() {
           </Text>
         ) : null}
         <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: "rgba(247,249,252,0.6)", maxWidth: 280 }}>
-          {temp ? "QR temporaire : usage unique." : "Ce QR ne contient ni ton numéro, ni ton e-mail."}
+          {temp
+            ? `QR éphémère · usage unique. La connexion durera ${durationLabel(temp.connectionMinutes ?? 1440)}.`
+            : "Ce QR ne contient ni ton numéro, ni ton e-mail."}
         </Text>
         <Text style={{ marginTop: 4, fontSize: 12, color: "rgba(247,249,252,0.4)" }}>{link}</Text>
         <View style={{ width: "100%", marginTop: 20 }}>
@@ -243,9 +251,9 @@ export function MyQrScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Btn
-              label={temp ? "QR permanent" : "QR temporaire"}
+              label={temp ? "QR permanent" : "QR éphémère"}
               variant="secondary"
-              onPress={() => (temp ? setTemp(null) : void renewTemp())}
+              onPress={() => (temp ? setTemp(null) : setDurationOpen(true))}
             />
           </View>
         </View>
@@ -253,6 +261,21 @@ export function MyQrScreen() {
           <Btn label={t("wgoTouch")} variant="secondary" onPress={() => push({ name: "wgo-touch" })} />
         </View>
       </ScrollView>
+      <Sheet open={durationOpen} title="QR éphémère" onClose={() => setDurationOpen(false)}>
+        <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>
+          La personne qui scanne pourra accepter une connexion éphémère. Le QR, lui, n’est valable que 75 secondes et une seule fois.
+        </Text>
+        <ConnectionChoicePicker value={tempChoice} onChange={setTempChoice} ephemeralOnly />
+        <Btn
+          label="Générer le QR"
+          disabled={!tempChoice}
+          style={{ marginTop: 16 }}
+          onPress={() => {
+            setDurationOpen(false);
+            void renewTemp();
+          }}
+        />
+      </Sheet>
     </View>
   );
 }
@@ -446,7 +469,20 @@ export function NearbyScreen() {
   );
 }
 
-export function FoundProfileScreen({ userId, via }: { userId: string; via?: FoundVia }) {
+export function FoundProfileScreen({
+  userId,
+  via,
+  offerToken,
+  offerMinutes,
+}: {
+  userId: string;
+  via?: FoundVia;
+  /** Set when reached by scanning an ephemeral QR: the owner offers an ephemeral connection. */
+  offerToken?: string;
+  offerMinutes?: number;
+}) {
+  const [offer, setOffer] = useState<"open" | "busy" | "accepted" | "declined" | "error">(offerToken ? "open" : "declined");
+  const [offerUntil, setOfferUntil] = useState<number | null>(null);
   const t = useT();
   const pop = useWippStore((s) => s.pop);
   const user = useWippStore((s) => s.users[userId]);
@@ -518,16 +554,69 @@ export function FoundProfileScreen({ userId, via }: { userId: string; via?: Foun
         ) : null}
         {viaLabel ? <Text style={{ marginTop: 8, fontSize: 12, color: colors.accent }}>{viaLabel}</Text> : null}
         <Text style={{ marginTop: 12, textAlign: "center", color: colors.muted }}>{user.bio}</Text>
+        {offerToken && offer !== "declined" ? (
+          <View style={{ width: "100%", marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.accent, gap: 10 }}>
+            {offer === "accepted" ? (
+              <>
+                <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>WIPP connecté ✓</Text>
+                <Text style={{ color: colors.muted, textAlign: "center" }}>
+                  ⏳ Contact éphémère{offerUntil ? ` jusqu’au ${new Date(offerUntil).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}` : ""}
+                </Text>
+                <Btn label={t("message")} onPress={() => openOrCreateDm(user.id)} />
+              </>
+            ) : (
+              <>
+                <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+                  {user.displayName.split(" ")[0]} souhaite créer une connexion éphémère avec vous
+                </Text>
+                <Text style={{ color: colors.accent, textAlign: "center", fontFamily: "Inter_600SemiBold" }}>⏳ Durée : {durationLabel(offerMinutes ?? 1440)}</Text>
+                {offer === "error" ? <Text style={{ color: colors.danger, textAlign: "center" }}>Cette offre n’est plus valable.</Text> : null}
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Btn
+                    label="Refuser"
+                    variant="secondary"
+                    style={{ flex: 1 }}
+                    disabled={offer === "busy"}
+                    onPress={() => {
+                      setOffer("declined");
+                      void answerTempQrOffer(offerToken, false).catch(() => undefined);
+                    }}
+                  />
+                  <Btn
+                    label={offer === "busy" ? "…" : "Accepter"}
+                    style={{ flex: 1 }}
+                    disabled={offer === "busy" || offer === "error"}
+                    onPress={() => {
+                      setOffer("busy");
+                      void answerTempQrOffer(offerToken, true)
+                        .then((r) => {
+                          if (r.status === "connected" || r.status === "already_connected") {
+                            setOfferUntil(r.expiresAt ?? null);
+                            setOffer("accepted");
+                            setRelation("connected");
+                            void useWippStore.getState().refreshConnections();
+                          } else setOffer("error");
+                        })
+                        .catch(() => setOffer("error"));
+                    }}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        ) : null}
+        {offerToken && offer !== "declined" ? null : (
         <View style={{ width: "100%", marginTop: 24, gap: 8 }}>
-          <Btn
-            disabled={(pending && !connected) || blocked || relation === "self"}
-            label={cta}
-            onPress={() => (connected ? openOrCreateDm(user.id) : connectWith(user.id, via))}
-          />
-          {!connected && !blocked ? (
-            <Btn label="Bloquer" variant="danger" onPress={() => { blockUser(user.id); pop(); }} />
-          ) : null}
-        </View>
+            <Btn
+              disabled={(pending && !connected) || blocked || relation === "self"}
+              label={cta}
+              onPress={() => (connected ? openOrCreateDm(user.id) : connectWith(user.id, via))}
+            />
+            {!connected && !blocked ? (
+              <Btn label="Bloquer" variant="danger" onPress={() => { blockUser(user.id); pop(); }} />
+            ) : null}
+          </View>
+        )}
       </ScrollView>
     </ScreenRoot>
   );
@@ -635,6 +724,7 @@ export function WgoTouchScreen() {
   const users = useWippStore((s) => s.users);
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
   const touch = useTouchSession();
+  const [touchChoice, setTouchChoice] = useState<ConnectionChoice | null>({ type: "permanent" });
   const [peerId, setPeerId] = useState<string | null>(null);
 
   // Start right away: the screen IS the "ready to touch" state.
@@ -665,7 +755,7 @@ export function WgoTouchScreen() {
   const peerUser = peerId ? users[peerId] : undefined;
   const ph = touch.phase;
   const searching = ph === "starting" || ph === "searching";
-  const matched = ph === "candidate" || ph === "waiting_peer";
+  const matched = ph === "candidate" || ph === "waiting_peer" || ph === "choose" || ph === "proposal_out" || ph === "proposal_in";
   const done = ph === "connected" || ph === "already_connected";
   const failure: Record<string, string> = {
     declined: c.declined,
@@ -715,8 +805,23 @@ export function WgoTouchScreen() {
             ) : (
               <>
                 <Text style={{ marginTop: 22, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>
-                  {ph === "waiting_peer" ? c.waiting : c.ask(name.split(" ")[0] || handle)}
+                  {ph === "waiting_peer"
+                    ? c.waiting
+                    : ph === "choose"
+                      ? "Comment voulez-vous vous connecter ?"
+                      : ph === "proposal_out"
+                        ? "En attente de la réponse…"
+                        : ph === "proposal_in"
+                          ? `${name.split(" ")[0] || handle} souhaite se connecter avec vous`
+                          : c.ask(name.split(" ")[0] || handle)}
                 </Text>
+                {(ph === "proposal_out" || ph === "proposal_in") && touch.proposal ? (
+                  <Text style={{ marginTop: 8, color: colors.accent, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>
+                    {touch.proposal.type === "ephemeral"
+                      ? `⏳ Contact éphémère · Durée : ${durationLabel(touch.proposal.minutes ?? 60)}`
+                      : "♾️ Contact permanent"}
+                  </Text>
+                ) : null}
                 {touch.uwbLabel === "measuring" ? <Text style={{ marginTop: 6, color: colors.muted }}>{c.uwbMeasuring}</Text> : null}
                 {touch.uwbLabel === "near" ? <Text style={{ marginTop: 6, color: colors.accent }}>{c.uwbNear}</Text> : null}
               </>
@@ -749,6 +854,20 @@ export function WgoTouchScreen() {
             </View>
           ) : null}
           {ph === "waiting_peer" ? <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} /> : null}
+          {ph === "choose" ? (
+            <>
+              <ConnectionChoicePicker value={touchChoice} onChange={setTouchChoice} />
+              <Btn label="Proposer" disabled={!touchChoice} onPress={() => touchChoice && void touch.propose(touchChoice)} />
+              <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} />
+            </>
+          ) : null}
+          {ph === "proposal_out" ? <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} /> : null}
+          {ph === "proposal_in" ? (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Btn label="Refuser" variant="secondary" style={{ flex: 1 }} onPress={() => void touch.answerProposal(false)} />
+              <Btn label="Accepter" style={{ flex: 1 }} onPress={() => void touch.answerProposal(true)} />
+            </View>
+          ) : null}
           {done && peerId ? <Btn label={c.message} onPress={() => openOrCreateDm(peerId)} /> : null}
           {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
           {ph === "uwb_denied" ? (

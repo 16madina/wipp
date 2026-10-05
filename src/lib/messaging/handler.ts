@@ -948,6 +948,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await openSealedReport(me.id, c));
     }
 
+    if (method === "GET" && a === "connections" && b === "active" && !c) {
+      const me = await resolveSession(bearer(request));
+      const { listActiveConnections } = await import("./connection");
+      return json({ connections: await listActiveConnections(me.id) });
+    }
+
     if (a === "connections" && b === "with" && c) {
       // Connection with one person (by profile id): info, "Garder ce contact", answer to it.
       const me = await resolveSession(bearer(request));

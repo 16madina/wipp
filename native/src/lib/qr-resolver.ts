@@ -12,7 +12,7 @@ import { GROUP_FR, groupInviteCall, isServerToken, redeemTemp, type RemoteProfil
 export type QrKind = "profile" | "temporary" | "group" | "business";
 
 export type QrDestination =
-  | { ok: true; kind: "remote-profile"; profile: RemoteProfile; connected: boolean }
+  | { ok: true; kind: "remote-profile"; profile: RemoteProfile; connected: boolean; offer?: { token: string; minutes: number } }
   | { ok: true; kind: "remote-group"; token: string; name: string; members: number; member: boolean }
   | { ok: true; kind: "group"; token: string }
   | { ok: true; kind: "business"; publicId: string }
@@ -93,7 +93,14 @@ export async function resolveWippQr(raw: string): Promise<QrDestination> {
     try {
       const r = await redeemTemp(id.value);
       if (r.status === "ok" && r.profile) {
-        return { ok: true, kind: "remote-profile", profile: r.profile, connected: Boolean(r.connected) };
+        // Ephemeral QR: an OFFER of an ephemeral connection the scanner must accept.
+        return {
+          ok: true,
+          kind: "remote-profile",
+          profile: r.profile,
+          connected: Boolean(r.connected),
+          offer: r.offer ? { token: id.value, minutes: r.offer.minutes } : undefined,
+        };
       }
       if (r.status === "expired") return { ok: false, error: QR_ERRORS.expired };
       if (r.status === "used") return { ok: false, error: QR_ERRORS.used };
@@ -118,11 +125,12 @@ export async function resolveWippQr(raw: string): Promise<QrDestination> {
           const a = [meId, p.id].sort();
           const { data: c } = await supabase
             .from("wipp_connections")
-            .select("id")
+            .select("status, expires_at")
             .eq("user_a", a[0])
             .eq("user_b", a[1])
             .maybeSingle();
-          connected = Boolean(c);
+          const row = c as { status?: string; expires_at?: string | null } | null;
+          connected = Boolean(row && row.status === "active" && (!row.expires_at || Date.parse(row.expires_at) > Date.now()));
         }
         return { ok: true, kind: "remote-profile", connected, profile: p };
       }

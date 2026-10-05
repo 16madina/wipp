@@ -18,6 +18,8 @@ import {
   Users,
 } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
+import { ConnectionChoicePicker } from "../components/ConnectionChoice";
+import { Sheet } from "../components/card-editor-parts";
 import { WippWordmark } from "../components/Logo";
 import {
   Badge,
@@ -46,7 +48,7 @@ import {
 import { pushProtect } from "../lib/screen-protection";
 import { orderedOtherStoryUsers, storyRing, type StoryRing } from "../lib/story-status";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
-import type { StoryItem } from "../lib/types";
+import type { ConnectionChoice, StoryItem } from "../lib/types";
 import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
 import { colors, layout } from "../theme";
@@ -478,6 +480,9 @@ export function RequestsScreen() {
   const blockUser = useWippStore((s) => s.blockUser);
   const blockedIds = useWippStore((s) => s.blockedIds);
   const live = useWippStore((s) => s.serverConnected);
+  // Accepting = choosing how to connect: ♾️ permanent or ⏳ ephemeral (+ duration).
+  const [accepting, setAccepting] = useState<string | null>(null);
+  const [choice, setChoice] = useState<ConnectionChoice | null>({ type: "permanent" });
   const pending = requests.filter((r) => r.status === "pending" && !blockedIds.includes(r.fromId));
   const pendingIntros = live ? [] : intros.filter((i) => i.recipientId === "me" && i.status === "pending");
   useEffect(() => {
@@ -524,7 +529,14 @@ export function RequestsScreen() {
               </View>
               <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 <View style={{ flexGrow: 1, minWidth: 70 }}>
-                  <Btn label={t("accept")} onPress={() => acceptRequest(r.id)} style={{ height: 40 }} />
+                  <Btn
+                    label={t("accept")}
+                    onPress={() => {
+                      setChoice({ type: "permanent" });
+                      setAccepting(r.id);
+                    }}
+                    style={{ height: 40 }}
+                  />
                 </View>
                 <View style={{ flexGrow: 1, minWidth: 70 }}>
                   <Btn label="Refuser" variant="secondary" onPress={() => declineRequest(r.id)} style={{ height: 40 }} />
@@ -540,6 +552,19 @@ export function RequestsScreen() {
           );
         })}
       </ScrollView>
+      <Sheet open={Boolean(accepting)} title="Comment voulez-vous vous connecter ?" onClose={() => setAccepting(null)}>
+        <ConnectionChoicePicker value={choice} onChange={setChoice} />
+        <Btn
+          label={choice ? `Se connecter · ${choice.type === "permanent" ? "Permanent" : "Éphémère"}` : "Choisis une durée valide"}
+          disabled={!choice}
+          style={{ marginTop: 16 }}
+          onPress={() => {
+            if (!accepting || !choice) return;
+            acceptRequest(accepting, choice);
+            setAccepting(null);
+          }}
+        />
+      </Sheet>
     </ScreenRoot>
   );
 }
