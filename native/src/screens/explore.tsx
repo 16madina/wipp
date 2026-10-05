@@ -213,7 +213,7 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
     { icon: Cross, title: t("hubServices"), sub: t("hubServicesSub"), kind: "utilities" as const, go: () => go("utilities") },
     { icon: Store, title: t("hubShops"), sub: t("hubShopsSub"), kind: "shops" as const, go: () => go("shops") },
     { icon: Calendar, title: t("hubEvents"), sub: t("hubEventsSub"), kind: "lifestyle" as const, go: () => go("lifestyle") },
-    { icon: Cross, title: "💊 Pharmacies", sub: "Ouvertes et de garde autour de toi", kind: "utilities" as const, wide: true, go: () => push({ name: "pharmacies" }) },
+    { icon: Cross, title: "💊 Pharmacies", sub: "Ouvertes autour de toi, 24 h/24", kind: "utilities" as const, wide: true, go: () => push({ name: "pharmacies" }) },
   ];
   return (
     <View style={{ paddingHorizontal: 16 }}>

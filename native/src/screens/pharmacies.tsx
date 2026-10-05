@@ -251,8 +251,6 @@ export function PharmaciesScreen() {
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <Chip label="🟢 Ouvertes maintenant" active={tab === "open"} onPress={() => setTab("open")} />
           <Chip label="🕐 Ouvertes 24 h/24" active={tab === "h24"} onPress={() => setTab("h24")} />
-          <Chip label="🌙 De garde" active={tab === "duty"} onPress={() => setTab("duty")} />
-          <Chip label="Toutes" active={tab === "all"} onPress={() => setTab("all")} />
         </View>
 
         {load.state === "locating" || load.state === "loading" ? (
@@ -339,14 +337,13 @@ export function PharmaciesScreen() {
                 body={tab === "h24" ? "Selon les horaires publiés sur Google. Ce n’est pas la liste officielle des pharmacies de garde." : undefined}
               />
               {tab === "h24" && openList.length ? <Btn label="Voir les pharmacies ouvertes maintenant" onPress={() => setTab("open")} /> : null}
-              {(tab === "open" || tab === "h24") && sorted.length ? <Btn label="Voir toutes les pharmacies proches" variant="secondary" onPress={() => setTab("all")} /> : null}
             </View>
           )
         ) : null}
 
         {load.state === "ready" ? (
           <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", marginTop: 8 }}>
-            Horaires fournis par Google. « Ouverte » ou « 24 h/24 » ne signifie pas « de garde ».
+            Horaires fournis par Google.
           </Text>
         ) : null}
       </ScrollView>
