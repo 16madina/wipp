@@ -108,6 +108,9 @@ ou via le test fermé Play Console avec l'AAB versionCode 5).
 - **iPhone ↔ Android** : contact + serveur + carte + double acceptation (pas d'UWB commun, aucune fausse distance).
 - **Raccourcis** : appui long sur le bouton central WIPP → WIPP Touch ; appui long sur l'icône
   WIPP (raccourci Android ajouté au premier lancement de l'app).
+- **Notifications Android avec aperçu chiffré** : le serveur envoie le message chiffré, WIPP le
+  déchiffre sur le téléphone et affiche « Nom — début du message » (ou « 📷 Photo », « 🎤 Message vocal »…).
+  Taper la notification ouvre directement la conversation.
 - Logo WIPP officiel, appels (CallKit / écran WIPP), statuts de messages WIPP Smile, etc.
 
 ---
@@ -122,6 +125,15 @@ ou via le test fermé Play Console avec l'AAB versionCode 5).
    « WIPP Touch détecté », **sans** « Proximité confirmée ».
 5. A « Se connecter » → « En attente de l'autre personne… » ; B « Se connecter » → « WIPP connecté ✓ ».
 6. Refaire avec « Annuler » → « Connexion annulée » des deux côtés, puis retour à « Prêt ».
+
+---
+
+## Test des notifications Android (fait par l'utilisatrice)
+
+1. Ouvrir WIPP une fois sur le Samsung après installation (il s'enregistre pour les nouvelles notifications).
+2. Fermer WIPP, verrouiller le Samsung.
+3. Recevoir un message privé : la notification doit montrer le **début du message**, pas « Nouveau message ».
+4. Taper la notification : WIPP doit ouvrir **directement la conversation**.
 
 ---
 

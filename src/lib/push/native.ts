@@ -199,13 +199,26 @@ function apnsAlertPost(host: string, token: string, jwt: string, body: string, c
 /** Visible FCM notification on Android (messages, requests), on the given channel. */
 export async function sendFcmAlert(
   tokens: string[],
-  msg: { title: string; body: string; data: Record<string, unknown>; channelId: string; collapseId?: string },
+  msg: {
+    title: string;
+    body: string;
+    data: Record<string, unknown>;
+    channelId: string;
+    collapseId?: string;
+    /** E2E envelope: sent as a DATA-only message so the app decrypts and shows the preview itself. */
+    wenc?: Record<string, unknown>;
+  },
 ) {
   const sa = serviceAccount();
   if (!sa || !tokens.length) return { sent: 0, invalid: [] as string[] };
   const access = await fcmAccessToken(sa);
   const data: Record<string, string> = { body: JSON.stringify(msg.data) };
   for (const [k, v] of Object.entries(msg.data)) if (k !== "body") data[k] = String(v ?? "");
+  if (msg.wenc) {
+    data.wenc = JSON.stringify(msg.wenc);
+    data.title = msg.title;
+    data.fallback = msg.body;
+  }
   const invalid: string[] = [];
   let sent = 0;
   await Promise.all(
@@ -214,15 +227,18 @@ export async function sendFcmAlert(
         method: "POST",
         headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: {
-            token,
-            notification: { title: msg.title, body: msg.body },
-            data,
-            android: {
-              priority: "HIGH",
-              notification: { channel_id: msg.channelId, sound: "default", tag: msg.collapseId?.slice(0, 64) },
-            },
-          },
+          message: msg.wenc
+            ? // Data-only, high priority: wakes WIPP's background task, which decrypts and notifies.
+              { token, data, android: { priority: "HIGH", ttl: "86400s" } }
+            : {
+                token,
+                notification: { title: msg.title, body: msg.body },
+                data,
+                android: {
+                  priority: "HIGH",
+                  notification: { channel_id: msg.channelId, sound: "default", tag: msg.collapseId?.slice(0, 64) },
+                },
+              },
         }),
       });
       if (res.ok) sent += 1;

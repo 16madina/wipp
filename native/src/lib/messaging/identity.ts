@@ -76,7 +76,7 @@ export async function clearNotificationIdentity() {
   }
 }
 
-/** "Aperçu des messages": on by default. */
+/** "Aperçu des messages": on by default (iOS extension + Android background task). */
 export async function getMessagePreviewEnabled(): Promise<boolean> {
   try {
     const v = await SecureStore.getItemAsync(NSE_PREVIEW, NSE_OPTS);

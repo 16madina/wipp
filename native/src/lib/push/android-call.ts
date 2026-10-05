@@ -104,7 +104,14 @@ if (Platform.OS === "android") {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const TaskManager = require("expo-task-manager") as typeof import("expo-task-manager");
   TaskManager.defineTask<unknown>(CALL_TASK, async ({ data }) => {
+    // Same background task for every FCM data push: calls, and E2E message previews.
     await onCallPush(data);
+    try {
+      const { onMessagePush } = await import("./android-message");
+      await onMessagePush(data);
+    } catch {
+      /* preview module unavailable */
+    }
   });
   void import("@notifee/react-native")
     .then(({ default: n, EventType }) => {
@@ -136,6 +143,8 @@ export async function startAndroidCalls(register: (token: string) => Promise<voi
   try {
     const { default: n, EventType } = await import("@notifee/react-native");
     const open = async (pressId: string | undefined, data: unknown, id?: string) => {
+      const { openMessageFromNotification } = await import("./android-message");
+      if (await openMessageFromNotification(data)) return;
       const call = findCall(data);
       if (!call) return;
       const callId = String(call.inviteId || call.eventId);

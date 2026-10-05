@@ -307,6 +307,12 @@ async function applyScreen(screen: Screen, eventId?: string) {
   useWippStore.getState().push(screen);
 }
 
+/** Opens the screen a push points to (used by Android notifications shown by notifee). */
+export async function openFromPushData(data: Record<string, unknown>) {
+  const screen = screenFromPushData(data);
+  if (screen) await applyScreen(screen, typeof data.eventId === "string" ? data.eventId : undefined);
+}
+
 export async function enqueueUrl(url: string) {
   if (!url || url.startsWith("exp+")) return;
   // Only WIPP links are deep links (on web the page's own address arrives here too).
@@ -388,13 +394,18 @@ export function bootstrapPush() {
   });
   const received = Notifications.addNotificationReceivedListener((notification) => {
     handleCallData((notification.request.content.data ?? {}) as Record<string, unknown>);
+    // Android, app open: data-only message pushes are shown here (same id as the background task → no duplicate).
+    if (Platform.OS === "android") {
+      void import("./android-message").then(({ onMessagePush }) => onMessagePush(notification.request.trigger ?? notification.request.content.data));
+    }
   });
   void import("./voip").then(({ startVoip }) => startVoip());
   void import("./android-call").then(({ startAndroidCalls }) =>
     startAndroidCalls(async (token) => {
       await wippApi("devices/push", {
         method: "POST",
-        body: JSON.stringify({ token, platform: "android", kind: "fcm", installationId: await getInstallationId() }),
+        // "fcm-e2e": this build decrypts message previews itself (data-only pushes).
+        body: JSON.stringify({ token, platform: "android", kind: "fcm-e2e", installationId: await getInstallationId() }),
       });
     }),
   );

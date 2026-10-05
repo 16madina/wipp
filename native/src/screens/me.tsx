@@ -316,7 +316,7 @@ function MessagePreviewSection() {
   useEffect(() => {
     void import("../lib/messaging/identity").then((m) => m.getMessagePreviewEnabled().then(setOn));
   }, []);
-  if (Platform.OS !== "ios") return null;
+  if (Platform.OS !== "ios" && Platform.OS !== "android") return null;
   return (
     <Section title="Notifications">
       <Row

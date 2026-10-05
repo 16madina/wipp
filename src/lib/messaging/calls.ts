@@ -101,7 +101,7 @@ async function pushCall(profileId: string, body: string, data: Record<string, un
   const expoTokens = tokens
     .filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken"))
     .map((t) => t.token);
-  const fcm = tokens.filter((t) => t.kind === "fcm").map((t) => t.token);
+  const fcm = tokens.filter((t) => t.kind === "fcm" || t.kind === "fcm-e2e").map((t) => t.token);
   const voip = tokens.filter((t) => t.kind === "voip").map((t) => t.token);
   const ring = data.action === "ring";
   const flat = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? "")]));
@@ -212,6 +212,17 @@ export async function registerPushToken(input: {
     `;
   } catch {
     /* schema without disabled_at */
+  }
+  // "fcm-e2e" (Android build able to decrypt previews) replaces the plain "fcm" row of the same token.
+  if (kind === "fcm-e2e") {
+    try {
+      await sql`
+        update wipp_push_tokens set disabled_at = now()
+        where profile_id = ${input.profileId} and token = ${token} and kind = 'fcm' and disabled_at is null
+      `;
+    } catch {
+      /* ignore */
+    }
   }
   if (installationId) {
     try {

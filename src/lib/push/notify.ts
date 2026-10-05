@@ -45,7 +45,7 @@ export async function sendProfilePush(input: {
   body: string;
   data: PushData;
   channelId: "messages" | "requests" | "calls";
-  /** iOS only: E2E envelope decrypted on the phone by the Notification Service Extension. */
+  /** E2E envelope decrypted on the phone (iOS extension / Android background task). */
   wenc?: Record<string, unknown>;
 }) {
   if (!(await claimEvent(input.data.eventId))) return { sent: 0, deduped: true as const };
@@ -53,9 +53,11 @@ export async function sendProfilePush(input: {
   assertNoSensitivePush(data, input.title, input.body);
   const tokens = await listPushTokens(input.profileId);
   const apns = tokens.filter((t) => t.kind === "apns").map((t) => t.token);
+  // Plain "fcm" = older Android builds (system notification); "fcm-e2e" = builds that decrypt previews.
   const fcm = tokens.filter((t) => t.kind === "fcm").map((t) => t.token);
+  const fcmE2e = tokens.filter((t) => t.kind === "fcm-e2e").map((t) => t.token);
   // A phone that registered a native token gets it directly from Apple/Google, not twice via Expo.
-  const native = new Set<string>([...(apns.length ? ["ios"] : []), ...(fcm.length ? ["android"] : [])]);
+  const native = new Set<string>([...(apns.length ? ["ios"] : []), ...(fcm.length || fcmE2e.length ? ["android"] : [])]);
   const expo = tokens
     .filter((t) => (t.kind === "expo" || t.token.startsWith("ExponentPushToken")) && !native.has(t.platform))
     .map((t) => t.token);
@@ -75,6 +77,7 @@ export async function sendProfilePush(input: {
   }
   if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId, wenc: input.wenc }));
   if (fcm.length) jobs.push(sendFcmAlert(fcm, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId }));
+  if (fcmE2e.length) jobs.push(sendFcmAlert(fcmE2e, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId, wenc: input.wenc }));
   const results = await Promise.allSettled(jobs);
   let sent = 0;
   const invalid: string[] = [];
