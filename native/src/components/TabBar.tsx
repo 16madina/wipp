@@ -283,7 +283,17 @@ export function TabBar({ active }: { active: string }) {
             }}
           />
         ))}
-        <Pressable onPress={tapWipp} accessibilityLabel={t("tabConnect")} style={{ alignItems: "center", marginTop: -46, width: 76, flexShrink: 0 }}>
+        <Pressable
+          onPress={tapWipp}
+          // Long press on the centre WIPP button opens WIPP Touch directly (no drawer).
+          onLongPress={() => {
+            haptic("select");
+            setOpen(false);
+            push({ name: "wgo-touch" });
+          }}
+          delayLongPress={450}
+          accessibilityLabel={t("tabConnect")}
+          accessibilityHint="Appui long : WIPP Touch" style={{ alignItems: "center", marginTop: -46, width: 76, flexShrink: 0 }}>
           <View style={{ width: 76, height: 74, alignItems: "center", justifyContent: "center" }}>
             <Animated.View
               pointerEvents="none"
