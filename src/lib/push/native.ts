@@ -133,7 +133,15 @@ export async function sendVoipCall(tokens: string[], payload: Record<string, unk
 /** Visible APNs notification (messages, requests). Custom data goes under "body" for expo-notifications. */
 export async function sendApnsAlert(
   tokens: string[],
-  msg: { title: string; body: string; data: Record<string, unknown>; collapseId?: string; sound?: boolean },
+  msg: {
+    title: string;
+    body: string;
+    data: Record<string, unknown>;
+    collapseId?: string;
+    sound?: boolean;
+    /** E2E envelope for the iOS Notification Service Extension: ciphertext only, Apple cannot read it. */
+    wenc?: Record<string, unknown>;
+  },
 ) {
   const jwt = await apnsAuth();
   if (!jwt || !tokens.length) return { sent: 0, invalid: [] as string[] };
@@ -141,6 +149,7 @@ export async function sendApnsAlert(
     aps: { alert: { title: msg.title, body: msg.body }, sound: msg.sound === false ? undefined : "default", "mutable-content": 1 },
     body: msg.data,
     ...msg.data,
+    ...(msg.wenc ? { wenc: msg.wenc } : {}),
   });
   const invalid: string[] = [];
   let sent = 0;

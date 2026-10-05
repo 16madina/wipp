@@ -310,6 +310,36 @@ function SettingsList({ title, rows }: { title: string; rows: { label: string; v
   );
 }
 
+/** Lock-screen preview of messages (decrypted on the phone). */
+function MessagePreviewSection() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    void import("../lib/messaging/identity").then((m) => m.getMessagePreviewEnabled().then(setOn));
+  }, []);
+  if (Platform.OS !== "ios") return null;
+  return (
+    <Section title="Notifications">
+      <Row
+        label="Aperçu des messages"
+        trailing={
+          <Toggle
+            value={on}
+            onChange={(v: boolean) => {
+              setOn(v);
+              void import("../lib/messaging/identity").then((m) => m.setMessagePreviewEnabled(v));
+            }}
+          />
+        }
+      />
+      <Text style={{ paddingHorizontal: 16, paddingTop: 6, color: colors.muted, fontSize: 12, lineHeight: 17 }}>
+        {on
+          ? "Le début du message s’affiche dans la notification. Il est déchiffré sur ce téléphone : WIPP ne peut pas le lire."
+          : "Les notifications affichent seulement « Nouveau message »."}
+      </Text>
+    </Section>
+  );
+}
+
 /** WIPP Touch → iOS "Nearby Interactions" permission: real state + shortcut to the iPhone settings. */
 function TouchPermissionSection() {
   const caps = useMemo(() => getTouchCapabilities(), []);
@@ -546,6 +576,7 @@ export function PrivacyScreen() {
           <Row label="WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
           <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>
+        <MessagePreviewSection />
         <TouchPermissionSection />
       </ScrollView>
     </ScreenRoot>

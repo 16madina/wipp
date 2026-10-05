@@ -418,6 +418,7 @@ export const useWippStore = create<Store>((set, get) => ({
   },
   signOut: () => {
     void import("./firebase-phone").then(({ signOutFirebase }) => signOutFirebase());
+    void import("./messaging/identity").then((m) => m.clearNotificationIdentity());
     void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
     void import("./push").then(({ unregisterThisInstall }) => unregisterThisInstall());
     void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
@@ -883,6 +884,7 @@ export const useWippStore = create<Store>((set, get) => ({
     }
     const myFingerprint = await fingerprintOf(identity.publicJwk);
     set({ identity, cryptoReady: true });
+    void import("./messaging/identity").then((m) => m.shareIdentityWithNotifications(identity));
     void myFingerprint;
     try {
       const { publishIdentityPublicKey } = await import("./messaging/sync");

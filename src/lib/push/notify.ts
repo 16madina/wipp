@@ -45,6 +45,8 @@ export async function sendProfilePush(input: {
   body: string;
   data: PushData;
   channelId: "messages" | "requests" | "calls";
+  /** iOS only: E2E envelope decrypted on the phone by the Notification Service Extension. */
+  wenc?: Record<string, unknown>;
 }) {
   if (!(await claimEvent(input.data.eventId))) return { sent: 0, deduped: true as const };
   const data = sanitizePushData(input.data as unknown as Record<string, unknown>);
@@ -71,7 +73,7 @@ export async function sendProfilePush(input: {
       }).then((r) => ({ sent: r.sent, invalid: r.invalidTokens })),
     );
   }
-  if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId }));
+  if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId, wenc: input.wenc }));
   if (fcm.length) jobs.push(sendFcmAlert(fcm, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId }));
   const results = await Promise.allSettled(jobs);
   let sent = 0;
@@ -136,6 +138,26 @@ async function peerFlags(chatId: string, profileId: string) {
       limit 1
     `;
     return { muted_until: rows[0]?.muted_until ?? null, generic_notify: false };
+  }
+}
+
+/**
+ * The stored E2E envelope, trimmed to what the phone needs to decrypt it (IV, ciphertext, sender
+ * public key x/y, chat id as HKDF salt). The server never has the key: this is ciphertext only.
+ */
+async function previewEnvelope(chatId: string, messageId: string): Promise<Record<string, unknown> | undefined> {
+  try {
+    const sql = await getSql();
+    const rows = await sql<{ body: string }>`select body from wipp_messages where id = ${messageId} and chat_id = ${chatId} limit 1`;
+    const raw = rows[0]?.body;
+    if (!raw || !raw.startsWith("{")) return undefined;
+    const env = JSON.parse(raw) as { e2e?: boolean; iv?: string; ct?: string; spk?: { x?: string; y?: string } };
+    if (!env.e2e || !env.iv || !env.ct || !env.spk?.x || !env.spk?.y) return undefined;
+    const wenc = { c: chatId, iv: env.iv, ct: env.ct, spk: { x: env.spk.x, y: env.spk.y } };
+    // APNs payloads are capped at 4 KB: long messages keep the generic text.
+    return JSON.stringify(wenc).length <= 2800 ? wenc : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -209,6 +231,7 @@ export async function notifyChatMessage(input: {
         title: biz.name.slice(0, 64) || "WIPP",
         body: ownerIsPeer ? "Nouveau message professionnel" : "Nouveau message",
         channelId: "messages",
+        wenc: await previewEnvelope(input.chatId, input.messageId),
         data: {
           type: "message",
           eventId: input.messageId,
@@ -224,6 +247,7 @@ export async function notifyChatMessage(input: {
       title: me[0]?.display_name || "WIPP",
       body: "Nouveau message",
       channelId: "messages",
+      wenc: await previewEnvelope(input.chatId, input.messageId),
       data: {
         type: "message",
         eventId: input.messageId,
