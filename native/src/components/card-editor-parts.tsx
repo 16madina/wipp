@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import { Check, ChevronDown, Clock, MapPin, Search } from "lucide-react-native";
 import { Press } from "./ui";
@@ -33,6 +33,8 @@ export function SelectField({ label, value, placeholder, left, onPress }: { labe
 export function Sheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      {/* The sheet rises above the keyboard so the field being typed in stays visible. */}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <Press onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
         <Press onPress={() => undefined} style={{ maxHeight: "82%", backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 10, paddingHorizontal: 16, paddingBottom: 28 }}>
           <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", marginBottom: 12 }} />
@@ -40,6 +42,7 @@ export function Sheet({ open, title, onClose, children }: { open: boolean; title
           {children}
         </Press>
       </Press>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

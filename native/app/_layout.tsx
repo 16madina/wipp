@@ -16,6 +16,7 @@ import {
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
 import { GreatVibes_400Regular } from "@expo-google-fonts/great-vibes";
+import { DancingScript_600SemiBold } from "@expo-google-fonts/dancing-script";
 import * as SplashScreen from "expo-splash-screen";
 import { ShareIntentProvider } from "expo-share-intent";
 
@@ -29,6 +30,7 @@ export default function RootLayout() {
     Inter_700Bold,
     Inter_800ExtraBold,
     GreatVibes_400Regular,
+    DancingScript_600SemiBold,
   });
 
   useEffect(() => {

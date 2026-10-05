@@ -75,6 +75,9 @@ import { errorText } from "../lib/error-fr";
 import { EventCard } from "../components/event-parts";
 import { wippSrc } from "../lib/assets";
 
+/** Personal phrase: a readable handwritten script, slightly slanted. */
+const MOTTO_FONT = "DancingScript_600SemiBold";
+
 /** Bigger script for short phrases, smaller for long ones (it always fits the corner). */
 function mottoSize(text: string) {
   const n = text.length;
@@ -159,19 +162,19 @@ export function MeScreen() {
                 setMottoDraft(me.motto ?? "");
                 setMottoOpen(true);
               }}
-              style={{ alignSelf: "flex-end", maxWidth: "80%", marginTop: 6 }}
+              style={{ alignSelf: "flex-end", maxWidth: "80%", marginTop: 6, transform: [{ rotate: "-4deg" }] }}
             >
               {me.motto ? (
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.6}
-                  style={{ fontFamily: "GreatVibes_400Regular", fontSize: mottoSize(me.motto), lineHeight: mottoSize(me.motto) * 1.15, color: colors.accent, textAlign: "right" }}
+                  style={{ fontFamily: MOTTO_FONT, fontSize: mottoSize(me.motto), lineHeight: mottoSize(me.motto) * 1.15, color: colors.accent, textAlign: "right" }}
                 >
                   {me.motto}
                 </Text>
               ) : (
-                <Text style={{ fontFamily: "GreatVibes_400Regular", fontSize: 20, color: "rgba(255,216,77,0.45)", textAlign: "right" }}>Ta phrase ✎</Text>
+                <Text style={{ fontFamily: MOTTO_FONT, fontSize: 20, color: "rgba(255,216,77,0.45)", textAlign: "right" }}>Ta phrase ✎</Text>
               )}
             </Press>
             {me.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: "rgba(247,249,252,0.8)" }}>{me.bio}</Text> : null}
@@ -300,7 +303,7 @@ export function MeScreen() {
           Un petit message personnel affiché sur ton profil. {MOTTO_MAX} caractères maximum.
         </Text>
         <View style={{ borderRadius: 14, backgroundColor: colors.navy, padding: 14, minHeight: 70, alignItems: "flex-end", justifyContent: "center", marginBottom: 10 }}>
-          <Text style={{ fontFamily: "GreatVibes_400Regular", fontSize: mottoSize(mottoDraft || "Good Vibes Only"), color: mottoDraft ? colors.accent : "rgba(255,216,77,0.4)", textAlign: "right" }}>
+          <Text style={{ fontFamily: MOTTO_FONT, fontSize: mottoSize(mottoDraft || "Good Vibes Only"), color: mottoDraft ? colors.accent : "rgba(255,216,77,0.4)", textAlign: "right", transform: [{ rotate: "-4deg" }] }}>
             {mottoDraft || "Good Vibes Only"}
           </Text>
         </View>

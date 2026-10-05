@@ -550,7 +550,7 @@ export function FoundProfileScreen({
         <Text style={{ marginTop: 12, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{user.displayName}</Text>
         <Text style={{ color: colors.muted }}>@{user.username}</Text>
         {user.motto ? (
-          <Text style={{ marginTop: 8, fontFamily: "GreatVibes_400Regular", fontSize: 24, color: colors.accent, textAlign: "center" }}>{user.motto}</Text>
+          <Text style={{ marginTop: 8, fontFamily: "DancingScript_600SemiBold", fontSize: 22, color: colors.accent, textAlign: "center", transform: [{ rotate: "-3deg" }] }}>{user.motto}</Text>
         ) : null}
         {viaLabel ? <Text style={{ marginTop: 8, fontSize: 12, color: colors.accent }}>{viaLabel}</Text> : null}
         <Text style={{ marginTop: 12, textAlign: "center", color: colors.muted }}>{user.bio}</Text>
