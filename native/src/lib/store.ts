@@ -84,6 +84,21 @@ function previewOf(message: Message, lang: Lang = "fr") {
   return message.text ?? "";
 }
 
+let inboxSaveTimer: ReturnType<typeof setTimeout> | null = null;
+/** Debounced encrypted snapshot of the real inbox (shown instantly at the next cold start). */
+export function scheduleInboxSave(get: () => Store) {
+  if (inboxSaveTimer) clearTimeout(inboxSaveTimer);
+  inboxSaveTimer = setTimeout(() => {
+    inboxSaveTimer = null;
+    const st = get();
+    if (!st.serverConnected || !st.serverProfileId) return;
+    const chats = st.chats.filter((c) => c.id.startsWith("srv:"));
+    void import("./inbox-cache").then(({ saveInboxSnapshot }) =>
+      saveInboxSnapshot({ profileId: st.serverProfileId!, chats, messages: st.messages, users: st.users, meAvatar: st.me.avatar || "" }),
+    );
+  }, 2500);
+}
+
 function peerPubOf(st: { chats: Chat[]; peerPublicKeys: Record<string, JsonWebKey> }, chatId: string) {
   const peerId = st.chats.find((c) => c.id === chatId)?.participantIds.find((id) => id !== "me");
   if (!peerId) return null;
@@ -419,6 +434,7 @@ export const useWippStore = create<Store>((set, get) => ({
   signOut: () => {
     void import("./firebase-phone").then(({ signOutFirebase }) => signOutFirebase());
     void import("./messaging/identity").then((m) => m.clearNotificationIdentity());
+    void import("./inbox-cache").then((m) => m.clearInboxSnapshot());
     void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
     void import("./push").then(({ unregisterThisInstall }) => unregisterThisInstall());
     void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
@@ -956,6 +972,7 @@ export const useWippStore = create<Store>((set, get) => ({
           const st = get();
           if (st.serverProfileId) rememberMyAvatar(st.serverProfileId, st.me.avatar || "");
         });
+        scheduleInboxSave(get);
         void get().syncBusinessContexts();
         void get().refreshIncomingRequests();
         // The chat list only has ciphertext for the last message: decrypt it so the

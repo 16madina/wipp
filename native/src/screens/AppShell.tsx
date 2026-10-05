@@ -286,7 +286,7 @@ export function AppShell() {
       const { watchFirebaseUser } = await import("../lib/firebase-phone");
       const { signinOtp } = await import("../lib/auth-api");
       const { pendingMode } = await import("../lib/auth-flow");
-      const { enterLinkedProfile, restoreFirebaseSession } = await import("../lib/enter-session");
+      const { enterLinkedProfile, refreshLinkedProfile, restoreFirebaseSession } = await import("../lib/enter-session");
       const { readLinkedSession } = await import("../lib/firebase-linked-session");
       stop = watchFirebaseUser((user) => {
         if (cancelled) return;
@@ -307,7 +307,8 @@ export function AppShell() {
             try {
               const res = await signinOtp();
               if (cancelled || !res.ok) return;
-              enterLinkedProfile(res.profile, phone);
+              // Same account as the cached one: keep the inbox and photo already shown.
+              refreshLinkedProfile(res.profile, phone);
             } catch {
               /* Firebase keeps the user. A network miss must not sign them out or request an SMS. */
             }
@@ -334,12 +335,19 @@ export function AppShell() {
       });
     })();
     void hydratePrivateVault();
+    // Keep the encrypted inbox snapshot fresh as messages arrive (debounced in the store).
+    const offSnapshot = useWippStore.subscribe((st, prev) => {
+      if (st.serverConnected && (st.messages !== prev.messages || st.chats !== prev.chats)) {
+        void import("../lib/store").then(({ scheduleInboxSave }) => scheduleInboxSave(useWippStore.getState));
+      }
+    });
     void import("../lib/push/prefs").then(async ({ loadNotifPrefs }) => {
       const prefs = await loadNotifPrefs();
       useWippStore.setState({ notifs: prefs.notifs, pushMaster: prefs.pushMaster });
     });
     const stopPush = bootstrapPush();
     return () => {
+      offSnapshot();
       cancelled = true;
       stop();
       stopPush();

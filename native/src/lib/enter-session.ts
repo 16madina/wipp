@@ -31,8 +31,51 @@ export function enterLinkedProfile(profile: LinkedProfile, phone: string) {
   );
 }
 
+/**
+ * Server confirmed the SAME account at launch: refresh names/username only. Unlike
+ * enterLinkedProfile it never empties the inbox nor the photo already on screen.
+ */
+export function refreshLinkedProfile(profile: LinkedProfile, phone: string) {
+  const st = useWippStore.getState();
+  if (!profile.id || (st.serverProfileId && st.serverProfileId !== profile.id)) {
+    enterLinkedProfile(profile, phone);
+    return;
+  }
+  const uid = currentFirebaseUser()?.uid;
+  if (uid && profile.username) void writeLinkedSession(uid, { ...profile, phone: profile.phone || phone });
+  const displayName = profile.displayName || st.me.displayName;
+  const [firstName, ...rest] = displayName.split(" ");
+  useWippStore.setState((s) => ({
+    serverProfileId: profile.id,
+    serverUsername: profile.username || s.serverUsername,
+    me: {
+      ...s.me,
+      displayName,
+      firstName: firstName || s.me.firstName,
+      lastName: rest.join(" ") || s.me.lastName,
+      username: profile.username || s.me.username,
+      phone: profile.phone || phone || s.me.phone,
+    },
+  }));
+}
+
 /** Reopen an already authenticated Firebase user. Does not create a profile and does not reseed the inbox. */
 export function restoreFirebaseSession(profile: LinkedProfile | null, phone: string) {
+  // Show my last known inbox right away (encrypted local snapshot), then the server refreshes it.
+  if (profile?.id) {
+    const pid = profile.id;
+    void import("./inbox-cache").then(async ({ loadInboxSnapshot }) => {
+      const snap = await loadInboxSnapshot(pid);
+      const st = useWippStore.getState();
+      if (!snap || st.serverProfileId !== pid || st.serverConnected) return;
+      useWippStore.setState((s) => ({
+        chats: snap.chats,
+        messages: { ...snap.messages },
+        users: { ...s.users, ...snap.users, me: { ...s.users.me, ...snap.users.me } },
+        me: { ...s.me, avatar: s.me.avatar || snap.meAvatar },
+      }));
+    });
+  }
   // Show my last known photo right away (the server copy replaces it a moment later).
   if (profile?.id) {
     const id = profile.id;
