@@ -20,6 +20,8 @@ export type TouchSessionConfig = {
   uwbTimeoutMs: number;
   maxBumps: number;
   purgeAfterMs: number;
+  detectG: number;
+  maxBumpMs: number;
 };
 
 export const TOUCH_SESSION_DEFAULTS: TouchSessionConfig = {
@@ -34,6 +36,8 @@ export const TOUCH_SESSION_DEFAULTS: TouchSessionConfig = {
   uwbTimeoutMs: 6_000,
   maxBumps: 12,
   purgeAfterMs: 600_000,
+  detectG: 0.8,
+  maxBumpMs: 250,
 };
 
 let cached: { at: number; value: TouchSessionConfig } | null = null;
@@ -166,7 +170,7 @@ export async function startTouchSession(
   return {
     session: { id, state: "waiting", expiresAt: expires.getTime() },
     serverNow: Date.now(),
-    config: { bumpWindowMs: cfg.bumpWindowMs, minPeakG: cfg.minPeakG, uwbMaxCm: cfg.uwbMaxCm, uwbTimeoutMs: cfg.uwbTimeoutMs },
+    config: { bumpWindowMs: cfg.bumpWindowMs, minPeakG: cfg.minPeakG, uwbMaxCm: cfg.uwbMaxCm, uwbTimeoutMs: cfg.uwbTimeoutMs, detectG: cfg.detectG, maxBumpMs: cfg.maxBumpMs },
   };
 }
 
@@ -390,8 +394,15 @@ export async function declineTouchSession(meId: string, id: string) {
   return view(meId, id);
 }
 
-export async function cancelTouchSession(meId: string, id: string) {
+export async function cancelTouchSession(meId: string, id: string, diag?: { spikes?: number; maxPeak?: number } | null) {
   const me = await own(meId, id);
+  if (diag && Number.isFinite(Number(diag.spikes))) {
+    // Calibration only (no raw motion): how many spikes the phone felt and the strongest one.
+    const d = { spikes: Math.min(999, Number(diag.spikes) | 0), maxPeak: Math.round(Number(diag.maxPeak) * 100) / 100 };
+    const sql = await getSql();
+    await sql`update wipp_touch_sessions set caps = caps || ${JSON.stringify({ diag: d })}::jsonb where id = ${me.id}`;
+    console.info("[wipp-touch] diag", me.platform, d);
+  }
   if (me.state === "candidate" && me.peer_session_id) {
     // Leaving during confirmation = a refusal for the other person.
     await finish([me.id, me.peer_session_id], "declined");

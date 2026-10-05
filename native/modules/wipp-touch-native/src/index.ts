@@ -161,10 +161,12 @@ export function getTouchCapabilities(): TouchCapabilities {
   return { platform: Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web", motion: false, uwb: false, uwbKind: null };
 }
 
-function emitter() {
+// Expo native modules ARE event emitters: listen on the module itself
+// (`new EventEmitter(module)` creates an unrelated emitter that never receives native events).
+function emitter(): { addListener: (name: string, fn: (e: never) => void) => { remove: () => void } } {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { EventEmitter, requireNativeModule } = require("expo-modules-core");
-  return new EventEmitter(requireNativeModule("WippTouchNative"));
+  const { requireNativeModule } = require("expo-modules-core");
+  return requireNativeModule("WippTouchNative");
 }
 
 export function startBumpDetection(thresholdG: number, maxDurMs: number, onBump: (e: BumpEvent) => void): Unsub | null {

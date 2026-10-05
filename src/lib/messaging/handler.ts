@@ -332,7 +332,10 @@ export async function handleWippApi(request: Request): Promise<Response> {
       }
       if (method === "POST" && c && d === "accept") return json(await ts.acceptTouchSession(me.id, c));
       if (method === "POST" && c && d === "decline") return json(await ts.declineTouchSession(me.id, c));
-      if (method === "POST" && c && d === "cancel") return json(await ts.cancelTouchSession(me.id, c));
+      if (method === "POST" && c && d === "cancel") {
+        const body = await readBody<{ diag?: { spikes?: number; maxPeak?: number } | null }>(request);
+        return json(await ts.cancelTouchSession(me.id, c, body.diag));
+      }
     }
 
     if (method === "GET" && a === "touch" && b === "time") {

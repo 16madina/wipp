@@ -31,7 +31,7 @@ type ServerSession = {
 type StartResponse = {
   session: { id: string; state: string; expiresAt: number };
   serverNow: number;
-  config: { bumpWindowMs: number; minPeakG: number; uwbMaxCm: number; uwbTimeoutMs: number };
+  config: { bumpWindowMs: number; minPeakG: number; uwbMaxCm: number; uwbTimeoutMs: number; detectG?: number; maxBumpMs?: number };
 };
 
 export type TouchPhase =
@@ -53,7 +53,7 @@ export type TouchPhase =
   | "failed";
 
 const POLL_MS = 600;
-const MAX_BUMP_MS = 140;
+
 
 const api = {
   time: () => wippApi<{ serverNow: number }>("/touch/time"),
@@ -68,7 +68,8 @@ const api = {
     wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/uwb-result`, { method: "POST", body: JSON.stringify(body) }),
   accept: (id: string) => wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/accept`, { method: "POST", body: "{}" }),
   decline: (id: string) => wippApi<{ session: ServerSession }>(`/touch/session/${encodeURIComponent(id)}/decline`, { method: "POST", body: "{}" }),
-  cancel: (id: string) => wippApi<{ ok: boolean }>(`/touch/session/${encodeURIComponent(id)}/cancel`, { method: "POST", body: "{}" }),
+  cancel: (id: string, d?: object) =>
+    wippApi<{ ok: boolean }>(`/touch/session/${encodeURIComponent(id)}/cancel`, { method: "POST", body: JSON.stringify({ diag: d ?? null }) }),
 };
 
 /** NTP-style offset: best of a few round trips. Returns server-time = device-time + offset. */
@@ -102,6 +103,7 @@ export function useTouchSession() {
   const phaseRef = useRef<TouchPhase>("idle");
   const alive = useRef(true);
   const caps = useRef<TouchCapabilities | null>(null);
+  const diag = useRef({ spikes: 0, maxPeak: 0 });
 
   function set(next: TouchPhase) {
     phaseRef.current = next;
@@ -132,7 +134,7 @@ export function useTouchSession() {
     stopAll();
     const id = sessionId.current;
     sessionId.current = null;
-    if (cancelServer && id) await api.cancel(id).catch(() => undefined);
+    if (cancelServer && id) await api.cancel(id, diag.current).catch(() => undefined);
   }
 
   useEffect(() => {
@@ -228,6 +230,7 @@ export function useTouchSession() {
         break;
       case "expired":
         stopAll();
+        void api.cancel(s.id, diag.current).catch(() => undefined);
         set(prev === "candidate" || prev === "waiting_peer" ? "expired" : "timeout");
         break;
       case "failed":
@@ -270,6 +273,7 @@ export function useTouchSession() {
     setUwbLabel("none");
     uwbState.current = { posted: false, started: false, reported: false, best: Infinity };
     set("starting");
+    diag.current = { spikes: 0, maxPeak: 0 };
     const c = getTouchCapabilities();
     caps.current = c;
     if (!c.motion) {
@@ -284,7 +288,12 @@ export function useTouchSession() {
         return;
       }
       sessionId.current = r.session.id;
-      const sub = startBumpDetection(r.config.minPeakG, MAX_BUMP_MS, (e) => void onBump(e));
+      const minPeak = r.config.minPeakG;
+      const sub = startBumpDetection(r.config.detectG ?? minPeak, r.config.maxBumpMs ?? 250, (e) => {
+        diag.current.spikes += 1;
+        diag.current.maxPeak = Math.max(diag.current.maxPeak, e.peak);
+        if (e.peak >= minPeak) void onBump(e);
+      });
       if (!sub) {
         void teardown(true);
         set("no_motion");
