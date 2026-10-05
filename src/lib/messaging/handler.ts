@@ -689,6 +689,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       }
       if (method === "GET" && b === "push" && c === "history") return json({ history: await adm.adminPushHistory(me.id) });
       if (method === "GET" && b === "audit") return json({ audit: await adm.adminAudit(me.id) });
+      if (method === "GET" && b === "messages") return json({ messages: await adm.adminRecentMessages(me.id) });
+      if (method === "GET" && b === "phone") return json(await adm.adminMyPhone(me.id));
+      if (method === "PUT" && b === "phone") {
+        const body = await readBody<{ phone?: string }>(request);
+        return json(await adm.adminLinkPhone(me.id, body.phone ?? ""));
+      }
     }
 
     if (method === "GET" && a === "admin" && b === "stats") {

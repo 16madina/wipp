@@ -321,3 +321,26 @@ export async function adminAudit(meId: string) {
   `;
   return rows.map((r) => ({ ...r, createdAt: Date.parse(r.created_at) }));
 }
+
+/** Recent message activity (who, when, which chat). E2E content stays unreadable: "Message chiffré". */
+export async function adminRecentMessages(meId: string) {
+  await assertStaff(meId, true);
+  const { adminListRecentMessages } = await import("./server");
+  return adminListRecentMessages(meId);
+}
+
+/** The admin's own login phone (from the old panel). */
+export async function adminMyPhone(meId: string) {
+  await assertStaff(meId, true);
+  const sql = await getSql();
+  const rows = await sql<{ phone_e164: string | null }>`select phone_e164 from wipp_profiles where id = ${meId} limit 1`;
+  return { phone: rows[0]?.phone_e164 ?? null };
+}
+
+export async function adminLinkPhone(meId: string, phone: string) {
+  await assertStaff(meId, true);
+  const { linkAdminPhone } = await import("./server");
+  const profile = await linkAdminPhone(meId, phone);
+  await audit(meId, "admin_phone_linked", meId);
+  return { phone: profile.phoneE164 ?? null };
+}

@@ -190,30 +190,9 @@ export async function ensureMessagingReady() {
   // an admin account there — that would write production data on first request.
   if (process.env.DATABASE_URL) return;
   await seedDemoUsers();
-  await ensureAdminAccount();
+  // No built-in @admin shell any more: administrators are real accounts with role = 'admin'.
 }
 
-async function ensureAdminAccount() {
-  const sql = await getSql();
-  // Promote @admin if present
-  await sql`update wipp_profiles set role = 'admin' where lower(username) = 'admin'`;
-  const rows = await sql<{ id: string }>`
-    select id from wipp_profiles where lower(username) = 'admin' limit 1
-  `;
-  if (rows[0]) return;
-  // Create admin shell if missing (password must be set via register or link)
-  await sql`
-    insert into wipp_profiles (id, username, display_name, password_hash, bio, role)
-    values (
-      ${uid("u")},
-      'admin',
-      'Admin Wipp',
-      ${hashPassword(process.env.WIPP_ADMIN_PASSWORD || "WippAdmin!change-me")},
-      'Compte administrateur',
-      'admin'
-    )
-  `;
-}
 
 export async function registerProfile(input: {
   username: string;

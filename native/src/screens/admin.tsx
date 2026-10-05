@@ -31,7 +31,7 @@ type Report = {
   createdAt: number;
 };
 type Template = { id: string; label: string; title: string; body: string };
-type Tab = "stats" | "users" | "reports" | "suspended" | "push" | "audit";
+type Tab = "stats" | "users" | "messages" | "reports" | "suspended" | "push" | "audit";
 
 const api = <T,>(path: string, body?: unknown, method?: string) =>
   wippApi<T>(`staff/${path}`, body === undefined ? { method: method ?? "GET" } : { method: method ?? "POST", body: JSON.stringify(body) });
@@ -69,6 +69,7 @@ export function AdminScreen() {
       ? [
           ["stats", "📊 Statistiques"],
           ["users", "👥 Utilisateurs"],
+          ["messages", "💬 Messages"],
           ["reports", "🚩 Signalements"],
           ["suspended", "⛔ Suspendus"],
           ["push", "🔔 Notifications"],
@@ -95,6 +96,7 @@ export function AdminScreen() {
           </ScrollView>
           {tab === "stats" ? <StatsTab /> : null}
           {tab === "users" ? <UsersTab role={role} /> : null}
+          {tab === "messages" ? <MessagesTab /> : null}
           {tab === "reports" ? <ReportsTab /> : null}
           {tab === "suspended" ? <SuspendedTab /> : null}
           {tab === "push" ? <PushTab /> : null}
@@ -115,6 +117,56 @@ function StatsTab() {
     void api<Record<string, number>>("overview").then(setS).catch(fail);
   }, []);
   if (!s) return <Text style={{ color: colors.muted }}>Chargement…</Text>;
+  return (
+    <View style={{ gap: 14 }}>
+      <StatsGrid s={s} />
+      <AdminPhoneCard />
+    </View>
+  );
+}
+
+/** From the old panel: the administrator's own login phone number. */
+function AdminPhoneCard() {
+  const [phone, setPhone] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
+  useEffect(() => {
+    void api<{ phone: string | null }>("phone")
+      .then((r) => {
+        setSaved(r.phone);
+        setPhone(r.phone ?? "");
+      })
+      .catch(() => undefined);
+  }, []);
+  return (
+    <Card>
+      <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>📱 Ton numéro admin</Text>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>Le numéro de connexion de ce compte administrateur.</Text>
+      <TextInput
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+        placeholder="+1 819 …"
+        placeholderTextColor={colors.muted}
+        style={{ height: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 12, color: colors.fg }}
+      />
+      <Btn
+        label="Enregistrer le numéro"
+        variant="secondary"
+        disabled={!phone.trim() || phone.replace(/\s/g, "") === (saved ?? "")}
+        onPress={() =>
+          void api<{ phone: string | null }>("phone", { phone }, "PUT")
+            .then((r) => {
+              setSaved(r.phone);
+              Alert.alert("Admin", "Numéro enregistré.");
+            })
+            .catch(fail)
+        }
+      />
+    </Card>
+  );
+}
+
+function StatsGrid({ s }: { s: Record<string, number> }) {
   const items: [string, number, string][] = [
     ["👥", s.users, "Utilisateurs"],
     ["🆕", s.new_users_7d, "Nouveaux (7 j)"],
@@ -136,6 +188,35 @@ function StatsTab() {
           <Text style={{ fontSize: 18 }}>{icon}</Text>
           <Text style={{ marginTop: 4, color: colors.fg, fontSize: 22, fontFamily: "Inter_700Bold" }}>{n ?? 0}</Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Recent activity (from the old panel). Messages are end-to-end encrypted: only metadata is readable. */
+function MessagesTab() {
+  const [rows, setRows] = useState<{ id: string; chatId: string; username: string; preview: string; createdAt: number }[] | null>(null);
+  useEffect(() => {
+    void api<{ messages: NonNullable<typeof rows> }>("messages")
+      .then((r) => setRows(r.messages))
+      .catch(fail);
+  }, []);
+  if (!rows) return <Text style={{ color: colors.muted }}>Chargement…</Text>;
+  if (!rows.length) return <Empty title="Aucun message" />;
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>
+        Les 50 derniers messages. Les conversations privées sont chiffrées de bout en bout : leur contenu n’est pas lisible, même par l’admin. Pour un message signalé, utilise « Signalements ».
+      </Text>
+      {rows.map((m) => (
+        <View key={m.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.hair }}>
+          <Text style={{ color: colors.fg }}>
+            @{m.username} · <Text style={{ color: colors.muted }}>{m.preview || "Message"}</Text>
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>
+            {when(m.createdAt)} · conversation {m.chatId.slice(0, 10)}…
+          </Text>
         </View>
       ))}
     </View>
@@ -446,6 +527,7 @@ const ACTIONS: Record<string, string> = {
   report_opened: "Message signalé consulté",
   push_sent: "Notification envoyée",
   push_template_saved: "Modèle de notification enregistré",
+  admin_phone_linked: "Numéro admin modifié",
 };
 
 function AuditTab() {
