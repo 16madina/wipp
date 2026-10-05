@@ -308,6 +308,24 @@ export async function handleWippApi(request: Request): Promise<Response> {
       }
     }
 
+    if (method === "GET" && a === "places" && b === "pharmacies") {
+      const me = await resolveSession(bearer(request));
+      const rl = touchRateLimit(`places:${me.id}`, 30, 60_000);
+      if (!rl.ok) throw new WippHttpError(429, "rate_limited", `Trop de recherches. Réessaie dans ${rl.retryAfterSec}s.`);
+      const url = new URL(request.url);
+      const lang = (url.searchParams.get("lang") || "fr").slice(0, 5);
+      const places = await import("@/lib/pharmacy/places");
+      if (c === "duty") {
+        const lat = Number(url.searchParams.get("lat"));
+        const lng = Number(url.searchParams.get("lng"));
+        const { onDutyPharmacies } = await import("@/lib/pharmacy/duty");
+        return json(await onDutyPharmacies(lat, lng, async () => (await places.nearbyPharmacies(lat, lng, lang)).places));
+      }
+      const q = url.searchParams.get("q");
+      if (q) return json(await places.pharmaciesByText(q, lang));
+      return json(await places.nearbyPharmacies(Number(url.searchParams.get("lat")), Number(url.searchParams.get("lng")), lang));
+    }
+
     if (a === "touch" && b === "session") {
       const me = await resolveSession(bearer(request));
       const ts = await import("@/lib/messaging/touch-session");

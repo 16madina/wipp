@@ -213,13 +213,14 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
     { icon: Cross, title: t("hubServices"), sub: t("hubServicesSub"), kind: "utilities" as const, go: () => go("utilities") },
     { icon: Store, title: t("hubShops"), sub: t("hubShopsSub"), kind: "shops" as const, go: () => go("shops") },
     { icon: Calendar, title: t("hubEvents"), sub: t("hubEventsSub"), kind: "lifestyle" as const, go: () => go("lifestyle") },
+    { icon: Cross, title: "💊 Pharmacies", sub: "Ouvertes et de garde autour de toi", kind: "utilities" as const, wide: true, go: () => push({ name: "pharmacies" }) },
   ];
   return (
     <View style={{ paddingHorizontal: 16 }}>
       <Text style={{ fontSize: 13, lineHeight: 18, color: colors.muted }}>{t("exploreSplit")}</Text>
       <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
         {hubs.map((h) => (
-          <Press key={h.title} onPress={h.go} style={{ width: "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
+          <Press key={h.title} onPress={h.go} style={{ width: "wide" in h && h.wide ? "100%" : "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
             <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
             <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
             <View style={{ zIndex: 1 }}>

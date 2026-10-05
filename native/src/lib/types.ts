@@ -158,6 +158,7 @@ export type ScreenName =
   | "qr-group"
   | "wgo-touch"
   | "pharmacy"
+  | "pharmacies"
   | "shop"
   | "create-shop"
   | "lifestyle"
@@ -231,6 +232,7 @@ export type Screen =
   | { name: "wgo-touch" }
   | { name: "touch-incoming"; demo?: TouchIncomingCase; requestId?: string; touchId?: string }
   | { name: "pharmacy"; pharmacyId: string }
+  | { name: "pharmacies" }
   | { name: "shop"; shopId: string }
   | { name: "create-shop" }
   | { name: "lifestyle"; itemId: string }

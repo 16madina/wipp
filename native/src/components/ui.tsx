@@ -283,10 +283,12 @@ export function SearchField({
   value,
   onChangeText,
   placeholder,
+  onSubmitEditing,
 }: {
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
+  onSubmitEditing?: () => void;
 }) {
   return (
     <TextInput
@@ -296,7 +298,10 @@ export function SearchField({
       placeholderTextColor={colors.muted}
       returnKeyType="search"
       blurOnSubmit
-      onSubmitEditing={() => Keyboard.dismiss()}
+      onSubmitEditing={() => {
+        Keyboard.dismiss();
+        onSubmitEditing?.();
+      }}
       style={{
         height: 44,
         borderRadius: 12,

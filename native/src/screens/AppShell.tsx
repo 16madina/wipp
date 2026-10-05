@@ -1,3 +1,4 @@
+import { PharmaciesScreen } from "./pharmacies";
 import { useShareIntentContext } from "expo-share-intent";
 import { isTabScreen, useWippStore } from "../lib/store";
 import type { Screen } from "../lib/types";
@@ -237,6 +238,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <TouchIncomingScreen />;
     case "pharmacy":
       return <PharmacyScreen pharmacyId={screen.pharmacyId} />;
+    case "pharmacies":
+      return <PharmaciesScreen />;
     case "shop":
       return <ShopScreen shopId={screen.shopId} />;
     case "create-shop":
