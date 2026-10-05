@@ -1,9 +1,8 @@
 import { PharmacyResults } from "./pharmacies";
-import { Sheet } from "../components/card-editor-parts";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
-import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
+import { Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
 import { Avatar } from "../components/Avatar";
 import { listingCatLabel } from "../lib/listing-cats";
@@ -386,7 +385,7 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
 }
 
 function UtilitiesPane() {
-  const [pharmaSheet, setPharmaSheet] = useState(false);
+  const [pharmaMenu, setPharmaMenu] = useState(false);
   const [pharmaMode, setPharmaMode] = useState<"open" | "h24" | null>(null);
   const pharmacies = useWippStore((s) => s.pharmacies);
   const serverConnected = useWippStore((s) => s.serverConnected);
@@ -402,39 +401,48 @@ function UtilitiesPane() {
   }, [serverConnected]);
   return (
     <View style={{ paddingHorizontal: 16 }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        <Press
-          onPress={() => setPharmaSheet(true)}
-          accessibilityLabel="Pharmacies"
-          style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: pharmaMode ? colors.accent : colors.navy, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
-        >
-          <Text style={{ fontSize: 14 }}>💊</Text>
-          <Text style={{ color: pharmaMode ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-            {pharmaMode === "open" ? "Pharmacies · ouvertes" : pharmaMode === "h24" ? "Pharmacies · 24 h/24" : "Pharmacies"}
-          </Text>
-        </Press>
-      </View>
-      <Sheet open={pharmaSheet} title="💊 Pharmacies" onClose={() => setPharmaSheet(false)}>
-        {([
-          ["open", "🟢", "Ouvertes maintenant", "Les pharmacies ouvertes en ce moment autour de toi"],
-          ["h24", "🕐", "Ouvertes 24 h/24", "Les pharmacies qui ne ferment jamais"],
-        ] as const).map(([id, icon, title, sub]) => (
+      {/* Service categories, same tiles as the Explorer hubs (Pharmacies first; vets etc. later). */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 12, zIndex: 10 }}>
+        <View style={{ width: "48.5%", zIndex: 10 }}>
           <Press
-            key={id}
-            onPress={() => {
-              setPharmaMode(id);
-              setPharmaSheet(false);
-            }}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, marginBottom: 10, backgroundColor: pharmaMode === id ? "rgba(255,216,77,0.14)" : colors.navy, borderWidth: 1, borderColor: pharmaMode === id ? colors.accent : colors.hair }}
+            onPress={() => setPharmaMenu((v) => !v)}
+            accessibilityLabel="Pharmacies"
+            style={{ minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
           >
-            <Text style={{ fontSize: 22 }}>{icon}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{title}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{sub}</Text>
+            <Image source={HUB_BACKGROUNDS.utilities} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
+            <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
+            <View style={{ zIndex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Cross size={20} color={colors.accent} />
+                <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: pharmaMenu ? "180deg" : "0deg" }] }} />
+              </View>
+              <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Pharmacies</Text>
+              <Text style={{ marginTop: 2, fontSize: 11, color: pharmaMode ? colors.accent : colors.muted }}>
+                {pharmaMode === "open" ? "Ouvertes maintenant" : pharmaMode === "h24" ? "Ouvertes 24 h/24" : "Ouvertes autour de vous"}
+              </Text>
             </View>
           </Press>
-        ))}
-      </Sheet>
+          {pharmaMenu ? (
+            <View style={{ position: "absolute", top: 106, left: 0, right: 0, borderRadius: 14, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, overflow: "hidden", zIndex: 20, elevation: 8 }}>
+              {([
+                ["open", "🟢 Ouvertes maintenant"],
+                ["h24", "🕐 Ouvertes 24 h/24"],
+              ] as const).map(([id, label], i) => (
+                <Press
+                  key={id}
+                  onPress={() => {
+                    setPharmaMode(id);
+                    setPharmaMenu(false);
+                  }}
+                  style={{ paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: colors.hair, backgroundColor: pharmaMode === id ? "rgba(255,216,77,0.14)" : "transparent" }}
+                >
+                  <Text style={{ color: pharmaMode === id ? colors.accent : colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{label}</Text>
+                </Press>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      </View>
       {pharmaMode ? (
         <View style={{ marginBottom: 16 }}>
           <PharmacyResults mode={pharmaMode} />
