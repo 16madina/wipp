@@ -158,13 +158,23 @@ let forcedRoleRefresh = false;
 export async function firebaseIdToken(): Promise<string | null> {
   const user = firebaseAuth().currentUser;
   if (!user) return null;
-  let token = await user.getIdToken();
-  if (token && tokenRole(token) !== "authenticated" && !forcedRoleRefresh) {
-    forcedRoleRefresh = true;
-    token = await user.getIdToken(true);
+  try {
+    let token = await user.getIdToken();
+    if (token && tokenRole(token) !== "authenticated" && !forcedRoleRefresh) {
+      forcedRoleRefresh = true;
+      token = await user.getIdToken(true);
+    }
+    return token;
+  } catch (err) {
+    // Offline / network drop while refreshing an expired token: callers treat null as
+    // "no session right now" and retry later. Never surface it as an uncaught error.
+    const code = typeof err === "object" && err && "code" in err ? String((err as { code: string }).code) : "";
+    if (code.includes("network-request-failed") || code.includes("internal-error") || code.includes("too-many-requests")) {
+      return null;
+    }
+    console.warn("[wipp] id token", code || err);
+    return null;
   }
-  if (token) console.log("[wipp] firebase role", tokenRole(token) ?? "absent");
-  return token;
 }
 
 export async function signOutFirebase() {
