@@ -13,3 +13,9 @@ android {
     versionName '1.0.0'
   }
 }
+
+dependencies {
+  // Android ↔ Android UWB ranging (API 31+, used only when the phone has UWB). No Bluetooth.
+  implementation "androidx.core.uwb:uwb:1.0.0-alpha08"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+}

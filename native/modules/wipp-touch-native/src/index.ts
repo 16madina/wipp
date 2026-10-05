@@ -39,7 +39,8 @@ type NativeShape = {
   getCapabilities: () => TouchCapabilities;
   startBumpDetection: (thresholdG: number, maxDurMs: number) => boolean;
   stopBumpDetection: () => void;
-  uwbPrepare: () => string | null;
+  uwbPrepare: (role?: string) => string | null | Promise<string | null>;
+  uwbAvailable?: () => Promise<boolean>;
   uwbStart: (peerTokenB64: string) => boolean;
   uwbStop: () => void;
   uwbPermission: () => string;
@@ -149,6 +150,7 @@ export type TouchCapabilities = {
   uwb: boolean;
   uwbKind: string | null;
   uwbHardware?: boolean;
+  uwbCapable?: boolean;
 };
 
 export type BumpEvent = { at: number; peak: number; durMs: number; energy: number };
@@ -197,11 +199,25 @@ export function startBumpDetection(thresholdG: number, maxDurMs: number, onBump:
   };
 }
 
-export function uwbPrepare(): string | null {
+/** Opens the local UWB session and returns this phone's OOB token (iOS: NI discovery token; Android: Jetpack params). */
+export async function uwbPrepare(role: "controller" | "controlee"): Promise<string | null> {
   try {
-    return getNative()?.uwbPrepare?.() ?? null;
+    const n = getNative();
+    if (!n?.uwbPrepare) return null;
+    return (await Promise.resolve(Platform.OS === "android" ? n.uwbPrepare(role) : n.uwbPrepare())) ?? null;
   } catch {
     return null;
+  }
+}
+
+/** Android: UWB radio on + UWB_RANGING granted. iOS: same as the capability. */
+export async function uwbAvailable(): Promise<boolean> {
+  try {
+    const n = getNative();
+    if (Platform.OS === "android") return Boolean(await n?.uwbAvailable?.());
+    return Boolean(n?.getCapabilities?.().uwb);
+  } catch {
+    return false;
   }
 }
 

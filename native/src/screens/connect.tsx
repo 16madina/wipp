@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Linking, Text, View, ScrollView } from "react-native";
+import { Linking, Platform, Text, View, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
@@ -561,6 +561,10 @@ const TOUCH_COPY = {
     uwbDeniedBody: "WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches.",
     uwbHow: "Réglages → WIPP → Interactions à proximité",
     openSettings: "Activer dans Réglages",
+    uwbDeniedAndroid: "Autorisation de proximité désactivée",
+    uwbDeniedBodyAndroid: "WIPP Touch utilise l’autorisation « Appareils à proximité » de votre téléphone pour confirmer que les deux téléphones sont réellement proches.",
+    uwbHowAndroid: "Paramètres → Applications → WIPP → Autorisations → Appareils à proximité",
+    openSettingsAndroid: "Activer dans les réglages",
     failed: "WIPP Touch n’a pas pu démarrer.",
     retry: "Réessayer",
     scanQr: "Scanner un QR",
@@ -602,6 +606,10 @@ const TOUCH_COPY = {
     uwbDeniedBody: "WIPP Touch uses your iPhone’s Nearby Interactions to confirm both phones are really close.",
     uwbHow: "Settings → WIPP → Nearby Interactions",
     openSettings: "Turn on in Settings",
+    uwbDeniedAndroid: "Nearby permission turned off",
+    uwbDeniedBodyAndroid: "WIPP Touch uses your phone’s “Nearby devices” permission to confirm both phones are really close.",
+    uwbHowAndroid: "Settings → Apps → WIPP → Permissions → Nearby devices",
+    openSettingsAndroid: "Turn on in settings",
     failed: "WIPP Touch couldn’t start.",
     retry: "Try again",
     scanQr: "Scan a QR",
@@ -663,7 +671,7 @@ export function WgoTouchScreen() {
     too_far: c.tooFar,
     offline: c.offline,
     no_motion: c.noMotion,
-    uwb_denied: c.uwbDenied,
+    uwb_denied: Platform.OS === "android" ? c.uwbDeniedAndroid : c.uwbDenied,
     failed: c.failed,
   };
   const failText = failure[ph];
@@ -722,7 +730,7 @@ export function WgoTouchScreen() {
               {failText ?? (ph === "verifying" ? c.verifying : searching ? c.title : c.title)}
             </Text>
             <Text style={{ marginTop: 8, textAlign: "center", color: colors.muted, maxWidth: 300 }}>
-              {ph === "uwb_denied" ? `${c.uwbDeniedBody}\n\n${c.uwbHow}` : failText ? "" : ph === "verifying" ? c.felt : searching ? (touch.bumps ? c.felt : `${c.ready} · ${c.waitingContact}`) : c.sub}
+              {ph === "uwb_denied" ? (Platform.OS === "android" ? `${c.uwbDeniedBodyAndroid}\n\n${c.uwbHowAndroid}` : `${c.uwbDeniedBody}\n\n${c.uwbHow}`) : failText ? "" : ph === "verifying" ? c.felt : searching ? (touch.bumps ? c.felt : `${c.ready} · ${c.waitingContact}`) : c.sub}
             </Text>
             {searching && !touch.bumps ? <Text style={{ marginTop: 4, textAlign: "center", color: colors.muted, fontSize: 13, maxWidth: 300 }}>{c.searchingSub}</Text> : null}
           </View>
@@ -740,7 +748,7 @@ export function WgoTouchScreen() {
           {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
           {ph === "uwb_denied" ? (
             <>
-              <Btn label={c.openSettings} onPress={() => void Linking.openSettings()} />
+              <Btn label={Platform.OS === "android" ? c.openSettingsAndroid : c.openSettings} onPress={() => void Linking.openSettings()} />
               <Btn label={c.useQr} variant="secondary" onPress={() => push({ name: "scanner" })} />
             </>
           ) : null}

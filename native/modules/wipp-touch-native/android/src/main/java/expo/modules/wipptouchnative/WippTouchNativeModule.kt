@@ -6,20 +6,47 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.SystemClock
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
  * WIPP Touch, no Bluetooth: SensorManager (linear acceleration) detects the physical bump.
- * UWB hardware is only reported for diagnostics; UWB ranging is not wired on Android in this build,
- * so the app relies on bump matching + mutual confirmation (and the QR fallback).
+ * Android ↔ Android UWB ranging (androidx.core.uwb) when BOTH phones have UWB switched on;
+ * otherwise bump matching + mutual confirmation (and the QR fallback).
  */
 class WippTouchNativeModule : Module() {
   private var sensorManager: SensorManager? = null
   private var listener: SensorEventListener? = null
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+  private var ranger: Any? = null // UwbRanger, typed loosely so API < 31 never loads the class
+
+  private fun uwbHardware(ctx: Context?): Boolean =
+    Build.VERSION.SDK_INT >= 31 && ctx?.packageManager?.hasSystemFeature("android.hardware.uwb") == true
+
+  private fun uwbPermissionGranted(ctx: Context?): Boolean =
+    ctx != null && Build.VERSION.SDK_INT >= 31 &&
+      ctx.checkSelfPermission("android.permission.UWB_RANGING") == PackageManager.PERMISSION_GRANTED
+
+  private fun rangerOrNull(): UwbRanger? {
+    if (Build.VERSION.SDK_INT < 31) return null
+    val ctx = appContext.reactContext ?: return null
+    if (!uwbHardware(ctx)) return null
+    val existing = ranger as? UwbRanger
+    if (existing != null) return existing
+    val created = UwbRanger(ctx) { name, body -> sendEvent(name, body) }
+    ranger = created
+    return created
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WippTouchNative")
@@ -30,13 +57,15 @@ class WippTouchNativeModule : Module() {
       val sm = ctx?.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
       val motion = sm?.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) != null ||
         sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
-      val uwbHardware = ctx?.packageManager?.hasSystemFeature("android.hardware.uwb") == true
+      val hw = uwbHardware(ctx)
       mapOf(
         "platform" to "android",
         "motion" to motion,
+        // "uwb" = really usable now is decided by uwbAvailable() (toggle + permission) in JS.
         "uwb" to false,
         "uwbKind" to null,
-        "uwbHardware" to uwbHardware,
+        "uwbHardware" to hw,
+        "uwbCapable" to hw,
       )
     }
 
@@ -82,13 +111,55 @@ class WippTouchNativeModule : Module() {
 
     Function("stopBumpDetection") { stopSensors() }
 
-    Function("uwbPrepare") { null as String? }
-    Function("uwbStart") { _: String -> false }
-    Function("uwbStop") { }
-    Function("uwbPermission") { "unsupported" }
-    AsyncFunction("uwbProbe") { "unsupported" }
+    /** true only if the UWB radio is on and UWB_RANGING is granted. */
+    AsyncFunction("uwbAvailable") { promise: Promise ->
+      val r = rangerOrNull()
+      if (r == null || !uwbPermissionGranted(appContext.reactContext)) {
+        promise.resolve(false)
+        return@AsyncFunction
+      }
+      scope.launch {
+        val ok = try { r.isAvailable() } catch (e: Exception) { false }
+        promise.resolve(ok)
+      }
+    }
 
-    OnDestroy { stopSensors() }
+    AsyncFunction("uwbPrepare") { role: String, promise: Promise ->
+      val r = rangerOrNull()
+      if (r == null || !uwbPermissionGranted(appContext.reactContext)) {
+        promise.resolve(null)
+        return@AsyncFunction
+      }
+      scope.launch {
+        val token = try { r.prepare(role) } catch (e: Exception) { null }
+        promise.resolve(token)
+      }
+    }
+
+    Function("uwbStart") { peerTokenB64: String ->
+      rangerOrNull()?.start(peerTokenB64) ?: false
+    }
+
+    Function("uwbStop") {
+      (ranger as? UwbRanger)?.stop()
+    }
+
+    Function("uwbPermission") {
+      val ctx = appContext.reactContext
+      if (!uwbHardware(ctx)) "unsupported" else if (uwbPermissionGranted(ctx)) "granted" else "unknown"
+    }
+
+    AsyncFunction("uwbProbe") { promise: Promise ->
+      val ctx = appContext.reactContext
+      promise.resolve(if (!uwbHardware(ctx)) "unsupported" else if (uwbPermissionGranted(ctx)) "granted" else "denied")
+    }
+
+    OnDestroy {
+      stopSensors()
+      (ranger as? UwbRanger)?.destroy()
+      ranger = null
+      scope.cancel()
+    }
   }
 
   private fun stopSensors() {

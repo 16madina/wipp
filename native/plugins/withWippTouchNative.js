@@ -80,6 +80,26 @@ function withWippTouchNative(config) {
       }
     }
 
+    // No library (e.g. Play services Nearby pulled by androidx.core.uwb) may re-add Bluetooth discovery.
+    for (const name of ["android.permission.BLUETOOTH_SCAN", "android.permission.BLUETOOTH_ADVERTISE", "android.permission.BLUETOOTH_ADMIN"]) {
+      manifest.manifest["uses-permission"].push({ $: { "android:name": name, "tools:node": "remove" } });
+    }
+    // Android ↔ Android UWB (WIPP Touch proof). Runtime "nearby devices" permission, no Bluetooth.
+    if (!manifest.manifest["uses-permission"].some((p) => p.$?.["android:name"] === "android.permission.UWB_RANGING")) {
+      manifest.manifest["uses-permission"].push({ $: { "android:name": "android.permission.UWB_RANGING" } });
+    }
+    const features = manifest.manifest["uses-feature"] || [];
+    if (!features.some((f) => f.$?.["android:name"] === "android.hardware.uwb")) {
+      features.push({ $: { "android:name": "android.hardware.uwb", "android:required": "false" } });
+    }
+    manifest.manifest["uses-feature"] = features;
+    // androidx.core.uwb declares minSdk 31; the app keeps its lower minSdk and only uses UWB on API 31+.
+    const sdk = (manifest.manifest["uses-sdk"] || [{ $: {} }])[0];
+    const libs = new Set(String(sdk.$["tools:overrideLibrary"] || "").split(",").filter(Boolean));
+    libs.add("androidx.core.uwb");
+    sdk.$["tools:overrideLibrary"] = [...libs].join(",");
+    manifest.manifest["uses-sdk"] = [sdk];
+
     AndroidConfig.Manifest.ensureToolsAvailable(manifest);
     return cfg;
   });

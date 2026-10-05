@@ -315,8 +315,12 @@ function TouchPermissionSection() {
   const caps = useMemo(() => getTouchCapabilities(), []);
   const [perm, setPerm] = useState<UwbPermission>(() => uwbPermission());
   useEffect(() => {
-    if (!caps.uwb) return;
+    if (!caps.uwb && !caps.uwbCapable) return;
     const refresh = () => {
+      if (Platform.OS === "android") {
+        void uwbProbe().then(setPerm);
+        return;
+      }
       // Only re-probe when it was refused (avoids triggering the first-time iOS prompt here).
       if (uwbPermission() === "denied") void uwbProbe().then(setPerm);
       else setPerm(uwbPermission());
@@ -324,23 +328,25 @@ function TouchPermissionSection() {
     refresh();
     const sub = AppState.addEventListener("change", (st) => st === "active" && refresh());
     return () => sub.remove();
-  }, [caps.uwb]);
-  if (Platform.OS !== "ios" || !caps.uwb) return null;
+  }, [caps.uwb, caps.uwbCapable]);
+  const android = Platform.OS === "android";
+  if (android ? !caps.uwbCapable : !caps.uwb) return null;
   const denied = perm === "denied";
   return (
     <Section title="WIPP Touch">
       <Row
-        label="Interactions à proximité"
+        label={android ? "Appareils à proximité" : "Interactions à proximité"}
         value={denied ? "Désactivées" : perm === "granted" ? "Activées" : "Demandées au premier WIPP Touch"}
         onPress={denied ? () => void Linking.openSettings() : undefined}
       />
       {denied ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 10 }}>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-            WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches.
-            Réglages → WIPP → Interactions à proximité.
+            {android
+              ? "Autorisation de proximité désactivée. WIPP Touch utilise « Appareils à proximité » pour confirmer que les deux téléphones sont réellement proches. Paramètres → Applications → WIPP → Autorisations → Appareils à proximité."
+              : "WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches. Réglages → WIPP → Interactions à proximité."}
           </Text>
-          <Btn label="Activer dans les réglages de l’iPhone" onPress={() => void Linking.openSettings()} />
+          <Btn label={android ? "Activer dans les réglages" : "Activer dans les réglages de l’iPhone"} onPress={() => void Linking.openSettings()} />
         </View>
       ) : null}
     </Section>

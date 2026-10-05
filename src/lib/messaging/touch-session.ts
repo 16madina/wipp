@@ -149,7 +149,7 @@ async function purge(cfg: TouchSessionConfig) {
 
 export async function startTouchSession(
   meId: string,
-  input: { platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string } },
+  input: { platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string; uwbCapable?: boolean } },
 ) {
   const cfg = await getTouchSessionConfig();
   await purge(cfg).catch(() => undefined);
@@ -164,6 +164,8 @@ export async function startTouchSession(
     motion: Boolean(input.caps?.motion),
     uwb: Boolean(input.caps?.uwb),
     uwbKind: typeof input.caps?.uwbKind === "string" ? input.caps.uwbKind.slice(0, 24) : null,
+    // uwbCapable = hardware present; uwb = really usable right now (radio on + permission).
+    uwbCapable: Boolean(input.caps?.uwbCapable ?? input.caps?.uwb),
   };
   const id = `ts_${token(18)}`;
   const nonce = token(24);
@@ -317,6 +319,8 @@ export async function view(meId: string, id: string) {
       uwb: inPair && bothUwb
         ? {
             peerToken: me.state === "candidate" ? peer?.uwb_token ?? null : null,
+            // Android ranging needs one controller and one controlee: the server decides.
+            role: peer && me.id < peer.id ? "controller" : "controlee",
             myStatus: me.uwb_status,
             peerStatus: peer?.uwb_status ?? null,
             maxCm: cfg.uwbMaxCm,

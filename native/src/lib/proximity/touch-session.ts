@@ -4,7 +4,7 @@
  * The app never decides who it touched: the server pairs the sessions.
  */
 import { useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { AppState, PermissionsAndroid } from "react-native";
 import * as Haptics from "expo-haptics";
 import {
   getTouchCapabilities,
@@ -12,6 +12,7 @@ import {
   uwbPrepare,
   uwbStart,
   uwbStop,
+  uwbAvailable,
   uwbPermission,
   uwbProbe,
   type BumpEvent,
@@ -29,7 +30,14 @@ type ServerSession = {
   acceptedByPeer: boolean;
   peer: TouchPeerCard | null;
   proximity?: "verifying" | "near" | "unverified" | null;
-  uwb: { peerToken: string | null; myStatus: string | null; peerStatus: string | null; maxCm: number; timeoutMs: number } | null;
+  uwb: {
+    peerToken: string | null;
+    myStatus: string | null;
+    peerStatus: string | null;
+    maxCm: number;
+    timeoutMs: number;
+    role?: "controller" | "controlee";
+  } | null;
 };
 
 type StartResponse = {
@@ -114,6 +122,7 @@ export function useTouchSession() {
   const diag = useRef({ spikes: 0, maxPeak: 0 });
   const openedAt = useRef(Date.now());
   const uwbDenied = useRef(false);
+  const pausedInBackground = useRef(false);
   const [proximity, setProximity] = useState<"near" | "unverified" | null>(null);
 
   function set(next: TouchPhase) {
@@ -151,7 +160,17 @@ export function useTouchSession() {
   useEffect(() => {
     // Back from iOS Settings: re-check the permission and retry right away.
     const sub = AppState.addEventListener("change", (st) => {
-      if (st === "active" && phaseRef.current === "uwb_denied") void start();
+      if (st === "active") {
+        // Back from Settings, or back from background while WIPP Touch was waiting.
+        if (phaseRef.current === "uwb_denied" || pausedInBackground.current) {
+          pausedInBackground.current = false;
+          void start();
+        }
+      } else if (st === "background" && ["starting", "searching"].includes(phaseRef.current)) {
+        // Sensors never run in the background: stop and invalidate the waiting session.
+        pausedInBackground.current = true;
+        void teardown(true);
+      }
     });
     return () => sub.remove();
   }, []);
@@ -179,14 +198,15 @@ export function useTouchSession() {
     const id = s.id;
     if (!u.posted) {
       u.posted = true;
-      const token = uwbPrepare();
-      if (!token) {
-        setUwbLabel("unavailable");
-        void reportUwb({ status: "unavailable" });
-        return;
-      }
       setUwbLabel("measuring");
-      void api.uwbToken(id, token).catch(() => undefined);
+      void uwbPrepare(s.uwb.role ?? "controlee").then((token) => {
+        if (!token) {
+          setUwbLabel("unavailable");
+          void reportUwb({ status: "unavailable" });
+          return;
+        }
+        void api.uwbToken(id, token).catch(() => undefined);
+      });
       timers.current.uwb = setTimeout(() => {
         if (u.best !== Infinity) void reportUwb({ distanceCm: u.best });
         else {
@@ -336,6 +356,25 @@ export function useTouchSession() {
       set("uwb_denied");
       return;
     }
+    if (c.platform === "android" && c.uwbCapable) {
+      // Android phone with UWB: needs the "Nearby devices" (UWB_RANGING) permission.
+      const perm = "android.permission.UWB_RANGING" as never;
+      let granted = await PermissionsAndroid.check(perm).catch(() => false);
+      if (!granted) {
+        const r = await PermissionsAndroid.request(perm).catch(() => "denied");
+        granted = r === PermissionsAndroid.RESULTS.GRANTED;
+      }
+      if (!granted) {
+        uwbDenied.current = true;
+        set("uwb_denied");
+        return;
+      }
+      // UWB switched off in Android settings → standard WIPP Touch (contact + double consent).
+      const on = await uwbAvailable();
+      c.uwb = on;
+      c.uwbKind = on ? "android-uwb" : null;
+    }
+    caps.current = c;
     try {
       clock.current = await measureOffset();
       const r = await api.start(c);

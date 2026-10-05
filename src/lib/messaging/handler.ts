@@ -314,7 +314,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
       if (method === "POST" && !c) {
         const rl = touchRateLimit(`touch:session:${me.id}`, 20, 60_000);
         if (!rl.ok) throw new WippHttpError(429, "rate_limited", `Trop de tentatives. Réessaie dans ${rl.retryAfterSec}s.`);
-        const body = await readBody<{ platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string } }>(request);
+        const body = await readBody<{ platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string; uwbCapable?: boolean } }>(request);
         return json(await ts.startTouchSession(me.id, body), 201);
       }
       if (method === "GET" && c && !d) return json(await ts.view(me.id, c));
