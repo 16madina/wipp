@@ -798,9 +798,10 @@ export function WgoTouchScreen() {
             {done ? (
               <>
                 <Text style={{ marginTop: 22, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
-                  {ph === "connected" ? `${c.connected} ✓` : c.already}
+                  {ph === "connected" ? `${c.connected} ✓` : `Vous êtes déjà amis avec ${name.split(" ")[0] || handle} 🤝`}
                 </Text>
                 {ph === "connected" ? <Text style={{ marginTop: 6, color: colors.muted }}>{c.connectedSub}</Text> : null}
+                {ph === "already_connected" ? <Text style={{ marginTop: 6, color: colors.muted, textAlign: "center" }}>Vous êtes déjà connectés sur WIPP.</Text> : null}
               </>
             ) : (
               <>
@@ -870,6 +871,7 @@ export function WgoTouchScreen() {
           ) : null}
           {done && peerId ? <Btn label={c.message} onPress={() => openOrCreateDm(peerId)} /> : null}
           {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
+          {ph === "already_connected" ? <Btn label="Recommencer" variant="ghost" onPress={() => void touch.start()} /> : null}
           {ph === "uwb_denied" ? (
             <>
               <Btn label={Platform.OS === "android" ? c.openSettingsAndroid : c.openSettings} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />

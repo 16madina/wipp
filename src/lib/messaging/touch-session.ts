@@ -282,6 +282,18 @@ export async function reportTouchBump(
   if (paired && (await isBlocked(meId, other.profile_id))) {
     // Neutral for both sides: never reveal a block.
     await finish([me.id, other.id], "unavailable");
+  } else if (paired) {
+    // Already PERMANENT contacts: say it right away ("Vous êtes déjà amis") instead of a new connection flow.
+    const { getConnection, isActive } = await import("@/lib/messaging/connection");
+    const existing = await getConnection(meId, other.profile_id);
+    if (existing && isActive(existing) && existing.connection_type === "permanent") {
+      await sql`
+        update wipp_touch_sessions set state = 'already_connected', updated_at = now(),
+          bump_at = null, bump_peak = null, bump_dur_ms = null, bump_energy = null, uwb_token = null
+        where id in (${me.id}, ${other.id}) and state = 'candidate'
+      `;
+      touchLog("already_connected", { session: me.id.slice(0, 8) });
+    }
   }
   return view(meId, me.id);
 }
