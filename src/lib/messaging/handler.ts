@@ -349,6 +349,14 @@ export async function handleWippApi(request: Request): Promise<Response> {
         return json(await ts.postTouchUwbResult(me.id, c, body));
       }
       if (method === "POST" && c && d === "accept") return json(await ts.acceptTouchSession(me.id, c));
+      if (method === "POST" && c && d === "propose") {
+        const body = await readBody<{ type?: string; minutes?: number }>(request);
+        return json(await ts.proposeTouchConnection(me.id, c, body));
+      }
+      if (method === "POST" && c && d === "proposal") {
+        const body = await readBody<{ accept?: boolean }>(request);
+        return json(await ts.respondTouchProposal(me.id, c, body.accept === true));
+      }
       if (method === "POST" && c && d === "decline") return json(await ts.declineTouchSession(me.id, c));
       if (method === "POST" && c && d === "cancel") {
         const body = await readBody<{ diag?: { spikes?: number; maxPeak?: number } | null }>(request);
@@ -940,6 +948,18 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await openSealedReport(me.id, c));
     }
 
+    if (a === "connections" && b === "with" && c) {
+      // Connection with one person (by profile id): info, "Garder ce contact", answer to it.
+      const me = await resolveSession(bearer(request));
+      const conn = await import("./connection");
+      if (method === "GET" && !d) return json({ connection: conn.connectionInfo(await conn.getConnection(me.id, c), me.id) });
+      if (method === "POST" && d === "upgrade") return json(await conn.requestUpgrade(me.id, c));
+      if (method === "POST" && d === "upgrade-respond") {
+        const body = await readBody<{ accept?: boolean }>(request);
+        return json(await conn.respondUpgrade(me.id, c, body.accept === true));
+      }
+    }
+
     if (method === "GET" && a === "connections" && b === "requests" && !c) {
       const me = await resolveSession(bearer(request));
       return json({ requests: await listIncomingConnectionRequests(me.id) });
@@ -953,8 +973,8 @@ export async function handleWippApi(request: Request): Promise<Response> {
 
     if (method === "POST" && a === "connections" && b === "requests" && c && !d) {
       const me = await resolveSession(bearer(request));
-      const body = await readBody<{ action?: string }>(request);
-      return json(await respondConnectionRequest(me.id, c, body.action ?? ""));
+      const body = await readBody<{ action?: string; type?: string; minutes?: number }>(request);
+      return json(await respondConnectionRequest(me.id, c, body.action ?? "", { type: body.type, minutes: body.minutes }));
     }
 
     if (method === "GET" && a === "business-cards" && b === "me") {
@@ -992,7 +1012,15 @@ export async function handleWippApi(request: Request): Promise<Response> {
 
     if (method === "POST" && a === "qr" && b === "temp" && !c) {
       const me = await resolveSession(bearer(request));
-      return json(await issueTempQr(me.id));
+      const body = await readBody<{ minutes?: number }>(request).catch(() => ({}) as { minutes?: number });
+      return json(await issueTempQr(me.id, { type: "ephemeral", minutes: body.minutes }));
+    }
+
+    if (method === "POST" && a === "qr" && b === "temp" && c === "offer") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ token?: string; accept?: boolean }>(request);
+      const { resolveTempQrOffer } = await import("./social");
+      return json(await resolveTempQrOffer(me.id, body.token ?? "", body.accept === true));
     }
 
     if (method === "POST" && a === "qr" && b === "temp" && c === "redeem") {

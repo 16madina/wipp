@@ -6,6 +6,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
 import { SUPABASE_URL } from "@/lib/supabase/config";
+import { establishConnection, isConnected, parseChoice, type ConnectionChoice } from "@/lib/messaging/connection";
 
 const REQUEST_TTL_MS = 7 * 86_400_000;
 const QR_TTL_MS = 75_000;
@@ -55,11 +56,8 @@ export async function sendConnectionRequest(meId: string, rawUsername: string, v
   if (!peer) return { status: "not_found" as const };
   if (peer.id === meId) return { status: "invalid" as const };
   if (await blockedEither(meId, peer.id)) return { status: "blocked" as const };
-  const [userA, userB] = pair(meId, peer.id);
-  const existing = await sql`
-    select id from wipp_connections where user_a = ${userA} and user_b = ${userB} limit 1
-  `;
-  if (existing.length) return { status: "already_connected" as const };
+  // An expired / ended ephemeral connection is NOT a contact: a new request is allowed.
+  if (await isConnected(meId, peer.id)) return { status: "already_connected" as const };
   const pending = await sql<{ id: string; sender_id: string }>`
     select id, sender_id from wipp_connection_requests
     where status = 'pending' and expires_at > now()
@@ -148,7 +146,7 @@ export async function listIncomingConnectionRequests(meId: string) {
   }));
 }
 
-export async function respondConnectionRequest(meId: string, requestId: string, action: string) {
+export async function respondConnectionRequest(meId: string, requestId: string, action: string, choice?: ConnectionChoice) {
   if (action !== "accept" && action !== "decline" && action !== "ignore") {
     throw new WippHttpError(400, "invalid", "Action invalide.");
   }
@@ -180,22 +178,23 @@ export async function respondConnectionRequest(meId: string, requestId: string, 
     return { status: action === "decline" ? ("declined" as const) : ("ignored" as const) };
   }
   if (await blockedEither(meId, row.sender_id)) return { status: "blocked" as const };
-  const [userA, userB] = pair(meId, row.sender_id);
-  const conn = await sql`select id from wipp_connections where user_a = ${userA} and user_b = ${userB} limit 1`;
-  if (!conn.length) {
-    await sql`
-      insert into wipp_connections (id, user_a, user_b, via)
-      values (${randomUUID()}, ${userA}, ${userB}, 'request')
-    `;
-  }
+  // The person who accepts chooses permanent or ephemeral (duration computed by the server).
+  const { type, minutes } = parseChoice(choice);
   const updated = await sql`
     update wipp_connection_requests
     set status = 'accepted', responded_at = now()
     where id = ${row.id} and recipient_id = ${meId} and status = 'pending'
-    returning id
+    returning id, via
   `;
   if (!updated.length) return { status: "already_handled" as const };
-  return { status: conn.length ? ("accepted_existing" as const) : ("accepted" as const) };
+  const viaRaw = String((updated[0] as { via?: string }).via ?? "request");
+  const via = viaRaw === "qr" || viaRaw === "touch" ? viaRaw : "request";
+  const result = await establishConnection(meId, row.sender_id, { type, minutes, via });
+  return {
+    status: result.status === "already_connected" ? ("accepted_existing" as const) : ("accepted" as const),
+    connectionType: result.connection.connection_type,
+    expiresAt: result.connection.expires_at ? Date.parse(result.connection.expires_at) : null,
+  };
 }
 
 type CardRow = {
@@ -445,15 +444,52 @@ export async function getPublicBusinessCard(publicId: string) {
   return rows[0] ? withServerMedia(publicCard(rows[0])) : null;
 }
 
-export async function issueTempQr(meId: string) {
+/**
+ * Ephemeral QR: valid 75 s and single-use; it OFFERS an ephemeral connection whose duration the
+ * issuer chose. The QR's own expiry and the connection's expiry are independent.
+ */
+export async function issueTempQr(meId: string, choice?: ConnectionChoice) {
+  const { minutes } = parseChoice({ type: "ephemeral", minutes: choice?.minutes ?? 1440 });
   const sql = await getSql();
   const token = opaqueToken();
   const expires = new Date(Date.now() + QR_TTL_MS).toISOString();
   await sql`
-    insert into wipp_qr_tokens (token_hash, profile_id, expires_at, created_at)
-    values (${sha256(token)}, ${meId}, ${expires}::timestamptz, now())
+    insert into wipp_qr_tokens (token_hash, profile_id, expires_at, created_at, connection_minutes)
+    values (${sha256(token)}, ${meId}, ${expires}::timestamptz, now(), ${minutes})
   `;
-  return { token, expiresAt: Date.now() + QR_TTL_MS };
+  return { token, expiresAt: Date.now() + QR_TTL_MS, connectionMinutes: minutes };
+}
+
+const OFFER_TTL_MS = 10 * 60_000;
+
+/** B accepts (or refuses) the ephemeral connection offered by the QR he just scanned. */
+export async function resolveTempQrOffer(meId: string, token: string, accept: boolean) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return { status: "invalid" as const };
+  const sql = await getSql();
+  const hash = sha256(token);
+  const rows = await sql<{ profile_id: string; used_at: string | null; used_by: string | null; connection_minutes: number | null; offer_resolved_at: string | null }>`
+    select profile_id, used_at::text, used_by, connection_minutes, offer_resolved_at::text
+    from wipp_qr_tokens where token_hash = ${hash} limit 1
+  `;
+  const row = rows[0];
+  // Only the person who scanned it, shortly after the scan, and only once.
+  if (!row || row.used_by !== meId || !row.used_at || row.offer_resolved_at) return { status: "invalid" as const };
+  if (Date.now() - Date.parse(row.used_at) > OFFER_TTL_MS) return { status: "expired" as const };
+  const claimed = await sql`
+    update wipp_qr_tokens set offer_resolved_at = now()
+    where token_hash = ${hash} and used_by = ${meId} and offer_resolved_at is null
+    returning token_hash
+  `;
+  if (!claimed.length) return { status: "invalid" as const };
+  if (!accept) return { status: "declined" as const };
+  if (await blockedEither(meId, row.profile_id)) return { status: "invalid" as const };
+  const minutes = row.connection_minutes ?? 1440;
+  const result = await establishConnection(meId, row.profile_id, { type: "ephemeral", minutes, via: "temp_qr" });
+  return {
+    status: result.status,
+    connectionType: result.connection.connection_type,
+    expiresAt: result.connection.expires_at ? Date.parse(result.connection.expires_at) : null,
+  };
 }
 
 export async function redeemTempQr(meId: string, token: string) {
@@ -471,11 +507,11 @@ export async function redeemTempQr(meId: string, token: string) {
   if (row.profile_id === meId) return { status: "self" as const };
   // A block (either way) looks like an invalid code: never reveal the profile.
   if (await blockedEither(meId, row.profile_id)) return { status: "invalid" as const };
-  const consumed = await sql<{ profile_id: string }>`
+  const consumed = await sql<{ profile_id: string; connection_minutes: number | null }>`
     update wipp_qr_tokens
-    set used_at = now()
+    set used_at = now(), used_by = ${meId}
     where token_hash = ${hash} and used_at is null and expires_at > now()
-    returning profile_id
+    returning profile_id, connection_minutes
   `;
   if (!consumed[0]) return { status: "used" as const };
   const profiles = await sql<{
@@ -490,11 +526,11 @@ export async function redeemTempQr(meId: string, token: string) {
   `;
   const profile = profiles[0];
   if (!profile) return { status: "invalid" as const };
-  const [userA, userB] = pair(meId, profile.id);
-  const conn = await sql`select id from wipp_connections where user_a = ${userA} and user_b = ${userB} limit 1`;
   return {
     status: "ok" as const,
-    connected: conn.length > 0,
+    connected: await isConnected(meId, profile.id),
+    // The connection is only created if the scanner accepts this offer (resolveTempQrOffer).
+    offer: { type: "ephemeral" as const, minutes: consumed[0].connection_minutes ?? 1440 },
     profile: {
       id: profile.id,
       username: profile.username,

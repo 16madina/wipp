@@ -78,9 +78,12 @@ type Row = {
   uwb_token: string | null;
   uwb_distance_cm: number | null;
   uwb_status: string | null;
+  proposal_type: string | null;
+  proposal_minutes: number | null;
+  proposed_by_session: string | null;
 };
 
-const LIVE = ["waiting", "bumped", "candidate"];
+const LIVE = ["waiting", "bumped", "candidate", "agreed"];
 const TERMINAL = ["ambiguous", "unavailable", "connected", "already_connected", "declined", "expired", "cancelled", "failed"];
 
 function token(bytes = 18) {
@@ -95,7 +98,8 @@ async function load(id: string): Promise<Row | null> {
   const sql = await getSql();
   const rows = await sql<Row>`
     select id, profile_id, platform, caps, state, expires_at::text, bump_at::text, bump_peak, bump_dur_ms,
-           bump_count, peer_session_id, accepted_at::text, uwb_token, uwb_distance_cm, uwb_status
+           bump_count, peer_session_id, accepted_at::text, uwb_token, uwb_distance_cm, uwb_status,
+           proposal_type, proposal_minutes, proposed_by_session
     from wipp_touch_sessions where id = ${id} limit 1
   `;
   return rows[0] ?? null;
@@ -302,7 +306,7 @@ export async function view(meId: string, id: string) {
   const me = await own(meId, id);
   const peer = me.peer_session_id ? await load(me.peer_session_id) : null;
   const bothUwb = Boolean(me.caps?.uwb && peer?.caps?.uwb && me.caps?.uwbKind && me.caps.uwbKind === peer?.caps?.uwbKind);
-  const inPair = me.state === "candidate" || me.state === "connected" || me.state === "already_connected";
+  const inPair = me.state === "candidate" || me.state === "agreed" || me.state === "connected" || me.state === "already_connected";
   // When both phones can range, the card stays hidden until UWB says "near" on both sides
   // (or one side reports UWB unavailable → fallback to the mutual confirmation alone).
   const proximityPending = me.state === "candidate" && bothUwb && !uwbResolved(me.uwb_status, peer?.uwb_status ?? null);
@@ -313,6 +317,9 @@ export async function view(meId: string, id: string) {
       state: me.state,
       expiresAt: Date.parse(me.expires_at),
       acceptedByMe: Boolean(me.accepted_at),
+      proposal: me.proposed_by_session
+        ? { type: me.proposal_type, minutes: me.proposal_minutes, byMe: me.proposed_by_session === me.id }
+        : null,
       acceptedByPeer: Boolean(peer?.accepted_at),
       proximity: me.state !== "candidate" ? null : !bothUwb ? "unverified" : proximityPending ? "verifying" : me.uwb_status === "near" && peer?.uwb_status === "near" ? "near" : "unverified",
       peer: inPair && peer && !proximityPending ? await profileCard(peer.profile_id) : null,
@@ -387,33 +394,81 @@ export async function acceptTouchSession(meId: string, id: string) {
         ? ("waiting" as const)
         : { peerProfile: peerRow.profile_id, peerId: peerRow.id };
   if (result === "stale" || result === "waiting") return view(meId, id);
-  // Both accepted: create the connection in the existing WIPP Connect tables.
+  // Both confirmed it is the right person. Now ONE proposes permanent / ephemeral, the other confirms.
   if (await isBlocked(meId, result.peerProfile)) {
     await finish([me.id, result.peerId], "unavailable");
     return view(meId, id);
   }
-  const [userA, userB] = pair(meId, result.peerProfile);
-  const inserted = await sql<{ id: string }>`
-    insert into wipp_connections (id, user_a, user_b, via)
-    values (${randomUUID()}, ${userA}, ${userB}, 'touch')
-    on conflict (user_a, user_b) do nothing
-    returning id::text
-  `;
-  const state = inserted[0] ? "connected" : "already_connected";
-  touchLog(state, { session: me.id.slice(0, 8) });
-  // Any pending request between them is now settled.
-  await sql`
-    update wipp_connection_requests set status = 'accepted', responded_at = now()
-    where status = 'pending'
-      and ((sender_id = ${meId} and recipient_id = ${result.peerProfile})
-        or (sender_id = ${result.peerProfile} and recipient_id = ${meId}))
-  `.catch(() => undefined);
-  await sql`
-    update wipp_touch_sessions
-    set state = ${state}, connection_id = ${inserted[0]?.id ?? null}, updated_at = now(),
+  const { isConnected: connected, getConnection } = await import("@/lib/messaging/connection");
+  const existing = await getConnection(meId, result.peerProfile);
+  if ((await connected(meId, result.peerProfile)) && existing?.connection_type === "permanent") {
+    await sql`
+      update wipp_touch_sessions set state = 'already_connected', updated_at = now(),
         bump_at = null, bump_peak = null, bump_dur_ms = null, bump_energy = null, uwb_token = null
+      where id in (${me.id}, ${result.peerId}) and state = 'candidate'
+    `;
+    touchLog("already_connected", { session: me.id.slice(0, 8) });
+    return view(meId, id);
+  }
+  const cfg = await getTouchSessionConfig();
+  const until = new Date(Date.now() + cfg.confirmTtlMs * 2).toISOString();
+  await sql`
+    update wipp_touch_sessions set state = 'agreed', expires_at = ${until}, updated_at = now(),
+      bump_at = null, bump_peak = null, bump_dur_ms = null, bump_energy = null, uwb_token = null
     where id in (${me.id}, ${result.peerId}) and state = 'candidate'
   `;
+  touchLog("agreed", { session: me.id.slice(0, 8) });
+  return view(meId, id);
+}
+
+/** One side proposes the connection type (and duration). First proposal wins; the other must confirm. */
+export async function proposeTouchConnection(meId: string, id: string, choice: { type?: string; minutes?: number }) {
+  const me = await own(meId, id);
+  if (me.state !== "agreed" || !me.peer_session_id) return view(meId, id);
+  const { parseChoice } = await import("@/lib/messaging/connection");
+  const { type, minutes } = parseChoice(choice);
+  const sql = await getSql();
+  // Store the proposal on BOTH rows, only if nobody proposed yet (concurrent taps: first wins).
+  await sql`
+    update wipp_touch_sessions
+    set proposal_type = ${type}, proposal_minutes = ${minutes}, proposed_by_session = ${me.id}, updated_at = now()
+    where id in (${me.id}, ${me.peer_session_id}) and state = 'agreed' and proposed_by_session is null
+  `;
+  touchLog("proposal", { session: me.id.slice(0, 8), type, minutes });
+  return view(meId, id);
+}
+
+/** The OTHER side accepts or refuses the proposal. Only now is the connection created. */
+export async function respondTouchProposal(meId: string, id: string, accept: boolean) {
+  const me = await own(meId, id);
+  if (me.state !== "agreed" || !me.peer_session_id || !me.proposed_by_session || me.proposed_by_session === me.id) {
+    return view(meId, id);
+  }
+  const peer = await load(me.peer_session_id);
+  if (!peer || peer.state !== "agreed") return view(meId, id);
+  if (!accept) {
+    await finish([me.id, peer.id], "declined");
+    touchLog("proposal_declined", { session: me.id.slice(0, 8) });
+    return view(meId, id);
+  }
+  if (await isBlocked(meId, peer.profile_id)) {
+    await finish([me.id, peer.id], "unavailable");
+    return view(meId, id);
+  }
+  const { establishConnection } = await import("@/lib/messaging/connection");
+  const type = me.proposal_type === "ephemeral" ? "ephemeral" : "permanent";
+  const result = await establishConnection(meId, peer.profile_id, {
+    type,
+    minutes: type === "ephemeral" ? me.proposal_minutes : null,
+    via: "touch",
+  });
+  const sql = await getSql();
+  await sql`
+    update wipp_touch_sessions
+    set state = ${result.status}, connection_id = ${result.connection.id}::uuid, updated_at = now()
+    where id in (${me.id}, ${peer.id}) and state = 'agreed'
+  `;
+  touchLog(result.status, { session: me.id.slice(0, 8), type });
   return view(meId, id);
 }
 
@@ -434,7 +489,7 @@ export async function cancelTouchSession(meId: string, id: string, diag?: { spik
     await sql`update wipp_touch_sessions set caps = caps || ${JSON.stringify({ diag: d })}::jsonb where id = ${me.id}`;
     touchLog("end", { session: me.id.slice(0, 8), state: me.state, platform: me.platform, ...d });
   }
-  if (me.state === "candidate" && me.peer_session_id) {
+  if ((me.state === "candidate" || me.state === "agreed") && me.peer_session_id) {
     // Leaving during confirmation = a refusal for the other person.
     await finish([me.id, me.peer_session_id], "declined");
   } else {

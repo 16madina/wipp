@@ -43,6 +43,17 @@ export type WippChatSummary = {
   /** number = expiry, "always" = muted forever, null = not muted */
   mutedUntil?: number | "always" | null;
   manuallyUnreadAt?: number | null;
+  /** WIPP connection with the peer (null = never connected). Only "active" means contact. */
+  connection?: WippConnectionInfo | null;
+};
+
+export type WippConnectionInfo = {
+  status: "active" | "expired" | "ended" | string;
+  type: "permanent" | "ephemeral";
+  expiresAt: number | null;
+  via: string;
+  upgradeRequestedByMe: boolean;
+  upgradeRequestedByPeer: boolean;
 };
 
 export type WippReaction = {

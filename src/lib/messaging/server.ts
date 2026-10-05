@@ -1205,6 +1205,15 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
       manuallyUnreadAt: m.manually_unread_at ? Date.parse(m.manually_unread_at) : null,
     });
   }
+  // Connection state per peer (active / expired, permanent / ephemeral, upgrade requests).
+  try {
+    const { connectionsFor, expireDue } = await import("@/lib/messaging/connection");
+    await expireDue();
+    const map = await connectionsFor(meId, out.map((c) => c.peer.id));
+    for (const c of out) c.connection = map.get(c.peer.id) ?? null;
+  } catch (err) {
+    console.warn("[wipp] connections for chats", err);
+  }
   out.sort((a, b) => b.lastAt - a.lastAt);
   return out;
 }
