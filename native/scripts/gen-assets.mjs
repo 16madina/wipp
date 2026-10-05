@@ -29,9 +29,10 @@ for (const rel of files) {
 }
 
 const lines = files.map((rel) => {
-  const ext = path.extname(rel).toLowerCase();
-  // Animated WebP/GIF must stay themselves. Preferring the PNG poster froze every animation.
-  const source = ext === ".webp" || ext === ".gif" ? rel : (preferred.get(rel.replace(/\.[^.]+$/, "")) ?? rel);
+  // One file per base name: Android merges bundled images by name without extension,
+  // so requiring both x.jpg and x.webp fails with "Duplicate resources".
+  // Animations keep their own name; their still image is named *-poster.png.
+  const source = preferred.get(rel.replace(/\.[^.]+$/, "")) ?? rel;
   return `  ${JSON.stringify(rel)}: require("../../assets/wipp/${source}"),`;
 });
 
