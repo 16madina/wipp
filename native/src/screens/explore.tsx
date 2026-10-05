@@ -135,7 +135,7 @@ export function ExploreScreen() {
               ["home", "Tous"],
               ["shops", "Boutiques"],
               ["lifestyle", "Événements"],
-              ["utilities", "Utility"],
+              ["utilities", "Services"],
             ] as const).map(([id, label]) => (
               <Chip key={id} label={label} active={hub === id} onPress={() => setHub(id)} />
             ))}
@@ -410,8 +410,9 @@ function UtilitiesPane() {
         </View>
         <Text style={{ color: colors.accent, fontSize: 20 }}>›</Text>
       </Press>
-      <PendingNote label="Services vérifiés uniquement. Aucune source externe branchée." />
-      {serverConnected && services.length === 0 && shown.length === 0 ? <Empty title="Aucun service vérifié" /> : null}
+      {serverConnected && services.length === 0 && shown.length === 0 ? (
+        <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center", marginTop: 12 }}>D’autres services utiles arrivent bientôt.</Text>
+      ) : null}
       {services.map((p) => (
         <View key={p.id} style={{ paddingVertical: 12 }}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{p.name}</Text>
