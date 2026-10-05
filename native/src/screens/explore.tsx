@@ -385,7 +385,6 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
 }
 
 function UtilitiesPane() {
-  const [pharmaMenu, setPharmaMenu] = useState(false);
   const [pharmaMode, setPharmaMode] = useState<"open" | "h24" | null>(null);
   const pharmacies = useWippStore((s) => s.pharmacies);
   const serverConnected = useWippStore((s) => s.serverConnected);
@@ -405,7 +404,7 @@ function UtilitiesPane() {
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginBottom: 12, zIndex: 10 }}>
         <View style={{ width: "48.5%", zIndex: 10 }}>
           <Press
-            onPress={() => setPharmaMenu((v) => !v)}
+            onPress={() => setPharmaMode((m) => (m ? null : "open"))}
             accessibilityLabel="Pharmacies"
             style={{ minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
           >
@@ -414,7 +413,7 @@ function UtilitiesPane() {
             <View style={{ zIndex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Cross size={20} color={colors.accent} />
-                <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: pharmaMenu ? "180deg" : "0deg" }] }} />
+                <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: pharmaMode ? "180deg" : "0deg" }] }} />
               </View>
               <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Pharmacies</Text>
               <Text style={{ marginTop: 2, fontSize: 11, color: pharmaMode ? colors.accent : colors.muted }}>
@@ -422,29 +421,14 @@ function UtilitiesPane() {
               </Text>
             </View>
           </Press>
-          {pharmaMenu ? (
-            <View style={{ position: "absolute", top: 106, left: 0, right: 0, borderRadius: 14, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, overflow: "hidden", zIndex: 20, elevation: 8 }}>
-              {([
-                ["open", "🟢 Ouvertes maintenant"],
-                ["h24", "🕐 Ouvertes 24 h/24"],
-              ] as const).map(([id, label], i) => (
-                <Press
-                  key={id}
-                  onPress={() => {
-                    setPharmaMode(id);
-                    setPharmaMenu(false);
-                  }}
-                  style={{ paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: colors.hair, backgroundColor: pharmaMode === id ? "rgba(255,216,77,0.14)" : "transparent" }}
-                >
-                  <Text style={{ color: pharmaMode === id ? colors.accent : colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{label}</Text>
-                </Press>
-              ))}
-            </View>
-          ) : null}
         </View>
       </View>
       {pharmaMode ? (
-        <View style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 16, gap: 12 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Chip label="🟢 Ouvertes maintenant" active={pharmaMode === "open"} onPress={() => setPharmaMode("open")} />
+            <Chip label="🕐 Ouvertes 24 h/24" active={pharmaMode === "h24"} onPress={() => setPharmaMode("h24")} />
+          </View>
           <PharmacyResults mode={pharmaMode} />
         </View>
       ) : null}
