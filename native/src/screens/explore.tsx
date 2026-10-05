@@ -1,3 +1,5 @@
+import { PharmacyResults } from "./pharmacies";
+import { Sheet } from "../components/card-editor-parts";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
@@ -384,6 +386,8 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
 }
 
 function UtilitiesPane() {
+  const [pharmaSheet, setPharmaSheet] = useState(false);
+  const [pharmaMode, setPharmaMode] = useState<"open" | "h24" | null>(null);
   const pharmacies = useWippStore((s) => s.pharmacies);
   const serverConnected = useWippStore((s) => s.serverConnected);
   const push = useWippStore((s) => s.push);
@@ -398,18 +402,44 @@ function UtilitiesPane() {
   }, [serverConnected]);
   return (
     <View style={{ paddingHorizontal: 16 }}>
-      <Press
-        onPress={() => push({ name: "pharmacies" })}
-        accessibilityLabel="Pharmacies"
-        style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, marginBottom: 12 }}
-      >
-        <Text style={{ fontSize: 26 }}>💊</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold" }}>Pharmacies</Text>
-          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Ouvertes maintenant et 24 h/24 autour de toi</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        <Press
+          onPress={() => setPharmaSheet(true)}
+          accessibilityLabel="Pharmacies"
+          style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: pharmaMode ? colors.accent : colors.navy, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
+        >
+          <Text style={{ fontSize: 14 }}>💊</Text>
+          <Text style={{ color: pharmaMode ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+            {pharmaMode === "open" ? "Pharmacies · ouvertes" : pharmaMode === "h24" ? "Pharmacies · 24 h/24" : "Pharmacies"}
+          </Text>
+        </Press>
+      </View>
+      <Sheet open={pharmaSheet} title="💊 Pharmacies" onClose={() => setPharmaSheet(false)}>
+        {([
+          ["open", "🟢", "Ouvertes maintenant", "Les pharmacies ouvertes en ce moment autour de toi"],
+          ["h24", "🕐", "Ouvertes 24 h/24", "Les pharmacies qui ne ferment jamais"],
+        ] as const).map(([id, icon, title, sub]) => (
+          <Press
+            key={id}
+            onPress={() => {
+              setPharmaMode(id);
+              setPharmaSheet(false);
+            }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, marginBottom: 10, backgroundColor: pharmaMode === id ? "rgba(255,216,77,0.14)" : colors.navy, borderWidth: 1, borderColor: pharmaMode === id ? colors.accent : colors.hair }}
+          >
+            <Text style={{ fontSize: 22 }}>{icon}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{title}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{sub}</Text>
+            </View>
+          </Press>
+        ))}
+      </Sheet>
+      {pharmaMode ? (
+        <View style={{ marginBottom: 16 }}>
+          <PharmacyResults mode={pharmaMode} />
         </View>
-        <Text style={{ color: colors.accent, fontSize: 20 }}>›</Text>
-      </Press>
+      ) : null}
       {serverConnected && services.length === 0 && shown.length === 0 ? (
         <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center", marginTop: 12 }}>D’autres services utiles arrivent bientôt.</Text>
       ) : null}

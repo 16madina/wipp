@@ -163,9 +163,10 @@ function PharmacyCard({ p, origin, duty }: { p: PharmacyPlace; origin: LatLng | 
   );
 }
 
-export function PharmaciesScreen() {
-  const pop = useWippStore((s) => s.pop);
-  const [tab, setTab] = useState<Tab>("open");
+/** Inline results (used inside Explorer → Services). `mode` comes from the bottom sheet. */
+export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
+  const [tab, setTab] = useState<Tab>(mode);
+  useEffect(() => setTab(mode), [mode]);
   const [origin, setOrigin] = useState<LatLng | null>(lastResult?.origin ?? null);
   // A city search centres the map but distances are only shown from the user's real position.
   const [fromGps, setFromGps] = useState(Boolean(lastResult?.origin));
@@ -173,7 +174,6 @@ export function PharmaciesScreen() {
   const [duty, setDuty] = useState<{ loading: boolean; available: boolean; source: string | null; list: DutyPharmacy[] } | null>(null);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
-  const scroll = useRef<ScrollView>(null);
 
   async function fetchNear(pos: LatLng, force = false) {
     const key = `${pos.lat.toFixed(3)},${pos.lng.toFixed(3)}`;
@@ -243,15 +243,7 @@ export function PharmaciesScreen() {
   const ordered = picked ? [...shown.filter((p) => p.id === picked), ...shown.filter((p) => p.id !== picked)] : shown;
 
   return (
-    <ScreenRoot>
-      <GlassHeader>
-        <Header title="💊 Pharmacies" onBack={pop} />
-      </GlassHeader>
-      <ScrollView ref={scroll} contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }}>
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <Chip label="🟢 Ouvertes maintenant" active={tab === "open"} onPress={() => setTab("open")} />
-          <Chip label="🕐 Ouvertes 24 h/24" active={tab === "h24"} onPress={() => setTab("h24")} />
-        </View>
+    <View style={{ gap: 12 }}>
 
         {load.state === "locating" || load.state === "loading" ? (
           <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>
@@ -293,10 +285,7 @@ export function PharmaciesScreen() {
           <PharmacyMap
             origin={origin}
             places={shown}
-            onPick={(p) => {
-              setPicked(p.id);
-              scroll.current?.scrollTo({ y: 260, animated: true });
-            }}
+            onPick={(p) => setPicked(p.id)}
           />
         ) : null}
 
@@ -346,6 +335,25 @@ export function PharmaciesScreen() {
             Horaires fournis par Google.
           </Text>
         ) : null}
+    </View>
+  );
+}
+
+/** Stand-alone screen (kept for deep links); Explorer shows PharmacyResults inline. */
+export function PharmaciesScreen() {
+  const pop = useWippStore((s) => s.pop);
+  const [mode, setMode] = useState<"open" | "h24">("open");
+  return (
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title="💊 Pharmacies" onBack={pop} />
+      </GlassHeader>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <Chip label="🟢 Ouvertes maintenant" active={mode === "open"} onPress={() => setMode("open")} />
+          <Chip label="🕐 Ouvertes 24 h/24" active={mode === "h24"} onPress={() => setMode("h24")} />
+        </View>
+        <PharmacyResults mode={mode} />
       </ScrollView>
     </ScreenRoot>
   );

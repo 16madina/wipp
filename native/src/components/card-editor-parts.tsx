@@ -30,7 +30,7 @@ export function SelectField({ label, value, placeholder, left, onPress }: { labe
   );
 }
 
-function Sheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+export function Sheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Press onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
