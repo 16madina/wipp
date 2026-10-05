@@ -552,9 +552,9 @@ const TOUCH_COPY = {
     declined: "Connexion annulée",
     expired: "Session expirée",
     timeout: "Personne détectée.",
-    ambiguous: "Impossible d’identifier le bon WIPP.",
+    ambiguous: "Plusieurs WIPP détectés",
     unavailable: "Connexion impossible.",
-    tooFar: "L’autre téléphone est trop loin.",
+    tooFar: "Proximité non confirmée",
     offline: "Connexion Internet requise pour WIPP Touch.",
     noMotion: "Les capteurs de mouvement ne sont pas disponibles sur cet appareil.",
     failed: "WIPP Touch n’a pas pu démarrer.",
@@ -589,9 +589,9 @@ const TOUCH_COPY = {
     declined: "Connection cancelled",
     expired: "Session expired",
     timeout: "Nobody detected.",
-    ambiguous: "Couldn’t identify the right WIPP.",
+    ambiguous: "Several WIPPs detected",
     unavailable: "Connection not possible.",
-    tooFar: "The other phone is too far away.",
+    tooFar: "Proximity not confirmed",
     offline: "WIPP Touch needs an Internet connection.",
     noMotion: "Motion sensors aren’t available on this device.",
     failed: "WIPP Touch couldn’t start.",
@@ -678,8 +678,10 @@ export function WgoTouchScreen() {
             {!done ? (
               <Text style={{ marginTop: 10, fontSize: 12, color: colors.muted, letterSpacing: 0.4 }}>
                 {c.found}
-                {touch.proximity === "near" ? ` · ${c.uwbNear}` : ""}
               </Text>
+            ) : null}
+            {!done && touch.proximity === "near" ? (
+              <Text style={{ marginTop: 4, fontSize: 13, color: colors.accent, fontFamily: "Inter_600SemiBold" }}>✓ {c.uwbNear}</Text>
             ) : null}
             {done ? (
               <>

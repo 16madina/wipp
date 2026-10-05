@@ -254,7 +254,7 @@ export function useTouchSession() {
         break;
       case "failed":
         stopAll();
-        set(uwbState.current.best !== Infinity ? "too_far" : "failed");
+        set(uwbState.current.posted ? "too_far" : "failed");
         break;
       case "declined":
         stopAll();
@@ -334,6 +334,7 @@ export function useTouchSession() {
         return;
       }
       subs.current.bump = sub;
+      if (!renew) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
       set("searching");
       timers.current.poll = setInterval(() => {
         const id = sessionId.current;

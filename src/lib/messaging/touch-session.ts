@@ -290,8 +290,8 @@ async function profileCard(profileId: string) {
   return p ? { username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url } : null;
 }
 
+/** Both phones can range: only a "near" measurement on BOTH sides reveals the cards. */
 function uwbResolved(mine: string | null, theirs: string | null) {
-  if (mine === "unavailable" || theirs === "unavailable") return true;
   return mine === "near" && theirs === "near";
 }
 
@@ -351,7 +351,8 @@ export async function postTouchUwbResult(meId: string, id: string, input: { dist
   const sql = await getSql();
   await sql`update wipp_touch_sessions set uwb_status = ${status}, uwb_distance_cm = ${d}, uwb_token = null, updated_at = now() where id = ${me.id} and state = 'candidate'`;
   touchLog("uwb", { session: me.id.slice(0, 8), status, cm: d == null ? null : Math.round(d) });
-  if (status === "far" && me.peer_session_id) await finish([me.id, me.peer_session_id], "failed");
+  // Both phones were UWB-capable: a failed or too-far measurement cancels the candidate (no card).
+  if ((status === "far" || status === "unavailable") && me.peer_session_id) await finish([me.id, me.peer_session_id], "failed");
   return view(meId, id);
 }
 
