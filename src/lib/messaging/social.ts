@@ -469,6 +469,8 @@ export async function redeemTempQr(meId: string, token: string) {
   if (row.used_at) return { status: "used" as const };
   if (Date.parse(row.expires_at) <= Date.now()) return { status: "expired" as const };
   if (row.profile_id === meId) return { status: "self" as const };
+  // A block (either way) looks like an invalid code: never reveal the profile.
+  if (await blockedEither(meId, row.profile_id)) return { status: "invalid" as const };
   const consumed = await sql<{ profile_id: string }>`
     update wipp_qr_tokens
     set used_at = now()
