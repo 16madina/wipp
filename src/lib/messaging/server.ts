@@ -572,7 +572,16 @@ async function tryResolveSupabaseAccessToken(token: string): Promise<WippProfile
   return null;
 }
 
+/** A suspended account cannot use the WIPP server (row-level security also ignores it). */
 export async function resolveSession(token: string | null | undefined): Promise<WippProfile> {
+  const profile = await resolveSessionRaw(token);
+  const sql = await getSql();
+  const rows = await sql<{ suspended_at: string | null }>`select suspended_at::text from wipp_profiles where id = ${profile.id} limit 1`;
+  if (rows[0]?.suspended_at) throw new WippHttpError(403, "account_suspended", "Ce compte est suspendu.");
+  return profile;
+}
+
+async function resolveSessionRaw(token: string | null | undefined): Promise<WippProfile> {
   await ensureMessagingReady();
   if (!token) throw new WippHttpError(401, "unauthorized", "Session requise.");
   const sql = await getSql();

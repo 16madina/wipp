@@ -91,6 +91,7 @@ export function MeScreen() {
   const listings = useWippStore((s) => s.listings);
   const lifestyle = useWippStore((s) => s.lifestyle);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const staffRole = useStaffRole();
   const [mottoOpen, setMottoOpen] = useState(false);
   const [mottoDraft, setMottoDraft] = useState("");
   const [mottoSaving, setMottoSaving] = useState(false);
@@ -227,6 +228,14 @@ export function MeScreen() {
         </View>
         <View style={{ marginTop: 20 }}>
           <Section title={t("myWipp")}>
+            {staffRole ? (
+              <Row
+                icon={<Shield size={16} color={colors.accent} />}
+                label={staffRole === "admin" ? "Admin panel" : "Modération"}
+                value={staffRole === "admin" ? "Administrateur" : "Modérateur"}
+                onPress={() => push({ name: "admin" })}
+              />
+            ) : null}
             <Row icon={<User size={16} color={colors.fg} />} label={t("account")} onPress={() => push({ name: "account" })} />
             <Row icon={<Shield size={16} color={colors.fg} />} label={t("privacy")} onPress={() => push({ name: "privacy" })} />
             <Row icon={<Lock size={16} color={colors.fg} />} label={t("security")} onPress={() => push({ name: "security" })} />
@@ -1622,14 +1631,5 @@ export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
   );
 }
 
-export function AdminScreen() {
-  const pop = useWippStore((s) => s.pop);
-  return (
-    <ScreenRoot>
-      <GlassHeader>
-        <Header title="Admin" onBack={pop} />
-      </GlassHeader>
-      <PendingNote label="adminCheck serveur — non exposé sans session" />
-    </ScreenRoot>
-  );
-}
+export { AdminScreen } from "./admin";
+import { useStaffRole } from "./admin";

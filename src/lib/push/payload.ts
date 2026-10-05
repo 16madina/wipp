@@ -44,7 +44,7 @@ const FORBIDDEN = [
 ];
 
 export type PushData = {
-  type: PushType | "group" | "story";
+  type: PushType | "group" | "story" | "announce";
   eventId: string;
   chatId?: string;
   private?: boolean;

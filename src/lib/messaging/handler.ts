@@ -655,6 +655,42 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ profile });
     }
 
+    if (a === "staff") {
+      // Admin panel (admin + moderators). Role checks happen inside each function.
+      const me = await resolveSession(bearer(request));
+      const adm = await import("./admin");
+      const url = new URL(request.url);
+      if (method === "GET" && b === "me") return json(await adm.adminMe(me.id));
+      if (method === "GET" && b === "overview") return json(await adm.adminOverview(me.id));
+      if (method === "GET" && b === "users") return json({ users: await adm.adminUsers(me.id, url.searchParams.get("q") ?? "") });
+      if (method === "POST" && b === "users" && c && d === "role") {
+        const body = await readBody<{ role?: string }>(request);
+        return json(await adm.adminSetRole(me.id, c, body.role ?? ""));
+      }
+      if (method === "POST" && b === "users" && c && d === "suspend") {
+        const body = await readBody<{ suspend?: boolean; reason?: string }>(request);
+        return json(await adm.adminSuspend(me.id, c, body.suspend !== false, body.reason ?? ""));
+      }
+      if (method === "GET" && b === "suspended") return json({ users: await adm.adminSuspended(me.id) });
+      if (method === "GET" && b === "reports" && !c) return json({ reports: await adm.adminReports(me.id, url.searchParams.get("status") ?? "open") });
+      if (method === "POST" && b === "reports" && c && d === "resolve") {
+        const body = await readBody<{ action?: string }>(request);
+        return json(await adm.adminResolveReport(me.id, c, body.action ?? ""));
+      }
+      if (method === "POST" && b === "reports" && c && d === "open") return json(await adm.adminOpenReport(me.id, c));
+      if (method === "GET" && b === "push" && c === "templates") return json({ templates: await adm.adminPushTemplates(me.id) });
+      if (method === "PUT" && b === "push" && c === "templates" && d) {
+        const body = await readBody<{ label?: string; title?: string; body?: string }>(request);
+        return json(await adm.adminSavePushTemplate(me.id, d, body));
+      }
+      if (method === "POST" && b === "push" && c === "send") {
+        const body = await readBody<{ title?: string; body?: string; target?: string; username?: string }>(request);
+        return json(await adm.adminSendPush(me.id, body));
+      }
+      if (method === "GET" && b === "push" && c === "history") return json({ history: await adm.adminPushHistory(me.id) });
+      if (method === "GET" && b === "audit") return json({ audit: await adm.adminAudit(me.id) });
+    }
+
     if (method === "GET" && a === "admin" && b === "stats") {
       const me = await resolveSession(bearer(request));
       const stats = await adminStats(me.id);

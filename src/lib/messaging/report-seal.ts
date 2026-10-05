@@ -45,7 +45,7 @@ export async function openSealedReport(actorId: string, flagId: string) {
   await ensureMessagingReady();
   const sql = await getSql();
   const me = await sql<{ role: string }>`select role from wipp_profiles where id = ${actorId} limit 1`;
-  if (me[0]?.role !== "admin") throw new WippHttpError(403, "forbidden", "Réservé à la modération.");
+  if (me[0]?.role !== "admin" && me[0]?.role !== "moderator") throw new WippHttpError(403, "forbidden", "Réservé à la modération.");
   const flags = await sql<{ sealed_payload: string | null; message_id: string | null }>`
     select sealed_payload, message_id from wipp_moderation_flags where id = ${flagId} limit 1
   `;
