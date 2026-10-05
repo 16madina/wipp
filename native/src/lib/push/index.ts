@@ -281,21 +281,29 @@ export function syncAppBadge() {
 }
 
 async function applyScreen(screen: Screen, eventId?: string) {
-  if (eventId && remember(`tap:${eventId}`)) return;
+  if (eventId && seen.has(`tap:${eventId}`)) return;
   const st = useWippStore.getState();
   if (!st.onboarded) {
     setPendingNav({ kind: "screen", screen, eventId });
     return;
   }
   if (screen.name === "conversation") {
-    try {
-      await st.syncServerInbox();
-    } catch {
-      /* offline: still only open if the chat is already known */
+    // Cold start from a notification: the session and the inbox are still loading. Keep trying
+    // (sync + check) for a few seconds instead of silently staying on the chat list.
+    const known = () => useWippStore.getState().chats.some((c) => c.id === screen.chatId);
+    for (let attempt = 0; attempt < 8 && !known(); attempt++) {
+      try {
+        await useWippStore.getState().syncServerInbox();
+      } catch {
+        /* session not ready yet / offline */
+      }
+      if (!known()) await new Promise((r) => setTimeout(r, 1500));
     }
-    const chats = useWippStore.getState().chats;
-    if (!chats.some((c) => c.id === screen.chatId)) return;
+    if (!known()) return;
   }
+  if (eventId) remember(`tap:${eventId}`);
+  const top = useWippStore.getState().stack.at(-1);
+  if (screen.name === "conversation" && top?.name === "conversation" && top.chatId === screen.chatId) return;
   useWippStore.getState().push(screen);
 }
 
