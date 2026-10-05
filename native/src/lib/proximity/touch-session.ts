@@ -25,6 +25,7 @@ type ServerSession = {
   acceptedByMe: boolean;
   acceptedByPeer: boolean;
   peer: TouchPeerCard | null;
+  proximity?: "verifying" | "near" | "unverified" | null;
   uwb: { peerToken: string | null; myStatus: string | null; peerStatus: string | null; maxCm: number; timeoutMs: number } | null;
 };
 
@@ -38,6 +39,7 @@ export type TouchPhase =
   | "idle"
   | "starting"
   | "searching"
+  | "verifying"
   | "candidate"
   | "waiting_peer"
   | "connected"
@@ -52,7 +54,9 @@ export type TouchPhase =
   | "no_motion"
   | "failed";
 
-const POLL_MS = 600;
+const POLL_MS = 500;
+/** How long the screen keeps renewing its ephemeral session while waiting for a contact. */
+const READY_FOR_MS = 120_000;
 
 
 const api = {
@@ -104,6 +108,8 @@ export function useTouchSession() {
   const alive = useRef(true);
   const caps = useRef<TouchCapabilities | null>(null);
   const diag = useRef({ spikes: 0, maxPeak: 0 });
+  const openedAt = useRef(Date.now());
+  const [proximity, setProximity] = useState<"near" | "unverified" | null>(null);
 
   function set(next: TouchPhase) {
     phaseRef.current = next;
@@ -141,7 +147,7 @@ export function useTouchSession() {
     alive.current = true;
     return () => {
       alive.current = false;
-      const live = ["starting", "searching", "candidate", "waiting_peer"].includes(phaseRef.current);
+      const live = ["starting", "searching", "verifying", "candidate", "waiting_peer"].includes(phaseRef.current);
       void teardown(live);
     };
   }, []);
@@ -213,13 +219,21 @@ export function useTouchSession() {
         if (prev === "starting" || prev === "searching") set("searching");
         break;
       case "candidate":
+        stopSensors();
+        runUwb(s);
+        if (!s.peer || s.proximity === "verifying") {
+          // Contact matched on the server; UWB is still proving the distance. No card yet.
+          set("verifying");
+          break;
+        }
         setPeer(s.peer);
         if (prev !== "candidate" && prev !== "waiting_peer") {
-          stopSensors();
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+          // Distinct "WIPP found" haptic: two firm taps.
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
+          setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined), 140);
         }
+        setProximity(s.proximity === "near" ? "near" : "unverified");
         set(s.acceptedByMe ? "waiting_peer" : "candidate");
-        runUwb(s);
         break;
       case "connected":
       case "already_connected":
@@ -231,13 +245,22 @@ export function useTouchSession() {
       case "expired":
         stopAll();
         void api.cancel(s.id, diag.current).catch(() => undefined);
-        set(prev === "candidate" || prev === "waiting_peer" ? "expired" : "timeout");
+        if ((prev === "searching" || prev === "starting") && Date.now() - openedAt.current < READY_FOR_MS) {
+          // Still on the screen: renew the ephemeral session silently and stay "ready".
+          void start(true);
+          break;
+        }
+        set(prev === "candidate" || prev === "waiting_peer" || prev === "verifying" ? "expired" : "timeout");
         break;
       case "failed":
         stopAll();
         set(uwbState.current.best !== Infinity ? "too_far" : "failed");
         break;
       case "declined":
+        stopAll();
+        set("declined");
+        scheduleReady();
+        break;
       case "ambiguous":
       case "unavailable":
         stopAll();
@@ -266,13 +289,24 @@ export function useTouchSession() {
     }
   }
 
-  async function start() {
+  function scheduleReady() {
+    // "Connexion annulée" for a moment, then back to "ready" on the same screen.
+    setTimeout(() => {
+      if (alive.current && phaseRef.current === "declined") void start();
+    }, 2500);
+  }
+
+  async function start(renew = false) {
     await teardown(true);
     setPeer(null);
-    setBumps(0);
+    setProximity(null);
+    if (!renew) {
+      setBumps(0);
+      openedAt.current = Date.now();
+    }
     setUwbLabel("none");
     uwbState.current = { posted: false, started: false, reported: false, best: Infinity };
-    set("starting");
+    if (!renew) set("starting");
     diag.current = { spikes: 0, maxPeak: 0 };
     const c = getTouchCapabilities();
     caps.current = c;
@@ -338,9 +372,10 @@ export function useTouchSession() {
     const id = sessionId.current;
     stopAll();
     set("declined");
-    if (id) await api.decline(id).catch(() => undefined);
     sessionId.current = null;
+    if (id) await api.decline(id).catch(() => undefined);
+    scheduleReady();
   }
 
-  return { phase, peer, bumps, uwbLabel, start, accept, decline, stop: () => teardown(true) };
+  return { phase, peer, bumps, uwbLabel, proximity, start: () => start(), accept, decline, stop: () => teardown(true) };
 }

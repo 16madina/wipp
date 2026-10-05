@@ -42,6 +42,11 @@ export const TOUCH_SESSION_DEFAULTS: TouchSessionConfig = {
 
 let cached: { at: number; value: TouchSessionConfig } | null = null;
 
+/** Diagnostics without personal data: short session prefixes and numbers only (never tokens). */
+function touchLog(event: string, data: Record<string, unknown> = {}) {
+  console.info(`[wipp-touch] ${event}`, JSON.stringify(data));
+}
+
 export async function getTouchSessionConfig(): Promise<TouchSessionConfig> {
   if (cached && Date.now() - cached.at < 5_000) return cached.value;
   try {
@@ -167,6 +172,7 @@ export async function startTouchSession(
     insert into wipp_touch_sessions (id, profile_id, nonce, platform, caps, state, expires_at)
     values (${id}, ${meId}, ${nonce}, ${platform}, ${JSON.stringify(caps)}::jsonb, 'waiting', ${expires.toISOString()})
   `;
+  touchLog("session", { session: id.slice(0, 8), platform, uwb: caps.uwb });
   return {
     session: { id, state: "waiting", expiresAt: expires.getTime() },
     serverNow: Date.now(),
@@ -214,6 +220,7 @@ export async function reportTouchBump(
         bump_energy = ${energy}, bump_count = bump_count + 1, updated_at = now()
     where id = ${me.id} and state in ('waiting', 'bumped')
   `;
+  touchLog("bump", { session: me.id.slice(0, 8), peak: Math.round(peak * 100) / 100, dur, rtt: Math.round(rtt) });
   if (peak < cfg.minPeakG) return view(meId, me.id);
 
   const win = cfg.bumpWindowMs;
@@ -238,6 +245,7 @@ export async function reportTouchBump(
       ids.add(s.id);
       if (s.peer_session_id) ids.add(s.peer_session_id);
     }
+    touchLog("ambiguous", { session: me.id.slice(0, 8), count: ids.size });
     await sql`
       update wipp_touch_sessions
       set state = 'ambiguous', updated_at = now(), bump_at = null, bump_peak = null, bump_dur_ms = null,
@@ -264,6 +272,7 @@ export async function reportTouchBump(
     await sql`update wipp_touch_sessions set state = 'bumped', peer_session_id = null where id = ${updated[0]!.id} and accepted_at is null`;
     paired = false;
   }
+  if (paired) touchLog("candidate", { a: me.id.slice(0, 8), b: other.id.slice(0, 8) });
   if (paired && (await isBlocked(meId, other.profile_id))) {
     // Neutral for both sides: never reveal a block.
     await finish([me.id, other.id], "unavailable");
@@ -281,12 +290,20 @@ async function profileCard(profileId: string) {
   return p ? { username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url } : null;
 }
 
+function uwbResolved(mine: string | null, theirs: string | null) {
+  if (mine === "unavailable" || theirs === "unavailable") return true;
+  return mine === "near" && theirs === "near";
+}
+
 export async function view(meId: string, id: string) {
   const cfg = await getTouchSessionConfig();
   const me = await own(meId, id);
   const peer = me.peer_session_id ? await load(me.peer_session_id) : null;
   const bothUwb = Boolean(me.caps?.uwb && peer?.caps?.uwb && me.caps?.uwbKind && me.caps.uwbKind === peer?.caps?.uwbKind);
   const inPair = me.state === "candidate" || me.state === "connected" || me.state === "already_connected";
+  // When both phones can range, the card stays hidden until UWB says "near" on both sides
+  // (or one side reports UWB unavailable → fallback to the mutual confirmation alone).
+  const proximityPending = me.state === "candidate" && bothUwb && !uwbResolved(me.uwb_status, peer?.uwb_status ?? null);
   return {
     serverNow: Date.now(),
     session: {
@@ -295,7 +312,8 @@ export async function view(meId: string, id: string) {
       expiresAt: Date.parse(me.expires_at),
       acceptedByMe: Boolean(me.accepted_at),
       acceptedByPeer: Boolean(peer?.accepted_at),
-      peer: inPair && peer ? await profileCard(peer.profile_id) : null,
+      proximity: me.state !== "candidate" ? null : !bothUwb ? "unverified" : proximityPending ? "verifying" : me.uwb_status === "near" && peer?.uwb_status === "near" ? "near" : "unverified",
+      peer: inPair && peer && !proximityPending ? await profileCard(peer.profile_id) : null,
       uwb: inPair && bothUwb
         ? {
             peerToken: me.state === "candidate" ? peer?.uwb_token ?? null : null,
@@ -332,6 +350,7 @@ export async function postTouchUwbResult(meId: string, id: string, input: { dist
   else if (input.status === "unavailable") status = "unavailable";
   const sql = await getSql();
   await sql`update wipp_touch_sessions set uwb_status = ${status}, uwb_distance_cm = ${d}, uwb_token = null, updated_at = now() where id = ${me.id} and state = 'candidate'`;
+  touchLog("uwb", { session: me.id.slice(0, 8), status, cm: d == null ? null : Math.round(d) });
   if (status === "far" && me.peer_session_id) await finish([me.id, me.peer_session_id], "failed");
   return view(meId, id);
 }
@@ -339,6 +358,11 @@ export async function postTouchUwbResult(meId: string, id: string, input: { dist
 export async function acceptTouchSession(meId: string, id: string) {
   const me = await own(meId, id);
   if (me.state !== "candidate" || !me.peer_session_id) return view(meId, id);
+  // No consent can be recorded while the UWB proof is still being measured.
+  const peerNow = await load(me.peer_session_id);
+  const bothUwb = Boolean(me.caps?.uwb && peerNow?.caps?.uwb && me.caps?.uwbKind && me.caps.uwbKind === peerNow?.caps?.uwbKind);
+  if (bothUwb && !uwbResolved(me.uwb_status, peerNow?.uwb_status ?? null)) return view(meId, id);
+  touchLog("accept", { session: me.id.slice(0, 8) });
   const sql = await getSql();
   await sql`
     update wipp_touch_sessions set accepted_at = coalesce(accepted_at, now()), updated_at = now()
@@ -371,6 +395,7 @@ export async function acceptTouchSession(meId: string, id: string) {
     returning id::text
   `;
   const state = inserted[0] ? "connected" : "already_connected";
+  touchLog(state, { session: me.id.slice(0, 8) });
   // Any pending request between them is now settled.
   await sql`
     update wipp_connection_requests set status = 'accepted', responded_at = now()
@@ -389,6 +414,7 @@ export async function acceptTouchSession(meId: string, id: string) {
 
 export async function declineTouchSession(meId: string, id: string) {
   const me = await own(meId, id);
+  touchLog("declined", { session: me.id.slice(0, 8) });
   const ids = [me.id, ...(me.peer_session_id ? [me.peer_session_id] : [])];
   await finish(ids, "declined");
   return view(meId, id);
@@ -401,7 +427,7 @@ export async function cancelTouchSession(meId: string, id: string, diag?: { spik
     const d = { spikes: Math.min(999, Number(diag.spikes) | 0), maxPeak: Math.round(Number(diag.maxPeak) * 100) / 100 };
     const sql = await getSql();
     await sql`update wipp_touch_sessions set caps = caps || ${JSON.stringify({ diag: d })}::jsonb where id = ${me.id}`;
-    console.info("[wipp-touch] diag", me.platform, d);
+    touchLog("end", { session: me.id.slice(0, 8), state: me.state, platform: me.platform, ...d });
   }
   if (me.state === "candidate" && me.peer_session_id) {
     // Leaving during confirmation = a refusal for the other person.

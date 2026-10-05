@@ -532,19 +532,24 @@ const TOUCH_COPY = {
   fr: {
     title: "Rapprochez vos téléphones",
     sub: "Connectez-vous sans partager votre numéro.",
+    active: "WIPP Touch actif",
+    ready: "Prêt à détecter un WIPP Touch",
+    waitingContact: "En attente d’un contact…",
+    verifying: "Vérification de proximité…",
+    found: "WIPP Touch détecté",
     start: "Commencer",
     searching: "Recherche d’un WIPP à proximité…",
-    searchingSub: "Touchez doucement l’autre téléphone, WIPP ouvert des deux côtés.",
-    felt: "Contact détecté…",
+    searchingSub: "Un seul contact suffit : l’un des deux téléphones vient toucher l’autre.",
+    felt: "Contact détecté",
     ask: (n: string) => `Se connecter avec ${n} ?`,
     connect: "Se connecter",
-    refuse: "Refuser",
-    waiting: "En attente de confirmation…",
+    refuse: "Annuler",
+    waiting: "En attente de l’autre personne…",
     connected: "WIPP connecté",
     connectedSub: "Aucun numéro n’a été partagé.",
     already: "Vous êtes déjà connectés sur WIPP.",
     message: "Envoyer un message",
-    declined: "Connexion refusée",
+    declined: "Connexion annulée",
     expired: "Session expirée",
     timeout: "Personne détectée.",
     ambiguous: "Impossible d’identifier le bon WIPP.",
@@ -564,19 +569,24 @@ const TOUCH_COPY = {
   en: {
     title: "Bring your phones together",
     sub: "Connect without sharing your number.",
+    active: "WIPP Touch active",
+    ready: "Ready to detect a WIPP Touch",
+    waitingContact: "Waiting for a contact…",
+    verifying: "Checking proximity…",
+    found: "WIPP Touch detected",
     start: "Start",
     searching: "Looking for a WIPP nearby…",
-    searchingSub: "Gently tap the other phone, with WIPP open on both.",
-    felt: "Contact detected…",
+    searchingSub: "One contact is enough: one phone taps the other.",
+    felt: "Contact detected",
     ask: (n: string) => `Connect with ${n}?`,
     connect: "Connect",
-    refuse: "Decline",
-    waiting: "Waiting for confirmation…",
+    refuse: "Cancel",
+    waiting: "Waiting for the other person…",
     connected: "WIPP connected",
     connectedSub: "No phone number was shared.",
     already: "You’re already connected on WIPP.",
     message: "Send a message",
-    declined: "Connection declined",
+    declined: "Connection cancelled",
     expired: "Session expired",
     timeout: "Nobody detected.",
     ambiguous: "Couldn’t identify the right WIPP.",
@@ -665,6 +675,12 @@ export function WgoTouchScreen() {
             </View>
             <Text style={{ marginTop: 14, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>{name}</Text>
             <Text style={{ marginTop: 2, color: colors.accent, fontFamily: "Inter_500Medium" }}>{handle}</Text>
+            {!done ? (
+              <Text style={{ marginTop: 10, fontSize: 12, color: colors.muted, letterSpacing: 0.4 }}>
+                {c.found}
+                {touch.proximity === "near" ? ` · ${c.uwbNear}` : ""}
+              </Text>
+            ) : null}
             {done ? (
               <>
                 <Text style={{ marginTop: 22, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
@@ -684,12 +700,18 @@ export function WgoTouchScreen() {
           </View>
         ) : (
           <View style={{ alignItems: "center" }}>
-            <TouchStage mode="search" pulseKey={touch.bumps} />
-            <Text style={{ marginTop: 18, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>
-              {failText ?? c.title}
+            <TouchStage mode={ph === "verifying" ? "match" : "search"} pulseKey={touch.bumps} />
+            {searching || ph === "verifying" ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.12)" }}>
+                <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent }} />
+                <Text style={{ color: colors.accent, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{c.active}</Text>
+              </View>
+            ) : null}
+            <Text style={{ marginTop: 14, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>
+              {failText ?? (ph === "verifying" ? c.verifying : searching ? c.title : c.title)}
             </Text>
             <Text style={{ marginTop: 8, textAlign: "center", color: colors.muted, maxWidth: 300 }}>
-              {failText ? "" : searching ? (touch.bumps ? c.felt : c.searching) : c.sub}
+              {failText ? "" : ph === "verifying" ? c.felt : searching ? (touch.bumps ? c.felt : `${c.ready} · ${c.waitingContact}`) : c.sub}
             </Text>
             {searching && !touch.bumps ? <Text style={{ marginTop: 4, textAlign: "center", color: colors.muted, fontSize: 13, maxWidth: 300 }}>{c.searchingSub}</Text> : null}
           </View>
