@@ -37,7 +37,7 @@ type DutyPharmacy = {
   source: string;
 };
 
-type Tab = "open" | "duty" | "all";
+type Tab = "open" | "h24" | "duty" | "all";
 type Load =
   | { state: "locating" | "loading" }
   | { state: "denied" }
@@ -237,7 +237,9 @@ export function PharmaciesScreen() {
     [places, origin],
   );
   const openList = sorted.filter((p) => p.open24h || p.openNow === true);
-  const shown = tab === "open" ? openList : sorted;
+  // 24/7 comes from the published opening hours — it is NOT the official on-duty rota.
+  const h24List = sorted.filter((p) => p.open24h);
+  const shown = tab === "open" ? openList : tab === "h24" ? h24List : sorted;
   const ordered = picked ? [...shown.filter((p) => p.id === picked), ...shown.filter((p) => p.id !== picked)] : shown;
 
   return (
@@ -248,6 +250,7 @@ export function PharmaciesScreen() {
       <ScrollView ref={scroll} contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }}>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <Chip label="🟢 Ouvertes maintenant" active={tab === "open"} onPress={() => setTab("open")} />
+          <Chip label="🕐 Ouvertes 24 h/24" active={tab === "h24"} onPress={() => setTab("h24")} />
           <Chip label="🌙 De garde" active={tab === "duty"} onPress={() => setTab("duty")} />
           <Chip label="Toutes" active={tab === "all"} onPress={() => setTab("all")} />
         </View>
@@ -331,15 +334,19 @@ export function PharmaciesScreen() {
             ordered.map((p) => <PharmacyCard key={p.id} p={p} origin={fromGps ? origin : null} />)
           ) : (
             <View style={{ gap: 10, marginTop: 8 }}>
-              <Empty title={tab === "open" ? "Aucune pharmacie ouverte trouvée" : "Aucune pharmacie trouvée"} />
-              {tab === "open" && sorted.length ? <Btn label="Voir toutes les pharmacies proches" variant="secondary" onPress={() => setTab("all")} /> : null}
+              <Empty
+                title={tab === "open" ? "Aucune pharmacie ouverte trouvée" : tab === "h24" ? "Aucune pharmacie ouverte 24 h/24 trouvée" : "Aucune pharmacie trouvée"}
+                body={tab === "h24" ? "Selon les horaires publiés sur Google. Ce n’est pas la liste officielle des pharmacies de garde." : undefined}
+              />
+              {tab === "h24" && openList.length ? <Btn label="Voir les pharmacies ouvertes maintenant" onPress={() => setTab("open")} /> : null}
+              {(tab === "open" || tab === "h24") && sorted.length ? <Btn label="Voir toutes les pharmacies proches" variant="secondary" onPress={() => setTab("all")} /> : null}
             </View>
           )
         ) : null}
 
         {load.state === "ready" ? (
           <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", marginTop: 8 }}>
-            Horaires fournis par Google. « Ouverte » ne signifie pas « de garde ».
+            Horaires fournis par Google. « Ouverte » ou « 24 h/24 » ne signifie pas « de garde ».
           </Text>
         ) : null}
       </ScrollView>
