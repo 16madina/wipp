@@ -41,6 +41,22 @@ function withWippCallNative(config) {
     const main = AndroidConfig.Manifest.getMainActivityOrThrow(manifest);
     main.$["android:showWhenLocked"] = "true";
     main.$["android:turnScreenOn"] = "true";
+    // CallKeep: registerPhoneAccount() throws a SecurityException at startup without this service.
+    const app = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
+    app.service = (app.service || []).filter((s) => !String(s.$?.["android:name"]).startsWith("io.wazo.callkeep."));
+    app.service.push(
+      {
+        $: {
+          "android:name": "io.wazo.callkeep.VoiceConnectionService",
+          "android:label": "WIPP",
+          "android:permission": "android.permission.BIND_TELECOM_CONNECTION_SERVICE",
+          "android:foregroundServiceType": "camera|microphone",
+          "android:exported": "true"
+        },
+        "intent-filter": [{ action: [{ $: { "android:name": "android.telecom.ConnectionService" } }] }]
+      },
+      { $: { "android:name": "io.wazo.callkeep.RNCallKeepBackgroundMessagingService" } }
+    );
     return cfg;
   });
 
