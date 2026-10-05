@@ -305,8 +305,10 @@ export function SearchUserScreen() {
       void (async () => {
         try {
           const found = await searchPublicProfiles(needle);
+          const myId = useWippStore.getState().serverProfileId;
           const ids: string[] = [];
           for (const p of found) {
+            if (myId && p.id === myId) continue; // never list myself
             ids.push(upsertRemoteProfile(p, false));
           }
           setHits(ids.filter((id) => !blocked.includes(id)));
@@ -339,9 +341,9 @@ export function SearchUserScreen() {
           return (
             <Press key={id} onPress={() => push({ name: "found-profile", userId: id, via: "username" })} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16 }}>
               <Avatar user={u} size={48} />
-              <View>
-                <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
-                <Text style={{ color: colors.muted }}>@{u.username}</Text>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
+                <Text numberOfLines={1} style={{ color: colors.muted }}>@{u.username}</Text>
               </View>
             </Press>
           );
