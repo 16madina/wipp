@@ -213,14 +213,13 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
     { icon: Cross, title: t("hubServices"), sub: t("hubServicesSub"), kind: "utilities" as const, go: () => go("utilities") },
     { icon: Store, title: t("hubShops"), sub: t("hubShopsSub"), kind: "shops" as const, go: () => go("shops") },
     { icon: Calendar, title: t("hubEvents"), sub: t("hubEventsSub"), kind: "lifestyle" as const, go: () => go("lifestyle") },
-    { icon: Cross, title: "💊 Pharmacies", sub: "Ouvertes autour de toi, 24 h/24", kind: "utilities" as const, wide: true, go: () => push({ name: "pharmacies" }) },
   ];
   return (
     <View style={{ paddingHorizontal: 16 }}>
       <Text style={{ fontSize: 13, lineHeight: 18, color: colors.muted }}>{t("exploreSplit")}</Text>
       <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
         {hubs.map((h) => (
-          <Press key={h.title} onPress={h.go} style={{ width: "wide" in h && h.wide ? "100%" : "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
+          <Press key={h.title} onPress={h.go} style={{ width: "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
             <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
             <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
             <View style={{ zIndex: 1 }}>
@@ -399,6 +398,18 @@ function UtilitiesPane() {
   }, [serverConnected]);
   return (
     <View style={{ paddingHorizontal: 16 }}>
+      <Press
+        onPress={() => push({ name: "pharmacies" })}
+        accessibilityLabel="Pharmacies"
+        style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, marginBottom: 12 }}
+      >
+        <Text style={{ fontSize: 26 }}>💊</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold" }}>Pharmacies</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Ouvertes maintenant et 24 h/24 autour de toi</Text>
+        </View>
+        <Text style={{ color: colors.accent, fontSize: 20 }}>›</Text>
+      </Press>
       <PendingNote label="Services vérifiés uniquement. Aucune source externe branchée." />
       {serverConnected && services.length === 0 && shown.length === 0 ? <Empty title="Aucun service vérifié" /> : null}
       {services.map((p) => (
