@@ -130,12 +130,44 @@ export async function requestUpgrade(meId: string, peerId: string) {
   const row = await getConnection(meId, peerId);
   if (!row || !isActive(row)) throw new WippHttpError(409, "not_connected", "Cette connexion n’est plus active.");
   if (row.connection_type === "permanent") return { status: "already_permanent" as const };
+  // One pending request at a time (either side): no duplicate, no second notification.
+  if (row.upgrade_requested_by) {
+    return { status: row.upgrade_requested_by === meId ? ("already_requested" as const) : ("pending_from_peer" as const) };
+  }
   const sql = await getSql();
-  await sql`
+  const set = await sql`
     update wipp_connections set upgrade_requested_by = ${meId}, upgrade_requested_at = now(), updated_at = now()
-    where id = ${row.id}::uuid and status = 'active' and connection_type = 'ephemeral'
+    where id = ${row.id}::uuid and status = 'active' and connection_type = 'ephemeral' and upgrade_requested_by is null
+    returning id
   `;
+  if (!set.length) return { status: "already_requested" as const };
+  await notifyKeepContact(meId, peerId, row.id).catch((err) => console.warn("[wipp] keep-contact push", err));
   return { status: "requested" as const };
+}
+
+/** Push to the other person; tapping it opens the conversation where they accept / refuse. */
+async function notifyKeepContact(meId: string, peerId: string, connectionId: string) {
+  const sql = await getSql();
+  const me = await sql<{ username: string }>`select username from wipp_profiles where id = ${meId} limit 1`;
+  const chat = await sql<{ chat_id: string }>`
+    select m1.chat_id from wipp_chat_members m1
+    join wipp_chat_members m2 on m2.chat_id = m1.chat_id
+    join wipp_chats c on c.id = m1.chat_id
+    where m1.profile_id = ${meId} and m2.profile_id = ${peerId} and c.id like 'c\_%'
+    limit 1
+  `.catch(() => [] as { chat_id: string }[]);
+  const { sendProfilePush } = await import("@/lib/push/notify");
+  const chatId = chat[0]?.chat_id;
+  await sendProfilePush({
+    profileId: peerId,
+    title: `@${me[0]?.username ?? "WIPP"} souhaite garder votre contact`,
+    body: "Votre connexion éphémère expire bientôt.",
+    channelId: "requests",
+    // Opens the conversation (its banner holds Accepter / Refuser); without a chat, the requests screen.
+    data: chatId
+      ? { type: "message", eventId: `keep:${connectionId}:${Date.now()}`, chatId }
+      : { type: "request", eventId: `keep:${connectionId}:${Date.now()}` },
+  });
 }
 
 /** Only the OTHER person can accept: never a silent conversion. */

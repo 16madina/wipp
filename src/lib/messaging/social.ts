@@ -55,7 +55,11 @@ export async function sendConnectionRequest(meId: string, rawUsername: string, v
   const peer = peers[0];
   if (!peer) return { status: "not_found" as const };
   if (peer.id === meId) return { status: "invalid" as const };
-  if (await blockedEither(meId, peer.id)) return { status: "blocked" as const };
+  // Never confirm a block: same neutral answer as any refusal (the real reason stays server-side).
+  if (await blockedEither(meId, peer.id)) {
+    console.info("[wipp] connection request refused (block)");
+    return { status: "unavailable" as const };
+  }
   // An expired / ended ephemeral connection is NOT a contact: a new request is allowed.
   if (await isConnected(meId, peer.id)) return { status: "already_connected" as const };
   const pending = await sql<{ id: string; sender_id: string }>`
@@ -177,7 +181,7 @@ export async function respondConnectionRequest(meId: string, requestId: string, 
     `;
     return { status: action === "decline" ? ("declined" as const) : ("ignored" as const) };
   }
-  if (await blockedEither(meId, row.sender_id)) return { status: "blocked" as const };
+  if (await blockedEither(meId, row.sender_id)) return { status: "unavailable" as const };
   // The person who accepts chooses permanent or ephemeral (duration computed by the server).
   const { type, minutes } = parseChoice(choice);
   const updated = await sql`

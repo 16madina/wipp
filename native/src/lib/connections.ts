@@ -186,10 +186,16 @@ export function durationLabel(minutes: number) {
   return `${d} jour${d > 1 ? "s" : ""}${h ? ` ${h} h` : ""}`;
 }
 
-/** "expire dans 3 h" */
-export function remainingLabel(expiresAt: number) {
-  const m = Math.max(0, Math.round((expiresAt - Date.now()) / 60000));
-  return durationLabel(Math.max(1, m));
+/** "23 h 42 min", "2 j 4 h", "12 min" — computed from the SERVER's expires_at and the current time. */
+export function remainingLabel(expiresAt: number, now = Date.now()) {
+  const total = Math.max(0, Math.ceil((expiresAt - now) / 60000));
+  if (total < 1) return "moins d’une minute";
+  const d = Math.floor(total / 1440);
+  const h = Math.floor((total % 1440) / 60);
+  const m = total % 60;
+  if (d) return `${d} j${h ? ` ${h} h` : ""}`;
+  if (h) return `${h} h${m ? ` ${m} min` : ""}`;
+  return `${m} min`;
 }
 
 export async function blockProfile(profileId: string): Promise<boolean> {
@@ -270,6 +276,8 @@ export const STATUS_FR: Record<string, string> = {
   rate_limited: "Trop de demandes aujourd'hui, réessaie demain",
   paused: "Demandes en pause avec cette personne",
   invalid: "Demande impossible",
+  unavailable: "Impossible d’envoyer cette demande.",
+  blocked: "Impossible d’envoyer cette demande.",
   no_session: "Connecte-toi avec un vrai compte",
   error: "Une erreur est survenue",
   accepted: "Vous êtes connectés",
@@ -277,5 +285,4 @@ export const STATUS_FR: Record<string, string> = {
   ignored: "Demande ignorée",
   already_handled: "Demande déjà traitée",
   expired: "Demande expirée",
-  blocked: "Profil introuvable",
 };
