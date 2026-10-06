@@ -130,9 +130,9 @@ export async function authenticateLock(askPin: () => Promise<string | null>) {
   if (!hasCode) return false;
   lastWait = 0;
   if (bio) {
-    const r = await authenticateBiometric("Ouvrir la conversation verrouillée");
+    // Face ID first; if it fails, is cancelled or « Entrer mon code » is tapped, ask for the lock code.
+    const r = await authenticateBiometric("Ouvrir la conversation verrouillée", "Entrer mon code");
     if (r === "success") return true;
-    if (r === "cancel") return false;
   }
   const pin = await askPin();
   if (!pin) return false;
