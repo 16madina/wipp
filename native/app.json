@@ -13,9 +13,7 @@
       "color": "#FFD84D"
     },
     "splash": {
-      "image": "./assets/wipp/brand/wipp-official.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#02081e"
+      "backgroundColor": "#020a22"
     },
     "ios": {
       "supportsTablet": true,
