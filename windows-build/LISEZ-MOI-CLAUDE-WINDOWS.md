@@ -149,6 +149,27 @@ ou via le test fermé Play Console avec l'AAB versionCode 6).
 
 ---
 
+## À reprendre au prochain build Android (versionCode 7) — seulement quand l'utilisatrice le demande
+
+Fait côté iPhone le 2026-10-06, tout est sur `main`. Pour Android :
+
+- **Refaire le prebuild Android** (`npx expo prebuild -p android`) : `app.json` a changé
+  (écran de lancement sans logo, couleur `#020a22` ; sons dans le plugin `expo-notifications`).
+- **Sons officiels WIPP** : `native/assets/sounds/`
+  - `wipp_ring.caf` (sonnerie d'appel) et `wipp_message.caf` (messages / notifications) sont au format **iPhone**.
+    Android ne lit pas le `.caf` : créer `wipp_ring.mp3` / `wipp_message.mp3` à partir de
+    `wipp-ring.mp3` et `wipp-sms-original.mp3` (même dossier), les ajouter à la liste `sounds` du plugin,
+    puis donner ce son au canal de notification `messages` et au canal `incoming_calls`.
+  - Côté serveur, le son des notifications Android (`src/lib/push/native.ts`, FCM) est encore `default`.
+- **Groupes** : création en 4 étapes, autorisations, éphémères, grille, Signaler et quitter, « Lu par »,
+  sondages, événements avec photo — code commun, rien de spécifique à Android à faire.
+- **Conversations verrouillées par code** : utilise `expo-secure-store` et `expo-local-authentication`
+  (déjà installés) ; vérifier que l'empreinte / le code du téléphone s'ouvrent bien sur le Samsung.
+- **Appel manqué** : sur iPhone, c'est le code natif (`withWippVoip`) qui affiche « Appel manqué ».
+  Sur Android, il faudra l'ajouter (notification quand l'appel plein écran s'arrête sans réponse).
+
+---
+
 ## Rapport à donner à l'utilisatrice
 
 1. Commit récupéré (`git log --oneline -1`)
