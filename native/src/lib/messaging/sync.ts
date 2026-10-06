@@ -383,6 +383,8 @@ export function mergeServerChatsIntoState(
         id: localId,
         type: "group",
         name: sc.groupName || sc.peer.displayName,
+        avatar: sc.groupAvatar ?? undefined,
+        description: sc.groupDescription ?? undefined,
         participantIds: memberIds,
         adminIds: (sc.adminIds ?? []).map((id) => (meServerId && id === meServerId ? "me" : `srvuser:${id}`)),
         preview: sc.preview || prev?.preview || "",

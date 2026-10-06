@@ -118,13 +118,13 @@ export async function listChats(): Promise<WippChatSummary[]> {
   const disappear = new Map(
     ((metas ?? []) as { id: string; disappear_after_ms?: number | null }[]).map((c) => [c.id, c.disappear_after_ms ?? null]),
   );
-  const groupBy = new Map<string, { name: string; owner_id: string }>();
+  const groupBy = new Map<string, { name: string; owner_id: string; avatar_url?: string | null; description?: string | null }>();
   const adminBy = new Map<string, string[]>();
   const membersBy = new Map<string, WippProfile[]>();
-  const { data: groupRows, error: groupErr } = await db.from("wipp_groups").select("chat_id,name,owner_id").in("chat_id", ids);
+  const { data: groupRows, error: groupErr } = await db.from("wipp_groups").select("chat_id,name,owner_id,avatar_url,description").in("chat_id", ids);
   if (!groupErr && groupRows?.length) {
-    for (const g of groupRows as { chat_id: string; name: string; owner_id: string }[]) {
-      groupBy.set(g.chat_id, { name: g.name, owner_id: g.owner_id });
+    for (const g of groupRows as { chat_id: string; name: string; owner_id: string; avatar_url: string | null; description: string | null }[]) {
+      groupBy.set(g.chat_id, { name: g.name, owner_id: g.owner_id, avatar_url: g.avatar_url, description: g.description });
     }
     const gids = [...groupBy.keys()];
     const { data: adminRows } = await db.from("wipp_group_admins").select("chat_id,profile_id").in("chat_id", gids);
@@ -174,6 +174,8 @@ export async function listChats(): Promise<WippChatSummary[]> {
         id: r.chat_id!,
         kind: "group",
         groupName: group.name,
+        groupAvatar: group.avatar_url ?? null,
+        groupDescription: group.description ?? null,
         ownerId: group.owner_id,
         memberIds: members.map((m) => m.id),
         adminIds: [...admins],

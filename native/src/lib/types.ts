@@ -153,6 +153,7 @@ export type ScreenName =
   | "intro-detail"
   | "group-qr"
   | "group-info"
+  | "group-add"
   | "group-invite"
   | "qr-profile"
   | "qr-group"
@@ -226,6 +227,7 @@ export type Screen =
   | { name: "intro-detail"; introId: string }
   | { name: "group-qr"; chatId: string }
   | { name: "group-info"; chatId: string }
+  | { name: "group-add"; chatId: string }
   | { name: "group-invite"; token: string }
   | { name: "qr-profile"; key: string }
   | { name: "qr-group"; key: string }

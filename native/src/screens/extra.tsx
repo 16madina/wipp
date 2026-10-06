@@ -21,6 +21,7 @@ import { stickerById } from "../lib/stickers";
 import { useT, useWippStore } from "../lib/store";
 import { colors, fgA, palettes, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { shareWippPublic } from "../lib/share-public";
 
 export { NewStoryScreen } from "./story-composer";
 
@@ -602,36 +603,194 @@ export function GroupInfoFull({ chatId }: { chatId: string }) {
   );
 }
 
-export function GroupQrScreen({ chatId }: { chatId: string }) {
+/** Admins: add WIPP contacts to a group (the next message creates a new group key for them). */
+export function GroupAddMembersScreen({ chatId }: { chatId: string }) {
   const pop = useWippStore((s) => s.pop);
+  const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
-  const [token, setToken] = useState(chat?.inviteToken ?? "");
-  useEffect(() => {
-    if (token || !chatId.startsWith("srv:")) return;
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    let raw = "";
-    for (const b of bytes) raw += String.fromCharCode(b);
-    const next = btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-    void import("../lib/lot7/api").then(async ({ createGroupInvite }) => {
-      const status = await createGroupInvite(chatId.slice(4), next);
-      if (status === "ok") {
-        setToken(next);
-        useWippStore.setState((s) => ({
-          chats: s.chats.map((c) => (c.id === chatId ? { ...c, inviteToken: next } : c)),
-        }));
+  const users = useWippStore((s) => s.users);
+  const [q, setQ] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const members = new Set(chat?.participantIds ?? []);
+  const contacts = Object.values(users)
+    .filter((u) => u.connected && u.id.startsWith("srvuser:") && !members.has(u.id))
+    .filter((u) => {
+      const n = q.trim().toLowerCase();
+      return !n || u.displayName.toLowerCase().includes(n) || u.username.toLowerCase().includes(n);
+    })
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  async function add() {
+    if (!picked.length || busy) return;
+    setBusy(true);
+    const { addGroupMember } = await import("../lib/lot7/api");
+    const problems: string[] = [];
+    for (const id of picked) {
+      try {
+        const r = await addGroupMember(chatId.slice(4), id);
+        const name = users[id]?.displayName ?? "Un contact";
+        if (r === "not_contact") problems.push(`${name} n’est pas (ou plus) dans tes contacts.`);
+        else if (r === "banned") problems.push(`${name} a été exclu de ce groupe.`);
+      } catch (err) {
+        problems.push(String((err as Error)?.message ?? "").includes("forbidden") ? "Seuls les admins peuvent ajouter des membres." : "Un ajout a échoué.");
+        break;
       }
-    }).catch(() => {});
-  }, [chatId, token]);
-  const value = `https://wippapp.com/g/${token || chat?.inviteToken || ""}`;
+    }
+    await useWippStore.getState().syncServerInbox();
+    setBusy(false);
+    if (problems.length) Alert.alert("Ajouter des membres", problems.join("\n"));
+    pop();
+  }
+
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="QR groupe" onBack={pop} />
+        <Header title="Ajouter des membres" onBack={pop} />
       </GlassHeader>
-      <View style={{ alignItems: "center", padding: 24 }}>
-        <QrCard value={value} size={220} />
-        <Text style={{ marginTop: 12, color: colors.muted }}>{chat?.name}</Text>
+      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder="Rechercher un contact"
+          placeholderTextColor={colors.muted}
+          style={{ height: 44, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14 }}
+        />
       </View>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 4 }}>
+        <Press onPress={() => push({ name: "group-qr", chatId })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }}>
+            <Users size={20} color={colors.accent} />
+          </View>
+          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>Inviter via un lien ou un QR</Text>
+        </Press>
+        {contacts.length === 0 ? (
+          <Text style={{ marginTop: 16, color: colors.muted, textAlign: "center" }}>
+            {q ? "Aucun contact trouvé." : "Tous tes contacts WIPP sont déjà dans ce groupe, ou tu n’as pas encore de contacts."}
+          </Text>
+        ) : (
+          contacts.map((u) => {
+            const on = picked.includes(u.id);
+            return (
+              <Press
+                key={u.id}
+                onPress={() => setPicked((p) => (on ? p.filter((x) => x !== u.id) : [...p, u.id]))}
+                style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
+              >
+                <Avatar user={u} size={44} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
+                  <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13 }}>@{u.username}</Text>
+                </View>
+                <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: on ? colors.accent : colors.hair, backgroundColor: on ? colors.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
+                  {on ? <Check size={14} color={colors.accentFg} /> : null}
+                </View>
+              </Press>
+            );
+          })
+        )}
+      </ScrollView>
+      {picked.length ? (
+        <View style={{ position: "absolute", left: 16, right: 16, bottom: 28 }}>
+          <Btn label={busy ? "Ajout…" : `Ajouter ${picked.length} membre${picked.length > 1 ? "s" : ""}`} disabled={busy} onPress={() => void add()} />
+        </View>
+      ) : null}
+    </ScreenRoot>
+  );
+}
+
+function newInviteToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let raw = "";
+  for (const b of bytes) raw += String.fromCharCode(b);
+  return btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+/** Invitation link of a group: QR, copy, share, and (admins) reset so old links stop working. */
+export function GroupQrScreen({ chatId }: { chatId: string }) {
+  const pop = useWippStore((s) => s.pop);
+  const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
+  const isAdmin = (chat?.adminIds ?? []).includes("me");
+  const [token, setToken] = useState(chat?.inviteToken ?? "");
+  const [state, setState] = useState<"ready" | "loading" | "forbidden" | "closed" | "error">(token ? "ready" : "loading");
+  const [copied, setCopied] = useState(false);
+
+  async function create(reset: boolean) {
+    if (!chatId.startsWith("srv:")) return;
+    setState("loading");
+    try {
+      const api = await import("../lib/lot7/api");
+      if (reset) await api.resetGroupInvites(chatId);
+      const next = newInviteToken();
+      const status = await api.createGroupInvite(chatId.slice(4), next);
+      if (status !== "ok") {
+        setState(status === "closed" ? "closed" : "error");
+        return;
+      }
+      setToken(next);
+      setState("ready");
+      setCopied(false);
+      useWippStore.setState((s) => ({ chats: s.chats.map((c) => (c.id === chatId ? { ...c, inviteToken: next } : c)) }));
+    } catch (err) {
+      setState(String((err as Error)?.message ?? "").includes("forbidden") ? "forbidden" : "error");
+    }
+  }
+
+  useEffect(() => {
+    if (!token) void create(false);
+  }, [chatId]);
+
+  const link = token ? `https://wippapp.com/g/${token}` : "";
+  return (
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title="Lien d’invitation" onBack={pop} />
+      </GlassHeader>
+      <ScrollView contentContainerStyle={{ alignItems: "center", padding: 24, paddingBottom: 40 }}>
+        <Text style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{chat?.name}</Text>
+        {state === "ready" && link ? (
+          <>
+            <View style={{ marginTop: 16 }}>
+              <QrCard value={link} size={220} />
+            </View>
+            <Text selectable style={{ marginTop: 12, fontSize: 13, color: colors.muted, textAlign: "center" }}>{link.replace(/^https:\/\//, "").slice(0, 34)}…</Text>
+            <Text style={{ marginTop: 8, fontSize: 12, color: colors.muted, textAlign: "center", maxWidth: 300 }}>
+              Toute personne qui a ce lien peut rejoindre le groupe (valable 7 jours, 50 utilisations).
+            </Text>
+            <View style={{ width: "100%", gap: 8, marginTop: 20 }}>
+              <Btn
+                label={copied ? "Lien copié ✓" : "Copier le lien"}
+                onPress={() => {
+                  void import("expo-clipboard").then((C) => C.setStringAsync(link)).then(() => setCopied(true));
+                }}
+              />
+              <Btn label="Partager le lien" variant="secondary" onPress={() => void shareWippPublic(`Rejoins « ${chat?.name ?? "notre groupe"} » sur WIPP : ${link}`)} />
+              {isAdmin ? (
+                <Btn
+                  label="Réinitialiser le lien"
+                  variant="danger"
+                  onPress={() =>
+                    Alert.alert("Réinitialiser le lien", "L’ancien lien et l’ancien QR ne fonctionneront plus.", [
+                      { text: "Annuler", style: "cancel" },
+                      { text: "Réinitialiser", style: "destructive", onPress: () => void create(true) },
+                    ])
+                  }
+                />
+              ) : null}
+            </View>
+          </>
+        ) : (
+          <Text style={{ marginTop: 24, color: state === "loading" ? colors.muted : colors.danger, textAlign: "center", maxWidth: 300 }}>
+            {state === "loading"
+              ? "Création du lien…"
+              : state === "forbidden"
+                ? "Seuls les admins du groupe peuvent créer un lien d’invitation."
+                : state === "closed"
+                  ? "Les invitations par lien sont désactivées pour ce groupe."
+                  : "Lien indisponible pour le moment."}
+          </Text>
+        )}
+      </ScrollView>
     </ScreenRoot>
   );
 }

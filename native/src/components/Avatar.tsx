@@ -10,7 +10,7 @@ const signedAvatar = new Map<string, string>();
 
 function useAvatarSource(path?: string) {
   const direct = wippSrc(path);
-  const storage = Boolean(path && !direct && /^(business|listings|profiles|shops|events)\//.test(path));
+  const storage = Boolean(path && !direct && /^(business|listings|profiles|shops|events|groups)\//.test(path));
   const [uri, setUri] = useState<string | null>(path && signedAvatar.get(path) ? signedAvatar.get(path)! : null);
   const [unresolved, setUnresolved] = useState(false);
   useEffect(() => {
@@ -24,7 +24,8 @@ function useAvatarSource(path?: string) {
     let live = true;
     setUnresolved(false);
     void import("../lib/lot7/api")
-      .then(({ signPublicMedia }) => signPublicMedia(path))
+      // Group photos live in the private bucket (members only): signed URL; the others are public.
+      .then(({ signPublicMedia, signPrivateMedia }) => (path.startsWith("groups/") ? signPrivateMedia(path) : signPublicMedia(path)))
       .then((url) => {
         signedAvatar.set(path, url);
         if (live) setUri(url);
@@ -96,7 +97,7 @@ export function GroupAvatar({
   fallback?: string;
 }) {
   const src = wippSrc(fallback);
-  if (src) return <Avatar user={{ displayName: "G", avatar: fallback }} size={size} />;
+  if (src || fallback?.startsWith("groups/")) return <Avatar user={{ displayName: "G", avatar: fallback }} size={size} />;
   const shown = users.filter(Boolean).slice(0, 2) as User[];
   // Same outer size as a person's avatar: one full circle, plus a small second face as a badge.
   const badge = Math.round(size * 0.42);

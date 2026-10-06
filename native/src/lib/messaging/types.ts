@@ -37,6 +37,8 @@ export type WippChatSummary = {
   peer: WippProfile;
   kind?: "dm" | "group";
   groupName?: string;
+  groupAvatar?: string | null;
+  groupDescription?: string | null;
   memberIds?: string[];
   adminIds?: string[];
   ownerId?: string;

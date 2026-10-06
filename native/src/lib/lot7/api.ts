@@ -84,6 +84,28 @@ export async function postGroupMessage(input: {
   return id;
 }
 
+/** Admins: change the group name / description / photo (null = unchanged, "" photo = remove). */
+export async function updateGroupInfo(chatId: string, info: { name?: string | null; description?: string | null; avatar?: string | null }) {
+  return rpc<string>("wipp_lot7_update_info", {
+    p_chat: chatId.replace(/^srv:/, ""),
+    p_name: info.name ?? null,
+    p_description: info.description ?? null,
+    p_avatar: info.avatar ?? null,
+  });
+}
+
+/** Uploads a new group photo into the group's private folder (members only) and returns its path. */
+export async function uploadGroupPhoto(chatId: string, uri: string, mime = "image/jpeg") {
+  const raw = chatId.replace(/^srv:/, "");
+  const path = `groups/${raw}/avatar-${Date.now().toString(36)}.jpg`;
+  return uploadPrivateMediaFile(path, uri, mime);
+}
+
+/** Admins: every previous invitation link / QR stops working. */
+export async function resetGroupInvites(chatId: string) {
+  return rpc<string>("wipp_lot7_reset_invites", { p_chat: chatId.replace(/^srv:/, "") });
+}
+
 export async function createGroupInvite(chatId: string, token: string) {
   return rpc<string>("wipp_lot7_invite", { p_chat: chatId, p_token: token });
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
   BadgeCheck,
   Ban,
@@ -7,7 +7,10 @@ import {
   Check,
   ChevronRight,
   Flag,
+  Link2,
+  LogOut,
   Palette,
+  Pencil,
   Phone,
   Pin,
   Share2,
@@ -750,6 +753,12 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const [sheet, setSheet] = useState<"theme" | "disappear" | null>(null);
   const [viewer, setViewer] = useState<{ items: MediaItem[]; start: number } | null>(null);
   const shops = useWippStore((s) => s.shops);
+  const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
+  const isAdmin = Boolean(group && (chat?.adminIds ?? []).includes("me"));
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [busy, setBusy] = useState(false);
   const [fresh, setFresh] = useState<{ motto?: string; bio?: string } | null>(null);
   const [card, setCard] = useState<BusinessCardView | null>(null);
 
@@ -790,6 +799,109 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const docs = (messages ?? []).filter((m) => m.type === "file" && !m.deletedForAll).length;
 
   if (!chat) return null;
+  const refresh = () => useWippStore.getState().syncServerInbox();
+
+  async function saveGroupInfo() {
+    if (!editName.trim() || busy) return;
+    setBusy(true);
+    try {
+      const { updateGroupInfo } = await import("../lib/lot7/api");
+      await updateGroupInfo(chatId, { name: editName.trim(), description: editDesc });
+      await refresh();
+      setEditOpen(false);
+    } catch {
+      Alert.alert("Groupe", "Modification impossible pour le moment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeGroupPhoto(remove = false) {
+    try {
+      const api = await import("../lib/lot7/api");
+      if (remove) {
+        await api.updateGroupInfo(chatId, { avatar: "" });
+      } else {
+        const ImagePicker = await import("expo-image-picker");
+        const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+        const asset = picked.canceled ? null : picked.assets?.[0];
+        if (!asset?.uri) return;
+        const path = await api.uploadGroupPhoto(chatId, asset.uri, asset.mimeType || "image/jpeg");
+        await api.updateGroupInfo(chatId, { avatar: path });
+      }
+      await refresh();
+    } catch {
+      Alert.alert("Photo du groupe", "Impossible de changer la photo pour le moment.");
+    }
+  }
+
+  function groupPhotoMenu() {
+    Alert.alert("Photo du groupe", undefined, [
+      { text: "Choisir une photo", onPress: () => void changeGroupPhoto(false) },
+      ...(chat?.avatar ? [{ text: "Supprimer la photo", style: "destructive" as const, onPress: () => void changeGroupPhoto(true) }] : []),
+      { text: "Annuler", style: "cancel" as const },
+    ]);
+  }
+
+  function memberMenu(id: string) {
+    const u = users[id];
+    if (!u || !chat) return;
+    const memberIsAdmin = (chat.adminIds ?? []).includes(id);
+    const raw = chat.id.slice(4);
+    Alert.alert(u.displayName, `@${u.username}`, [
+      { text: "Voir le profil", onPress: () => push({ name: "found-profile", userId: id }) },
+      ...(u.connected ? [{ text: "Envoyer un message", onPress: () => openOrCreateDm(id) }] : []),
+      ...(isAdmin
+        ? [
+            {
+              text: memberIsAdmin ? "Retirer des admins" : "Nommer admin",
+              onPress: () =>
+                void import("../lib/lot7/api")
+                  .then(({ setGroupAdmin }) => setGroupAdmin(raw, id, !memberIsAdmin))
+                  .then(refresh)
+                  .catch(() => Alert.alert("Groupe", "Action impossible.")),
+            },
+            {
+              text: "Retirer du groupe",
+              style: "destructive" as const,
+              onPress: () =>
+                Alert.alert("Retirer du groupe", `Retirer ${u.displayName} du groupe ?`, [
+                  { text: "Annuler", style: "cancel" },
+                  {
+                    text: "Retirer",
+                    style: "destructive",
+                    onPress: () =>
+                      void import("../lib/lot7/api")
+                        .then(({ removeGroupMember }) => removeGroupMember(raw, id))
+                        .then((r) => (r === "is_owner" ? Alert.alert("Groupe", "Le créateur du groupe ne peut pas être retiré.") : refresh()))
+                        .catch(() => Alert.alert("Groupe", "Action impossible.")),
+                  },
+                ]),
+            },
+          ]
+        : []),
+      { text: "Annuler", style: "cancel" as const },
+    ]);
+  }
+
+  function leaveGroup() {
+    Alert.alert("Quitter le groupe", `Quitter « ${chat?.name ?? "ce groupe"} » ? Tu ne recevras plus ses messages.`, [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Quitter",
+        style: "destructive",
+        onPress: () =>
+          void import("../lib/lot7/api")
+            .then(({ leaveServerGroup }) => leaveServerGroup(chatId.slice(4)))
+            .then(() => {
+              useWippStore.setState((s) => ({ chats: s.chats.filter((c) => c.id !== chatId) }));
+              useWippStore.getState().goTab("chats");
+            })
+            .catch(() => Alert.alert("Groupe", "Impossible de quitter le groupe pour le moment.")),
+      },
+    ]);
+  }
+
   const title = chat.name ?? peer?.displayName ?? "";
   const profile = peer ? { ...peer, motto: fresh?.motto || peer.motto, bio: fresh?.bio || peer.bio } : undefined;
   const firstName = peer?.firstName || peer?.displayName.split(" ")[0] || (peer ? `@${peer.username}` : "");
@@ -812,9 +924,10 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           <View style={{ borderRadius: 16, backgroundColor: colors.navy, padding: 14, overflow: "hidden" }}>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Press
-                disabled={group || !profile?.avatar}
-                accessibilityLabel="Voir la photo"
+                disabled={group ? !isAdmin : !profile?.avatar}
+                accessibilityLabel={group ? "Photo du groupe" : "Voir la photo"}
                 onPress={() => {
+                  if (group) return groupPhotoMenu();
                   const src = profile?.avatar ? wippSrc(profile.avatar) : undefined;
                   if (src && typeof src === "object" && "uri" in src && src.uri) setViewer({ items: [{ type: "image", url: src.uri }], start: 0 });
                 }}
@@ -854,6 +967,20 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               </View>
             ) : null}
             {!group && profile?.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: fgA(0.8) }}>{profile.bio}</Text> : null}
+            {group && chat.description ? <Text style={{ marginTop: 10, fontSize: 13, lineHeight: 18, color: fgA(0.85) }}>{chat.description}</Text> : null}
+            {isAdmin ? (
+              <Press
+                onPress={() => {
+                  setEditName(chat.name ?? "");
+                  setEditDesc(chat.description ?? "");
+                  setEditOpen(true);
+                }}
+                style={{ alignSelf: "flex-start", marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Pencil size={13} color={colors.accent} />
+                <Text style={{ fontSize: 13, color: colors.accent }}>{chat.description ? "Modifier le groupe" : "Modifier le nom · Ajouter une description"}</Text>
+              </Press>
+            ) : null}
             <View style={{ marginTop: 12, flexDirection: "row", gap: 6 }}>
               <Press onPress={() => call("audio")} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <Phone size={14} color={colors.paper} />
@@ -934,8 +1061,48 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             label="Chiffrement de bout en bout"
             onPress={() => push({ name: "e2e-info", chatId })}
           />
-          {group ? <Row icon={<Users size={18} color={colors.fg} />} label="Membres et réglages du groupe" onPress={() => push({ name: "group-info", chatId })} /> : null}
         </View>
+
+        {group ? (
+          <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
+            <Text style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, fontSize: 13, color: colors.muted }}>
+              {chat.participantIds.length} membre{chat.participantIds.length > 1 ? "s" : ""}
+            </Text>
+            {isAdmin ? <Row icon={<UserPlus size={18} color={colors.accent} />} label="Ajouter des membres" onPress={() => push({ name: "group-add", chatId })} /> : null}
+            <Row icon={<Link2 size={18} color={colors.accent} />} label="Inviter via un lien ou un QR" onPress={() => push({ name: "group-qr", chatId })} />
+            {[...chat.participantIds]
+              .sort((a, b) => (a === "me" ? -1 : b === "me" ? 1 : Number((chat.adminIds ?? []).includes(b)) - Number((chat.adminIds ?? []).includes(a))))
+              .map((id) => {
+                const u = id === "me" ? useWippStore.getState().me : users[id];
+                const admin = (chat.adminIds ?? []).includes(id);
+                return (
+                  <Press
+                    key={id}
+                    disabled={id === "me"}
+                    onPress={() => memberMenu(id)}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.hair }}
+                  >
+                    <Avatar user={u} size={40} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15 }}>{id === "me" ? "Toi" : u?.displayName}</Text>
+                      {u?.username ? <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{u.username}</Text> : null}
+                    </View>
+                    {admin ? (
+                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.accentSoft }}>
+                        <Text style={{ fontSize: 11, color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Admin</Text>
+                      </View>
+                    ) : null}
+                  </Press>
+                );
+              })}
+          </View>
+        ) : null}
+
+        {group ? (
+          <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
+            <Row icon={<LogOut size={18} color={colors.danger} />} label="Quitter le groupe" danger onPress={leaveGroup} />
+          </View>
+        ) : null}
 
         {!group && conn ? (
           <Text style={{ marginHorizontal: 16, marginTop: 10, fontSize: 12, color: colors.muted }}>
@@ -1019,6 +1186,28 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             </Press>
           );
         })}
+      </Sheet>
+
+      <Sheet open={editOpen} title="Modifier le groupe" onClose={() => setEditOpen(false)}>
+        <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 6 }}>Nom du groupe</Text>
+        <TextInput
+          value={editName}
+          onChangeText={(v) => setEditName(v.slice(0, 80))}
+          placeholder="Nom du groupe"
+          placeholderTextColor={colors.muted}
+          style={{ height: 46, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14, fontSize: 15 }}
+        />
+        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 14, marginBottom: 6 }}>Description (facultative)</Text>
+        <TextInput
+          value={editDesc}
+          onChangeText={(v) => setEditDesc(v.slice(0, 500))}
+          placeholder="Règles, sujet du groupe…"
+          placeholderTextColor={colors.muted}
+          multiline
+          style={{ minHeight: 90, maxHeight: 180, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14, paddingTop: 12, fontSize: 15, textAlignVertical: "top" }}
+        />
+        <Text style={{ alignSelf: "flex-end", marginTop: 4, fontSize: 11, color: colors.muted }}>{editDesc.length}/500</Text>
+        <Btn label={busy ? "Enregistrement…" : "Enregistrer"} disabled={busy || !editName.trim()} onPress={() => void saveGroupInfo()} style={{ marginTop: 12 }} />
       </Sheet>
 
       {viewer ? <MediaViewer items={viewer.items} start={viewer.start} onClose={() => setViewer(null)} /> : null}

@@ -72,6 +72,7 @@ import {
   SecurityScreen,
 } from "./me";
 import {
+  GroupAddMembersScreen,
   GroupInfoFull,
   GroupInviteScreen,
   GroupQrScreen,
@@ -231,7 +232,10 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "group-qr":
       return <GroupQrScreen chatId={screen.chatId} />;
     case "group-info":
-      return <GroupInfoFull chatId={screen.chatId} />;
+      // The complete group screen is "Infos du groupe" (chat-info).
+      return <ChatInfoScreen chatId={screen.chatId} />;
+    case "group-add":
+      return <GroupAddMembersScreen chatId={screen.chatId} />;
     case "group-invite":
       return <GroupInviteScreen token={screen.token} />;
     case "wgo-touch":
