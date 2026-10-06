@@ -146,7 +146,7 @@ export async function sendApnsAlert(
   const jwt = await apnsAuth();
   if (!jwt || !tokens.length) return { sent: 0, invalid: [] as string[] };
   const payload = JSON.stringify({
-    aps: { alert: { title: msg.title, body: msg.body }, sound: msg.sound === false ? undefined : "default", "mutable-content": 1 },
+    aps: { alert: { title: msg.title, body: msg.body }, sound: msg.sound === false ? undefined : "wipp_message.caf", "mutable-content": 1 },
     body: msg.data,
     ...msg.data,
     ...(msg.wenc ? { wenc: msg.wenc } : {}),

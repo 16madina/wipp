@@ -32,6 +32,8 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
       ios: {
         appName: "WIPP",
         imageName: "CallKitLogo",
+        // Official WIPP ringtone (bundled CAF, < 30 s), also used when a VoIP push wakes the app.
+        ringtoneSound: "wipp_ring.caf",
         supportsVideo: true,
         maximumCallGroups: "1",
         maximumCallsPerCallGroup: "1",

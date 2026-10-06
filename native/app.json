@@ -238,7 +238,8 @@
           "icon": "./assets/brand/notification-icon.png",
           "color": "#FFD84D",
           "defaultChannel": "messages",
-          "enableBackgroundRemoteNotifications": true
+          "enableBackgroundRemoteNotifications": true,
+          "sounds": ["./assets/sounds/wipp_ring.caf", "./assets/sounds/wipp_message.caf"]
         }
       ],
       [
