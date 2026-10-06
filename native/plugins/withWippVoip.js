@@ -41,11 +41,27 @@ function patchAppDelegate(src) {
 
   /** Caller shown on the ringing screen, kept to name the "missed call" notice (the cancel push has no name). */
   static var callerNames: [String: String] = [:]
+  /** Ringing calls whose « Appel manqué » notice is scheduled: expiry time and whether the caller hung up. */
+  static var missedPending: [String: (expiry: TimeInterval, cancelled: Bool)] = [:]
+  static let callObserver = CXCallObserver()
+  static let callWatcher = CallWatcher()
 
-  /** « Appel manqué » on the lock screen, posted by the phone itself (works even if the server is late). */
-  static func notifyMissedCall(uuid: String, video: Bool) {
-    let key = uuid.lowercased()
-    let name = callerNames.removeValue(forKey: key) ?? ""
+  /** Answered → cancel the notice. Declined by me before the end → cancel it too (that is not "missed"). */
+  final class CallWatcher: NSObject, CXCallObserverDelegate {
+    func callObserver(_ callObserver: CXCallObserver, callChanged call: CXCall) {
+      let key = call.uuid.uuidString.lowercased()
+      guard let pending = AppDelegate.missedPending[key] else { return }
+      if call.hasConnected {
+        AppDelegate.cancelMissedCall(key)
+      } else if call.hasEnded {
+        let declinedByMe = !pending.cancelled && Date().timeIntervalSince1970 < pending.expiry - 3
+        if declinedByMe { AppDelegate.cancelMissedCall(key) } else { AppDelegate.missedPending.removeValue(forKey: key) }
+      }
+    }
+  }
+
+  static func missedContent(_ key: String, video: Bool) -> UNMutableNotificationContent {
+    let name = callerNames[key] ?? ""
     let content = UNMutableNotificationContent()
     content.title = "Appel manqué"
     content.body = name.isEmpty || name == "WIPP"
@@ -53,8 +69,31 @@ function patchAppDelegate(src) {
       : "\\(name) · \\(video ? "appel vidéo" : "appel audio")"
     content.sound = UNNotificationSound(named: UNNotificationSoundName("wipp_message.caf"))
     content.userInfo = ["type": "missed-call", "screen": "calls"]
-    let request = UNNotificationRequest(identifier: "missed-\\(key)", content: content, trigger: nil)
-    UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    return content
+  }
+
+  /** Scheduled when the call starts ringing: iOS shows it at expiry even if WIPP is suspended or closed. */
+  static func scheduleMissedCall(uuid: String, video: Bool, at expiry: TimeInterval) {
+    let key = uuid.lowercased()
+    if callObserver.delegate == nil { callObserver.setDelegate(callWatcher, queue: nil) }
+    missedPending[key] = (expiry, false)
+    let wait = max(1, expiry - Date().timeIntervalSince1970 + 1)
+    let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "missed-\\(key)", content: missedContent(key, video: video), trigger: trigger), withCompletionHandler: nil)
+  }
+
+  /** The caller hung up before I answered: show « Appel manqué » now (replaces the scheduled one). */
+  static func notifyMissedCall(uuid: String, video: Bool) {
+    let key = uuid.lowercased()
+    missedPending[key] = (missedPending[key]?.expiry ?? 0, true)
+    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["missed-\\(key)"])
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "missed-\\(key)", content: missedContent(key, video: video), trigger: nil), withCompletionHandler: nil)
+  }
+
+  static func cancelMissedCall(_ key: String) {
+    missedPending.removeValue(forKey: key)
+    callerNames.removeValue(forKey: key)
+    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["missed-\\(key)"])
   }
 
   public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
@@ -62,27 +101,27 @@ function patchAppDelegate(src) {
     let uuid = (data["uuid"] as? String) ?? UUID().uuidString
     let caller = (data["callerName"] as? String) ?? "WIPP"
     let video = (data["kind"] as? String) == "video"
-    // Was this call still ringing here (not answered)? Then a cancel / expiry means "missed call".
-    let stillRinging = CXCallObserver().calls.contains { $0.uuid.uuidString.lowercased() == uuid.lowercased() && !$0.hasConnected && !$0.hasEnded }
-    if (data["action"] as? String) == "ring" { AppDelegate.callerNames[uuid.lowercased()] = caller }
+    let action = (data["action"] as? String) ?? "ring"
+    let key = uuid.lowercased()
+    if action == "ring" { AppDelegate.callerNames[key] = caller }
     RNVoipPushNotificationManager.didReceiveIncomingPush(with: payload, forType: type.rawValue)
     RNCallKeep.reportNewIncomingCall(uuid, handle: "wipp", handleType: "generic", hasVideo: video, localizedCallerName: caller, supportsHolding: false, supportsDTMF: false, supportsGrouping: false, supportsUngrouping: false, fromPushKit: true, payload: data, withCompletionHandler: completion)
-    // The caller hung up / call answered elsewhere: iOS still requires the report above, then we end it at once.
-    if let action = data["action"] as? String, action != "ring" {
+    if action != "ring" {
+      // Caller hung up / nobody answered: iOS still requires the report above, then we end it at once.
+      if action == "cancel" && AppDelegate.missedPending[key] != nil { AppDelegate.notifyMissedCall(uuid: uuid, video: video) }
       // reason 3 = unanswered (nobody picked up), 2 = remote ended (caller hung up).
       RNCallKeep.endCall(withUUID: uuid, reason: (data["reason"] as? String) == "unanswered" ? 3 : 2)
-      if stillRinging && action == "cancel" { AppDelegate.notifyMissedCall(uuid: uuid, video: video) }
     } else {
-      // Safety net: if no "cancel" arrives (network lost, caller's phone off), stop ringing by itself
-      // when the invitation expires on the server (60 s), unless the call was answered meanwhile.
       let now = Date().timeIntervalSince1970
       let expiresAt = (Double((data["expiresAt"] as? String) ?? "") ?? (now * 1000 + 60_000)) / 1000
+      AppDelegate.scheduleMissedCall(uuid: uuid, video: video, at: expiresAt)
+      // Safety net: if no "cancel" arrives (network lost, caller's phone off), stop ringing by itself
+      // when the invitation expires on the server (60 s), unless the call was answered meanwhile.
       let delay = max(5, min(90, expiresAt - now + 2))
       DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-        let ringing = CXCallObserver().calls.first { $0.uuid.uuidString.lowercased() == uuid.lowercased() }
+        let ringing = AppDelegate.callObserver.calls.first { $0.uuid.uuidString.lowercased() == key }
         if let call = ringing, !call.hasConnected, !call.hasEnded {
           RNCallKeep.endCall(withUUID: uuid, reason: 3)
-          AppDelegate.notifyMissedCall(uuid: uuid, video: video)
         }
       }
     }
