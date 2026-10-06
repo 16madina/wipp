@@ -156,7 +156,7 @@ export async function playIncomingRing() {
   if (gen !== token) return;
   try {
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true, staysActiveInBackground: false });
-    const created = await Audio.Sound.createAsync(require("../../../assets/sounds/wipp-original.mp3"), { shouldPlay: true, isLooping: true, volume: 1 });
+    const created = await Audio.Sound.createAsync(require("../../../assets/sounds/wipp-ring.mp3"), { shouldPlay: true, isLooping: true, volume: 1 });
     if (gen !== token) {
       await created.sound.unloadAsync();
       return;
