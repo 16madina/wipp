@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
-import { Check, Clock, Delete, Eye, MoreHorizontal, Smile, Users } from "lucide-react-native";
+import { Camera, Check, Clock, Delete, Eye, MoreHorizontal, Smile, Users } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { WippSticker } from "../components/WippSticker";
 import { QrCard } from "../components/QrCard";
@@ -526,31 +526,115 @@ function StoryPlayback({ uri, paused, onEnd, onProgress }: { uri: string; paused
 export function NewGroupFlow() {
   const pop = useWippStore((s) => s.pop);
   const usersById = useWippStore((s) => s.users);
-  const users = Object.values(usersById).filter((u) => u?.connected);
   const [picked, setPicked] = useState<string[]>([]);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [photo, setPhoto] = useState<{ uri: string; mime?: string } | null>(null);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const users = Object.values(usersById)
+    .filter((u) => u?.connected)
+    .filter((u) => {
+      const n = q.trim().toLowerCase();
+      return !n || u.displayName.toLowerCase().includes(n) || u.username.toLowerCase().includes(n);
+    })
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  async function pickPhoto() {
+    try {
+      const ImagePicker = await import("expo-image-picker");
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      const asset = res.canceled ? null : res.assets?.[0];
+      if (asset?.uri) setPhoto({ uri: asset.uri, mime: asset.mimeType ?? undefined });
+    } catch {
+      Alert.alert("Photo du groupe", "Impossible d’ouvrir tes photos.");
+    }
+  }
+
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="Nouveau groupe" onBack={pop} />
       </GlassHeader>
-      <View style={{ padding: 16 }}>
-        <TextInput value={name} onChangeText={setName} placeholder="Nom du groupe" placeholderTextColor={colors.muted} returnKeyType="done" blurOnSubmit onSubmitEditing={() => Keyboard.dismiss()} style={{ height: 48, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }} />
-      </View>
-      <ScrollView>
-        {users.map((u) => {
-          const on = picked.includes(u.id);
-          return (
-            <Press key={u.id} onPress={() => setPicked((p) => (on ? p.filter((x) => x !== u.id) : [...p, u.id]))} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
-              <Avatar user={u} size={44} />
-              <Text style={{ flex: 1, color: colors.fg }}>{u.displayName}</Text>
-              {on ? <Check size={18} color={colors.accent} /> : null}
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+        <View style={{ padding: 16, gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <Press
+              accessibilityLabel={photo ? "Changer la photo du groupe" : "Ajouter une photo de groupe"}
+              onPress={() =>
+                photo
+                  ? Alert.alert("Photo du groupe", undefined, [
+                      { text: "Changer la photo", onPress: () => void pickPhoto() },
+                      { text: "Retirer la photo", style: "destructive", onPress: () => setPhoto(null) },
+                      { text: "Annuler", style: "cancel" },
+                    ])
+                  : void pickPhoto()
+              }
+              style={{ width: 72, height: 72, borderRadius: 36, overflow: "hidden", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
+            >
+              {photo ? <Image source={{ uri: photo.uri }} style={{ width: 72, height: 72 }} contentFit="cover" /> : <Camera size={26} color={colors.accent} />}
             </Press>
-          );
-        })}
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={name}
+                onChangeText={(v) => setName(v.slice(0, 80))}
+                placeholder="Nom du groupe"
+                placeholderTextColor={colors.muted}
+                returnKeyType="next"
+                style={{ height: 48, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12, fontSize: 16 }}
+              />
+              <Text style={{ marginTop: 4, fontSize: 11, color: colors.muted }}>{photo ? "Touche la photo pour la changer" : "Touche l’appareil photo pour ajouter une photo"}</Text>
+            </View>
+          </View>
+          <TextInput
+            value={description}
+            onChangeText={(v) => setDescription(v.slice(0, 500))}
+            placeholder="Description (facultative) : sujet, règles du groupe…"
+            placeholderTextColor={colors.muted}
+            multiline
+            style={{ minHeight: 70, maxHeight: 140, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12, paddingTop: 12, fontSize: 15, textAlignVertical: "top" }}
+          />
+          <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4 }}>
+            Membres {picked.length ? `· ${picked.length} sélectionné${picked.length > 1 ? "s" : ""}` : ""}
+          </Text>
+          <TextInput
+            value={q}
+            onChangeText={setQ}
+            placeholder="Rechercher un contact"
+            placeholderTextColor={colors.muted}
+            style={{ height: 42, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }}
+          />
+        </View>
+        {users.length === 0 ? (
+          <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{q ? "Aucun contact trouvé." : "Ajoute d’abord des contacts WIPP pour créer un groupe."}</Text>
+        ) : (
+          users.map((u) => {
+            const on = picked.includes(u.id);
+            return (
+              <Press key={u.id} onPress={() => setPicked((p) => (on ? p.filter((x) => x !== u.id) : [...p, u.id]))} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
+                <Avatar user={u} size={44} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15 }}>{u.displayName}</Text>
+                  <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{u.username}</Text>
+                </View>
+                <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: on ? colors.accent : colors.hair, backgroundColor: on ? colors.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
+                  {on ? <Check size={14} color={colors.accentFg} /> : null}
+                </View>
+              </Press>
+            );
+          })
+        )}
       </ScrollView>
-      <View style={{ padding: 16 }}>
-        <Btn label="Créer" onPress={() => useWippStore.getState().createGroup(name, picked)} />
+      <View style={{ position: "absolute", left: 16, right: 16, bottom: 28 }}>
+        <Btn
+          label={busy ? "Création…" : "Créer le groupe"}
+          disabled={busy || !name.trim()}
+          onPress={() => {
+            setBusy(true);
+            useWippStore.getState().createGroup(name, picked, { description, photoUri: photo?.uri, photoMime: photo?.mime });
+            setTimeout(() => setBusy(false), 4000);
+          }}
+        />
       </View>
     </ScreenRoot>
   );

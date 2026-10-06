@@ -85,12 +85,18 @@ export async function postGroupMessage(input: {
 }
 
 /** Admins: change the group name / description / photo (null = unchanged, "" photo = remove). */
-export async function updateGroupInfo(chatId: string, info: { name?: string | null; description?: string | null; avatar?: string | null }) {
+export async function updateGroupInfo(
+  chatId: string,
+  info: { name?: string | null; description?: string | null; avatar?: string | null },
+  opts?: { quiet?: boolean },
+) {
   return rpc<string>("wipp_lot7_update_info", {
     p_chat: chatId.replace(/^srv:/, ""),
     p_name: info.name ?? null,
     p_description: info.description ?? null,
     p_avatar: info.avatar ?? null,
+    // Setup right after creation: no "photo changed" system message (the server limits it to new groups).
+    p_quiet: Boolean(opts?.quiet),
   });
 }
 

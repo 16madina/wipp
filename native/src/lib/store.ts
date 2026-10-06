@@ -241,7 +241,7 @@ type Store = {
   blockUser: (userId: string) => void;
   refreshIncomingRequests: () => Promise<void>;
   viewStory: (userId: string) => void;
-  createGroup: (name: string, participantIds: string[]) => void;
+  createGroup: (name: string, participantIds: string[], extra?: { description?: string; photoUri?: string; photoMime?: string }) => void;
   ensureMyCode: () => LiveCode;
   regenerateMyCode: () => LiveCode;
   ensurePeerCode: (userId: string) => LiveCode;
@@ -1584,12 +1584,24 @@ export const useWippStore = create<Store>((set, get) => ({
   },
   viewStory: (userId) =>
     set((s) => ({ viewedStories: { ...s.viewedStories, [userId]: Date.now() } })),
-  createGroup: (name, participantIds) => {
+  createGroup: (name, participantIds, extra) => {
     const trimmed = name.trim();
     if (!trimmed || !get().serverConnected) return;
     void (async () => {
-      const { createServerGroup } = await import("./lot7/api");
+      const { createServerGroup, updateGroupInfo, uploadGroupPhoto } = await import("./lot7/api");
       const id = await createServerGroup(trimmed, participantIds);
+      // Photo + description chosen on the "Nouveau groupe" screen, saved right after creation.
+      const description = extra?.description?.trim();
+      if (description || extra?.photoUri) {
+        try {
+          const avatar = extra?.photoUri ? await uploadGroupPhoto(id, extra.photoUri, extra.photoMime || "image/jpeg") : null;
+          await updateGroupInfo(id, { description: description || null, avatar }, { quiet: true });
+        } catch (err) {
+          console.warn("[wipp] group photo/description failed", err);
+          const { Alert } = await import("react-native");
+          Alert.alert("Groupe", "Le groupe est créé, mais la photo ou la description n’a pas pu être enregistrée. Tu peux la remettre dans Infos du groupe.");
+        }
+      }
       await get().syncServerInbox();
       const localId = id.startsWith("srv:") ? id : `srv:${id}`;
       // Back from the new group returns to the chat list, not to "Nouveau groupe".
