@@ -11,7 +11,7 @@ const MARK = "// WIPP-VOIP";
 
 function patchAppDelegate(src) {
   if (src.includes(MARK)) return src;
-  src = src.replace("import Expo\n", `import Expo\nimport PushKit ${MARK}\n`);
+  src = src.replace("import Expo\n", `import Expo\nimport PushKit ${MARK}\nimport CallKit ${MARK}\n`);
   src = src.replace(
     "public class AppDelegate: ExpoAppDelegate {",
     "public class AppDelegate: ExpoAppDelegate, PKPushRegistryDelegate {",
@@ -38,7 +38,20 @@ function patchAppDelegate(src) {
     RNCallKeep.reportNewIncomingCall(uuid, handle: "wipp", handleType: "generic", hasVideo: video, localizedCallerName: caller, supportsHolding: false, supportsDTMF: false, supportsGrouping: false, supportsUngrouping: false, fromPushKit: true, payload: data, withCompletionHandler: completion)
     // The caller hung up / call answered elsewhere: iOS still requires the report above, then we end it at once.
     if let action = data["action"] as? String, action != "ring" {
-      RNCallKeep.endCall(withUUID: uuid, reason: 2)
+      // reason 3 = unanswered (nobody picked up), 2 = remote ended (caller hung up).
+      RNCallKeep.endCall(withUUID: uuid, reason: (data["reason"] as? String) == "unanswered" ? 3 : 2)
+    } else {
+      // Safety net: if no "cancel" arrives (network lost, caller's phone off), stop ringing by itself
+      // when the invitation expires on the server (60 s), unless the call was answered meanwhile.
+      let now = Date().timeIntervalSince1970
+      let expiresAt = (Double((data["expiresAt"] as? String) ?? "") ?? (now * 1000 + 60_000)) / 1000
+      let delay = max(5, min(90, expiresAt - now + 2))
+      DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        let ringing = CXCallObserver().calls.first { $0.uuid.uuidString.lowercased() == uuid.lowercased() }
+        if let call = ringing, !call.hasConnected, !call.hasEnded {
+          RNCallKeep.endCall(withUUID: uuid, reason: 3)
+        }
+      }
     }
   }`,
   );

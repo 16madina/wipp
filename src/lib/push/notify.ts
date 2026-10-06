@@ -177,8 +177,8 @@ export async function notifyChatMessage(input: {
   const peers = await sql<{ profile_id: string }>`
     select profile_id from wipp_chat_members where chat_id = ${input.chatId} and profile_id <> ${input.senderId}
   `;
-  const me = await sql<{ display_name: string }>`
-    select display_name from wipp_profiles where id = ${input.senderId} limit 1
+  const me = await sql<{ display_name: string; username: string }>`
+    select display_name, username from wipp_profiles where id = ${input.senderId} limit 1
   `;
   const biz = await loadBusinessMeta(input.chatId);
   let groupName: string | null = null;
@@ -213,10 +213,12 @@ export async function notifyChatMessage(input: {
       continue;
     }
     if (groupName) {
+      // Who wrote, never the content: the "Aperçu des messages" choice lives on the phone only.
+      const who = me[0]?.username ? `@${me[0].username}` : me[0]?.display_name || "Quelqu’un";
       await sendProfilePush({
         profileId: peer.profile_id,
         title: groupName.slice(0, 64) || "Groupe",
-        body: "Nouveau message",
+        body: `${who} : Nouveau message`,
         channelId: "messages",
         data: {
           type: "message",

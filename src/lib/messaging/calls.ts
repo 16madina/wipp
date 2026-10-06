@@ -78,21 +78,33 @@ function epoch(value: unknown) {
 
 async function expireRinging(scope?: { callId?: string; profileId?: string }) {
   const sql = await getSql();
+  let missed: { id: string; callee_id: string; kind: string }[] = [];
   if (scope?.callId) {
-    await sql`
+    missed = await sql<{ id: string; callee_id: string; kind: string }>`
       update wipp_call_invites
       set status = 'missed'
       where id = ${scope.callId} and status = 'ringing' and expires_at < now()
+      returning id, callee_id, kind
     `;
-    return;
-  }
-  if (scope?.profileId) {
-    await sql`
+  } else if (scope?.profileId) {
+    missed = await sql<{ id: string; callee_id: string; kind: string }>`
       update wipp_call_invites
       set status = 'missed'
       where status = 'ringing' and expires_at < now()
         and (caller_id = ${scope.profileId} or callee_id = ${scope.profileId})
+      returning id, callee_id, kind
     `;
+  }
+  // Nobody answered: stop the phone that is still ringing (CallKit on iPhone, full-screen call on Android).
+  for (const row of missed) {
+    await pushCall(row.callee_id, "Appel manqué", {
+      type: "call",
+      eventId: row.id,
+      inviteId: row.id,
+      kind: row.kind === "video" ? "video" : "audio",
+      action: "cancel",
+      reason: "unanswered",
+    }).catch(() => undefined);
   }
 }
 
@@ -419,6 +431,8 @@ export async function createCallInvite(input: {
     kind,
     callerName: `@${dto.caller.username}`,
     action: "ring",
+    // The phone ends the ringing screen by itself at this time if no "cancel" arrives (network lost…).
+    expiresAt: dto.expiresAt,
   }).catch((err) => console.warn("[wipp-call] push", err));
 
   return dto;
