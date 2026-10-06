@@ -5,6 +5,7 @@
  * Keychain / Keystore, jamais de code en clair, rien côté serveur à part « notification générique ».
  */
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import { authenticateBiometric } from "./private-vault";
 import { createVerifier, lockRemaining, nextLock, verifierMatches, type LockState, type PinVerifier } from "./private-crypto";
 
@@ -34,11 +35,17 @@ export function subscribeChatLock(fn: () => void) {
   };
 }
 
+// Web preview only (no Keychain in a browser): sessionStorage so the flow can be tried on the Mac.
+const web = Platform.OS === "web";
+const webStore = () => (globalThis as { sessionStorage?: Storage }).sessionStorage;
+
 async function put(key: string, value: string) {
+  if (web) return void webStore()?.setItem(key, value);
   await SecureStore.setItemAsync(key, value, STORE);
 }
 async function read(key: string) {
   try {
+    if (web) return webStore()?.getItem(key) ?? null;
     return await SecureStore.getItemAsync(key, STORE);
   } catch {
     return null;
@@ -46,6 +53,7 @@ async function read(key: string) {
 }
 async function drop(key: string) {
   try {
+    if (web) return void webStore()?.removeItem(key);
     await SecureStore.deleteItemAsync(key, STORE);
   } catch {
     /* missing */

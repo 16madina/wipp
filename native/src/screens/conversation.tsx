@@ -186,7 +186,10 @@ function StoryCiteCard({
 /** A locked conversation (Confidentialité › Code de verrouillage) asks for the code before anything is shown. */
 export function ConversationScreen({ chatId }: { chatId: string }) {
   useWippStore((s) => s.vaultEpoch);
-  const title = useWippStore((s) => s.chats.find((c) => c.id === chatId)?.name) ?? "";
+  const title = useWippStore((s) => {
+    const c = s.chats.find((x) => x.id === chatId);
+    return c ? (c.type === "group" ? c.name : chatPeer(c, s.users)?.displayName) : undefined;
+  }) ?? "";
   const pop = useWippStore((s) => s.pop);
   useEffect(() => () => relockChat(chatId), [chatId]);
   if (isChatLocked(chatId) && !isChatUnlocked(chatId)) return <ChatLockGate chatId={chatId} title={title} onBack={pop} />;

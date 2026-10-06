@@ -174,10 +174,12 @@ export function toggleChatLock(chatId: string, askPin: () => Promise<string | nu
 /** Shown instead of a locked conversation until the code (or biometrics) is given. */
 export function ChatLockGate({ chatId, title, onBack }: { chatId: string; title: string; onBack: () => void }) {
   const { askPin, gate } = useLockPinAsk();
+  const [error, setError] = useState("");
   const open = () => {
+    setError("");
     void authenticateLock(askPin).then((ok) => {
       if (ok) markChatUnlocked(chatId);
-      else if (lastLockWaitMs() > 0) Alert.alert("Code de verrouillage", waitText());
+      else if (lastLockWaitMs() > 0) setError(waitText());
     });
   };
   useEffect(() => {
@@ -195,6 +197,7 @@ export function ChatLockGate({ chatId, title, onBack }: { chatId: string; title:
         </View>
         <Text style={{ marginTop: 16, color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>Conversation verrouillée</Text>
         <Text style={{ marginTop: 6, color: colors.muted, fontSize: 13, textAlign: "center" }}>Entre ton code de verrouillage pour l’ouvrir.</Text>
+        {error ? <Text style={{ marginTop: 12, color: colors.danger, fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
         <View style={{ marginTop: 20, alignSelf: "stretch" }}>
           <Btn label="Déverrouiller" onPress={open} />
         </View>
