@@ -280,6 +280,7 @@ function mapMessage(r: any, me: string): WippMessage {
     pinnedBy: r.pinned_by,
     deliveredAt: ms(delivered),
     readAt: ms(read),
+    receipts: others.map((x) => ({ profileId: x.profile_id, deliveredAt: ms(x.delivered_at), readAt: ms(x.read_at) })),
     reactions: (r.wipp_reactions ?? []).map((x: any) => ({
       profileId: x.profile_id,
       emoji: x.emoji,

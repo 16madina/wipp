@@ -366,6 +366,8 @@ export type Message = {
   createdAt: number;
   status: "sending" | "sent" | "delivered" | "read" | "failed";
   reactions: { userId: string; emoji: string }[];
+  /** My own server messages: who received / read it (other members), for « Lu par » in groups. */
+  seen?: { userId: string; deliveredAt?: number; readAt?: number }[];
   duration?: number;
   /** Local or remote audio blob URL for voice notes. */
   audioUrl?: string;

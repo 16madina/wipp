@@ -27,6 +27,7 @@ import { MediaViewer } from "../components/MediaViewer";
 import { myBubbleColors, useChatThemes } from "../lib/chat-themes";
 import { MessageMenu } from "../components/MessageMenu";
 import { ReceiptTicks } from "../components/ReceiptTicks";
+import { ReadByFaces, groupStatus } from "../components/ReadBy";
 import { ShareSurpriseSheet } from "../components/ShareSurpriseSheet";
 import { StickerTray } from "../components/StickerTray";
 import { SurpriseReveal } from "../components/SurpriseReveal";
@@ -192,6 +193,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
   const users = useWippStore((s) => s.users);
+  const receiptsOn = useWippStore((s) => s.privacy.readReceipts !== false);
   const rawMessages = useWippStore((s) => s.messages[chatId]) ?? NO_MESSAGES;
   const now = Date.now();
   const messages = rawMessages.filter((m) => !m.expiresAt || m.expiresAt > now);
@@ -773,8 +775,9 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         </SwipeableBubble>
         {/* Status sits under the bubble, on the right, outside the message itself. */}
         {mine ? (
-          <View style={{ alignSelf: "flex-end", marginTop: 2, marginRight: 2 }}>
-            <ReceiptTicks status={m.status} />
+          <View style={{ alignSelf: "flex-end", marginTop: 2, marginRight: 2, flexDirection: "row", alignItems: "center" }}>
+            {chat?.type === "group" && receiptsOn ? <ReadByFaces m={m} users={users} memberIds={chat.participantIds} /> : null}
+            <ReceiptTicks status={chat?.type === "group" ? groupStatus(m, chat.participantIds.filter((id) => id !== "me").length) : m.status} />
           </View>
         ) : null}
         {(m.reactions ?? []).length ? (

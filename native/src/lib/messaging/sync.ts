@@ -253,6 +253,7 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
           : undefined,
       createdAt: m.createdAt,
       status: receiptStatus(m, Boolean(fromMe)),
+      seen: seenOf(m, Boolean(fromMe)),
       reactions: (m.reactions ?? []).map((r) => ({
         userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
         emoji: r.emoji,
@@ -296,6 +297,7 @@ function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): M
     encFailed: parsed.kind === "e2e" && !m.deletedAt,
     createdAt: m.createdAt,
     status: receiptStatus(m, Boolean(fromMe)),
+      seen: seenOf(m, Boolean(fromMe)),
     reactions: (m.reactions ?? []).map((r) => ({
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
@@ -324,6 +326,7 @@ function messageMeta(m: WippMessage, meServerId: string | undefined) {
   const fromMe = Boolean(meServerId && m.senderId === meServerId);
   return {
     status: receiptStatus(m, fromMe),
+    seen: seenOf(m, fromMe),
     reactions: (m.reactions ?? []).map((r) => ({
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
@@ -333,6 +336,11 @@ function messageMeta(m: WippMessage, meServerId: string | undefined) {
     pinned: Boolean(m.pinnedAt),
     type: m.deletedAt ? ("system" as const) : ("text" as const),
   };
+}
+
+function seenOf(m: WippMessage, fromMe: boolean): Message["seen"] {
+  if (!fromMe || !m.receipts) return undefined;
+  return m.receipts.map((r) => ({ userId: `srvuser:${r.profileId}`, deliveredAt: r.deliveredAt ?? undefined, readAt: r.readAt ?? undefined }));
 }
 
 function receiptStatus(m: WippMessage, fromMe: boolean): Message["status"] {

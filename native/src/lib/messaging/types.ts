@@ -77,6 +77,8 @@ export type WippMessage = {
   pinnedBy?: string | null;
   deliveredAt?: number | null;
   readAt?: number | null;
+  /** Per-member receipts (other members only), for « Lu par » in groups. */
+  receipts?: { profileId: string; deliveredAt?: number | null; readAt?: number | null }[];
   reactions?: WippReaction[];
   mentions?: string[];
   systemEvent?: string | null;
