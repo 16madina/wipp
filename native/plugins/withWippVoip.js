@@ -52,13 +52,23 @@ function patchAppDelegate(src) {
     func callObserver(_ callObserver: CXCallObserver, callChanged call: CXCall) {
       let key = call.uuid.uuidString.lowercased()
       guard let pending = AppDelegate.missedPending[key] else { return }
+      _ = pending
       if call.hasConnected {
+        AppDelegate.callLog("connected \\(key.prefix(8)) → notice cancelled")
         AppDelegate.cancelMissedCall(key)
       } else if call.hasEnded {
-        let declinedByMe = !pending.cancelled && Date().timeIntervalSince1970 < pending.expiry - 3
-        if declinedByMe { AppDelegate.cancelMissedCall(key) } else { AppDelegate.missedPending.removeValue(forKey: key) }
+        // Only a real answer cancels it: if the ringing stops early for any reason, the notice still shows.
+        AppDelegate.callLog("ended without answer \\(key.prefix(8)) → notice kept")
+        AppDelegate.missedPending.removeValue(forKey: key)
       }
     }
+  }
+
+  /** Small trail of call events (last 30), readable from the Mac over the cable to debug missed calls. */
+  static func callLog(_ line: String) {
+    var log = UserDefaults.standard.stringArray(forKey: "wippCallLog") ?? []
+    log.append("\\(Date()) \\(line)")
+    UserDefaults.standard.set(Array(log.suffix(30)), forKey: "wippCallLog")
   }
 
   static func missedContent(_ key: String, video: Bool) -> UNMutableNotificationContent {
@@ -80,7 +90,12 @@ function patchAppDelegate(src) {
     missedPending[key] = (expiry, false)
     let wait = max(1, expiry - Date().timeIntervalSince1970 + 1)
     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
-    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "missed-\\(key)", content: missedContent(key, video: video), trigger: trigger), withCompletionHandler: nil)
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "missed-\\(key)", content: missedContent(key, video: video), trigger: trigger)) { error in
+      AppDelegate.callLog("scheduled \\(key.prefix(8)) in \\(Int(wait))s error=\\(error?.localizedDescription ?? "none")")
+    }
+    UNUserNotificationCenter.current().getNotificationSettings { settings in
+      AppDelegate.callLog("notif auth=\\(settings.authorizationStatus.rawValue) lock=\\(settings.lockScreenSetting.rawValue) alert=\\(settings.alertSetting.rawValue)")
+    }
   }
 
   /** The caller hung up before I answered: show « Appel manqué » now (replaces the scheduled one). */
@@ -104,6 +119,7 @@ function patchAppDelegate(src) {
     let video = (data["kind"] as? String) == "video"
     let action = (data["action"] as? String) ?? "ring"
     let key = uuid.lowercased()
+    AppDelegate.callLog("voip push action=\\(action) \\(key.prefix(8))")
     if action == "ring" { AppDelegate.callerNames[key] = caller }
     RNVoipPushNotificationManager.didReceiveIncomingPush(with: payload, forType: type.rawValue)
     RNCallKeep.reportNewIncomingCall(uuid, handle: "wipp", handleType: "generic", hasVideo: video, localizedCallerName: caller, supportsHolding: false, supportsDTMF: false, supportsGrouping: false, supportsUngrouping: false, fromPushKit: true, payload: data, withCompletionHandler: completion)
