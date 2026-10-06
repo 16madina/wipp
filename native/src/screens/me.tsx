@@ -57,6 +57,8 @@ import {
   type CardInput,
 } from "../lib/business-card";
 import { usePrivatePinAsk } from "../components/PrivatePinGate";
+import { ChatLockSettings } from "../components/ChatLock";
+import { hasLockCode } from "../lib/chat-lock";
 import {
   authenticateBiometric,
   biometricAvailable,
@@ -507,7 +509,7 @@ export function PrivacyScreen() {
   const push = useWippStore((s) => s.push);
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   const { askPin, gate } = usePrivatePinAsk();
-  const [pane, setPane] = useState<"home" | "prive" | "create" | "confirm">("home");
+  const [pane, setPane] = useState<"home" | "prive" | "create" | "confirm" | "lock">("home");
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState("");
   const [bioOn, setBioOn] = useState(isBiometricPreferred());
@@ -562,6 +564,8 @@ export function PrivacyScreen() {
       Alert.alert("WIPP Privé", "Le code doit contenir au moins 4 caractères.");
     }
   }
+
+  if (pane === "lock") return <ChatLockSettings onBack={() => setPane("home")} />;
 
   if (pane === "create" || pane === "confirm") {
     return (
@@ -691,6 +695,7 @@ export function PrivacyScreen() {
       <ScrollView>
         <Section title="">
           <Row label={t("nearbyVis")} onPress={() => push({ name: "nearby" })} />
+          <Row label="Code de verrouillage" value={hasLockCode() ? "Activé" : "Désactivé"} onPress={() => setPane("lock")} />
           <Row label="WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
           <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>

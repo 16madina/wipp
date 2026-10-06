@@ -7,12 +7,14 @@ export function PrivatePinGate({
   visible,
   title = "Code WIPP Privé",
   hint = "Ce code est distinct du code PIN du téléphone.",
+  numeric,
   onCancel,
   onSubmit,
 }: {
   visible: boolean;
   title?: string;
   hint?: string;
+  numeric?: boolean;
   onCancel: () => void;
   onSubmit: (pin: string) => void;
 }) {
@@ -28,6 +30,7 @@ export function PrivatePinGate({
             onChangeText={setPin}
             secureTextEntry
             autoFocus
+            keyboardType={numeric ? "number-pad" : "default"}
             autoCapitalize="none"
             placeholder="••••"
             placeholderTextColor={colors.muted}
@@ -67,7 +70,7 @@ export function PrivatePinGate({
   );
 }
 
-export function usePrivatePinAsk() {
+export function usePrivatePinAsk(opts?: { title?: string; hint?: string; numeric?: boolean }) {
   const [open, setOpen] = useState(false);
   const wait = useRef<((v: string | null) => void) | null>(null);
   function askPin() {
@@ -79,6 +82,9 @@ export function usePrivatePinAsk() {
   const gate = (
     <PrivatePinGate
       visible={open}
+      title={opts?.title}
+      hint={opts?.hint}
+      numeric={opts?.numeric}
       onCancel={() => {
         wait.current?.(null);
         wait.current = null;

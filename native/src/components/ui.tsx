@@ -434,7 +434,7 @@ export function Field({
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
-  keyboardType?: "default" | "phone-pad" | "url" | "email-address";
+  keyboardType?: "default" | "phone-pad" | "number-pad" | "url" | "email-address";
   autoCapitalize?: "none" | "sentences" | "words";
   secureTextEntry?: boolean;
 }) {

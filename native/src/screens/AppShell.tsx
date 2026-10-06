@@ -348,6 +348,7 @@ export function AppShell() {
       });
     })();
     void hydratePrivateVault();
+    void import("../lib/chat-lock").then(({ hydrateChatLock }) => hydrateChatLock());
     // Keep the encrypted inbox snapshot fresh as messages arrive (debounced in the store).
     const offSnapshot = useWippStore.subscribe((st, prev) => {
       if (st.serverConnected && (st.messages !== prev.messages || st.chats !== prev.chats)) {
@@ -392,6 +393,9 @@ export function AppShell() {
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active") {
         void useWippStore.getState().syncServerInbox();
+      } else if (st === "background") {
+        // Locked conversations ask for the code again after the app was left.
+        void import("../lib/chat-lock").then(({ relockAllChats }) => relockAllChats());
       }
     });
     // Contacts' new profile photos and names show up within ~2 minutes while WIPP is open.

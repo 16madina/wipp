@@ -23,6 +23,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { GroupSafetyBanner } from "../components/GroupSafety";
+import { ChatLockGate } from "../components/ChatLock";
+import { isChatLocked, isChatUnlocked, relockChat } from "../lib/chat-lock";
 import { MediaViewer } from "../components/MediaViewer";
 import { myBubbleColors, useChatThemes } from "../lib/chat-themes";
 import { MessageMenu } from "../components/MessageMenu";
@@ -181,7 +183,17 @@ function StoryCiteCard({
   );
 }
 
+/** A locked conversation (Confidentialité › Code de verrouillage) asks for the code before anything is shown. */
 export function ConversationScreen({ chatId }: { chatId: string }) {
+  useWippStore((s) => s.vaultEpoch);
+  const title = useWippStore((s) => s.chats.find((c) => c.id === chatId)?.name) ?? "";
+  const pop = useWippStore((s) => s.pop);
+  useEffect(() => () => relockChat(chatId), [chatId]);
+  if (isChatLocked(chatId) && !isChatUnlocked(chatId)) return <ChatLockGate chatId={chatId} title={title} onBack={pop} />;
+  return <ConversationInner chatId={chatId} />;
+}
+
+function ConversationInner({ chatId }: { chatId: string }) {
   const t = useT();
   // Colour of my bubbles chosen for this conversation (contact info → Thème de la discussion).
   const mb = myBubbleColors(useChatThemes((s) => s.themes[chatId]));
@@ -754,7 +766,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
               {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.type !== "shop" && m.text ? (
                 <Text style={{ color: mine ? mb.fg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} linkColor={onMe ? mb.accent : undefined} />}</Text>
               ) : null}
-              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted) }}>🔒 Message chiffré</Text> : null}
+              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted) }}>Message chiffré</Text> : null}
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
@@ -825,7 +837,6 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                         <Text style={{ fontSize: 10, color: colors.accent, fontFamily: "Inter_500Medium" }}>Professionnel</Text>
                       </View>
                     ) : null}
-                    {!sealed ? <Lock size={12} color={colors.muted} /> : null}
                   </View>
                   {subtitle ? (
                     <Text numberOfLines={1} style={{ fontSize: 11, color: typing ? colors.accent : colors.muted }}>
@@ -869,13 +880,11 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
       {!sealed && chat?.type !== "group" ? (
         // Small centered pill (like WhatsApp): the details are one tap away.
         <Press onPress={() => push({ name: "e2e-info", chatId })} accessibilityLabel={t("e2eBanner")} style={{ alignSelf: "center", marginTop: 6, marginBottom: 2, borderRadius: 999, backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <Lock size={10} color={colors.accent} />
           <Text style={{ fontSize: 10.5, color: colors.muted }}>{t("e2eBannerShort")}</Text>
         </Press>
       ) : null}
       {!sealed && chat?.type === "group" ? (
         <Press onPress={() => push({ name: "e2e-info", chatId })} accessibilityLabel={t("e2eBanner")} style={{ alignSelf: "center", marginTop: 6, marginBottom: 2, borderRadius: 999, backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <Lock size={10} color={colors.accent} />
           <Text style={{ fontSize: 10.5, color: colors.muted }}>{t("e2eBannerShort")}</Text>
         </Press>
       ) : null}

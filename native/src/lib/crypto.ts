@@ -232,7 +232,7 @@ export function parseMessageBody(body: string): { kind: "e2e"; envelope: E2eEnve
   return { kind: "plain", text: body };
 }
 
-export function previewFromBody(body: string, lockedLabel = "🔒 Message chiffré") {
+export function previewFromBody(body: string, lockedLabel = "Message chiffré") {
   const parsed = parseMessageBody(body);
   return parsed.kind === "e2e" ? lockedLabel : parsed.text.slice(0, 140);
 }

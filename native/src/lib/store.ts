@@ -46,6 +46,7 @@ import { sixDigit, uid } from "./utils";
 import { fingerprintOf, generateBundle, type KeyBundle } from "./crypto";
 import { loadIdentity, saveIdentity } from "./messaging/identity";
 import { isPrivateChat as isVaultChat, subscribePrivateVault } from "./private-vault";
+import { subscribeChatLock } from "./chat-lock";
 import type { LiveEvent } from "./messaging/message-live";
 import { stickerById } from "./stickers";
 import type { SurprisePlain } from "./messaging/plain";
@@ -1630,5 +1631,9 @@ export function chatPeer(chat: Chat, users: Record<string, User>) {
 }
 
 subscribePrivateVault(() => {
+  useWippStore.setState((s) => ({ vaultEpoch: s.vaultEpoch + 1 }));
+});
+// Locked conversations reuse the same epoch to refresh lists / gates.
+subscribeChatLock(() => {
   useWippStore.setState((s) => ({ vaultEpoch: s.vaultEpoch + 1 }));
 });

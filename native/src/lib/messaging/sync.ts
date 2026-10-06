@@ -502,7 +502,7 @@ export function mergeServerMessagesIntoState(
   const preview = last?.text
     ? last.text
     : last?.enc
-      ? "🔒 Message chiffré"
+      ? "Message chiffré"
       : last
         ? ""
         : undefined;
@@ -662,7 +662,7 @@ export async function decryptMergedMessages(
       c.id === localChatId && last
         ? {
             ...c,
-            preview: last.text || mediaPreview(last.type) || (last.enc ? "🔒 Message chiffré" : c.preview),
+            preview: last.text || mediaPreview(last.type) || (last.enc ? "Message chiffré" : c.preview),
             lastAt: last.createdAt,
           }
         : c,

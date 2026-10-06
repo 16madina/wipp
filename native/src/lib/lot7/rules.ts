@@ -39,7 +39,7 @@ export function groupPreview(body: string) {
     try {
       const parsed = JSON.parse(trimmed) as { k?: string; type?: string; text?: string; name?: string; e2e?: boolean };
       // End-to-end encrypted (group key): the phone shows the real text once decrypted.
-      if (parsed.e2e === true) return "🔒 Message chiffré";
+      if (parsed.e2e === true) return "Message chiffré";
       if (parsed.k === "wipp-group-media") {
         if (parsed.text) return parsed.text.slice(0, 140);
         if (parsed.type === "image") return "Photo";

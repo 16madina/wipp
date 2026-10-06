@@ -772,7 +772,7 @@ export function NewGroupFlow() {
             {settings.category ? ` · ${settings.category}` : ""}
             {disappearMs ? ` · messages éphémères (${GROUP_DISAPPEAR.find((o) => o.ms === disappearMs)?.label})` : ""}
           </Text>
-          <Text style={{ marginTop: 6, color: colors.muted, fontSize: 12, textAlign: "center" }}>🔒 Messages chiffrés de bout en bout</Text>
+          <Text style={{ marginTop: 6, color: colors.muted, fontSize: 12, textAlign: "center" }}>Messages chiffrés de bout en bout</Text>
         </ScrollView>
       ) : null}
 

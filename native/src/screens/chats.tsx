@@ -32,6 +32,8 @@ import {
 } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { reportGroupFlow } from "../components/GroupSafety";
+import { toggleChatLock, useLockPinAsk } from "../components/ChatLock";
+import { isChatLocked } from "../lib/chat-lock";
 import { InvisibleAvatar } from "../components/InvisibleAvatar";
 import { ConnectionChoicePicker } from "../components/ConnectionChoice";
 import { Sheet } from "../components/card-editor-parts";
@@ -120,6 +122,7 @@ export function ChatsScreen() {
   const drafts = useWippStore((s) => s.drafts);
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   const { askPin, gate } = usePrivatePinAsk();
+  const lockAsk = useLockPinAsk();
   const hold = useRef<{ haptic?: ReturnType<typeof setTimeout>; open?: ReturnType<typeof setTimeout> }>({});
   void vaultEpoch;
 
@@ -313,6 +316,13 @@ export function ChatsScreen() {
               ["Marquer lu / non lu", () => useWippStore.getState().toggleUnread(menuChatId)],
               ["Archives", () => push({ name: "archives" })],
               [
+                menuChatId && isChatLocked(menuChatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation",
+                () => {
+                  const id = menuChatId;
+                  if (id) toggleChatLock(id, lockAsk.askPin);
+                },
+              ],
+              [
                 "Masquer et verrouiller",
                 () => {
                   const id = menuChatId;
@@ -362,6 +372,7 @@ export function ChatsScreen() {
         </Press>
       ) : null}
       {gate}
+      {lockAsk.gate}
     </ScreenRoot>
   );
 }
@@ -408,7 +419,8 @@ function ChatRow({
           : shop && !mineShop
             ? shop.name
             : peer?.displayName;
-  const preview = sealed ? t("sealedKeepsNone") : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
+  const locked = isChatLocked(chat.id);
+  const preview = sealed ? t("sealedKeepsNone") : locked ? "Conversation verrouillée" : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
   const stamp = ephemeral && chat.expiresAt ? formatRemainShort(chat.expiresAt, now) : formatChatTime(chat.lastAt, lang);
   return (
     <View style={{ minHeight: 74, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
@@ -436,7 +448,8 @@ function ChatRow({
               <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: colors.accent }}>Professionnel</Text>
             </View>
           ) : null}
-          {peer && verifiedIds.includes(peer.id) ? <ShieldCheck size={14} color={colors.accent} /> : !sealed && chat.type !== "group" ? <Lock size={14} color={colors.muted} /> : null}
+          {peer && verifiedIds.includes(peer.id) ? <ShieldCheck size={14} color={colors.accent} /> : null}
+          {locked ? <Lock size={13} color={colors.accent} /> : null}
           {ephemeral ? <Clock size={14} color={colors.accent} /> : null}
           {chat.muted ? <BellOff size={14} color={colors.muted} /> : null}
           <Text style={{ marginLeft: "auto", fontSize: 12, color: ephemeral ? colors.accent : colors.muted }}>{stamp}</Text>
@@ -802,6 +815,8 @@ const DISAPPEAR_OPTIONS: [string, number][] = [
 
 /** Contact / group info, like WhatsApp: big photo, quick actions, shared media, chat settings. */
 export function ChatInfoScreen({ chatId }: { chatId: string }) {
+  useWippStore((s) => s.vaultEpoch);
+  const infoLock = useLockPinAsk();
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
@@ -1157,6 +1172,12 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           {isAdmin ? <Row icon={<ShieldCheck size={18} color={colors.fg} />} label="Autorisations du groupe" onPress={() => push({ name: "group-settings", chatId })} /> : null}
           <Row
             icon={<Lock size={18} color={colors.fg} />}
+            label={isChatLocked(chatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation"}
+            value={isChatLocked(chatId) ? "Activé" : undefined}
+            onPress={() => toggleChatLock(chatId, infoLock.askPin)}
+          />
+          <Row
+            icon={<ShieldCheck size={18} color={colors.fg} />}
             label="Chiffrement de bout en bout"
             onPress={() => push({ name: "e2e-info", chatId })}
           />
@@ -1273,6 +1294,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
         ) : null}
       </ScrollView>
 
+      {infoLock.gate}
       <Sheet open={sheet === "theme"} title="Thème de la discussion" onClose={() => setSheet(null)}>
         <Text style={{ marginBottom: 12, fontSize: 13, color: colors.muted }}>La couleur de vos bulles, sur ce téléphone uniquement.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14 }}>

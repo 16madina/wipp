@@ -6,7 +6,7 @@
  *   or someone without a key got one): people who left cannot read new messages; newcomers do not
  *   get older keys (no history before they joined).
  * - The message body keeps the private-message envelope shape + `g` (epoch), so older app versions
- *   simply show "🔒 Message chiffré" instead of raw data.
+ *   simply show "Message chiffré" instead of raw data.
  */
 import { b64, decryptText, deriveChatKey, encryptText, type E2eEnvelope, type KeyBundle, unb64 } from "../crypto";
 import { supabase } from "../supabase";
