@@ -52,7 +52,7 @@ const privacyFr: LegalDocument = {
     {
       title: "4. Chiffrement de bout en bout — et ses limites",
       paragraphs: [
-        "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages. Les groupes et médias suivront.",
+        "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages. Les photos, vidéos et vocaux sont chiffrés de la même façon. Les groupes sont chiffrés de bout en bout avec une clé partagée uniquement entre leurs membres actuels ; les messages de groupe envoyés avant l’activation de ce chiffrement restent stockés tels quels.",
         "Le E2EE ne couvre pas encore : groupes, médias, profils publics, Stories publiques, annonces, Boutiques, événements, listes de membres, métadonnées techniques, ni un contenu que vous copiez, transférez ou capturez.",
         "Une capture d’écran, un enregistrement d’écran, un mini-lecteur système (PiP) ou un appareil compromis peut révéler un contenu autrement chiffré. Les messages éphémères disparaissent de WIPP selon le délai choisi; ils ne empêchent pas un destinataire de les photographier.",
         "Si vous signalez un message, les éléments nécessaires à l’examen peuvent être transmis à WIPP.",

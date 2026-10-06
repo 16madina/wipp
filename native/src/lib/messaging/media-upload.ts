@@ -88,6 +88,8 @@ export async function uploadCipherFile(input: {
   onProgress?: (fraction: number) => void;
   caption?: string;
   size?: number;
+  /** Groups: send the media description sealed with the group key instead of the private-chat key. */
+  sendInner?: (inner: string) => Promise<{ id: string } | null>;
 }) {
   const stored = await putEncryptedBytes(input);
   const inner = describeMedia({
@@ -102,11 +104,13 @@ export async function uploadCipherFile(input: {
     size: stored.size,
     chunks: stored.chunks,
   });
-  const message = await sendViaServer(input.chatId, inner, input.clientId, {
-    identity: input.identity,
-    peerPublicJwk: input.peerPublicJwk,
-    vault: input.vault,
-  });
+  const message = input.sendInner
+    ? await input.sendInner(inner)
+    : await sendViaServer(input.chatId, inner, input.clientId, {
+        identity: input.identity,
+        peerPublicJwk: input.peerPublicJwk,
+        vault: input.vault,
+      });
   if (message?.id) await completeServerAttachment(stored.id, message.id);
   else await completeServerAttachment(stored.id);
   input.onProgress?.(1);
@@ -123,6 +127,7 @@ export async function uploadCipherAlbum(input: {
   vault?: boolean;
   onProgress?: (fraction: number) => void;
   caption?: string;
+  sendInner?: (inner: string) => Promise<{ id: string } | null>;
 }) {
   const parts = [];
   for (let i = 0; i < input.files.length; i++) {
@@ -160,11 +165,13 @@ export async function uploadCipherAlbum(input: {
     chunks: first.chunks,
     album: parts,
   });
-  const message = await sendViaServer(input.chatId, inner, input.clientId, {
-    identity: input.identity,
-    peerPublicJwk: input.peerPublicJwk,
-    vault: input.vault,
-  });
+  const message = input.sendInner
+    ? await input.sendInner(inner)
+    : await sendViaServer(input.chatId, inner, input.clientId, {
+        identity: input.identity,
+        peerPublicJwk: input.peerPublicJwk,
+        vault: input.vault,
+      });
   await Promise.all(parts.map((p) => (message?.id ? completeServerAttachment(p.id, message.id) : completeServerAttachment(p.id))));
   input.onProgress?.(1);
   return { attachmentId: first.id, parts, message };

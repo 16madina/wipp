@@ -870,8 +870,9 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         </Press>
       ) : null}
       {!sealed && chat?.type === "group" ? (
-        <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ alignSelf: "center", marginTop: 6, marginBottom: 2, borderRadius: 999, backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Text style={{ fontSize: 10.5, color: colors.muted }}>Groupe non chiffré de bout en bout</Text>
+        <Press onPress={() => push({ name: "e2e-info", chatId })} accessibilityLabel={t("e2eBanner")} style={{ alignSelf: "center", marginTop: 6, marginBottom: 2, borderRadius: 999, backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <Lock size={10} color={colors.accent} />
+          <Text style={{ fontSize: 10.5, color: colors.muted }}>{t("e2eBannerShort")}</Text>
         </Press>
       ) : null}
       {shop ? (
@@ -1332,8 +1333,8 @@ export function E2eInfoScreen({ chatId }: { chatId: string }) {
         <Header title="Chiffrement de bout en bout" onBack={pop} />
       </GlassHeader>
       <Text style={{ padding: 16, color: colors.muted, lineHeight: 20 }}>
-        {chatId.includes(":g_") || chatId.startsWith("g_")
-          ? "Les groupes ne sont pas chiffrés de bout en bout. GROUP E2EE — PENDING. Les messages directs conservent leur chiffrement."
+        {useWippStore.getState().chats.find((c) => c.id === chatId)?.type === "group" || chatId.includes(":g_") || chatId.startsWith("g_")
+          ? "Les messages de ce groupe, photos, vidéos et vocaux compris, sont chiffrés de bout en bout sur les téléphones des membres. Une clé de groupe est partagée uniquement avec les membres actuels : quand quelqu’un quitte le groupe, une nouvelle clé est créée et il ne peut plus lire les nouveaux messages. Un nouveau membre ne voit pas les messages envoyés avant son arrivée. Les messages envoyés avant l’activation du chiffrement restent tels quels."
           : "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages."}
       </Text>
     </ScreenRoot>

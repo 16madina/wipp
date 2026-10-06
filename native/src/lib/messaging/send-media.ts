@@ -38,6 +38,20 @@ function peerKey(chatId: string) {
   return st.peerPublicKeys[peerId] || (peerId.startsWith("srvuser:") ? st.peerPublicKeys[peerId.slice(8)] : undefined) || null;
 }
 
+/** Posts a group message whose body is the media description sealed with the group key. */
+function groupSender(chatId: string, clientId: string) {
+  return async (inner: string) => {
+    const st = useWippStore.getState();
+    if (!st.identity || !st.serverProfileId) throw new Error("no-e2e");
+    const { encryptGroupBody } = await import("./group-e2e");
+    const body = await encryptGroupBody(chatId, inner, st.identity, st.serverProfileId);
+    if (!body) throw new Error("group_e2e_unavailable");
+    const { postGroupMessage } = await import("../lot7/api");
+    const id = await postGroupMessage({ chatId: chatId.slice(4), clientId, body });
+    return { id };
+  };
+}
+
 export function isMediaJob(messageId: string) {
   return jobs.has(messageId);
 }
@@ -48,43 +62,9 @@ export async function uploadMedia(job: MediaJob) {
   try {
     const st = useWippStore.getState();
     const chat = st.chats.find((c) => c.id === job.chatId);
-    if (chat?.type === "group" && job.chatId.startsWith("srv:")) {
-      const bytes = await readLocalBytes(job.blobUrl);
-      patch(job.chatId, job.messageId, { mediaState: "uploading", progress: 0.2 });
-      const { uploadPrivateMedia, postGroupMessage, signPrivateMedia } = await import("../lot7/api");
-      const { groupObjectPath } = await import("../calls/rules");
-      const path = await uploadPrivateMedia(groupObjectPath(job.chatId, job.messageId), bytes, job.mime || "application/octet-stream");
-      const url = await signPrivateMedia(path);
-      const kind = job.kind === "voice" ? "voice" : job.kind === "video" ? "video" : job.kind === "file" ? "file" : "image";
-      await postGroupMessage({
-        chatId: job.chatId.slice(4),
-        clientId: job.messageId,
-        body: JSON.stringify({
-          k: "wipp-group-media",
-          type: kind,
-          text: job.caption || "",
-          path,
-          imageUrl: kind === "image" || kind === "file" ? path : undefined,
-          videoUrl: kind === "video" ? path : undefined,
-          audioUrl: kind === "voice" ? path : undefined,
-          name: job.name,
-          mime: job.mime,
-          size: bytes.byteLength,
-        }),
-      });
-      jobs.delete(job.messageId);
-      patch(job.chatId, job.messageId, {
-        status: "sent",
-        mediaState: "sent",
-        progress: 1,
-        imageUrl: kind === "image" ? url : undefined,
-        videoUrl: kind === "video" ? url : undefined,
-        audioUrl: kind === "voice" ? url : undefined,
-      });
-      return;
-    }
-    const peer = peerKey(job.chatId);
-    if (!st.identity || !peer) throw new Error("no-e2e");
+    const group = chat?.type === "group" && job.chatId.startsWith("srv:");
+    const peer = group ? null : peerKey(job.chatId);
+    if (!st.identity || (!group && !peer)) throw new Error("no-e2e");
     const bytes = await readLocalBytes(job.blobUrl);
     patch(job.chatId, job.messageId, { mediaState: "uploading", progress: 0.02 });
     const res = await uploadCipherFile({
@@ -102,6 +82,8 @@ export async function uploadMedia(job: MediaJob) {
       clientId: job.messageId,
       vault: isPrivateChat(job.chatId),
       onProgress: (f) => patch(job.chatId, job.messageId, { progress: f }),
+      // Group: the encrypted file + its description sealed with the group key (end-to-end).
+      sendInner: group ? groupSender(job.chatId, job.messageId) : undefined,
     });
     localBlobs.set(res.attachmentId, job.blobUrl);
     jobs.delete(job.messageId);
@@ -144,26 +126,9 @@ export async function uploadAlbum(job: AlbumJob) {
   }
   try {
     const st = useWippStore.getState();
-    if (st.chats.find((c) => c.id === job.chatId)?.type === "group") {
-      const { uploadPrivateMedia, postGroupMessage, signPrivateMedia } = await import("../lot7/api");
-      const { groupObjectPath } = await import("../calls/rules");
-      let firstPath = "";
-      for (const [index, item] of job.items.entries()) {
-        const bytes = await readLocalBytes(item.blobUrl);
-        const path = await uploadPrivateMedia(groupObjectPath(job.chatId, `${job.messageId}-${index}`), bytes, item.mime || "image/jpeg");
-        if (!firstPath) firstPath = path;
-      }
-      const shown = firstPath ? await signPrivateMedia(firstPath) : "";
-      await postGroupMessage({
-        chatId: job.chatId.slice(4),
-        clientId: job.messageId,
-        body: JSON.stringify({ k: "wipp-group-media", type: "image", text: job.caption || "", path: firstPath, imageUrl: firstPath }),
-      });
-      patch(job.chatId, job.messageId, { status: "sent", mediaState: "sent", progress: 1, imageUrl: shown });
-      return;
-    }
-    const peer = peerKey(job.chatId);
-    if (!st.identity || !peer) throw new Error("no-e2e");
+    const group = st.chats.find((c) => c.id === job.chatId)?.type === "group";
+    const peer = group ? null : peerKey(job.chatId);
+    if (!st.identity || (!group && !peer)) throw new Error("no-e2e");
     const { uploadCipherAlbum } = await import("./media-upload");
     const files = [];
     for (const item of job.items) {
@@ -186,6 +151,7 @@ export async function uploadAlbum(job: AlbumJob) {
       clientId: job.messageId,
       vault: isPrivateChat(job.chatId),
       onProgress: (f) => patch(job.chatId, job.messageId, { mediaState: "uploading", progress: f }),
+      sendInner: group ? groupSender(job.chatId, job.messageId) : undefined,
     });
     job.items.forEach((item, i) => {
       const part = res.parts[i];

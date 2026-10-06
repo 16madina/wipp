@@ -931,7 +931,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           {!group ? <Row icon={<Clock size={18} color={colors.fg} />} label="Messages éphémères" value={disappearLabel} onPress={() => setSheet("disappear")} /> : null}
           <Row
             icon={<Lock size={18} color={colors.fg} />}
-            label={group ? "Groupe non chiffré de bout en bout" : "Chiffrement de bout en bout"}
+            label="Chiffrement de bout en bout"
             onPress={() => push({ name: "e2e-info", chatId })}
           />
           {group ? <Row icon={<Users size={18} color={colors.fg} />} label="Membres et réglages du groupe" onPress={() => push({ name: "group-info", chatId })} /> : null}

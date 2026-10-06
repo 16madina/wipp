@@ -448,6 +448,7 @@ export const useWippStore = create<Store>((set, get) => ({
       void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
     });
     void import("./messaging/identity").then((m) => m.clearNotificationIdentity());
+    void import("./messaging/group-e2e").then((m) => m.forgetGroupKeys());
     void import("./inbox-cache").then((m) => m.clearInboxSnapshot());
     void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
     void import("./proximity/lifecycle").then(({ syncProximityLifecycle }) => syncProximityLifecycle("splash", "background"));
@@ -591,11 +592,21 @@ export const useWippStore = create<Store>((set, get) => ({
           const members = (existingChat?.participantIds ?? [])
             .filter((id) => id !== "me")
             .map((id) => ({ id, username: get().users[id]?.username }));
-          const body =
+          const plainBody =
             message.type === "text" || !message.stickerId
               ? message.text ?? ""
               : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });
-          if (!body) return;
+          if (!plainBody) return;
+          // End-to-end: encrypted with the group key (the server only stores ciphertext).
+          // Without an identity key on this phone (very old install), the message cannot be encrypted.
+          const st0 = get();
+          let body = plainBody;
+          if (st0.identity && st0.serverProfileId) {
+            const { encryptGroupBody } = await import("./messaging/group-e2e");
+            const sealed = await encryptGroupBody(chatId, plainBody, st0.identity, st0.serverProfileId);
+            if (!sealed) throw new Error("group_e2e_unavailable");
+            body = sealed;
+          }
           await postGroupMessage({
             chatId: chatId.slice(4),
             body,
@@ -609,10 +620,12 @@ export const useWippStore = create<Store>((set, get) => ({
               [chatId]: (s.messages[chatId] ?? []).map((m) => (m.id === message.id ? { ...m, status: "sent" as const } : m)),
             },
           }));
-          const { syncChatMessages, mergeServerMessagesIntoState } = await import("./messaging/sync");
+          const { syncChatMessages, mergeServerMessagesIntoState, decryptMergedMessages } = await import("./messaging/sync");
           const synced = await syncChatMessages(chatId);
           if (synced && "messages" in synced) {
             set((s) => mergeServerMessagesIntoState(s, chatId.slice(4), synced.messages, synced.meServerId));
+            const dec = await decryptMergedMessages(get(), chatId, get().identity);
+            if (Object.keys(dec).length) set(() => dec);
           }
         } catch (err) {
           console.warn("[wipp] group send failed", err);
@@ -846,8 +859,18 @@ export const useWippStore = create<Store>((set, get) => ({
     }));
     if (!chatId.startsWith("srv:")) return;
     void (async () => {
-      const { editViaServer } = await import("./messaging/sync");
       const st = get();
+      if (st.chats.find((c) => c.id === chatId)?.type === "group") {
+        // Group: the edited text is sealed with the group key too (never sent in clear).
+        if (!st.identity || !st.serverProfileId) return;
+        const { encryptGroupBody } = await import("./messaging/group-e2e");
+        const body = await encryptGroupBody(chatId, text, st.identity, st.serverProfileId);
+        if (!body) return;
+        const { editServerMessage } = await import("./messaging/client");
+        await editServerMessage(chatId.slice(4), messageId, body);
+        return;
+      }
+      const { editViaServer } = await import("./messaging/sync");
       const reply = msg.replyTo ? (st.messages[chatId] ?? []).find((m) => m.id === msg.replyTo) : undefined;
       await editViaServer(chatId, messageId, text, {
         identity: st.identity,

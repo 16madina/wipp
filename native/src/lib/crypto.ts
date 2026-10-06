@@ -167,7 +167,9 @@ export async function deriveChatKey(
   peerPublicJwk: JsonWebKey,
   chatId: string,
 ): Promise<Uint8Array> {
-  const cacheKey = `${chatId}|${peerPublicJwk.x ?? ""}|${peerPublicJwk.y ?? ""}`;
+  // Includes MY public key: after an account switch on the same phone, keys derived for the
+  // previous identity must never be reused.
+  const cacheKey = `${chatId}|${my.publicJwk.x ?? ""}|${peerPublicJwk.x ?? ""}|${peerPublicJwk.y ?? ""}`;
   const hit = aesCache.get(cacheKey);
   if (hit) return hit;
   const bits = ecdhSharedX(privFromJwk(my.privateJwk), pubFromJwk(peerPublicJwk));

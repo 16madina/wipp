@@ -355,7 +355,7 @@ const fr = {
   e2eBannerShort: "Chiffré de bout en bout",
   e2eInfoTitle: "Chiffrement",
   e2eInfoBody:
-    "Sur les messages privés (DM), seul toi et ton contact avez les clés. Le serveur ne stocke que du contenu chiffré (AES-256-GCM), photos et vidéos comprises. Les groupes ne sont pas encore chiffrés de bout en bout.",
+    "Sur les messages privés (DM), seul toi et ton contact avez les clés. Le serveur ne stocke que du contenu chiffré (AES-256-GCM), photos et vidéos comprises. Les groupes sont aussi chiffrés de bout en bout, avec une clé partagée uniquement entre leurs membres.",
   e2eSafety: "Numéro de sécurité",
   e2eSafetyHint:
     "Comparez-le en personne. S’il est identique, personne ne s’est glissé au milieu.",
@@ -386,7 +386,7 @@ const fr = {
   e2eHow3: "Chaque message texte DM est scellé en AES-256-GCM avant l’envoi.",
   e2eKeyChanged: "Clé renouvelée. Les anciens messages sont illisibles.",
   e2eCompare: "Numéro de sécurité",
-  e2eBody: "Les messages privés, photos et vidéos comprises, sont chiffrés de bout en bout. Les groupes suivront.",
+  e2eBody: "Les messages privés et de groupe, photos et vidéos comprises, sont chiffrés de bout en bout.",
 
   themeLight: "Clair",
   themeDark: "Sombre",
@@ -1385,7 +1385,7 @@ const en: Record<keyof typeof fr, string> = {
   e2eHow3: "Each DM text message is sealed with AES-256-GCM before send.",
   e2eKeyChanged: "Key renewed. Older messages are unreadable.",
   e2eCompare: "Safety number",
-  e2eBody: "Private messages, photos and videos included, are end-to-end encrypted. Groups come next.",
+  e2eBody: "Private and group messages, photos and videos included, are end-to-end encrypted.",
 
   themeLight: "Light",
   themeDark: "Dark",

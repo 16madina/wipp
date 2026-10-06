@@ -526,14 +526,65 @@ function mediaPreview(type: Message["type"]) {
   }
 }
 
+/** Group messages: decrypt with the group key of their epoch (see group-e2e.ts). */
+async function decryptGroupMerged(state: StoreSlice, localChatId: string, identity: KeyBundle): Promise<Partial<StoreSlice>> {
+  const meId = (state as { serverProfileId?: string | null }).serverProfileId;
+  if (!meId) return {};
+  const list = state.messages[localChatId] ?? [];
+  if (!list.some((m) => !m.text && m.enc && (m.enc as { g?: unknown }).g != null)) return {};
+  const { decryptGroupBody, isGroupEnvelope } = await import("./group-e2e");
+  const { parseMedia, mediaLabel } = await import("./media-crypto");
+  let changed = false;
+  const next: Message[] = [];
+  for (const m of list) {
+    if (m.text || !m.enc || !isGroupEnvelope(m.enc)) {
+      next.push(m);
+      continue;
+    }
+    const inner = m.deletedForAll ? null : await decryptGroupBody(localChatId, m.enc, identity, meId);
+    if (inner == null) {
+      next.push(m);
+      continue;
+    }
+    changed = true;
+    const media = parseMedia(inner);
+    if (media) {
+      next.push({ ...applyMediaEnvelope(m, media, mediaLabel(media.kind)), encFailed: false });
+      continue;
+    }
+    const legacy = groupMediaFields(inner);
+    next.push(legacy ? { ...m, ...legacy, encFailed: false } : { ...m, type: "text", text: inner, encFailed: false });
+  }
+  if (!changed) return {};
+  const last = next.at(-1);
+  return {
+    messages: { ...state.messages, [localChatId]: next },
+    chats: state.chats.map((c) => (c.id === localChatId && last?.text ? { ...c, preview: last.text } : c)),
+  };
+}
+
+/** Sticker / media sent in the group JSON format (now inside the encrypted body). */
+function groupMediaFields(inner: string): Partial<Message> | null {
+  const t = inner.trim();
+  if (!t.startsWith("{")) return null;
+  try {
+    const p = JSON.parse(t) as { k?: string; type?: Message["type"]; text?: string; stickerId?: string };
+    if (p.k !== "wipp-group-media" || !p.type) return null;
+    return { type: p.type, text: p.text, stickerId: p.stickerId };
+  } catch {
+    return null;
+  }
+}
+
 export async function decryptMergedMessages(
   state: StoreSlice,
   localChatId: string,
   identity: KeyBundle | null | undefined,
 ): Promise<Partial<StoreSlice>> {
   if (!identity || !isServerChatId(localChatId)) return {};
-  if (toServerChatId(localChatId).startsWith("g_")) return {};
-  if (state.chats.find((c) => c.id === localChatId)?.type === "group") return {};
+  if (toServerChatId(localChatId).startsWith("g_") || state.chats.find((c) => c.id === localChatId)?.type === "group") {
+    return decryptGroupMerged(state, localChatId, identity);
+  }
   const serverChatId = toServerChatId(localChatId);
   const list = state.messages[localChatId] ?? [];
   // ECDH needs the other party's public key. For an incoming message that is the
