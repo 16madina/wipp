@@ -107,6 +107,38 @@ export async function uploadGroupPhoto(chatId: string, uri: string, mime = "imag
   return uploadPrivateMediaFile(path, uri, mime);
 }
 
+/** Admins: visibility, category, member permissions and disappearing messages (server-enforced). */
+export async function setGroupSettings(
+  chatId: string,
+  settings: Partial<import("../types").GroupSettings> & { disappearMs?: number },
+  opts?: { quiet?: boolean },
+) {
+  return rpc<string>("wipp_lot7_set_settings", {
+    p_chat: chatId.replace(/^srv:/, ""),
+    p_settings: settings,
+    p_quiet: Boolean(opts?.quiet),
+  });
+}
+
+export type GroupJoinRequest = {
+  profileId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  via: "link" | "member";
+  invitedBy: string | null;
+  createdAt: string;
+};
+
+/** Admins: people waiting for approval to join. */
+export async function groupJoinRequests(chatId: string) {
+  return rpc<GroupJoinRequest[]>("wipp_lot7_join_requests", { p_chat: chatId.replace(/^srv:/, "") });
+}
+
+export async function decideGroupJoin(chatId: string, profileId: string, approve: boolean) {
+  return rpc<string>("wipp_lot7_decide_join", { p_chat: chatId.replace(/^srv:/, ""), p_profile: rawId(profileId), p_approve: approve });
+}
+
 /** Admins: every previous invitation link / QR stops working. */
 export async function resetGroupInvites(chatId: string) {
   return rpc<string>("wipp_lot7_reset_invites", { p_chat: chatId.replace(/^srv:/, "") });

@@ -263,6 +263,17 @@ export function ChatsScreen() {
             body={filter === "groups" ? t("groupsEmptySub") : t("chatsEmptySub")}
             action={<Btn label={filter === "groups" ? t("createGroup") : t("connectCta")} onPress={() => push({ name: filter === "groups" ? "new-group" : "connect" })} />}
           />
+        ) : filter === "groups" ? (
+          <GroupGrid
+            groups={visible}
+            users={users}
+            onOpen={(id) => {
+              markRead(id);
+              push({ name: "conversation", chatId: id });
+            }}
+            onCreate={() => push({ name: "new-group" })}
+            onInfo={(id) => setMenuChatId(id)}
+          />
         ) : (
           visible.map((chat) => (
             <ChatRow
@@ -703,6 +714,62 @@ export function ArchivesScreen() {
   );
 }
 
+/** Groups as a grid of three (not a WhatsApp-style list). The first tile creates a group. */
+function GroupGrid({
+  groups,
+  users,
+  onOpen,
+  onCreate,
+  onInfo,
+}: {
+  groups: Chat[];
+  users: Record<string, import("../lib/types").User>;
+  onOpen: (chatId: string) => void;
+  onCreate: () => void;
+  onInfo: (chatId: string) => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 6 }}>
+      <View style={{ width: "33.333%", padding: 6 }}>
+        <Press
+          onPress={onCreate}
+          style={{ aspectRatio: 0.82, borderRadius: 18, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.accent, alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.accentSoft }}
+        >
+          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+            <Plus size={26} color={colors.accentFg} />
+          </View>
+          <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>Créer un groupe</Text>
+        </Press>
+      </View>
+      {groups.map((g) => {
+        const members = g.participantIds.filter((id) => id !== "me").map((id) => users[id]);
+        return (
+          <View key={g.id} style={{ width: "33.333%", padding: 6 }}>
+            <Press
+              onPress={() => onOpen(g.id)}
+              onLongPress={() => onInfo(g.id)}
+              style={{ aspectRatio: 0.82, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 }}
+            >
+              <View>
+                <GroupAvatar users={members} size={60} fallback={g.avatar} />
+                {g.unread ? (
+                  <View style={{ position: "absolute", top: -4, right: -6, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ color: colors.accentFg, fontSize: 11, fontFamily: "Inter_700Bold" }}>{g.unread > 99 ? "99+" : g.unread}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text numberOfLines={2} style={{ marginTop: 10, color: colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{g.name}</Text>
+              <Text numberOfLines={1} style={{ marginTop: 2, color: colors.muted, fontSize: 11 }}>
+                {g.participantIds.length} membre{g.participantIds.length > 1 ? "s" : ""}
+              </Text>
+            </Press>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export function MyGroupsScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
@@ -711,18 +778,17 @@ export function MyGroupsScreen() {
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   void vaultEpoch;
   const groups = allChats.filter((c) => c.type === "group" && c.participantIds.includes("me") && !isPrivateChat(c.id));
+  const users = useWippStore((s) => s.users);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("statGroups")} onBack={pop} right={<IconBtn label={t("createGroup")} onPress={() => push({ name: "new-group" })}><Plus size={20} color={colors.fg} /></IconBtn>} />
       </GlassHeader>
-      <ScrollView>
-        {groups.map((g) => (
-          <Press key={g.id} onPress={() => push({ name: "conversation", chatId: g.id })} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-            <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_500Medium" }}>{g.name}</Text>
-            <Text style={{ color: colors.muted, fontSize: 13 }}>{g.preview}</Text>
-          </Press>
-        ))}
+      <ScrollView contentContainerStyle={{ paddingVertical: 12, paddingBottom: 40 }}>
+        <GroupGrid groups={groups} users={users} onOpen={(id) => push({ name: "conversation", chatId: id })} onCreate={() => push({ name: "new-group" })} onInfo={(id) => push({ name: "chat-info", chatId: id })} />
+        {groups.length === 0 ? (
+          <Text style={{ marginTop: 16, color: colors.muted, textAlign: "center", paddingHorizontal: 24 }}>Tu n’as pas encore de groupe. Crée le premier !</Text>
+        ) : null}
       </ScrollView>
     </ScreenRoot>
   );
@@ -755,6 +821,23 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const shops = useWippStore((s) => s.shops);
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
   const isAdmin = Boolean(group && (chat?.adminIds ?? []).includes("me"));
+  const gs = chat?.groupSettings;
+  // What THIS member may do (admins: everything). Mirrors the server rules.
+  const canEdit = isAdmin || Boolean(group && gs?.membersCanEdit);
+  const canAdd = isAdmin || Boolean(group && gs?.membersCanAdd);
+  const canInvite = Boolean(group && (gs?.visibility ?? "public") === "public" && (isAdmin || gs?.membersCanInvite));
+  const [pendingJoins, setPendingJoins] = useState(0);
+  useEffect(() => {
+    if (!isAdmin || !chat?.id.startsWith("srv:")) return;
+    let off = false;
+    void import("../lib/lot7/api")
+      .then(({ groupJoinRequests }) => groupJoinRequests(chatId))
+      .then((r) => !off && setPendingJoins(Array.isArray(r) ? r.length : 0))
+      .catch(() => undefined);
+    return () => {
+      off = true;
+    };
+  }, [isAdmin, chatId]);
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -924,7 +1007,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           <View style={{ borderRadius: 16, backgroundColor: colors.navy, padding: 14, overflow: "hidden" }}>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Press
-                disabled={group ? !isAdmin : !profile?.avatar}
+                disabled={group ? !canEdit : !profile?.avatar}
                 accessibilityLabel={group ? "Photo du groupe" : "Voir la photo"}
                 onPress={() => {
                   if (group) return groupPhotoMenu();
@@ -942,7 +1025,10 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                   {!group ? <BadgeCheck size={16} color={colors.accent} /> : null}
                 </View>
                 {group ? (
-                  <Text style={{ fontSize: 12, color: fgA(0.55) }}>Groupe · {chat.participantIds.length} membres</Text>
+                  <Text style={{ fontSize: 12, color: fgA(0.55) }}>
+                    {gs ? (gs.visibility === "public" ? "Groupe public" : "Groupe privé") : "Groupe"} · {chat.participantIds.length} membres
+                    {gs?.category ? ` · ${gs.category}` : ""}
+                  </Text>
                 ) : profile?.username ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{profile.username}</Text>
                 ) : null}
@@ -968,7 +1054,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             ) : null}
             {!group && profile?.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: fgA(0.8) }}>{profile.bio}</Text> : null}
             {group && chat.description ? <Text style={{ marginTop: 10, fontSize: 13, lineHeight: 18, color: fgA(0.85) }}>{chat.description}</Text> : null}
-            {isAdmin ? (
+            {canEdit ? (
               <Press
                 onPress={() => {
                   setEditName(chat.name ?? "");
@@ -1056,6 +1142,15 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             onPress={() => setSheet("theme")}
           />
           {!group ? <Row icon={<Clock size={18} color={colors.fg} />} label="Messages éphémères" value={disappearLabel} onPress={() => setSheet("disappear")} /> : null}
+          {group ? (
+            <Row
+              icon={<Clock size={18} color={colors.fg} />}
+              label="Messages éphémères"
+              value={disappearLabel}
+              onPress={isAdmin ? () => push({ name: "group-settings", chatId }) : undefined}
+            />
+          ) : null}
+          {isAdmin ? <Row icon={<ShieldCheck size={18} color={colors.fg} />} label="Autorisations du groupe" onPress={() => push({ name: "group-settings", chatId })} /> : null}
           <Row
             icon={<Lock size={18} color={colors.fg} />}
             label="Chiffrement de bout en bout"
@@ -1068,8 +1163,11 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             <Text style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, fontSize: 13, color: colors.muted }}>
               {chat.participantIds.length} membre{chat.participantIds.length > 1 ? "s" : ""}
             </Text>
-            {isAdmin ? <Row icon={<UserPlus size={18} color={colors.accent} />} label="Ajouter des membres" onPress={() => push({ name: "group-add", chatId })} /> : null}
-            <Row icon={<Link2 size={18} color={colors.accent} />} label="Inviter via un lien ou un QR" onPress={() => push({ name: "group-qr", chatId })} />
+            {canAdd ? <Row icon={<UserPlus size={18} color={colors.accent} />} label="Ajouter des membres" onPress={() => push({ name: "group-add", chatId })} /> : null}
+            {canInvite ? <Row icon={<Link2 size={18} color={colors.accent} />} label="Inviter via un lien ou un QR" onPress={() => push({ name: "group-qr", chatId })} /> : null}
+            {isAdmin && pendingJoins > 0 ? (
+              <Row icon={<UserPlus size={18} color={colors.danger} />} label="Demandes d’adhésion" value={String(pendingJoins)} onPress={() => push({ name: "group-requests", chatId })} />
+            ) : null}
             {[...chat.participantIds]
               .sort((a, b) => (a === "me" ? -1 : b === "me" ? 1 : Number((chat.adminIds ?? []).includes(b)) - Number((chat.adminIds ?? []).includes(a))))
               .map((id) => {

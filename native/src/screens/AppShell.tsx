@@ -73,6 +73,8 @@ import {
 } from "./me";
 import {
   GroupAddMembersScreen,
+  GroupJoinRequestsScreen,
+  GroupSettingsScreen,
   GroupInfoFull,
   GroupInviteScreen,
   GroupQrScreen,
@@ -236,6 +238,10 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <ChatInfoScreen chatId={screen.chatId} />;
     case "group-add":
       return <GroupAddMembersScreen chatId={screen.chatId} />;
+    case "group-settings":
+      return <GroupSettingsScreen chatId={screen.chatId} />;
+    case "group-requests":
+      return <GroupJoinRequestsScreen chatId={screen.chatId} />;
     case "group-invite":
       return <GroupInviteScreen token={screen.token} />;
     case "wgo-touch":

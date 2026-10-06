@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
-import { Camera, Check, Clock, Delete, Eye, MoreHorizontal, Smile, Users } from "lucide-react-native";
+import { Camera, Check, ChevronRight, Clock, Delete, Eye, LayoutGrid, MoreHorizontal, Pencil, Search, Smile, Users, X } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { WippSticker } from "../components/WippSticker";
 import { QrCard } from "../components/QrCard";
@@ -11,7 +11,7 @@ import { wippSrc } from "../lib/assets";
 import { formatClock } from "../lib/format";
 import { isStoryLive } from "../lib/types";
 import { tempQr } from "../lib/qr-payload";
-import { issueTemp } from "../lib/qr-remote";
+import { GROUP_FR, issueTemp } from "../lib/qr-remote";
 import { popProtect, pushProtect } from "../lib/screen-protection";
 import { hideStoryLocal, isStoryHidden } from "../lib/story-hide";
 import { orderedOtherStoryUsers } from "../lib/story-status";
@@ -22,6 +22,9 @@ import { useT, useWippStore } from "../lib/store";
 import { colors, fgA, palettes, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
 import { shareWippPublic } from "../lib/share-public";
+import { GROUP_DISAPPEAR, GroupPermissionsEditor, GroupVisibilityPicker } from "../components/GroupPermissions";
+import { Sheet } from "../components/card-editor-parts";
+import { DEFAULT_GROUP_SETTINGS, type GroupSettings } from "../lib/types";
 
 export { NewStoryScreen } from "./story-composer";
 
@@ -523,22 +526,67 @@ function StoryPlayback({ uri, paused, onEnd, onProgress }: { uri: string; paused
   return <VideoView player={player} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="contain" nativeControls={false} />;
 }
 
+const GROUP_STEPS = ["Infos", "Membres", "Autorisations", "Terminé"];
+const GROUP_CATEGORIES = ["Famille", "Amis", "Travail", "École / Études", "Quartier", "Sport", "Association", "Business", "Loisirs", "Autre"];
+
+function GroupStepper({ step }: { step: number }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 16, paddingTop: 6, paddingBottom: 10 }}>
+      {GROUP_STEPS.map((label, i) => {
+        const done = i < step;
+        const current = i === step;
+        return (
+          <View key={label} style={{ flex: 1, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", width: "100%" }}>
+              <View style={{ flex: 1, height: 2, backgroundColor: i === 0 ? "transparent" : i <= step ? colors.accent : colors.hair }} />
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: done || current ? colors.accent : colors.surface2,
+                  borderWidth: 1,
+                  borderColor: done || current ? colors.accent : colors.hair,
+                }}
+              >
+                {done ? <Check size={16} color={colors.accentFg} strokeWidth={3} /> : <Text style={{ color: current ? colors.accentFg : colors.muted, fontFamily: "Inter_700Bold" }}>{i + 1}</Text>}
+              </View>
+              <View style={{ flex: 1, height: 2, backgroundColor: i === GROUP_STEPS.length - 1 ? "transparent" : i < step ? colors.accent : colors.hair }} />
+            </View>
+            <Text style={{ marginTop: 6, fontSize: 11, color: current ? colors.fg : colors.muted, fontFamily: current ? "Inter_600SemiBold" : undefined }}>{label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Créer un groupe — 4 steps: Infos (photo, name, description, category, visibility), Members, Permissions, Done. */
 export function NewGroupFlow() {
   const pop = useWippStore((s) => s.pop);
+  const push = useWippStore((s) => s.push);
   const usersById = useWippStore((s) => s.users);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<{ uri: string; mime?: string } | null>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [settings, setSettings] = useState<GroupSettings>({ ...DEFAULT_GROUP_SETTINGS });
+  const [disappearMs, setDisappearMs] = useState(0);
+  const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
-  const users = Object.values(usersById)
-    .filter((u) => u?.connected)
-    .filter((u) => {
-      const n = q.trim().toLowerCase();
-      return !n || u.displayName.toLowerCase().includes(n) || u.username.toLowerCase().includes(n);
-    })
+  const [created, setCreated] = useState<string | null>(null);
+
+  const contacts = Object.values(usersById)
+    .filter((u) => u?.connected && u.id.startsWith("srvuser:"))
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const shown = contacts.filter((u) => {
+    const n = q.trim().toLowerCase();
+    return !n || u.displayName.toLowerCase().includes(n) || u.username.toLowerCase().includes(n);
+  });
 
   async function pickPhoto() {
     try {
@@ -551,91 +599,220 @@ export function NewGroupFlow() {
     }
   }
 
+  async function create() {
+    if (busy || !name.trim()) return;
+    setBusy(true);
+    let id: string | null = null;
+    try {
+      const api = await import("../lib/lot7/api");
+      id = await api.createServerGroup(name.trim(), picked);
+      const localId = id.startsWith("srv:") ? id : `srv:${id}`;
+      try {
+        const avatar = photo ? await api.uploadGroupPhoto(id, photo.uri, photo.mime || "image/jpeg") : null;
+        if (avatar || description.trim()) await api.updateGroupInfo(id, { description: description.trim() || null, avatar }, { quiet: true });
+        await api.setGroupSettings(id, { ...settings, disappearMs }, { quiet: true });
+      } catch {
+        Alert.alert("Groupe", "Le groupe est créé, mais une partie des réglages n’a pas pu être enregistrée. Tu peux les reprendre dans Infos du groupe.");
+      }
+      await useWippStore.getState().syncServerInbox();
+      setCreated(localId);
+      setStep(3);
+    } catch (err) {
+      Alert.alert("Groupe", errorText(err, "Création impossible pour le moment."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const back = () => (step === 0 || step === 3 ? pop() : setStep(step - 1));
+  const counter = (n: number, max: number) => <Text style={{ alignSelf: "flex-end", marginTop: 4, fontSize: 11, color: colors.muted }}>{n}/{max}</Text>;
+  const label = (text: string, optional?: boolean) => (
+    <Text style={{ marginTop: 18, marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+      {text}
+      {optional ? <Text style={{ color: colors.muted, fontFamily: "Inter_400Regular" }}> (optionnelle)</Text> : null}
+    </Text>
+  );
+  const field = { borderRadius: 14, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14, fontSize: 15, borderWidth: 1, borderColor: colors.hair } as const;
+
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Nouveau groupe" onBack={pop} />
+        <Header title="Créer un groupe" onBack={back} />
+        <GroupStepper step={step} />
       </GlassHeader>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <View style={{ padding: 16, gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Press
-              accessibilityLabel={photo ? "Changer la photo du groupe" : "Ajouter une photo de groupe"}
-              onPress={() =>
-                photo
-                  ? Alert.alert("Photo du groupe", undefined, [
-                      { text: "Changer la photo", onPress: () => void pickPhoto() },
-                      { text: "Retirer la photo", style: "destructive", onPress: () => setPhoto(null) },
-                      { text: "Annuler", style: "cancel" },
-                    ])
-                  : void pickPhoto()
-              }
-              style={{ width: 72, height: 72, borderRadius: 36, overflow: "hidden", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
-            >
-              {photo ? <Image source={{ uri: photo.uri }} style={{ width: 72, height: 72 }} contentFit="cover" /> : <Camera size={26} color={colors.accent} />}
-            </Press>
-            <View style={{ flex: 1 }}>
-              <TextInput
-                value={name}
-                onChangeText={(v) => setName(v.slice(0, 80))}
-                placeholder="Nom du groupe"
-                placeholderTextColor={colors.muted}
-                returnKeyType="next"
-                style={{ height: 48, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12, fontSize: 16 }}
-              />
-              <Text style={{ marginTop: 4, fontSize: 11, color: colors.muted }}>{photo ? "Touche la photo pour la changer" : "Touche l’appareil photo pour ajouter une photo"}</Text>
+
+      {step === 0 ? (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+          <Press
+            accessibilityLabel={photo ? "Changer la photo du groupe" : "Ajouter une photo de groupe"}
+            onPress={() =>
+              photo
+                ? Alert.alert("Photo du groupe", undefined, [
+                    { text: "Changer la photo", onPress: () => void pickPhoto() },
+                    { text: "Retirer la photo", style: "destructive", onPress: () => setPhoto(null) },
+                    { text: "Annuler", style: "cancel" },
+                  ])
+                : void pickPhoto()
+            }
+            style={{ alignSelf: "center", marginTop: 4 }}
+          >
+            <View style={{ width: 124, height: 124, borderRadius: 62, borderWidth: 3, borderColor: colors.accent, padding: 5 }}>
+              <View style={{ flex: 1, borderRadius: 60, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+                {photo ? <Image source={{ uri: photo.uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={32} color={colors.fg} />}
+              </View>
             </View>
-          </View>
+            <View style={{ position: "absolute", right: 2, bottom: 2, width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}>
+              <Pencil size={15} color={colors.accent} />
+            </View>
+          </Press>
+
+          {label("Nom du groupe")}
+          <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 50))} placeholder="Ex. Famille, Équipe, Masterclass…" placeholderTextColor={colors.muted} style={{ ...field, height: 50 }} />
+          {counter(name.length, 50)}
+
+          {label("Description", true)}
           <TextInput
             value={description}
-            onChangeText={(v) => setDescription(v.slice(0, 500))}
-            placeholder="Description (facultative) : sujet, règles du groupe…"
+            onChangeText={(v) => setDescription(v.slice(0, 200))}
+            placeholder="Parlez de votre groupe…"
             placeholderTextColor={colors.muted}
             multiline
-            style={{ minHeight: 70, maxHeight: 140, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12, paddingTop: 12, fontSize: 15, textAlignVertical: "top" }}
+            style={{ ...field, minHeight: 92, paddingTop: 12, textAlignVertical: "top" }}
           />
-          <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4 }}>
-            Membres {picked.length ? `· ${picked.length} sélectionné${picked.length > 1 ? "s" : ""}` : ""}
+          {counter(description.length, 200)}
+
+          {label("Catégorie", true)}
+          <Press onPress={() => setCategoryOpen(true)} style={{ ...field, height: 50, flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <LayoutGrid size={18} color={colors.fg} />
+            <Text style={{ flex: 1, color: settings.category ? colors.fg : colors.muted, fontSize: 15 }}>{settings.category ?? "Choisir une catégorie"}</Text>
+            <ChevronRight size={18} color={colors.muted} />
+          </Press>
+
+          {label("Visibilité")}
+          <GroupVisibilityPicker
+            value={settings.visibility}
+            onChange={(v) => setSettings((s) => ({ ...s, visibility: v, approveNewMembers: v === "private" ? true : s.approveNewMembers, membersCanInvite: v === "public" ? s.membersCanInvite : false }))}
+          />
+        </ScrollView>
+      ) : null}
+
+      {step === 1 ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: 160 }} keyboardShouldPersistTaps="handled">
+          <View style={{ paddingHorizontal: 16 }}>
+            <View style={{ ...field, height: 48, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 999 }}>
+              <Search size={18} color={colors.muted} />
+              <TextInput value={q} onChangeText={setQ} placeholder="Rechercher des contacts…" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15 }} />
+            </View>
+          </View>
+          {picked.length ? (
+            <>
+              <Text style={{ marginTop: 18, marginHorizontal: 16, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                Membres sélectionnés <Text style={{ color: colors.muted }}>({picked.length})</Text>
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingTop: 12 }}>
+                {picked.map((id) => {
+                  const u = usersById[id];
+                  return (
+                    <Press key={id} onPress={() => setPicked((p) => p.filter((x) => x !== id))} style={{ alignItems: "center", width: 64 }}>
+                      <View>
+                        <Avatar user={u} size={56} />
+                        <View style={{ position: "absolute", top: -2, right: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}>
+                          <X size={12} color={colors.fg} />
+                        </View>
+                      </View>
+                      <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12, color: colors.fg }}>{(u?.displayName ?? "").split(" ")[0]}</Text>
+                    </Press>
+                  );
+                })}
+              </ScrollView>
+            </>
+          ) : null}
+          <Text style={{ marginTop: 18, marginBottom: 4, marginHorizontal: 16, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Inviter des contacts</Text>
+          {shown.length === 0 ? (
+            <Text style={{ marginHorizontal: 16, marginTop: 8, color: colors.muted }}>{q ? "Aucun contact trouvé." : settings.visibility === "public" ? "Tu n’as pas encore de contacts WIPP. Tu pourras inviter avec le lien une fois le groupe créé." : "Tu n’as pas encore de contacts WIPP. Tu pourras ajouter des membres plus tard depuis les infos du groupe."}</Text>
+          ) : (
+            shown.map((u) => {
+              const on = picked.includes(u.id);
+              return (
+                <Press key={u.id} onPress={() => setPicked((p) => (on ? p.filter((x) => x !== u.id) : [...p, u.id]))} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
+                  <Avatar user={u} size={48} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16 }}>{u.displayName}</Text>
+                    <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{u.username}</Text>
+                  </View>
+                  <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: on ? colors.accent : colors.muted, backgroundColor: on ? colors.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
+                    {on ? <Check size={15} color={colors.accentFg} strokeWidth={3} /> : null}
+                  </View>
+                </Press>
+              );
+            })
+          )}
+        </ScrollView>
+      ) : null}
+
+      {step === 2 ? (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
+          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Autorisations du groupe</Text>
+          <Text style={{ marginTop: 4, marginBottom: 6, color: colors.muted, fontSize: 13 }}>Ce que les membres peuvent faire. Modifiable à tout moment dans Infos du groupe.</Text>
+          <GroupPermissionsEditor value={settings} onChange={setSettings} disappearMs={disappearMs} onDisappear={setDisappearMs} />
+        </ScrollView>
+      ) : null}
+
+      {step === 3 && created ? (
+        <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 140, alignItems: "center" }}>
+          <View style={{ width: 112, height: 112, borderRadius: 56, borderWidth: 3, borderColor: colors.accent, padding: 4, marginTop: 8 }}>
+            <View style={{ flex: 1, borderRadius: 54, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+              {photo ? <Image source={{ uri: photo.uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Users size={40} color={colors.accent} />}
+            </View>
+          </View>
+          <Text style={{ marginTop: 16, fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{name.trim()}</Text>
+          <Text style={{ marginTop: 6, color: colors.success, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>✓ Groupe créé</Text>
+          <Text style={{ marginTop: 8, color: colors.muted, fontSize: 13, textAlign: "center" }}>
+            {settings.visibility === "public" ? "Public" : "Privé"} · {picked.length + 1} membre{picked.length ? "s" : ""}
+            {settings.category ? ` · ${settings.category}` : ""}
+            {disappearMs ? ` · messages éphémères (${GROUP_DISAPPEAR.find((o) => o.ms === disappearMs)?.label})` : ""}
           </Text>
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            placeholder="Rechercher un contact"
-            placeholderTextColor={colors.muted}
-            style={{ height: 42, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 12 }}
-          />
-        </View>
-        {users.length === 0 ? (
-          <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{q ? "Aucun contact trouvé." : "Ajoute d’abord des contacts WIPP pour créer un groupe."}</Text>
-        ) : (
-          users.map((u) => {
-            const on = picked.includes(u.id);
-            return (
-              <Press key={u.id} onPress={() => setPicked((p) => (on ? p.filter((x) => x !== u.id) : [...p, u.id]))} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
-                <Avatar user={u} size={44} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15 }}>{u.displayName}</Text>
-                  <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{u.username}</Text>
-                </View>
-                <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: on ? colors.accent : colors.hair, backgroundColor: on ? colors.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
-                  {on ? <Check size={14} color={colors.accentFg} /> : null}
-                </View>
-              </Press>
-            );
-          })
-        )}
-      </ScrollView>
-      <View style={{ position: "absolute", left: 16, right: 16, bottom: 28 }}>
-        <Btn
-          label={busy ? "Création…" : "Créer le groupe"}
-          disabled={busy || !name.trim()}
-          onPress={() => {
-            setBusy(true);
-            useWippStore.getState().createGroup(name, picked, { description, photoUri: photo?.uri, photoMime: photo?.mime });
-            setTimeout(() => setBusy(false), 4000);
-          }}
-        />
+          <Text style={{ marginTop: 6, color: colors.muted, fontSize: 12, textAlign: "center" }}>🔒 Messages chiffrés de bout en bout</Text>
+        </ScrollView>
+      ) : null}
+
+      <View style={{ position: "absolute", left: 16, right: 16, bottom: 28, gap: 10 }}>
+        {step === 0 ? <Btn label="Suivant →" disabled={!name.trim()} onPress={() => setStep(1)} /> : null}
+        {step === 1 ? <Btn label={picked.length ? "Suivant →" : "Continuer sans membre →"} onPress={() => setStep(2)} /> : null}
+        {step === 2 ? <Btn label={busy ? "Création…" : "Créer le groupe"} disabled={busy} onPress={() => void create()} /> : null}
+        {step === 3 && created ? (
+          <>
+            <Btn
+              label="Ouvrir le groupe"
+              onPress={() =>
+                useWippStore.setState((st) => ({
+                  stack: [...st.stack.filter((sc) => sc.name !== "new-group" && sc.name !== "new-chat"), { name: "conversation", chatId: created }],
+                }))
+              }
+            />
+            {settings.visibility === "public" ? <Btn label="Partager un lien d’invitation" variant="secondary" onPress={() => push({ name: "group-qr", chatId: created })} /> : null}
+          </>
+        ) : null}
       </View>
+
+      <Sheet open={categoryOpen} title="Catégorie" onClose={() => setCategoryOpen(false)}>
+        {[null, ...GROUP_CATEGORIES].map((c) => {
+          const on = settings.category === c;
+          return (
+            <Press
+              key={c ?? "none"}
+              onPress={() => {
+                setSettings((s) => ({ ...s, category: c }));
+                setCategoryOpen(false);
+              }}
+              style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13 }}
+            >
+              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : c ? colors.fg : colors.muted }}>{c ?? "Aucune catégorie"}</Text>
+              {on ? <Check size={18} color={colors.accent} /> : null}
+            </Press>
+          );
+        })}
+      </Sheet>
     </ScreenRoot>
   );
 }
@@ -783,6 +960,113 @@ export function GroupAddMembersScreen({ chatId }: { chatId: string }) {
   );
 }
 
+/** Admins: visibility + member permissions + disappearing messages, after creation. */
+export function GroupSettingsScreen({ chatId }: { chatId: string }) {
+  const pop = useWippStore((s) => s.pop);
+  const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
+  const [settings, setSettings] = useState<GroupSettings>(chat?.groupSettings ?? { ...DEFAULT_GROUP_SETTINGS });
+  const [disappearMs, setDisappearMs] = useState(chat?.disappearAfterMs ?? 0);
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    try {
+      const { setGroupSettings } = await import("../lib/lot7/api");
+      await setGroupSettings(chatId, { ...settings, disappearMs });
+      await useWippStore.getState().syncServerInbox();
+      pop();
+    } catch (err) {
+      Alert.alert("Autorisations", String((err as Error)?.message ?? "").includes("forbidden") ? "Seuls les admins peuvent modifier ces réglages." : "Enregistrement impossible pour le moment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title="Autorisations du groupe" onBack={pop} />
+      </GlassHeader>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        <Text style={{ marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Visibilité</Text>
+        <GroupVisibilityPicker
+          value={settings.visibility}
+          onChange={(v) => setSettings((s) => ({ ...s, visibility: v, membersCanInvite: v === "public" ? s.membersCanInvite : false }))}
+        />
+        {chat?.groupSettings?.visibility === "public" && settings.visibility === "private" ? (
+          <Text style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>En passant en Privé, tous les liens d’invitation existants cesseront de fonctionner.</Text>
+        ) : null}
+        <Text style={{ marginTop: 22, marginBottom: 4, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Ce que les membres peuvent faire</Text>
+        <GroupPermissionsEditor value={settings} onChange={setSettings} disappearMs={disappearMs} onDisappear={setDisappearMs} />
+      </ScrollView>
+      <View style={{ position: "absolute", left: 16, right: 16, bottom: 28 }}>
+        <Btn label={busy ? "Enregistrement…" : "Enregistrer"} disabled={busy} onPress={() => void save()} />
+      </View>
+    </ScreenRoot>
+  );
+}
+
+/** Admins: approve or decline people waiting to join (by link, or added by a member). */
+export function GroupJoinRequestsScreen({ chatId }: { chatId: string }) {
+  const pop = useWippStore((s) => s.pop);
+  const [items, setItems] = useState<import("../lib/lot7/api").GroupJoinRequest[] | null>(null);
+  const load = () =>
+    void import("../lib/lot7/api")
+      .then(({ groupJoinRequests }) => groupJoinRequests(chatId))
+      .then((r) => setItems(Array.isArray(r) ? r : []))
+      .catch(() => setItems([]));
+  useEffect(load, [chatId]);
+
+  async function decide(profileId: string, approve: boolean) {
+    try {
+      const { decideGroupJoin } = await import("../lib/lot7/api");
+      await decideGroupJoin(chatId, profileId, approve);
+      setItems((list) => (list ?? []).filter((r) => r.profileId !== profileId));
+      if (approve) void useWippStore.getState().syncServerInbox();
+    } catch {
+      Alert.alert("Demandes", "Action impossible pour le moment.");
+    }
+  }
+
+  return (
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title="Demandes d’adhésion" onBack={pop} />
+      </GlassHeader>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+        {items === null ? (
+          <Text style={{ color: colors.muted }}>Chargement…</Text>
+        ) : items.length === 0 ? (
+          <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>Aucune demande en attente.</Text>
+        ) : (
+          items.map((r) => (
+            <View key={r.profileId} style={{ padding: 14, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Avatar user={{ displayName: r.displayName, avatar: r.avatarUrl ?? "" }} size={48} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{r.displayName}</Text>
+                  <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{r.username}</Text>
+                  <Text style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>
+                    {r.via === "link" ? "Via le lien d’invitation" : `Ajouté par ${r.invitedBy ?? "un membre"}`}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Btn label="Approuver" onPress={() => void decide(r.profileId, true)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Btn label="Refuser" variant="secondary" onPress={() => void decide(r.profileId, false)} />
+                </View>
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </ScreenRoot>
+  );
+}
+
 function newInviteToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   let raw = "";
@@ -881,29 +1165,64 @@ export function GroupQrScreen({ chatId }: { chatId: string }) {
 
 export function GroupInviteScreen({ token }: { token: string }) {
   const pop = useWippStore((s) => s.pop);
-  const push = useWippStore((s) => s.push);
-  const chat = useWippStore((s) => s.chats.find((c) => c.inviteToken === token || c.id === token));
+  const replace = useWippStore((s) => s.replace);
+  const [info, setInfo] = useState<{ status: string; name?: string; members?: number; chat_id?: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    void import("../lib/lot7/api")
+      .then(({ peekGroupInvite }) => peekGroupInvite(token))
+      .then(setInfo)
+      .catch(() => setInfo({ status: "error" }));
+  }, [token]);
+
+  async function join() {
+    setBusy(true);
+    try {
+      const { joinGroupInvite } = await import("../lib/lot7/api");
+      const res = await joinGroupInvite(token);
+      if ((res.status === "joined" || res.status === "already_member") && res.chat_id) {
+        await useWippStore.getState().syncServerInbox();
+        replace({ name: "conversation", chatId: `srv:${res.chat_id}` });
+        return;
+      }
+      setResult(res.status);
+    } catch {
+      setResult("error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const usable = info?.status === "ok" || info?.status === "already_member";
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="Invitation" onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 24, alignItems: "center" }}>
-        <Users size={40} color={colors.accent} />
-        <Text style={{ marginTop: 12, fontSize: 20, color: colors.fg }}>{chat?.name ?? "Groupe WIPP"}</Text>
-        <Btn
-          label="Rejoindre"
-          onPress={() => {
-            void import("../lib/lot7/api").then(async ({ joinGroupInvite }) => {
-              const res = await joinGroupInvite(token);
-              if (res.chat_id) {
-                await useWippStore.getState().syncServerInbox();
-                push({ name: "conversation", chatId: `srv:${res.chat_id}` });
-              }
-            });
-          }}
-          style={{ marginTop: 20, alignSelf: "stretch" }}
-        />
+        <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }}>
+          <Users size={40} color={colors.accent} />
+        </View>
+        <Text style={{ marginTop: 14, fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{info?.name ?? (info ? "Groupe WIPP" : "…")}</Text>
+        {info?.members ? <Text style={{ marginTop: 4, color: colors.muted }}>{info.members} membre{info.members > 1 ? "s" : ""}</Text> : null}
+        {result ? (
+          <Text style={{ marginTop: 18, color: result === "pending" ? colors.fg : colors.danger, textAlign: "center", lineHeight: 20 }}>
+            {result === "pending" ? "✓ Demande envoyée. Un admin du groupe doit l’approuver ; tu verras le groupe dès qu’il aura accepté." : GROUP_FR[result] ?? GROUP_FR.error}
+          </Text>
+        ) : info && !usable ? (
+          <Text style={{ marginTop: 18, color: colors.danger, textAlign: "center" }}>{GROUP_FR[info.status] ?? GROUP_FR.error}</Text>
+        ) : null}
+        {usable && !result ? (
+          <Btn
+            label={busy ? "…" : info?.status === "already_member" ? "Ouvrir le groupe" : "Rejoindre le groupe"}
+            disabled={busy}
+            onPress={() => void join()}
+            style={{ marginTop: 22, alignSelf: "stretch" }}
+          />
+        ) : null}
+        {result === "pending" ? <Btn label="Fermer" variant="secondary" onPress={pop} style={{ marginTop: 18, alignSelf: "stretch" }} /> : null}
       </View>
     </ScreenRoot>
   );

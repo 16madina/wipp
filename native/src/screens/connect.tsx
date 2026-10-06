@@ -1140,17 +1140,10 @@ export function QrProfileScreen({ handoffKey }: { handoffKey: string }) {
 }
 
 export function QrGroupScreen({ handoffKey }: { handoffKey: string }) {
-  const pop = useWippStore((s) => s.pop);
-  const push = useWippStore((s) => s.push);
-  return (
-    <ScreenRoot>
-      <GlassHeader>
-        <Header title="Groupe" onBack={pop} />
-      </GlassHeader>
-      <Text style={{ paddingHorizontal: 16, color: colors.muted, fontSize: 13 }}>
-        Les groupes restent partiels dans cette version. Le QR a bien été reconnu.
-      </Text>
-      <Btn label="Ouvrir l’invitation" onPress={() => push({ name: "group-invite", token: handoffKey })} style={{ margin: 16 }} />
-    </ScreenRoot>
-  );
+  const replace = useWippStore((s) => s.replace);
+  // A scanned group QR goes straight to the invitation (group name, members, Rejoindre).
+  useEffect(() => {
+    replace({ name: "group-invite", token: handoffKey });
+  }, [handoffKey]);
+  return <ScreenRoot>{null}</ScreenRoot>;
 }

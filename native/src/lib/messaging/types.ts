@@ -39,6 +39,7 @@ export type WippChatSummary = {
   groupName?: string;
   groupAvatar?: string | null;
   groupDescription?: string | null;
+  groupSettings?: import("../types").GroupSettings;
   memberIds?: string[];
   adminIds?: string[];
   ownerId?: string;

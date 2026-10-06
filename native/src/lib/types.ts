@@ -154,6 +154,8 @@ export type ScreenName =
   | "group-qr"
   | "group-info"
   | "group-add"
+  | "group-settings"
+  | "group-requests"
   | "group-invite"
   | "qr-profile"
   | "qr-group"
@@ -228,6 +230,8 @@ export type Screen =
   | { name: "group-qr"; chatId: string }
   | { name: "group-info"; chatId: string }
   | { name: "group-add"; chatId: string }
+  | { name: "group-settings"; chatId: string }
+  | { name: "group-requests"; chatId: string }
   | { name: "group-invite"; token: string }
   | { name: "qr-profile"; key: string }
   | { name: "qr-group"; key: string }
@@ -284,11 +288,33 @@ export type ConnectionInfo = {
 /** What the person who accepts / proposes chooses. Minutes only for ephemeral (server bounds 15 min–30 days). */
 export type ConnectionChoice = { type: "permanent" } | { type: "ephemeral"; minutes: number };
 
+/** Group visibility + what members may do (enforced by the server). */
+export type GroupSettings = {
+  visibility: "private" | "public";
+  category: string | null;
+  membersCanEdit: boolean;
+  membersCanSend: boolean;
+  membersCanAdd: boolean;
+  membersCanInvite: boolean;
+  approveNewMembers: boolean;
+};
+
+export const DEFAULT_GROUP_SETTINGS: GroupSettings = {
+  visibility: "private",
+  category: null,
+  membersCanEdit: false,
+  membersCanSend: true,
+  membersCanAdd: false,
+  membersCanInvite: false,
+  approveNewMembers: true,
+};
+
 export type Chat = {
   id: string;
   type: "dm" | "group";
   name?: string;
   avatar?: string;
+  groupSettings?: GroupSettings;
   inviteToken?: string;
   participantIds: string[];
   unread: number;

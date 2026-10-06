@@ -901,6 +901,11 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             <Lock size={16} color={colors.muted} />
             <Text style={{ color: colors.muted, marginTop: 6 }}>{t("sealedKeepsNone")}</Text>
           </View>
+        ) : chat?.type === "group" && chat.groupSettings?.membersCanSend === false && !(chat.adminIds ?? []).includes("me") ? (
+          // Announcement group: only admins write (the server refuses the others anyway).
+          <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12), alignItems: "center", borderTopWidth: 1, borderTopColor: colors.hair }}>
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>Seuls les admins peuvent envoyer des messages dans ce groupe.</Text>
+          </View>
         ) : (
           <View style={{ paddingBottom: stickerBar ? 0 : Math.max(insets.bottom, 8) }}>
             {reply || editing ? (

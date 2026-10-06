@@ -118,14 +118,29 @@ export async function listChats(): Promise<WippChatSummary[]> {
   const disappear = new Map(
     ((metas ?? []) as { id: string; disappear_after_ms?: number | null }[]).map((c) => [c.id, c.disappear_after_ms ?? null]),
   );
-  const groupBy = new Map<string, { name: string; owner_id: string; avatar_url?: string | null; description?: string | null }>();
+  type GroupRow = {
+    chat_id: string;
+    name: string;
+    owner_id: string;
+    avatar_url: string | null;
+    description: string | null;
+    invites_enabled?: boolean;
+    category?: string | null;
+    members_can_edit?: boolean;
+    members_can_send?: boolean;
+    members_can_add?: boolean;
+    members_can_invite?: boolean;
+    approve_new_members?: boolean;
+  };
+  const groupBy = new Map<string, GroupRow>();
   const adminBy = new Map<string, string[]>();
   const membersBy = new Map<string, WippProfile[]>();
-  const { data: groupRows, error: groupErr } = await db.from("wipp_groups").select("chat_id,name,owner_id,avatar_url,description").in("chat_id", ids);
+  const { data: groupRows, error: groupErr } = await db
+    .from("wipp_groups")
+    .select("chat_id,name,owner_id,avatar_url,description,invites_enabled,category,members_can_edit,members_can_send,members_can_add,members_can_invite,approve_new_members")
+    .in("chat_id", ids);
   if (!groupErr && groupRows?.length) {
-    for (const g of groupRows as { chat_id: string; name: string; owner_id: string; avatar_url: string | null; description: string | null }[]) {
-      groupBy.set(g.chat_id, { name: g.name, owner_id: g.owner_id, avatar_url: g.avatar_url, description: g.description });
-    }
+    for (const g of groupRows as GroupRow[]) groupBy.set(g.chat_id, g);
     const gids = [...groupBy.keys()];
     const { data: adminRows } = await db.from("wipp_group_admins").select("chat_id,profile_id").in("chat_id", gids);
     for (const a of (adminRows ?? []) as { chat_id: string; profile_id: string }[]) {
@@ -176,6 +191,15 @@ export async function listChats(): Promise<WippChatSummary[]> {
         groupName: group.name,
         groupAvatar: group.avatar_url ?? null,
         groupDescription: group.description ?? null,
+        groupSettings: {
+          visibility: group.invites_enabled === false ? "private" : "public",
+          category: group.category ?? null,
+          membersCanEdit: Boolean(group.members_can_edit),
+          membersCanSend: group.members_can_send !== false,
+          membersCanAdd: Boolean(group.members_can_add),
+          membersCanInvite: Boolean(group.members_can_invite),
+          approveNewMembers: Boolean(group.approve_new_members),
+        },
         ownerId: group.owner_id,
         memberIds: members.map((m) => m.id),
         adminIds: [...admins],

@@ -1221,6 +1221,12 @@ export async function sendMessage(
   await ensureMessagingReady();
   await assertMember(meId, chatId);
   await assertChatUnblocked(meId, chatId);
+  {
+    // Group where only admins may write (group permissions, same rule as the database).
+    const sqlPerm = await getSql();
+    const perm = await sqlPerm<{ ok: boolean }>`select public.wipp_group_can_post(${chatId}, ${meId}) as ok`;
+    if (perm[0] && !perm[0].ok) throw new WippHttpError(403, "admins_only", "Seuls les admins peuvent envoyer des messages dans ce groupe.");
+  }
   const { sweepMedia } = await import("./media-store");
   await sweepMedia();
   const text = body.trim();

@@ -38,6 +38,7 @@ export async function groupInviteCall(token: string, join: boolean) {
 export const GROUP_FR: Record<string, string> = {
   ok: "Invitation valide",
   joined: "Tu as rejoint le groupe",
+  pending: "Demande envoyée : un admin du groupe doit l’approuver",
   already_member: "Tu es déjà membre de ce groupe",
   revoked: "Invitation révoquée",
   expired: "Invitation expirée",
