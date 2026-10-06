@@ -9,6 +9,7 @@ export function screenFromPushData(data: Record<string, unknown>): Screen | null
   if (type === "group" || type === "story") return null;
   if (type === "request") return { name: "requests" };
   if (type === "touch") return { name: "touch-incoming" };
+  if (type === "missed-call") return { name: "calls" };
   if (type === "call" || type === "incoming_call") {
     const callId = String(data.eventId || data.inviteId || "");
     if (!callId) return { name: "calls" };

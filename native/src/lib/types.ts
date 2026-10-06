@@ -487,6 +487,8 @@ export type CallLog = {
   participantIds?: string[];
   /** Issue d'un appel sortant non abouti. */
   outcome?: "declined" | "busy" | "noAnswer" | "failed";
+  /** Name / photo sent with the history (person or group), when not in the contacts list. */
+  peer?: { name?: string; username?: string; avatar?: string };
 };
 
 export type LiveCall = {

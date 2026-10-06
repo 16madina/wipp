@@ -681,7 +681,31 @@ export async function listCallHistory(meId: string) {
   } catch {
     /* group call table not deployed yet */
   }
-  return direct.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 40);
+  const list = direct.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 40);
+  // Name + photo of each peer / group, so the Calls tab shows them even without an open conversation.
+  const peers = new Map<string, { name: string | null; username: string | null; avatar: string | null }>();
+  try {
+    const personIds = [...new Set(list.filter((c) => !c.group).map((c) => c.peerId))];
+    const groupIds = [...new Set(list.filter((c) => c.group).map((c) => c.peerId))];
+    if (personIds.length) {
+      const ppl = await sql<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null }>`
+        select id, username, display_name, avatar_url from wipp_profiles where id = any(${personIds})
+      `;
+      for (const p of ppl) peers.set(p.id, { name: p.display_name, username: p.username, avatar: p.avatar_url });
+    }
+    if (groupIds.length) {
+      const grp = await sql<{ chat_id: string; name: string | null; avatar_url: string | null }>`
+        select chat_id, name, avatar_url from wipp_groups where chat_id = any(${groupIds})
+      `;
+      for (const g of grp) peers.set(g.chat_id, { name: g.name, username: null, avatar: g.avatar_url });
+    }
+  } catch {
+    /* names are a bonus: the list still works without them */
+  }
+  return list.map((c) => {
+    const p = peers.get(c.peerId);
+    return { ...c, peerName: p?.name ?? null, peerUsername: p?.username ?? null, peerAvatar: p?.avatar ?? null };
+  });
 }
 
 const LIVE_GROUP_STATES = ["joining", "joined", "reconnecting", "disconnected"];

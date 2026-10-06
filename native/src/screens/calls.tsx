@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { Mic, MicOff, Phone, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Video, VideoOff } from "lucide-react-native";
-import { Avatar } from "../components/Avatar";
+import { Avatar, GroupAvatar } from "../components/Avatar";
 import { Chip, Empty, GlassHeader, Header, PendingNote, Press, ScreenRoot, SearchField, Btn } from "../components/ui";
 import { QrCard } from "../components/QrCard";
 import { asEpochMs, formatChatTime, formatDuration } from "../lib/format";
@@ -22,6 +22,7 @@ export function CallsScreen() {
   const push = useWippStore((s) => s.push);
   const markCallsSeen = useWippStore((s) => s.markCallsSeen);
   const [filter, setFilter] = useState<"all" | "missed">("all");
+  const chats = useWippStore((s) => s.chats);
   const [q, setQ] = useState("");
   const [picker, setPicker] = useState(false);
   useEffect(() => {
@@ -44,6 +45,9 @@ export function CallsScreen() {
             duration?: number | string | null;
             group?: boolean;
             chatId?: string | null;
+            peerName?: string | null;
+            peerUsername?: string | null;
+            peerAvatar?: string | null;
           }[];
         }>("calls/history");
         useWippStore.setState({
@@ -58,6 +62,7 @@ export function CallsScreen() {
             group: c.group,
             chatId: c.chatId ?? undefined,
             outcome: c.declined ? "declined" as const : c.status === "busy" ? "busy" as const : c.missed ? "noAnswer" as const : undefined,
+            peer: { name: c.peerName ?? undefined, username: c.peerUsername ?? undefined, avatar: c.peerAvatar ?? undefined },
           })),
         });
       } catch {
@@ -69,7 +74,7 @@ export function CallsScreen() {
   const list = (filter === "missed" ? calls.filter((c) => c.missed) : calls).filter((c) => {
     if (!needle) return true;
     const u = users[c.userId];
-    return [u?.displayName, u?.username].some((v) => v?.toLowerCase().includes(needle));
+    return [u?.displayName, u?.username, c.peer?.name, c.peer?.username].some((v) => v?.toLowerCase().includes(needle));
   });
   return (
     <ScreenRoot padBottom>
@@ -97,6 +102,11 @@ export function CallsScreen() {
         </View>
         {list.length === 0 ? <Empty title={t("noResults")} /> : list.map((c) => {
           const u = users[c.userId];
+          const groupChat = c.group ? chats.find((x) => x.id === c.userId) : undefined;
+          const name = c.group
+            ? groupChat?.name || c.peer?.name || "Groupe"
+            : u?.displayName || c.peer?.name || (c.peer?.username ? `@${c.peer.username}` : "WIPP");
+          const face = u ?? { displayName: name, avatar: c.peer?.avatar };
           const Icon = c.missed ? PhoneMissed : c.direction === "in" ? PhoneIncoming : PhoneOutgoing;
           return (
             <Press
@@ -104,9 +114,9 @@ export function CallsScreen() {
               onPress={() => push({ name: "active-call", userId: c.userId, kind: c.kind, dir: "out", group: c.group, chatId: c.chatId })}
               style={{ minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16 }}
             >
-              <Avatar user={u} size={48} />
+              {c.group ? <GroupAvatar name={name} size={48} fallback={groupChat?.avatar ?? c.peer?.avatar} /> : <Avatar user={face} size={48} />}
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontFamily: "Inter_500Medium", color: c.missed ? colors.danger : colors.fg }}>{u?.displayName}</Text>
+                <Text style={{ fontSize: 16, fontFamily: "Inter_500Medium", color: c.missed ? colors.danger : colors.fg }}>{name}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Icon size={14} color={c.missed ? colors.danger : colors.muted} />
                   <Text style={{ fontSize: 13, color: colors.muted }}>
