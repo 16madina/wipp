@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
+import { GroupSafetyBanner } from "../components/GroupSafety";
 import { MediaViewer } from "../components/MediaViewer";
 import { myBubbleColors, useChatThemes } from "../lib/chat-themes";
 import { MessageMenu } from "../components/MessageMenu";
@@ -875,6 +876,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
           <Text style={{ fontSize: 10.5, color: colors.muted }}>{t("e2eBannerShort")}</Text>
         </Press>
       ) : null}
+      {chat?.type === "group" && chatId.startsWith("srv:") ? <GroupSafetyBanner chatId={chatId} serverId={chatId.slice(4)} name={chat.name} /> : null}
       {shop ? (
         <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 14, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
           <Text style={{ color: fgA(0.72), fontSize: 13, lineHeight: 18 }}>

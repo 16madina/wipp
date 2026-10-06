@@ -54,6 +54,18 @@ export async function leaveServerGroup(chatId: string) {
   return rpc<string>("wipp_lot7_leave", { p_chat: chatId });
 }
 
+export type GroupSafety = { addedBy: string; username?: string; displayName?: string; isContact: boolean };
+
+/** Who added me to this group (null when I created it or joined by myself). */
+export async function groupSafety(chatId: string) {
+  return rpc<GroupSafety | null>("wipp_lot7_group_safety", { p_chat: chatId });
+}
+
+/** Report a group to moderation (id + reason only, never messages); optionally leave it. */
+export async function reportGroup(chatId: string, reason: string, leave: boolean) {
+  return rpc<string>("wipp_lot7_report_group", { p_chat: chatId, p_reason: reason, p_leave: leave });
+}
+
 export async function renameServerGroup(chatId: string, name: string) {
   return rpc<string>("wipp_lot7_rename", { p_chat: chatId, p_name: name });
 }

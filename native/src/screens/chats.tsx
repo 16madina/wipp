@@ -31,6 +31,7 @@ import {
   Users,
 } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
+import { reportGroupFlow } from "../components/GroupSafety";
 import { InvisibleAvatar } from "../components/InvisibleAvatar";
 import { ConnectionChoicePicker } from "../components/ConnectionChoice";
 import { Sheet } from "../components/card-editor-parts";
@@ -1201,6 +1202,18 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
 
         {group ? (
           <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
+            <Row
+              icon={<Flag size={18} color={colors.danger} />}
+              label="Signaler le groupe"
+              danger
+              onPress={() =>
+                Alert.alert("Signaler le groupe", "Veux-tu aussi quitter le groupe ?", [
+                  { text: "Signaler et quitter", style: "destructive", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, true) },
+                  { text: "Signaler seulement", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, false) },
+                  { text: "Annuler", style: "cancel" },
+                ])
+              }
+            />
             <Row icon={<LogOut size={18} color={colors.danger} />} label="Quitter le groupe" danger onPress={leaveGroup} />
           </View>
         ) : null}
