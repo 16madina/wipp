@@ -169,17 +169,22 @@ export async function openCall(input: {
     if (input.dir === "in" && input.callId) {
       // Woken by a VoIP push with WIPP closed, the session may not be ready yet: retry a few times
       // instead of failing (a failure would close the iOS call screen while it rings).
+      // Keep trying for the whole ringing time (~55 s): 12 s was too short in the background and closed
+      // the ringing iPhone screen while the caller was still waiting.
       let status: Awaited<ReturnType<typeof callStatus>> | null = null;
-      for (let attempt = 0; attempt < 8 && !status; attempt++) {
+      const giveUpAt = Date.now() + 55_000;
+      while (!status) {
         try {
           status = await callStatus(input.callId);
-        } catch (err) {
-          if (attempt === 7) throw err;
-          await new Promise((r) => setTimeout(r, 1500));
+        } catch {
+          if (Date.now() > giveUpAt) {
+            useCallSession.getState().patch({ phase: "missed", note: "Appel expiré." });
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 2000));
           if (useCallSession.getState().session?.callId !== input.callId) return;
         }
       }
-      if (!status) return;
       const invite = status.invite;
       if (invite.status === "missed" || invite.status === "ended" || invite.status === "cancelled") {
         useCallSession.getState().patch({ phase: "missed", note: "Appel expiré." });

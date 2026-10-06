@@ -59,7 +59,7 @@ function patchAppDelegate(src) {
       } else if call.hasEnded {
         // Only a real answer cancels it: if the ringing stops early for any reason, the notice still shows.
         AppDelegate.callLog("ended without answer \\(key.prefix(8)) → notice kept")
-        AppDelegate.missedPending.removeValue(forKey: key)
+        AppDelegate.showMissedNow(key)
       }
     }
   }
@@ -104,6 +104,18 @@ function patchAppDelegate(src) {
     missedPending[key] = (missedPending[key]?.expiry ?? 0, true)
     UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["missed-\\(key)"])
     UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "missed-\\(key)", content: missedContent(key, video: video), trigger: nil), withCompletionHandler: nil)
+  }
+
+  /** Ringing stopped without an answer: show the notice right away (the scheduled one was only a fallback). */
+  static func showMissedNow(_ key: String) {
+    guard missedPending.removeValue(forKey: key) != nil else { return }
+    let center = UNUserNotificationCenter.current()
+    center.getPendingNotificationRequests { requests in
+      guard let scheduled = requests.first(where: { $0.identifier == "missed-\\(key)" }) else { return }
+      center.removePendingNotificationRequests(withIdentifiers: [scheduled.identifier])
+      center.add(UNNotificationRequest(identifier: scheduled.identifier, content: scheduled.content, trigger: nil), withCompletionHandler: nil)
+      AppDelegate.callLog("missed notice shown now \\(key.prefix(8))")
+    }
   }
 
   static func cancelMissedCall(_ key: String) {
