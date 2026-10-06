@@ -13,6 +13,7 @@ import {
   Pencil,
   Phone,
   Pin,
+  Archive,
   Share2,
   Store,
   Video,
@@ -118,6 +119,7 @@ export function ChatsScreen() {
   const { compact, headerIcon } = useDeviceLayout();
   const [filter, setFilter] = useState<"all" | "personal" | "shops" | "groups">("all");
   const [menuChatId, setMenuChatId] = useState<string | null>(null);
+  const menuChat = menuChatId ? chats.find((c) => c.id === menuChatId) : undefined;
   const now = Date.now();
   const drafts = useWippStore((s) => s.drafts);
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
@@ -133,6 +135,7 @@ export function ChatsScreen() {
     }
   }, []);
 
+  const archivedCount = chats.filter((c) => c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id) && (!serverConnected || !isSeedDemoChat(c.id))).length;
   const visible = chats
     .filter((c) => !c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id))
     .filter((c) => !serverConnected || !isSeedDemoChat(c.id))
@@ -261,6 +264,15 @@ export function ChatsScreen() {
           />
           <Chip label={t("chatsGroups")} active={filter === "groups"} onPress={() => setFilter("groups")} />
         </ScrollView>
+        {archivedCount > 0 && filter !== "groups" ? (
+          <Press onPress={() => push({ name: "archives" })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View style={{ width: 52, alignItems: "center" }}>
+              <Archive size={20} color={colors.muted} />
+            </View>
+            <Text style={{ flex: 1, fontSize: 15, color: colors.fg, fontFamily: "Inter_500Medium" }}>Archivées</Text>
+            <Text style={{ fontSize: 13, color: colors.muted }}>{archivedCount}</Text>
+          </Press>
+        ) : null}
         {visible.length === 0 ? (
           <Empty
             title={filter === "groups" ? t("groupsEmpty") : t("chatsEmpty")}
@@ -305,26 +317,34 @@ export function ChatsScreen() {
           style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
         >
           <View style={{ marginBottom: 24, marginHorizontal: 16, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surface }}>
-            {[
-              ["Épingler", () => useWippStore.getState().pinChat(menuChatId, true)],
-              ["Archiver", () => useWippStore.getState().archiveChat(menuChatId, true)],
-              ["Sourdine toujours", () => useWippStore.getState().setMute(menuChatId, "always")],
-              ["Sourdine 1 heure", () => useWippStore.getState().setMute(menuChatId, "1h")],
-              ["Sourdine 8 heures", () => useWippStore.getState().setMute(menuChatId, "8h")],
-              ["Sourdine 1 semaine", () => useWippStore.getState().setMute(menuChatId, "1w")],
-              ["Réactiver les notifications", () => useWippStore.getState().setMute(menuChatId, "off")],
-              ["Marquer lu / non lu", () => useWippStore.getState().toggleUnread(menuChatId)],
-              ["Archives", () => push({ name: "archives" })],
-              [
-                menuChatId && isChatLocked(menuChatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation",
-                () => {
-                  const id = menuChatId;
-                  if (id) toggleChatLock(id, lockAsk.askPin);
-                },
-              ],
-              [
-                "Masquer et verrouiller",
-                () => {
+            {menuChat ? (
+              <Text numberOfLines={1} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, fontSize: 13, color: colors.muted }}>
+                {menuChat.type === "group" ? menuChat.name : chatPeer(menuChat, users)?.displayName ?? "Conversation"}
+              </Text>
+            ) : null}
+            <ScrollView style={{ maxHeight: 440 }}>
+              {(
+                [
+                  [menuChat?.pinned ? "Désépingler" : "Épingler", () => menuChatId && useWippStore.getState().pinChat(menuChatId, !menuChat?.pinned)],
+                  [menuChat?.archived ? "Désarchiver" : "Archiver", () => menuChatId && useWippStore.getState().archiveChat(menuChatId, !menuChat?.archived)],
+                  [menuChat?.muted ? "Réactiver les notifications" : "Mettre en sourdine…", () => {
+                    const id = menuChatId;
+                    if (!id) return;
+                    if (menuChat?.muted) return useWippStore.getState().setMute(id, "off");
+                    Alert.alert("Mettre en sourdine", undefined, [
+                      { text: "1 heure", onPress: () => useWippStore.getState().setMute(id, "1h") },
+                      { text: "8 heures", onPress: () => useWippStore.getState().setMute(id, "8h") },
+                      { text: "1 semaine", onPress: () => useWippStore.getState().setMute(id, "1w") },
+                      { text: "Toujours", onPress: () => useWippStore.getState().setMute(id, "always") },
+                      { text: "Annuler", style: "cancel" },
+                    ]);
+                  }],
+                  [menuChat?.unread || menuChat?.manuallyUnreadAt ? "Marquer comme lu" : "Marquer comme non lu", () => menuChatId && useWippStore.getState().toggleUnread(menuChatId)],
+                  [menuChatId && isChatLocked(menuChatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation", () => {
+                    const id = menuChatId;
+                    if (id) toggleChatLock(id, lockAsk.askPin);
+                  }],
+                  ["Masquer dans WIPP Privé", () => {
                   const id = menuChatId;
                   if (!id) return;
                   if (!isPrivateEnabled()) {
@@ -354,20 +374,21 @@ export function ChatsScreen() {
                       },
                     ],
                   );
-                },
-              ],
-            ].map(([label, fn]) => (
-              <Press
-                key={String(label)}
-                onPress={() => {
-                  (fn as () => void)();
-                  setMenuChatId(null);
-                }}
-                style={{ paddingHorizontal: 16, paddingVertical: 14 }}
-              >
-                <Text style={{ fontSize: 16, color: colors.fg }}>{label as string}</Text>
-              </Press>
-            ))}
+                }],
+                ] as [string, () => void][]
+              ).map(([label, fn], idx) => (
+                <Press
+                  key={label}
+                  onPress={() => {
+                    setMenuChatId(null);
+                    fn();
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: idx ? 1 : 0, borderTopColor: colors.hair }}
+                >
+                  <Text style={{ fontSize: 16, color: colors.fg }}>{label}</Text>
+                </Press>
+              ))}
+            </ScrollView>
           </View>
         </Press>
       ) : null}
@@ -449,6 +470,7 @@ function ChatRow({
             </View>
           ) : null}
           {peer && verifiedIds.includes(peer.id) ? <ShieldCheck size={14} color={colors.accent} /> : null}
+          {chat.pinned ? <Pin size={13} color={colors.muted} /> : null}
           {locked ? <Lock size={13} color={colors.accent} /> : null}
           {ephemeral ? <Clock size={14} color={colors.accent} /> : null}
           {chat.muted ? <BellOff size={14} color={colors.muted} /> : null}
