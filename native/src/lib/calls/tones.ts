@@ -149,6 +149,21 @@ export async function playBusyTone() {
   await start("busy", true);
 }
 
+/** Incoming call with WIPP open: the official WIPP ringtone (loops until answered / ended). */
 export async function playIncomingRing() {
-  await start("incoming", true);
+  const gen = ++token;
+  await unload();
+  if (gen !== token) return;
+  try {
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true, staysActiveInBackground: false });
+    const created = await Audio.Sound.createAsync(require("../../../assets/sounds/wipp-original.mp3"), { shouldPlay: true, isLooping: true, volume: 1 });
+    if (gen !== token) {
+      await created.sound.unloadAsync();
+      return;
+    }
+    active = created.sound;
+  } catch {
+    // Fallback: the short synthesized tone.
+    if (gen === token) await start("incoming", true);
+  }
 }

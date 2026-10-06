@@ -96,6 +96,11 @@ export function showSystemIncoming(callId: string, video: boolean, callerName?: 
   keep.displayIncomingCall(uuid, "wipp", callerName || "WIPP", "generic", video);
 }
 
+/** True when the iPhone call screen (CallKit) is already showing this call — it plays the ringtone itself. */
+export function isSystemRinging(callId: string) {
+  return [...uuidToCall.values()].includes(callId);
+}
+
 /** The CallKit screen was opened natively by a VoIP push: remember which WIPP call it is. */
 /** Accepted from the Android call notification before the call was loaded. */
 export function markAnsweredBySystem(callId: string) {

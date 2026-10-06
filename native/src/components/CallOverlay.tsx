@@ -19,6 +19,7 @@ import {
   type CallPhase,
 } from "../lib/calls/session";
 import { playBusyTone, playCallerWaiting, playIncomingRing, stopCallTones } from "../lib/calls/tones";
+import { isSystemRinging } from "../lib/calls/callkeep";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
@@ -100,7 +101,11 @@ export function CallOverlay() {
       return;
     }
     if (session.phase === "outgoing") void playCallerWaiting();
-    else if (session.phase === "ringing" && session.dir === "in") void playIncomingRing();
+    else if (session.phase === "ringing" && session.dir === "in") {
+      // CallKit already rings (app in the background or call screen shown natively): no second ringtone.
+      if (AppState.currentState === "active" && !(session.callId && isSystemRinging(session.callId))) void playIncomingRing();
+      else void stopCallTones();
+    }
     else if (session.phase === "busy") void playBusyTone();
     else void stopCallTones();
   }, [session?.phase, session?.dir]);
