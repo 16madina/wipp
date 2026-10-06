@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Camera,
   ChevronRight,
+  BarChart3,
   Clock3,
   Eye,
   FileText,
@@ -127,6 +128,7 @@ export function ShareSurpriseSheet({
   onShare,
   onSurprise,
   onStickers,
+  showPoll,
   initialStage = "share",
 }: {
   open: boolean;
@@ -134,6 +136,8 @@ export function ShareSurpriseSheet({
   onShare: (label: string) => void;
   onSurprise: (surprise: Surprise) => void;
   onStickers: () => void;
+  /** Groups only: adds the « Sondage » tile. */
+  showPoll?: boolean;
   initialStage?: "share" | "compose";
 }) {
   const insets = useSafeAreaInsets();
@@ -253,7 +257,7 @@ export function ShareSurpriseSheet({
                 </Press>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {CONTENT.map(({ label, icon: Icon }) => (
+                {[...CONTENT, ...(showPoll ? [{ label: "Sondage", icon: BarChart3 } as const] : [])].map(({ label, icon: Icon }) => (
                   <Press
                     key={label}
                     onPress={() => pick(label)}

@@ -153,6 +153,7 @@ const MEDIA_FIELDS = [
   "text",
   // Sans ces champs, un sticker / une carte / une surprise redevenait un simple texte à la synchro suivante.
   "stickerId",
+  "poll",
   "shopId",
   "scratchCardId",
   "scratchDesign",
@@ -254,6 +255,7 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
       createdAt: m.createdAt,
       status: receiptStatus(m, Boolean(fromMe)),
       seen: seenOf(m, Boolean(fromMe)),
+      pollVotes: votesOf(m, meServerId ?? undefined),
       reactions: (m.reactions ?? []).map((r) => ({
         userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
         emoji: r.emoji,
@@ -298,6 +300,7 @@ function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): M
     createdAt: m.createdAt,
     status: receiptStatus(m, Boolean(fromMe)),
       seen: seenOf(m, Boolean(fromMe)),
+      pollVotes: votesOf(m, meServerId ?? undefined),
     reactions: (m.reactions ?? []).map((r) => ({
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
@@ -327,6 +330,7 @@ function messageMeta(m: WippMessage, meServerId: string | undefined) {
   return {
     status: receiptStatus(m, fromMe),
     seen: seenOf(m, fromMe),
+    pollVotes: votesOf(m, meServerId),
     reactions: (m.reactions ?? []).map((r) => ({
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
@@ -336,6 +340,11 @@ function messageMeta(m: WippMessage, meServerId: string | undefined) {
     pinned: Boolean(m.pinnedAt),
     type: m.deletedAt ? ("system" as const) : ("text" as const),
   };
+}
+
+function votesOf(m: WippMessage, meServerId: string | undefined): Message["pollVotes"] {
+  if (!m.pollVotes) return undefined;
+  return m.pollVotes.map((v) => ({ userId: meServerId && v.profileId === meServerId ? "me" : `srvuser:${v.profileId}`, options: v.options }));
 }
 
 function seenOf(m: WippMessage, fromMe: boolean): Message["seen"] {
@@ -574,13 +583,22 @@ async function decryptGroupMerged(state: StoreSlice, localChatId: string, identi
   };
 }
 
+function validPoll(p: unknown): Message["poll"] | null {
+  const q = p as { question?: unknown; options?: unknown; multi?: unknown } | undefined;
+  if (!q || typeof q.question !== "string" || !Array.isArray(q.options)) return null;
+  const options = q.options.filter((o): o is string => typeof o === "string" && o.trim().length > 0).slice(0, 12).map((o) => o.slice(0, 100));
+  if (options.length < 2) return null;
+  return { question: q.question.slice(0, 300), options, multi: q.multi === true };
+}
+
 /** Sticker / media sent in the group JSON format (now inside the encrypted body). */
 function groupMediaFields(inner: string): Partial<Message> | null {
   const t = inner.trim();
   if (!t.startsWith("{")) return null;
   try {
-    const p = JSON.parse(t) as { k?: string; type?: Message["type"]; text?: string; stickerId?: string };
+    const p = JSON.parse(t) as { k?: string; type?: Message["type"]; text?: string; stickerId?: string; poll?: Message["poll"] };
     if (p.k !== "wipp-group-media" || !p.type) return null;
+    if (p.type === "poll") return validPoll(p.poll) ? { type: "poll", poll: validPoll(p.poll)!, text: undefined } : null;
     return { type: p.type, text: p.text, stickerId: p.stickerId };
   } catch {
     return null;

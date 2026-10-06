@@ -54,6 +54,11 @@ export async function leaveServerGroup(chatId: string) {
   return rpc<string>("wipp_lot7_leave", { p_chat: chatId });
 }
 
+/** Vote in a group poll (option indexes; empty = remove my vote). */
+export async function votePoll(messageId: string, options: number[]) {
+  return rpc<string>("wipp_lot7_poll_vote", { p_message: messageId, p_options: options });
+}
+
 export type GroupSafety = { addedBy: string; username?: string; displayName?: string; isContact: boolean };
 
 /** Who added me to this group (null when I created it or joined by myself). */

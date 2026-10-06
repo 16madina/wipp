@@ -81,6 +81,7 @@ function previewOf(message: Message, lang: Lang = "fr") {
   if (message.type === "gif") return "GIF";
   if (message.type === "video") return lang === "fr" ? "Vidéo" : "Video";
   if (message.type === "sticker") return stickerById(message.stickerId ?? "")?.labelFr ?? "Sticker";
+  if (message.type === "poll") return `📊 ${message.poll?.question ?? (lang === "fr" ? "Sondage" : "Poll")}`;
   if (message.type === "shop") return message.text ? `🏪 ${message.text}` : "Carte professionnelle";
   return message.text ?? "";
 }
@@ -558,6 +559,7 @@ export const useWippStore = create<Store>((set, get) => ({
       file: data.file,
       gifUrl: data.gifUrl,
       stickerId: data.stickerId,
+      poll: data.poll,
       scratchDesign: data.scratchDesign,
       scratchCardId: data.scratchCardId,
       effectId: data.effectId,
@@ -586,7 +588,7 @@ export const useWippStore = create<Store>((set, get) => ({
     if (!chatId.startsWith("srv:")) pumpReceipt(get, set, chatId, message.id);
 
     const groupServer = existingChat?.type === "group" && chatId.startsWith("srv:");
-    if (groupServer && (message.type === "text" || message.type === "sticker")) {
+    if (groupServer && (message.type === "text" || message.type === "sticker" || message.type === "poll")) {
       void (async () => {
         try {
           const { postGroupMessage, mentionIdsInText } = await import("./lot7/api");
@@ -594,9 +596,11 @@ export const useWippStore = create<Store>((set, get) => ({
             .filter((id) => id !== "me")
             .map((id) => ({ id, username: get().users[id]?.username }));
           const plainBody =
-            message.type === "text" || !message.stickerId
-              ? message.text ?? ""
-              : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });
+            message.type === "poll" && message.poll
+              ? JSON.stringify({ k: "wipp-group-media", type: "poll", poll: message.poll })
+              : message.type === "text" || !message.stickerId
+                ? message.text ?? ""
+                : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });
           if (!plainBody) return;
           // End-to-end: encrypted with the group key (the server only stores ciphertext).
           // Without an identity key on this phone (very old install), the message cannot be encrypted.

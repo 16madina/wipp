@@ -361,7 +361,10 @@ export type Message = {
   id: string;
   chatId: string;
   fromId: string;
-  type: "text" | "voice" | "image" | "video" | "listing" | "shop" | "system" | "sticker" | "scratch" | "file" | "gif";
+  type: "text" | "voice" | "image" | "video" | "listing" | "shop" | "system" | "sticker" | "scratch" | "file" | "gif" | "poll";
+  /** Group poll: question + choices travel inside the encrypted body; votes come from the server (indexes only). */
+  poll?: { question: string; options: string[]; multi: boolean };
+  pollVotes?: { userId: string; options: number[] }[];
   text?: string;
   createdAt: number;
   status: "sending" | "sent" | "delivered" | "read" | "failed";

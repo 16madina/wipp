@@ -47,6 +47,7 @@ export function groupPreview(body: string) {
         if (parsed.type === "voice") return "Message vocal";
         if (parsed.type === "file") return parsed.name || "Document";
         if (parsed.type === "sticker") return "Sticker";
+        if (parsed.type === "poll") return "Sondage";
       }
     } catch {
       /* plain */

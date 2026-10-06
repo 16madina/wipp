@@ -30,6 +30,7 @@ import { myBubbleColors, useChatThemes } from "../lib/chat-themes";
 import { MessageMenu } from "../components/MessageMenu";
 import { ReceiptTicks } from "../components/ReceiptTicks";
 import { ReadByFaces, groupStatus } from "../components/ReadBy";
+import { CreatePollSheet, PollBubble } from "../components/Poll";
 import { ShareSurpriseSheet } from "../components/ShareSurpriseSheet";
 import { StickerTray } from "../components/StickerTray";
 import { SurpriseReveal } from "../components/SurpriseReveal";
@@ -229,6 +230,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const [editing, setEditing] = useState<Message | null>(null);
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const [gifOpen, setGifOpen] = useState(false);
+  const [pollOpen, setPollOpen] = useState(false);
   const [viewOnce, setViewOnce] = useState(false);
   const [viewOnceProtect, setViewOnceProtect] = useState(false);
   const [viewer, setViewer] = useState<{ items: MediaItem[]; start: number } | null>(null);
@@ -770,6 +772,9 @@ function ConversationInner({ chatId }: { chatId: string }) {
                 <Text style={{ color: mine ? mb.fg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} linkColor={onMe ? mb.accent : undefined} />}</Text>
               ) : null}
               {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted) }}>Message chiffré</Text> : null}
+              {m.type === "poll" && m.poll ? (
+                <PollBubble chatId={chatId} m={m} users={users} onMe={onMe} fg={mine ? mb.fg : colors.fg} muted={onMe ? mb.muted : colors.muted} accent={onMe ? mb.accent : colors.accent} />
+              ) : null}
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
@@ -1091,7 +1096,16 @@ function ConversationInner({ chatId }: { chatId: string }) {
       </KeyboardAvoidingView>
       <SurpriseAnimOverlay centered animationId={surprisePlay?.id ?? null} playKey={surprisePlay?.n ?? 0} onDone={() => setSurprisePlay(null)} />
       <WippMomentOverlay stickerId={momentPlay?.id ?? null} playKey={momentPlay?.n ?? 0} onDone={() => setMomentPlay(null)} />
+      <CreatePollSheet
+        open={pollOpen}
+        onClose={() => setPollOpen(false)}
+        onSend={(poll) => {
+          setPollOpen(false);
+          sendMessage(chatId, { type: "poll", poll });
+        }}
+      />
       <ShareSurpriseSheet
+        showPoll={chat?.type === "group"}
         open={shareOpen}
         initialStage={shareStage}
         onClose={() => setShareOpen(false)}
@@ -1100,6 +1114,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
           else if (label === "Caméra") void pickCamera();
           else if (label === "Document") void pickDocument();
           else if (label === "GIF") setGifOpen(true);
+          else if (label === "Sondage") setTimeout(() => setPollOpen(true), 350);
           else if (label === "Stickers") {
             setShareOpen(false);
             setStickerBar(true);
