@@ -42,7 +42,7 @@ type PutFileInput = {
   onProgress?: (fraction: number) => void;
 };
 
-async function putEncryptedBytes(input: PutFileInput) {
+export async function putEncryptedBytes(input: PutFileInput) {
   const serverChatId = input.chatId.replace(/^srv:/, "");
   const chunkCount = Math.max(1, Math.ceil(input.bytes.byteLength / CHUNK_PLAIN_MAX));
   const created = await createServerAttachment(serverChatId, {

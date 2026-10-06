@@ -597,11 +597,26 @@ export const useWippStore = create<Store>((set, get) => ({
           const members = (existingChat?.participantIds ?? [])
             .filter((id) => id !== "me")
             .map((id) => ({ id, username: get().users[id]?.username }));
+          // Event photo: encrypted and uploaded first; its key travels inside the (encrypted) event.
+          let eventPhotoId: string | null = null;
+          let eventForBody = message.groupEvent;
+          if (message.type === "event" && message.groupEvent?.photoUri && !message.groupEvent.photo) {
+            const { readLocalBytes, putEncryptedBytes } = await import("./messaging/media-upload");
+            const bytes = await readLocalBytes(message.groupEvent.photoUri);
+            const stored = await putEncryptedBytes({ chatId, bytes, kind: "image", mime: "image/jpeg", size: bytes.byteLength });
+            eventPhotoId = stored.id;
+            eventForBody = { ...message.groupEvent, photo: { id: stored.id, fileKey: stored.fileKey, mime: stored.mime, chunks: stored.chunks } };
+          }
+          if (eventForBody) {
+            const { photoUri: _local, ...shared } = eventForBody;
+            void _local;
+            eventForBody = shared;
+          }
           const plainBody =
             message.type === "poll" && message.poll
               ? JSON.stringify({ k: "wipp-group-media", type: "poll", poll: message.poll })
               : message.type === "event" && message.groupEvent
-                ? JSON.stringify({ k: "wipp-group-media", type: "event", event: message.groupEvent })
+                ? JSON.stringify({ k: "wipp-group-media", type: "event", event: eventForBody })
                 : message.type === "text" || !message.stickerId
                 ? message.text ?? ""
                 : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });
@@ -616,13 +631,17 @@ export const useWippStore = create<Store>((set, get) => ({
             if (!sealed) throw new Error("group_e2e_unavailable");
             body = sealed;
           }
-          await postGroupMessage({
+          const postedId = await postGroupMessage({
             chatId: chatId.slice(4),
             body,
             clientId: message.id,
             replyTo: message.replyTo ?? null,
             mentions: mentionIdsInText(message.text ?? "", members),
           });
+          if (eventPhotoId) {
+            const { completeServerAttachment } = await import("./messaging/client");
+            await completeServerAttachment(eventPhotoId, postedId).catch(() => undefined);
+          }
           set((s) => ({
             messages: {
               ...s.messages,

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Image } from "expo-image";
 import { Alert, ScrollView, Text, TextInput, View } from "react-native";
-import { CalendarDays, Clock, MapPin } from "lucide-react-native";
+import { CalendarDays, Camera, Clock, MapPin, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Btn, Press } from "./ui";
 import { Sheet } from "./card-editor-parts";
@@ -31,6 +32,13 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
   const [place, setPlace] = useState("");
   const [description, setDescription] = useState("");
   const [picker, setPicker] = useState<"day" | "time" | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+
+  async function pickPhoto() {
+    const ImagePicker = await import("expo-image-picker");
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [16, 9], quality: 0.7 });
+    if (!res.canceled && res.assets[0]?.uri) setPhotoUri(res.assets[0].uri);
+  }
 
   const startsAt = day && start ? at(day, start) : null;
   const endsAt = day && start && end ? at(day, end) : null;
@@ -44,6 +52,7 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
     setEnd("");
     setPlace("");
     setDescription("");
+    setPhotoUri(null);
   };
 
   const input = { minHeight: 46, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: colors.fg, backgroundColor: colors.surface2, fontSize: 15 } as const;
@@ -58,6 +67,21 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
     <Sheet open={open} title="Créer un événement" onClose={onClose}>
       <ScrollView style={{ maxHeight: 560 }} keyboardShouldPersistTaps="handled">
         <View style={{ gap: 10 }}>
+          <Press onPress={() => void pickPhoto()} accessibilityLabel={photoUri ? "Changer la photo" : "Ajouter une photo"} style={{ height: 150, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+            {photoUri ? (
+              <>
+                <Image source={{ uri: photoUri }} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} contentFit="cover" />
+                <Press accessibilityLabel="Retirer la photo" onPress={() => setPhotoUri(null)} style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                  <X size={16} color="#fff" />
+                </Press>
+              </>
+            ) : (
+              <>
+                <Camera size={26} color={colors.accent} />
+                <Text style={{ marginTop: 6, color: colors.muted, fontSize: 13 }}>Ajouter une photo (facultatif)</Text>
+              </>
+            )}
+          </Press>
           <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 120))} placeholder="Nom de l’événement" placeholderTextColor={colors.muted} style={input} />
           {pickRow(CalendarDays, day ? dayLabel(day) : "Choisir la date", !day, () => setPicker("day"))}
           {pickRow(Clock, start ? (end ? `${start.replace(":", "h")} – ${end.replace(":", "h")}` : `À ${start.replace(":", "h")}`) : "Choisir l’heure", !start, () => (day ? setPicker("time") : setPicker("day")))}
@@ -87,6 +111,7 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
                 endsAt: endsAt && endsAt > startsAt ? endsAt.getTime() : undefined,
                 place: place.trim() || undefined,
                 description: description.trim() || undefined,
+                photoUri: photoUri ?? undefined,
               });
               reset();
             }}
@@ -155,6 +180,7 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
 
   return (
     <View style={{ minWidth: 240, paddingVertical: 2 }}>
+      <EventPhoto ev={ev} />
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ width: 52, borderRadius: 12, overflow: "hidden", backgroundColor: onMe ? "rgba(0,0,0,0.18)" : colors.surface2, alignItems: "center" }}>
           <View style={{ alignSelf: "stretch", backgroundColor: accent, paddingVertical: 2, alignItems: "center" }}>
@@ -218,6 +244,43 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
           })}
         </ScrollView>
       </Sheet>
+    </View>
+  );
+}
+
+/** Decrypted event photos, kept for this session (the file itself is cached on the phone). */
+const photoCache = new Map<string, string>();
+
+function EventPhoto({ ev }: { ev: NonNullable<Message["groupEvent"]> }) {
+  const [uri, setUri] = useState<string | null>(ev.photoUri ?? (ev.photo ? photoCache.get(ev.photo.id) ?? null : null));
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (ev.photoUri) {
+      setUri(ev.photoUri);
+      return;
+    }
+    const p = ev.photo;
+    if (!p || photoCache.has(p.id)) return;
+    let live = true;
+    void import("../lib/messaging/media-upload")
+      .then(({ downloadCipherFile }) => downloadCipherFile({ attachmentId: p.id, fileKey: p.fileKey, chunks: p.chunks, mime: p.mime ?? "image/jpeg" }))
+      .then((u) => {
+        photoCache.set(p.id, u);
+        if (live) setUri(u);
+      })
+      .catch(() => live && setFailed(true));
+    return () => {
+      live = false;
+    };
+  }, [ev.photoUri, ev.photo]);
+  if (!ev.photoUri && !ev.photo) return null;
+  return (
+    <View style={{ height: 140, borderRadius: 12, overflow: "hidden", marginBottom: 10, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+      {uri ? (
+        <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+      ) : (
+        <Text style={{ color: colors.muted, fontSize: 12 }}>{failed ? "Photo indisponible" : "Chargement de la photo…"}</Text>
+      )}
     </View>
   );
 }

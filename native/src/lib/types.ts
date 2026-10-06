@@ -366,7 +366,17 @@ export type Message = {
   poll?: { question: string; options: string[]; multi: boolean };
   pollVotes?: { userId: string; options: number[] }[];
   /** Group event: details travel inside the encrypted body; answers come from the server. */
-  groupEvent?: { title: string; startsAt: number; endsAt?: number; place?: string; description?: string };
+  groupEvent?: {
+    title: string;
+    startsAt: number;
+    endsAt?: number;
+    place?: string;
+    description?: string;
+    /** Encrypted photo (key inside the encrypted message). */
+    photo?: { id: string; fileKey: string; mime?: string; chunks: { i: number; iv: string; sha256: string }[] };
+    /** Sender only, before upload: local picture. Never sent. */
+    photoUri?: string;
+  };
   rsvps?: { userId: string; status: "going" | "maybe" | "no" }[];
   text?: string;
   createdAt: number;

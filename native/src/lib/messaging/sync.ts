@@ -601,7 +601,19 @@ function validEvent(e: unknown): Message["groupEvent"] | null {
     endsAt: typeof v.endsAt === "number" && v.endsAt > v.startsAt ? v.endsAt : undefined,
     place: typeof v.place === "string" && v.place.trim() ? v.place.slice(0, 200) : undefined,
     description: typeof v.description === "string" && v.description.trim() ? v.description.slice(0, 1000) : undefined,
+    photo: validPhoto((v as { photo?: unknown }).photo),
   };
+}
+
+function validPhoto(p: unknown): NonNullable<Message["groupEvent"]>["photo"] {
+  const v = p as { id?: unknown; fileKey?: unknown; mime?: unknown; chunks?: unknown } | undefined;
+  if (!v || typeof v.id !== "string" || typeof v.fileKey !== "string" || !Array.isArray(v.chunks) || !v.chunks.length) return undefined;
+  const chunks = v.chunks.filter(
+    (c): c is { i: number; iv: string; sha256: string } =>
+      !!c && typeof (c as { i?: unknown }).i === "number" && typeof (c as { iv?: unknown }).iv === "string" && typeof (c as { sha256?: unknown }).sha256 === "string",
+  );
+  if (chunks.length !== v.chunks.length) return undefined;
+  return { id: v.id, fileKey: v.fileKey, mime: typeof v.mime === "string" ? v.mime : undefined, chunks };
 }
 
 function validPoll(p: unknown): Message["poll"] | null {
