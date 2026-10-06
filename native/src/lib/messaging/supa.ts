@@ -281,6 +281,7 @@ function mapMessage(r: any, me: string): WippMessage {
     deliveredAt: ms(delivered),
     readAt: ms(read),
     receipts: others.map((x) => ({ profileId: x.profile_id, deliveredAt: ms(x.delivered_at), readAt: ms(x.read_at) })),
+    rsvps: r.wipp_event_rsvps ? (r.wipp_event_rsvps as any[]).map((v) => ({ profileId: v.profile_id, status: v.status })) : undefined,
     pollVotes: r.wipp_poll_votes ? (r.wipp_poll_votes as any[]).map((v) => ({ profileId: v.profile_id, options: v.options ?? [] })) : undefined,
     reactions: (r.wipp_reactions ?? []).map((x: any) => ({
       profileId: x.profile_id,
@@ -294,7 +295,7 @@ function mapMessage(r: any, me: string): WippMessage {
 
 export async function listMessages(chatId: string, before?: number): Promise<WippMessage[]> {
   const me = await meId();
-  const cols = chatId.startsWith("g_") ? `${MSG_COLS}, mentions, system_event, wipp_poll_votes(profile_id, options)` : MSG_COLS;
+  const cols = chatId.startsWith("g_") ? `${MSG_COLS}, mentions, system_event, wipp_poll_votes(profile_id, options), wipp_event_rsvps(profile_id, status)` : MSG_COLS;
   let q = db.from("wipp_messages").select(cols).eq("chat_id", chatId).order("created_at", { ascending: false }).limit(80);
   if (before) q = q.lt("created_at", new Date(before).toISOString());
   const [{ data, error }, { data: hides }] = await Promise.all([
@@ -496,6 +497,9 @@ export function subscribeChanges(onEvent: (e: LiveEvt) => void) {
     void byMessage((p.new?.message_id ?? p.old?.message_id) as string, "receipt"),
   );
   ch.on("postgres_changes", { event: "*", schema: "public", table: "wipp_poll_votes" }, (p: any) =>
+    void byMessage((p.new?.message_id ?? p.old?.message_id) as string, "reaction"),
+  );
+  ch.on("postgres_changes", { event: "*", schema: "public", table: "wipp_event_rsvps" }, (p: any) =>
     void byMessage((p.new?.message_id ?? p.old?.message_id) as string, "reaction"),
   );
   const resubscribe = () => {

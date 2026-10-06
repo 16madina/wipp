@@ -81,6 +81,7 @@ function previewOf(message: Message, lang: Lang = "fr") {
   if (message.type === "gif") return "GIF";
   if (message.type === "video") return lang === "fr" ? "Vidéo" : "Video";
   if (message.type === "sticker") return stickerById(message.stickerId ?? "")?.labelFr ?? "Sticker";
+  if (message.type === "event") return `📅 ${message.groupEvent?.title ?? (lang === "fr" ? "Événement" : "Event")}`;
   if (message.type === "poll") return `📊 ${message.poll?.question ?? (lang === "fr" ? "Sondage" : "Poll")}`;
   if (message.type === "shop") return message.text ? `🏪 ${message.text}` : "Carte professionnelle";
   return message.text ?? "";
@@ -560,6 +561,7 @@ export const useWippStore = create<Store>((set, get) => ({
       gifUrl: data.gifUrl,
       stickerId: data.stickerId,
       poll: data.poll,
+      groupEvent: data.groupEvent,
       scratchDesign: data.scratchDesign,
       scratchCardId: data.scratchCardId,
       effectId: data.effectId,
@@ -588,7 +590,7 @@ export const useWippStore = create<Store>((set, get) => ({
     if (!chatId.startsWith("srv:")) pumpReceipt(get, set, chatId, message.id);
 
     const groupServer = existingChat?.type === "group" && chatId.startsWith("srv:");
-    if (groupServer && (message.type === "text" || message.type === "sticker" || message.type === "poll")) {
+    if (groupServer && (message.type === "text" || message.type === "sticker" || message.type === "poll" || message.type === "event")) {
       void (async () => {
         try {
           const { postGroupMessage, mentionIdsInText } = await import("./lot7/api");
@@ -598,7 +600,9 @@ export const useWippStore = create<Store>((set, get) => ({
           const plainBody =
             message.type === "poll" && message.poll
               ? JSON.stringify({ k: "wipp-group-media", type: "poll", poll: message.poll })
-              : message.type === "text" || !message.stickerId
+              : message.type === "event" && message.groupEvent
+                ? JSON.stringify({ k: "wipp-group-media", type: "event", event: message.groupEvent })
+                : message.type === "text" || !message.stickerId
                 ? message.text ?? ""
                 : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });
           if (!plainBody) return;

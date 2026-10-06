@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronRight,
   BarChart3,
+  CalendarDays,
   Clock3,
   Eye,
   FileText,
@@ -257,7 +258,7 @@ export function ShareSurpriseSheet({
                 </Press>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {[...CONTENT, ...(showPoll ? [{ label: "Sondage", icon: BarChart3 } as const] : [])].map(({ label, icon: Icon }) => (
+                {[...CONTENT, ...(showPoll ? [{ label: "Sondage", icon: BarChart3 } as const, { label: "Événement", icon: CalendarDays } as const] : [])].map(({ label, icon: Icon }) => (
                   <Press
                     key={label}
                     onPress={() => pick(label)}

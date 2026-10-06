@@ -48,6 +48,7 @@ export function groupPreview(body: string) {
         if (parsed.type === "file") return parsed.name || "Document";
         if (parsed.type === "sticker") return "Sticker";
         if (parsed.type === "poll") return "Sondage";
+        if (parsed.type === "event") return "Événement";
       }
     } catch {
       /* plain */

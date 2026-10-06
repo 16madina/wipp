@@ -80,6 +80,7 @@ export type WippMessage = {
   /** Per-member receipts (other members only), for « Lu par » in groups. */
   receipts?: { profileId: string; deliveredAt?: number | null; readAt?: number | null }[];
   pollVotes?: { profileId: string; options: number[] }[];
+  rsvps?: { profileId: string; status: "going" | "maybe" | "no" }[];
   reactions?: WippReaction[];
   mentions?: string[];
   systemEvent?: string | null;

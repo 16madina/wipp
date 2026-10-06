@@ -59,6 +59,11 @@ export async function votePoll(messageId: string, options: number[]) {
   return rpc<string>("wipp_lot7_poll_vote", { p_message: messageId, p_options: options });
 }
 
+/** Answer a group event (null = clear my answer). */
+export async function rsvpEvent(messageId: string, status: "going" | "maybe" | "no" | null) {
+  return rpc<string>("wipp_lot7_event_rsvp", { p_message: messageId, p_status: status });
+}
+
 export type GroupSafety = { addedBy: string; username?: string; displayName?: string; isContact: boolean };
 
 /** Who added me to this group (null when I created it or joined by myself). */

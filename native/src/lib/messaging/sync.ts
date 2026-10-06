@@ -154,6 +154,7 @@ const MEDIA_FIELDS = [
   // Sans ces champs, un sticker / une carte / une surprise redevenait un simple texte à la synchro suivante.
   "stickerId",
   "poll",
+  "groupEvent",
   "shopId",
   "scratchCardId",
   "scratchDesign",
@@ -256,6 +257,7 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
       status: receiptStatus(m, Boolean(fromMe)),
       seen: seenOf(m, Boolean(fromMe)),
       pollVotes: votesOf(m, meServerId ?? undefined),
+      rsvps: rsvpsOf(m, meServerId ?? undefined),
       reactions: (m.reactions ?? []).map((r) => ({
         userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
         emoji: r.emoji,
@@ -301,6 +303,7 @@ function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): M
     status: receiptStatus(m, Boolean(fromMe)),
       seen: seenOf(m, Boolean(fromMe)),
       pollVotes: votesOf(m, meServerId ?? undefined),
+      rsvps: rsvpsOf(m, meServerId ?? undefined),
     reactions: (m.reactions ?? []).map((r) => ({
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
@@ -331,6 +334,7 @@ function messageMeta(m: WippMessage, meServerId: string | undefined) {
     status: receiptStatus(m, fromMe),
     seen: seenOf(m, fromMe),
     pollVotes: votesOf(m, meServerId),
+    rsvps: rsvpsOf(m, meServerId),
     reactions: (m.reactions ?? []).map((r) => ({
       userId: meServerId && r.profileId === meServerId ? "me" : `srvuser:${r.profileId}`,
       emoji: r.emoji,
@@ -345,6 +349,11 @@ function messageMeta(m: WippMessage, meServerId: string | undefined) {
 function votesOf(m: WippMessage, meServerId: string | undefined): Message["pollVotes"] {
   if (!m.pollVotes) return undefined;
   return m.pollVotes.map((v) => ({ userId: meServerId && v.profileId === meServerId ? "me" : `srvuser:${v.profileId}`, options: v.options }));
+}
+
+function rsvpsOf(m: WippMessage, meServerId: string | undefined): Message["rsvps"] {
+  if (!m.rsvps) return undefined;
+  return m.rsvps.map((v) => ({ userId: meServerId && v.profileId === meServerId ? "me" : `srvuser:${v.profileId}`, status: v.status }));
 }
 
 function seenOf(m: WippMessage, fromMe: boolean): Message["seen"] {
@@ -583,6 +592,18 @@ async function decryptGroupMerged(state: StoreSlice, localChatId: string, identi
   };
 }
 
+function validEvent(e: unknown): Message["groupEvent"] | null {
+  const v = e as { title?: unknown; startsAt?: unknown; endsAt?: unknown; place?: unknown; description?: unknown } | undefined;
+  if (!v || typeof v.title !== "string" || !v.title.trim() || typeof v.startsAt !== "number" || !Number.isFinite(v.startsAt)) return null;
+  return {
+    title: v.title.slice(0, 120),
+    startsAt: v.startsAt,
+    endsAt: typeof v.endsAt === "number" && v.endsAt > v.startsAt ? v.endsAt : undefined,
+    place: typeof v.place === "string" && v.place.trim() ? v.place.slice(0, 200) : undefined,
+    description: typeof v.description === "string" && v.description.trim() ? v.description.slice(0, 1000) : undefined,
+  };
+}
+
 function validPoll(p: unknown): Message["poll"] | null {
   const q = p as { question?: unknown; options?: unknown; multi?: unknown } | undefined;
   if (!q || typeof q.question !== "string" || !Array.isArray(q.options)) return null;
@@ -596,7 +617,11 @@ function groupMediaFields(inner: string): Partial<Message> | null {
   const t = inner.trim();
   if (!t.startsWith("{")) return null;
   try {
-    const p = JSON.parse(t) as { k?: string; type?: Message["type"]; text?: string; stickerId?: string; poll?: Message["poll"] };
+    const p = JSON.parse(t) as { k?: string; type?: Message["type"]; text?: string; stickerId?: string; poll?: Message["poll"]; event?: unknown };
+    if (p.k === "wipp-group-media" && p.type === "event") {
+      const ev = validEvent(p.event);
+      return ev ? { type: "event", groupEvent: ev, text: undefined } : null;
+    }
     if (p.k !== "wipp-group-media" || !p.type) return null;
     if (p.type === "poll") return validPoll(p.poll) ? { type: "poll", poll: validPoll(p.poll)!, text: undefined } : null;
     return { type: p.type, text: p.text, stickerId: p.stickerId };
