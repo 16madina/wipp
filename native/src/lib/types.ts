@@ -490,6 +490,11 @@ export type ConnectRequest = {
   id: string;
   fromId: string;
   preview: string;
+  /** Sent from À proximité. */
+  nearby?: boolean;
+  /** Sender was Invisible: photo hidden in this request (first name + @pseudo only). */
+  invisible?: boolean;
+  ring?: "man" | "woman" | "other" | null;
   createdAt: number;
   status: "pending" | "accepted" | "ignored";
 };

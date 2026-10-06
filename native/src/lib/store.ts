@@ -170,6 +170,8 @@ type Store = {
   verifiedIds: string[];
   sentRequestIds: string[];
   nearby: NearbyMode;
+  /** End of my 15 / 60 min visibility (server time), null = until off or Invisible. */
+  nearbyUntil: number | null;
   vaultEpoch: number;
   setNearby: (nearby: NearbyMode) => void;
   codes: LiveCode[];
@@ -337,6 +339,7 @@ function fresh(): Omit<
     verifiedIds: ["maya", "alex"],
     sentRequestIds: [],
     nearby: 0,
+    nearbyUntil: null,
     vaultEpoch: 0,
     codes: seedCodes(),
     codeChatTtl: 60 * 60_000,
@@ -435,12 +438,18 @@ export const useWippStore = create<Store>((set, get) => ({
     if (id) void import("./media-url-cache").then(({ rememberMyAvatar }) => rememberMyAvatar(id, avatar));
   },
   signOut: () => {
-    void import("./firebase-phone").then(({ signOutFirebase }) => signOutFirebase());
+    // À proximité: my presence is deleted on the server BEFORE the session ends (needs the token).
+    const nearbyCleared = import("./proximity/nearby-visibility")
+      .then((m) => m.clearNearbyPresence())
+      .catch(() => undefined);
+    void Promise.race([nearbyCleared, new Promise((r) => setTimeout(r, 4000))]).finally(() => {
+      void import("./firebase-phone").then(({ signOutFirebase }) => signOutFirebase());
+      void import("./push").then(({ unregisterThisInstall }) => unregisterThisInstall());
+      void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
+    });
     void import("./messaging/identity").then((m) => m.clearNotificationIdentity());
     void import("./inbox-cache").then((m) => m.clearInboxSnapshot());
     void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
-    void import("./push").then(({ unregisterThisInstall }) => unregisterThisInstall());
-    void import("./proximity/wipp-session").then(({ persistWippToken }) => persistWippToken(null));
     void import("./proximity/lifecycle").then(({ syncProximityLifecycle }) => syncProximityLifecycle("splash", "background"));
     get().resetDemo();
   },
@@ -1219,7 +1228,12 @@ export const useWippStore = create<Store>((set, get) => ({
       try {
         const { sendRequest, STATUS_FR } = await import("./connections");
         const channel = via === "qr" ? "qr" : via === "touch" ? "touch" : "request";
-        const status = await sendRequest(user.username, channel, userId);
+        // Found in À proximité: the same request system, marked via = nearby by the server
+        // (which also knows whether I am Invisible, to hide my photo in that request).
+        const status =
+          via === "nearby" && userId.startsWith("srvuser:")
+            ? (await (await import("./proximity/nearby-visibility")).requestNearby(userId)).status
+            : await sendRequest(user.username, channel, userId);
         if (status === "already_connected" || status === "accepted_existing" || status === "accepted") {
           set((s) => ({
             users: { ...s.users, ...(s.users[userId] ? { [userId]: { ...s.users[userId], connected: true } } : {}) },
@@ -1376,19 +1390,26 @@ export const useWippStore = create<Store>((set, get) => ({
         const users = { ...s.users };
         const requests = items.map((r) => {
           const id = srvUserId(r.sender.id);
-          users[id] = userFromPublic(
-            {
-              id: r.sender.id,
-              username: r.sender.username,
-              displayName: r.sender.displayName,
-              avatarUrl: r.sender.avatarUrl,
-            },
-            false,
-          );
+          // Invisible sender: keep any profile already known, never fill a photo from this request.
+          if (!r.invisible || !users[id]) {
+            users[id] = userFromPublic(
+              {
+                id: r.sender.id,
+                username: r.sender.username,
+                displayName: r.sender.displayName,
+                avatarUrl: r.sender.avatarUrl,
+              },
+              false,
+            );
+          }
+          const nearby = r.via === "nearby";
           return {
             id: r.id,
             fromId: id,
-            preview: "veut se connecter avec toi",
+            preview: nearby ? "Demande depuis À proximité" : "veut se connecter avec toi",
+            nearby,
+            invisible: Boolean(r.invisible),
+            ring: r.ring ?? null,
             createdAt: Date.parse(r.createdAt) || Date.now(),
             status: "pending" as const,
           };

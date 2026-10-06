@@ -8,7 +8,7 @@ import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
 
 export type ConnectionType = "permanent" | "ephemeral";
-export type ConnectionVia = "request" | "qr" | "temp_qr" | "touch";
+export type ConnectionVia = "request" | "qr" | "temp_qr" | "touch" | "nearby";
 
 /** 15 min, 1 h, 24 h, 7 days presets — or a custom duration between 15 min and 30 days. */
 export const PRESET_MINUTES = [15, 60, 1440, 10080] as const;

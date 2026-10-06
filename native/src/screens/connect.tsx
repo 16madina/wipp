@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
-import { Linking, Platform, Text, View, ScrollView } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Linking, Platform, Share, Text, View, ScrollView } from "react-native";
 import { Image } from "expo-image";
-import { MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
+import { ImagePlus, MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { LiveScanner } from "../components/LiveScanner";
 import { WippMark, WippWordmark, TouchHero } from "../components/Logo";
 import { QrCard } from "../components/QrCard";
+import { QrShareCard, type QrShareCardHandle } from "../components/QrShareCard";
+import { PhotoQrScan } from "../components/PhotoQrScan";
 import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippSrc } from "../lib/assets";
 import { getRelation, sendRequest, type Relation } from "../lib/connections";
@@ -18,8 +20,8 @@ import { ConnectionChoicePicker } from "../components/ConnectionChoice";
 import { Sheet } from "../components/card-editor-parts";
 import { answerTempQrOffer, durationLabel } from "../lib/connections";
 import { TouchStage } from "../components/TouchStage";
-import { applyNearbyMode } from "../lib/proximity/nearby-visibility";
-import { startNearbyScan, stopNearbyScan } from "../lib/proximity/nearby-scan";
+import { chooseNearbyMode, searchAround, syncNearby } from "../lib/proximity/nearby-visibility";
+import type { NearbyPerson } from "../lib/proximity/nearby-api";
 import { getLastTouchMatch } from "../lib/proximity/match-bus";
 import { rejectTouchCode } from "../lib/proximity/touch-api";
 import { shareWippPublic } from "../lib/share-public";
@@ -189,6 +191,62 @@ export function MyQrScreen() {
       setTempErr("QR temporaire indisponible, réessaie.");
     }
   }
+  const card = useRef<QrShareCardHandle>(null);
+  const [cardBusy, setCardBusy] = useState<"share" | "save" | null>(null);
+
+  /** The permanent QR card as a PNG file in the cache (never the 75 s ephemeral QR). */
+  async function cardFile() {
+    const b64 = await card.current!.toBase64();
+    const FS = await import("expo-file-system/legacy");
+    const uri = `${FS.cacheDirectory}wipp-${username}.png`;
+    await FS.writeAsStringAsync(uri, b64, { encoding: FS.EncodingType.Base64 });
+    return uri;
+  }
+
+  async function shareCard() {
+    if (!username || cardBusy) return;
+    const link = `https://wippapp.com/@${username}`;
+    setCardBusy("share");
+    try {
+      const uri = await cardFile();
+      if (Platform.OS === "ios") {
+        // Image + link as caption: on WhatsApp / Facebook people can simply tap the link.
+        await Share.share({ url: uri, message: `@${username} ${link}` });
+      } else {
+        const Sharing = await import("expo-sharing");
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Partager mon WIPP" });
+      }
+      setCopied(true);
+    } catch {
+      // Image export unavailable (web, old device): fall back to the link alone.
+      void shareWippPublic(`@${username} ${link}`);
+    } finally {
+      setCardBusy(null);
+    }
+  }
+
+  async function saveCard() {
+    if (!username || cardBusy) return;
+    setCardBusy("save");
+    try {
+      const MediaLibrary = await import("expo-media-library");
+      const perm = await MediaLibrary.requestPermissionsAsync(true);
+      if (!perm.granted) {
+        Alert.alert("Photos", "Autorise WIPP à ajouter des photos pour enregistrer ton code QR.", [
+          { text: "Annuler", style: "cancel" },
+          { text: "Réglages", onPress: () => void Linking.openSettings() },
+        ]);
+        return;
+      }
+      await MediaLibrary.saveToLibraryAsync(await cardFile());
+      Alert.alert("Mon WIPP", "Ton code QR est enregistré dans tes photos.");
+    } catch {
+      Alert.alert("Mon WIPP", "Enregistrement impossible pour le moment.");
+    } finally {
+      setCardBusy(null);
+    }
+  }
+
   const left = temp ? Math.max(0, Math.ceil((temp.expiresAt - now) / 1000)) : 0;
   const qrValue = temp ? tempQr(temp.token) : username ? profileQr(username) : "";
   const link = qrValue.replace(/^https?:\/\//, "").replace(/\/t\/.{8}.*/, "/t/…");
@@ -236,18 +294,14 @@ export function MyQrScreen() {
         <Text style={{ marginTop: 4, fontSize: 12, color: fgA(0.4) }}>{link}</Text>
         <View style={{ width: "100%", marginTop: 20 }}>
           <Btn
-            label={copied ? t("copied") : "Partager mon WIPP"}
-            disabled={!username}
-            onPress={() => {
-              if (!username) return;
-              void shareWippPublic(`@${username} https://wippapp.com/@${username}`);
-              setCopied(true);
-            }}
+            label={cardBusy === "share" ? "Préparation…" : copied ? t("copied") : "Partager mon WIPP"}
+            disabled={!username || Boolean(cardBusy)}
+            onPress={() => void shareCard()}
           />
         </View>
         <View style={{ width: "100%", marginTop: 8, flexDirection: "row", gap: 8 }}>
           <View style={{ flex: 1 }}>
-            <Btn label="Enregistrer" variant="secondary" disabled={!qrValue} onPress={() => { if (qrValue) void shareWippPublic(qrValue); }} />
+            <Btn label={cardBusy === "save" ? "Enregistrement…" : "Enregistrer"} variant="secondary" disabled={!username || Boolean(cardBusy)} onPress={() => void saveCard()} />
           </View>
           <View style={{ flex: 1 }}>
             <Btn
@@ -261,6 +315,7 @@ export function MyQrScreen() {
           <Btn label={t("wgoTouch")} variant="secondary" onPress={() => push({ name: "wgo-touch" })} />
         </View>
       </ScrollView>
+      {username ? <QrShareCard ref={card} value={profileQr(username)} name={me.displayName} username={username} /> : null}
       <Sheet open={durationOpen} title="QR éphémère" onClose={() => setDurationOpen(false)}>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>
           La personne qui scanne pourra accepter une connexion éphémère. Le QR, lui, n’est valable que 75 secondes et une seule fois.
@@ -285,6 +340,23 @@ export function ScannerScreen({ error }: { error?: string }) {
   const pop = useWippStore((s) => s.pop);
   const replace = useWippStore((s) => s.replace);
   const [q, setQ] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+
+  async function scanFromPhoto() {
+    setImporting(true);
+    try {
+      const ImagePicker = await import("expo-image-picker");
+      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1 });
+      const uri = picked.canceled ? null : picked.assets?.[0]?.uri;
+      // The scan window takes over: picture + moving scan line, then the profile or a clear message.
+      if (uri) setPhotoUri(uri);
+    } catch {
+      Alert.alert("Importer une photo", "Impossible d’ouvrir tes photos.");
+    } finally {
+      setImporting(false);
+    }
+  }
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -295,6 +367,24 @@ export function ScannerScreen({ error }: { error?: string }) {
         onFallback={(to) => replace({ name: to === "search" ? "search-user" : "my-qr" })}
       />
       <Text style={{ marginTop: 8, textAlign: "center", color: fgA(0.6) }}>{t("scanSub")}</Text>
+      {/* A WIPP QR received as an image (WhatsApp, Facebook, screenshot): read it from the photo. */}
+      <Press
+        accessibilityLabel="Importer une photo"
+        disabled={importing}
+        onPress={() => void scanFromPhoto()}
+        style={{ alignSelf: "center", marginTop: 14, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 18, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.hair, backgroundColor: colors.surface, opacity: importing ? 0.6 : 1 }}
+      >
+        <ImagePlus size={18} color={colors.accent} />
+        <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{importing ? "Lecture…" : "Importer une photo"}</Text>
+      </Press>
+      <PhotoQrScan
+        uri={photoUri}
+        onClose={() => setPhotoUri(null)}
+        onRetry={() => {
+          setPhotoUri(null);
+          void scanFromPhoto();
+        }}
+      />
       {__DEV__ ? (
         <View style={{ padding: 16 }}>
           <SearchField value={q} onChangeText={setQ} placeholder="https://wippapp.com/@username" />
@@ -378,91 +468,147 @@ export function SearchUserScreen() {
 }
 
 export function NearbyScreen() {
-  const t = useT();
   const pop = useWippStore((s) => s.pop);
-  const users = useWippStore((s) => s.users);
-  const nearby = useWippStore((s) => s.nearby);
-  const setNearby = useWippStore((s) => s.setNearby);
-  const connectWith = useWippStore((s) => s.connectWith);
-  const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
   const push = useWippStore((s) => s.push);
-  const visible = nearby !== 0;
-  const [foundIds, setFoundIds] = useState<string[]>([]);
-  const [scanHint, setScanHint] = useState<string | null>(null);
+  const nearby = useWippStore((s) => s.nearby);
+  const nearbyUntil = useWippStore((s) => s.nearbyUntil);
+  const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
+  const connectWith = useWippStore((s) => s.connectWith);
+  const sentIds = useWippStore((s) => s.sentRequestIds);
+  const [busyMode, setBusyMode] = useState<NearbyMode | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [people, setPeople] = useState<(NearbyPerson & { userId: string })[] | null>(null);
+  const [locDenied, setLocDenied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // The server is the truth: am I still visible, until when?
   useEffect(() => {
-    let alive = true;
-    void (async () => {
-      const res = await startNearbyScan((ids) => {
-        if (alive) setFoundIds(ids);
-      });
-      if (!alive) return;
-      if (!res.ok) {
-        setScanHint(
-          res.reason === "bluetooth_off" ? t("touchNeedBt") : res.reason === "bluetooth_permission" ? t("touchPermTitle") : null,
-        );
-      }
-    })();
-    return () => {
-      alive = false;
-      void stopNearbyScan();
-    };
-  }, [t]);
-  const found = foundIds.map((id) => users[id]).filter(Boolean);
+    void syncNearby(false);
+  }, []);
+
   const modes: { v: NearbyMode; label: string }[] = [
     { v: 15, label: "15 min" },
     { v: 60, label: "60 min" },
     { v: -1, label: "Jusqu’à désactivation" },
     { v: 0, label: "Invisible" },
   ];
+
+  async function pick(v: NearbyMode) {
+    if (busyMode !== null || v === nearby) return;
+    setBusyMode(v);
+    setError(null);
+    const r = await chooseNearbyMode(v);
+    setBusyMode(null);
+    if (!r.ok) {
+      if (r.reason === "denied") setLocDenied(true);
+      else setError(r.reason === "unavailable" ? "Position indisponible. Vérifie que la localisation est activée." : r.message || "Action impossible pour le moment.");
+    } else setLocDenied(false);
+  }
+
+  async function search() {
+    if (searching) return;
+    setSearching(true);
+    setError(null);
+    const r = await searchAround();
+    setSearching(false);
+    if (!r.ok) {
+      if (r.reason === "denied") setLocDenied(true);
+      else setError(r.reason === "unavailable" ? "Position indisponible. Vérifie que la localisation est activée." : r.message || "Recherche impossible pour le moment.");
+      return;
+    }
+    setLocDenied(false);
+    setPeople(
+      r.people.map((p) => ({
+        ...p,
+        userId: upsertRemoteProfile(
+          { id: p.id, username: p.username, displayName: p.displayName, avatarUrl: p.avatarUrl ?? null, bio: p.bio ?? "" },
+          p.relation === "connected" || undefined,
+        ),
+      })),
+    );
+  }
+
+  const until = nearbyUntil ? new Date(nearbyUntil) : null;
+  const status =
+    nearby === 0
+      ? null
+      : nearby === -1
+        ? "🟢 Visible jusqu’à désactivation"
+        : until
+          ? `🟢 Visible jusqu’à ${String(until.getHours()).padStart(2, "0")}:${String(until.getMinutes()).padStart(2, "0")}`
+          : "🟢 Visible";
+
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="Personnes à proximité" onBack={pop} />
       </GlassHeader>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>Uniquement avec consentement. Jamais de distance ni de numéro.</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <Text style={{ color: colors.muted, fontSize: 13 }}>Uniquement avec consentement. Jamais de distance ni de numéro.</Text>
+
+        <Text style={{ marginTop: 18, marginBottom: 10, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Ma visibilité</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {modes.map((m) => (
-            <Chip
-              key={String(m.v)}
-              label={m.label}
-              active={nearby === m.v}
-              onPress={() => {
-                setNearby(m.v);
-                void applyNearbyMode(m.v);
-              }}
-            />
+            <Chip key={String(m.v)} label={busyMode === m.v ? "…" : m.label} active={nearby === m.v} onPress={() => void pick(m.v)} />
           ))}
         </View>
-        {scanHint ? <Text style={{ color: colors.accent, marginBottom: 12 }}>{scanHint}</Text> : null}
-        {!visible ? (
-          <Empty title="Tu es invisible" body="Choisis une durée pour apparaître." />
-        ) : found.length === 0 ? (
-          <Empty title={t("nearbyPeople")} body={t("nearbyHint")} />
+        <Text style={{ marginTop: 8, fontSize: 12, color: status ? colors.accent : colors.muted }}>
+          {status ?? "Vous êtes invisible. Vous pouvez rechercher les personnes qui ont choisi d’être visibles."}
+        </Text>
+
+        <View style={{ height: 1, backgroundColor: colors.hair, marginVertical: 20 }} />
+
+        <Text style={{ marginBottom: 10, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Personnes autour de moi</Text>
+        <Btn label={searching ? "Recherche…" : "🔎 Rechercher autour de moi"} disabled={searching} onPress={() => void search()} />
+
+        {locDenied ? (
+          <View style={{ marginTop: 14, padding: 14, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Localisation désactivée pour WIPP</Text>
+            <Text style={{ marginTop: 4, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+              WIPP utilise ta position approximative, seulement pendant que tu utilises l’app, pour trouver les personnes du secteur. Elle n’est jamais montrée aux autres.
+            </Text>
+            <Btn label="Ouvrir les réglages" variant="secondary" onPress={() => void Linking.openSettings()} style={{ marginTop: 10 }} />
+          </View>
+        ) : null}
+        {error ? <Text style={{ marginTop: 12, color: colors.danger, fontSize: 13 }}>{error}</Text> : null}
+
+        {people === null ? null : people.length === 0 ? (
+          <Empty title="Personne de visible autour de toi" body="Réessaie un peu plus tard : seules les personnes qui ont choisi d’être visibles apparaissent." />
         ) : (
-          found.map((u) => (
-            <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <Press onPress={() => push({ name: "found-profile", userId: u.id, via: "nearby" })} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <Avatar user={u} size={48} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{u.displayName}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 13 }}>@{u.username}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 12 }}>{t("nearby")}</Text>
+          <View style={{ marginTop: 14, gap: 10 }}>
+            {people.map((p) => {
+              const sent = p.relation === "pending_out" || sentIds.includes(p.userId);
+              const label = p.relation === "connected" ? "Message" : p.relation === "pending_in" ? "Répondre" : sent ? "Demande envoyée" : "Se connecter";
+              return (
+                <View key={p.id} style={{ padding: 12, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <Avatar user={{ displayName: p.displayName, avatar: p.avatarUrl ?? "" }} size={52} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{p.displayName}</Text>
+                      <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13 }}>@{p.username}</Text>
+                      <Text style={{ marginTop: 2, color: colors.success, fontSize: 12 }}>🟢 Visible maintenant</Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Btn label="Voir le profil" variant="secondary" onPress={() => push({ name: "found-profile", userId: p.userId, via: "nearby" })} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Btn
+                        label={label}
+                        disabled={sent && p.relation !== "connected"}
+                        onPress={() => {
+                          if (p.relation === "connected") openOrCreateDm(p.userId);
+                          else if (p.relation === "pending_in") push({ name: "requests" });
+                          else connectWith(p.userId, "nearby");
+                        }}
+                      />
+                    </View>
+                  </View>
                 </View>
-              </Press>
-              <Btn
-                label={u.connected ? t("message") : t("connectWith")}
-                onPress={() => {
-                  if (u.connected) openOrCreateDm(u.id);
-                  else {
-                    connectWith(u.id, "nearby");
-                    push({ name: "found-profile", userId: u.id, via: "nearby" });
-                  }
-                }}
-                style={{ height: 36, paddingHorizontal: 12 }}
-              />
-            </View>
-          ))
+              );
+            })}
+          </View>
         )}
       </ScrollView>
     </ScreenRoot>

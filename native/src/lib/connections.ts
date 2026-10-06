@@ -5,6 +5,9 @@ export type RealRequest = {
   status: string;
   createdAt: string;
   expiresAt: string;
+  via?: string;
+  invisible?: boolean;
+  ring?: "man" | "woman" | "other" | null;
   sender: { id: string; username: string; displayName: string; avatarUrl: string | null };
 };
 
@@ -28,7 +31,7 @@ export async function listIncomingRequests(): Promise<RealRequest[]> {
   if (!me) return [];
   const { data: reqs } = await supabase
     .from("wipp_connection_requests")
-    .select("id,status,created_at,expires_at,sender_id")
+    .select("id,status,created_at,expires_at,sender_id,via,sender_invisible,sender_ring")
     .eq("recipient_id", me)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
@@ -40,7 +43,7 @@ export async function listIncomingRequests(): Promise<RealRequest[]> {
     .select("id,username,display_name,avatar_url")
     .in("id", ids);
   const byId = new Map((profs ?? []).map((p: { id: string }) => [p.id, p]));
-  return (reqs as Array<{ id: string; status: string; created_at: string; expires_at: string; sender_id: string }>)
+  return (reqs as Array<{ id: string; status: string; created_at: string; expires_at: string; sender_id: string; via?: string | null; sender_invisible?: boolean | null; sender_ring?: string | null }>)
     .filter((r) => byId.has(r.sender_id))
     .map((r) => {
       const p = byId.get(r.sender_id) as {
@@ -49,12 +52,22 @@ export async function listIncomingRequests(): Promise<RealRequest[]> {
         display_name: string;
         avatar_url: string | null;
       };
+      // Invisible sender from À proximité: no photo in the request.
+      const masked = r.via === "nearby" && Boolean(r.sender_invisible);
       return {
         id: r.id,
         status: r.status,
         createdAt: r.created_at,
         expiresAt: r.expires_at,
-        sender: { id: p.id, username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url },
+        via: r.via ?? "request",
+        invisible: masked,
+        ring: masked ? (r.sender_ring === "man" || r.sender_ring === "woman" ? r.sender_ring : "other") : null,
+        sender: {
+          id: p.id,
+          username: p.username,
+          displayName: masked ? p.display_name.split(" ")[0] || p.username : p.display_name,
+          avatarUrl: masked ? null : p.avatar_url,
+        },
       };
     });
 }

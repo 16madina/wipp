@@ -493,6 +493,25 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (a === "profile" && b === "gender" && !c) {
+      const me = await resolveSession(bearer(request));
+      const nz = await import("@/lib/messaging/nearby-zones");
+      if (method === "GET") return json(await nz.getMyGender(me.id));
+      if (method === "POST") return json(await nz.setMyGender(me.id, (await readBody<{ gender?: unknown }>(request)).gender));
+    }
+
+    // À proximité par zone (sans Bluetooth). Les anciennes routes /nearby/visibility|resolve restent isolées.
+    if (a === "nearby" && (b === "state" || b === "mode" || b === "cell" || b === "search" || b === "request" || b === "clear") && !c) {
+      const me = await resolveSession(bearer(request));
+      const nz = await import("@/lib/messaging/nearby-zones");
+      if (method === "GET" && b === "state") return json(await nz.getNearbyState(me.id));
+      if (method === "POST" && b === "mode") return json(await nz.setNearbyMode(me.id, await readBody<{ mode?: unknown; cell?: unknown }>(request)));
+      if (method === "POST" && b === "cell") return json(await nz.refreshNearbyCell(me.id, (await readBody<{ cell?: unknown }>(request)).cell));
+      if (method === "POST" && b === "search") return json(await nz.searchNearby(me.id, (await readBody<{ cell?: unknown }>(request)).cell));
+      if (method === "POST" && b === "request") return json(await nz.requestFromNearby(me.id, String((await readBody<{ peerId?: string }>(request)).peerId ?? "")));
+      if (method === "POST" && b === "clear") return json(await nz.clearNearby(me.id));
+    }
+
     if (method === "POST" && a === "nearby" && b === "visibility") {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ durationMin?: number }>(request);

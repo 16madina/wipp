@@ -37,7 +37,7 @@ import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
 import { BusinessCardExperience, CoverCameraHint, EmptyBusinessCard } from "../components/business-face";
 import { WippWordmark } from "../components/Logo";
-import { Btn, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
+import { Btn, Chip, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
 import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
 import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
@@ -353,6 +353,27 @@ export function AccountScreen() {
   const [username, setUsername] = useState(me.username);
   const [bio, setBio] = useState(me.bio);
   const [city, setCity] = useState(me.city);
+  // Optional, declared by the person only. Used only for the ring of an Invisible request (À proximité).
+  const [gender, setGender] = useState<"man" | "woman" | "unspecified">(me.gender === "man" || me.gender === "woman" ? me.gender : "unspecified");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    void import("../lib/proximity/wipp-session")
+      .then(({ wippApi }) => wippApi<{ gender: "man" | "woman" | null }>("profile/gender"))
+      .then((r) => setGender(r.gender ?? "unspecified"))
+      .catch(() => undefined);
+  }, []);
+  async function save() {
+    setSaving(true);
+    updateMe({ displayName, username, bio, city, gender });
+    try {
+      const { wippApi } = await import("../lib/proximity/wipp-session");
+      await wippApi("profile/gender", { method: "POST", body: JSON.stringify({ gender: gender === "unspecified" ? null : gender }) });
+    } catch {
+      /* the rest of the profile is saved; the gender is retried at the next save */
+    }
+    setSaving(false);
+    pop();
+  }
   const taken = TAKEN_USERNAMES.has(username.toLowerCase()) && username.toLowerCase() !== me.username;
   return (
     <ScreenRoot>
@@ -369,7 +390,21 @@ export function AccountScreen() {
         {taken ? <Text style={{ color: colors.danger, fontSize: 12 }}>{t("usernameTaken")}</Text> : null}
         <Field label={t("bio")} value={bio} onChangeText={(v) => setBio(v.slice(0, 140))} />
         <Field label="Ville" value={city} onChangeText={setCity} />
-        <Btn label="Enregistrer" onPress={() => { updateMe({ displayName, username, bio, city }); pop(); }} />
+        <View>
+          <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>Genre (facultatif)</Text>
+          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+            {(
+              [
+                ["man", "Homme"],
+                ["woman", "Femme"],
+                ["unspecified", "Non renseigné"],
+              ] as const
+            ).map(([id, label]) => (
+              <Chip key={id} label={label} active={gender === id} onPress={() => setGender(id)} />
+            ))}
+          </View>
+        </View>
+        <Btn label={saving ? "Enregistrement…" : "Enregistrer"} disabled={saving} onPress={() => void save()} />
       </ScrollView>
     </ScreenRoot>
   );

@@ -28,6 +28,7 @@ import {
   Users,
 } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
+import { InvisibleAvatar } from "../components/InvisibleAvatar";
 import { ConnectionChoicePicker } from "../components/ConnectionChoice";
 import { Sheet } from "../components/card-editor-parts";
 import { WippWordmark } from "../components/Logo";
@@ -539,14 +540,18 @@ export function RequestsScreen() {
         })}
         {pending.map((r) => {
           const u = users[r.fromId];
+          // Sent from À proximité in Invisible mode: special avatar instead of the photo, first name only.
+          const first = r.invisible ? (u?.displayName ?? "").split(" ")[0] || u?.username : u?.displayName;
           return (
             <View key={r.id} style={{ marginBottom: 12, borderRadius: 12, backgroundColor: colors.surface, padding: 16 }}>
+              {r.invisible ? <Text style={{ marginBottom: 10, fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Demande reçue (mode Invisible)</Text> : null}
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <Avatar user={u} size={48} />
-                <View>
-                  <Text style={{ fontFamily: "Inter_500Medium", color: colors.fg }}>{u?.displayName}</Text>
+                {r.invisible ? <InvisibleAvatar size={52} ring={r.ring} /> : <Avatar user={u} size={48} />}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", color: colors.fg }}>{first}</Text>
                   <Text style={{ fontSize: 13, color: colors.muted }}>@{u?.username}</Text>
-                  <Text style={{ marginTop: 8, fontSize: 14, color: colors.muted }}>{r.preview}</Text>
+                  <Text style={{ marginTop: 8, fontSize: 14, color: r.nearby ? colors.fg : colors.muted, fontFamily: r.nearby ? "Inter_600SemiBold" : undefined }}>{r.preview}</Text>
+                  {r.invisible ? <Text style={{ marginTop: 2, fontSize: 13, color: colors.muted }}>Cet utilisateur utilise le mode Invisible.</Text> : null}
                 </View>
               </View>
               <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

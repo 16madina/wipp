@@ -31,7 +31,7 @@ function opaqueToken() {
   return out;
 }
 
-async function blockedEither(a: string, b: string) {
+export async function blockedEither(a: string, b: string) {
   const sql = await getSql();
   const rows = await sql`
     select 1 from wipp_blocks
@@ -83,17 +83,24 @@ function invalidPayload(err: unknown) {
 }
 
 /** Live rows use uuid ids. A rq_ text id is rejected (22P02) and the request never arrives. */
-async function insertConnectionRequest(senderId: string, recipientId: string, via: string) {
+export async function insertConnectionRequest(
+  senderId: string,
+  recipientId: string,
+  via: string,
+  extra?: { senderInvisible?: boolean; senderRing?: "man" | "woman" | "other" | null },
+) {
   const sql = await getSql();
   const id = randomUUID();
   const expires = new Date(Date.now() + REQUEST_TTL_MS).toISOString();
   const viaTries = [...new Set([via, "request"])];
+  const invisible = Boolean(extra?.senderInvisible);
+  const ring = extra?.senderRing ?? null;
   let last: unknown;
   for (const viaValue of viaTries) {
     try {
       const rows = await sql<{ id: string }>`
-        insert into wipp_connection_requests (id, sender_id, recipient_id, status, via, expires_at)
-        values (${id}, ${senderId}, ${recipientId}, 'pending', ${viaValue}, ${expires}::timestamptz)
+        insert into wipp_connection_requests (id, sender_id, recipient_id, status, via, expires_at, sender_invisible, sender_ring)
+        values (${id}, ${senderId}, ${recipientId}, 'pending', ${viaValue}, ${expires}::timestamptz, ${invisible}, ${ring})
         returning id::text
       `;
       return rows[0]?.id ?? id;
@@ -125,9 +132,13 @@ export async function listIncomingConnectionRequests(meId: string) {
     username: string;
     display_name: string;
     avatar_url: string | null;
+    via: string | null;
+    sender_invisible: boolean | null;
+    sender_ring: string | null;
   }>`
     select r.id::text as id, r.created_at::text as created_at, r.expires_at::text as expires_at,
-           p.id as sender_id, p.username, p.display_name, p.avatar_url
+           p.id as sender_id, p.username, p.display_name, p.avatar_url,
+           r.via, r.sender_invisible, r.sender_ring
     from wipp_connection_requests r
     join wipp_profiles p on p.id = r.sender_id
     where r.recipient_id = ${meId}
@@ -136,18 +147,26 @@ export async function listIncomingConnectionRequests(meId: string) {
     order by r.created_at desc
     limit 50
   `;
-  return rows.map((row) => ({
-    id: row.id,
-    status: "pending",
-    createdAt: row.created_at,
-    expiresAt: row.expires_at,
-    sender: {
-      id: row.sender_id,
-      username: row.username,
-      displayName: row.display_name,
-      avatarUrl: row.avatar_url,
-    },
-  }));
+  return rows.map((row) => {
+    // Sent from À proximité while Invisible: the photo is NOT sent with the request (first name +
+    // @pseudo only). Once accepted, the normal profile shows as usual.
+    const masked = row.via === "nearby" && Boolean(row.sender_invisible);
+    return {
+      id: row.id,
+      status: "pending",
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      via: row.via ?? "request",
+      invisible: masked,
+      ring: masked ? (row.sender_ring === "man" || row.sender_ring === "woman" ? row.sender_ring : "other") : null,
+      sender: {
+        id: row.sender_id,
+        username: row.username,
+        displayName: masked ? row.display_name.split(" ")[0] || row.username : row.display_name,
+        avatarUrl: masked ? null : row.avatar_url,
+      },
+    };
+  });
 }
 
 export async function respondConnectionRequest(meId: string, requestId: string, action: string, choice?: ConnectionChoice) {
@@ -192,7 +211,7 @@ export async function respondConnectionRequest(meId: string, requestId: string, 
   `;
   if (!updated.length) return { status: "already_handled" as const };
   const viaRaw = String((updated[0] as { via?: string }).via ?? "request");
-  const via = viaRaw === "qr" || viaRaw === "touch" ? viaRaw : "request";
+  const via = viaRaw === "qr" || viaRaw === "touch" || viaRaw === "nearby" ? viaRaw : "request";
   const result = await establishConnection(meId, row.sender_id, { type, minutes, via });
   return {
     status: result.status === "already_connected" ? ("accepted_existing" as const) : ("accepted" as const),

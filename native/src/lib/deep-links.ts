@@ -1,6 +1,6 @@
 import { useWippStore } from "./store";
 import { upsertRemoteProfile } from "./public-profiles";
-import { resolveWippQr } from "./qr-resolver";
+import { resolveWippQr, type QrDestination } from "./qr-resolver";
 
 export { upsertRemoteProfile } from "./public-profiles";
 
@@ -39,6 +39,13 @@ export async function openResolvedQr(raw: string, mode: "push" | "replace" = "pu
     go({ name: "scanner", error: dest.error });
     return dest;
   }
+  return goToQrDestination(dest, mode);
+}
+
+/** Opens an already-resolved WIPP QR (profile, business card, group). */
+export function goToQrDestination(dest: Extract<QrDestination, { ok: true }>, mode: "push" | "replace" = "push") {
+  const st = useWippStore.getState();
+  const go = mode === "replace" ? st.replace : st.push;
   if (dest.kind === "remote-profile") {
     const userId = upsertRemoteProfile(dest.profile, dest.connected);
     go({ name: "found-profile", userId, via: "qr", offerToken: dest.offer?.token, offerMinutes: dest.offer?.minutes });
