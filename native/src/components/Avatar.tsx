@@ -87,34 +87,30 @@ export function Avatar({
   );
 }
 
-export function GroupAvatar({
-  users,
-  size = 48,
-  fallback,
-}: {
-  users: (User | undefined)[];
-  size?: number;
-  fallback?: string;
-}) {
+/** Initials of a group name: "Famille Diallo" → "FD", "Voisins" → "VO". */
+export function groupInitials(name?: string) {
+  const words = (name ?? "").trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w));
+  if (!words.length) return "";
+  const first = (w: string) => (w.match(/[\p{L}\p{N}]/u)?.[0] ?? "").toUpperCase();
+  if (words.length === 1) return Array.from(words[0].replace(/[^\p{L}\p{N}]/gu, "")).slice(0, 2).join("").toUpperCase();
+  return first(words[0]) + first(words[1]);
+}
+
+/**
+ * A group's picture: only the photo the group chose. Without one, the initials of its name —
+ * never a member's photo (that would look like the group's picture).
+ */
+export function GroupAvatar({ name, size = 48, fallback }: { name?: string; size?: number; fallback?: string }) {
   const src = wippSrc(fallback);
-  if (src || fallback?.startsWith("groups/")) return <Avatar user={{ displayName: "G", avatar: fallback }} size={size} />;
-  const shown = users.filter(Boolean).slice(0, 2) as User[];
-  // Same outer size as a person's avatar: one full circle, plus a small second face as a badge.
-  const badge = Math.round(size * 0.42);
+  if (src || fallback?.startsWith("groups/")) return <Avatar user={{ displayName: name ?? "G", avatar: fallback }} size={size} />;
+  const initials = groupInitials(name);
   return (
-    <View style={{ width: size, height: size }}>
-      {shown[0] ? (
-        <Avatar user={shown[0]} size={size} />
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+      {initials ? (
+        <Text style={{ color: colors.accent, fontSize: size * (initials.length > 1 ? 0.34 : 0.4), fontFamily: "Inter_600SemiBold" }}>{initials}</Text>
       ) : (
-        <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
-          <Users size={size * 0.42} color={colors.accent} />
-        </View>
+        <Users size={size * 0.42} color={colors.accent} />
       )}
-      {shown[1] ? (
-        <View style={{ position: "absolute", right: -2, bottom: -2, borderRadius: badge, borderWidth: 2, borderColor: colors.bg }}>
-          <Avatar user={shown[1]} size={badge} />
-        </View>
-      ) : null}
     </View>
   );
 }

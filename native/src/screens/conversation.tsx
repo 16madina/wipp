@@ -797,7 +797,7 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0, maxWidth: "100%" }}>
                 {chat.type === "group" ? (
                   <Press onPress={() => push({ name: "chat-info", chatId })}>
-                    <GroupAvatar users={chat.participantIds.filter((id) => id !== "me").map((id) => users[id])} size={32} fallback={chat.avatar} />
+                    <GroupAvatar name={chat.name} size={32} fallback={chat.avatar} />
                   </Press>
                 ) : (
                   <Press

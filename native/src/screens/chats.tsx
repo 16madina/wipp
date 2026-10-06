@@ -395,7 +395,6 @@ function ChatRow({
   const mineShop = Boolean(shop && shop.ownerId === "me");
   const personStory = Boolean(peer && chat.type !== "group" && !(shop && !mineShop));
   const ring: StoryRing = personStory && peer ? storyRing(stories, peer.id) : "none";
-  const groupUsers = chat.participantIds.filter((id) => id !== "me").map((id) => users[id]);
   const sealed = isChatSealed(chat, now);
   const ephemeral = Boolean(chat.ephemeral) && !sealed;
   const title =
@@ -421,7 +420,7 @@ function ChatRow({
         onLongPress={onMenu}
       >
         {chat.type === "group" ? (
-          <GroupAvatar users={groupUsers} size={52} fallback={chat.avatar} />
+          <GroupAvatar name={chat.name} size={52} fallback={chat.avatar} />
         ) : (
           <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} ring={ring} />
         )}
@@ -742,7 +741,6 @@ function GroupGrid({
         </Press>
       </View>
       {groups.map((g) => {
-        const members = g.participantIds.filter((id) => id !== "me").map((id) => users[id]);
         return (
           <View key={g.id} style={{ width: "33.333%", padding: 6 }}>
             <Press
@@ -751,7 +749,7 @@ function GroupGrid({
               style={{ aspectRatio: 0.82, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 }}
             >
               <View>
-                <GroupAvatar users={members} size={60} fallback={g.avatar} />
+                <GroupAvatar name={g.name} size={60} fallback={g.avatar} />
                 {g.unread ? (
                   <View style={{ position: "absolute", top: -4, right: -6, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ color: colors.accentFg, fontSize: 11, fontFamily: "Inter_700Bold" }}>{g.unread > 99 ? "99+" : g.unread}</Text>
@@ -1008,7 +1006,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Press
                 disabled={group ? !canEdit : !profile?.avatar}
-                accessibilityLabel={group ? "Photo du groupe" : "Voir la photo"}
+                accessibilityLabel={group ? (canEdit ? "Modifier la photo du groupe" : "Photo du groupe") : "Voir la photo"}
                 onPress={() => {
                   if (group) return groupPhotoMenu();
                   const src = profile?.avatar ? wippSrc(profile.avatar) : undefined;
@@ -1016,8 +1014,13 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                 }}
               >
                 <View style={{ borderRadius: 999, borderWidth: 2, borderColor: colors.accent, padding: 2 }}>
-                  {group ? <GroupAvatar users={members} size={72} fallback={chat.avatar} /> : <Avatar user={profile} size={72} />}
+                  {group ? <GroupAvatar name={title} size={72} fallback={chat.avatar} /> : <Avatar user={profile} size={72} />}
                 </View>
+                {group && canEdit ? (
+                  <View style={{ position: "absolute", right: -2, bottom: -2, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+                    <Pencil size={13} color={colors.accentFg} />
+                  </View>
+                ) : null}
               </Press>
               <View style={{ flex: 1, paddingTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
