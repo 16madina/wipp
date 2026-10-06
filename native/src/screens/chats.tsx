@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
   BadgeCheck,
   Ban,
@@ -311,18 +311,19 @@ export function ChatsScreen() {
           ))
         )}
       </ScrollView>
-      {menuChatId ? (
-        <Press
+      <Modal visible={Boolean(menuChatId)} transparent animationType="fade" onRequestClose={() => setMenuChatId(null)}>
+        {/* Centered above everything (the tab bar used to cover the bottom of the old sheet). */}
+        <Pressable
           onPress={() => setMenuChatId(null)}
-          style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", paddingHorizontal: 24 }}
         >
-          <View style={{ marginBottom: 24, marginHorizontal: 16, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surface }}>
+          <Pressable onPress={() => undefined} style={{ borderRadius: 18, overflow: "hidden", backgroundColor: colors.surface }}>
             {menuChat ? (
               <Text numberOfLines={1} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, fontSize: 13, color: colors.muted }}>
                 {menuChat.type === "group" ? menuChat.name : chatPeer(menuChat, users)?.displayName ?? "Conversation"}
               </Text>
             ) : null}
-            <ScrollView style={{ maxHeight: 440 }}>
+            <ScrollView style={{ maxHeight: 520 }} bounces={false}>
               {(
                 [
                   [menuChat?.pinned ? "Désépingler" : "Épingler", () => menuChatId && useWippStore.getState().pinChat(menuChatId, !menuChat?.pinned)],
@@ -381,7 +382,8 @@ export function ChatsScreen() {
                   key={label}
                   onPress={() => {
                     setMenuChatId(null);
-                    fn();
+                    // iOS cannot present the code / alert while this modal is still closing.
+                    setTimeout(fn, 400);
                   }}
                   style={{ paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: idx ? 1 : 0, borderTopColor: colors.hair }}
                 >
@@ -389,9 +391,9 @@ export function ChatsScreen() {
                 </Press>
               ))}
             </ScrollView>
-          </View>
-        </Press>
-      ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
       {gate}
       {lockAsk.gate}
     </ScreenRoot>
