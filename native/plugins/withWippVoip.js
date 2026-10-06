@@ -45,6 +45,7 @@ function patchAppDelegate(src) {
   static var missedPending: [String: (expiry: TimeInterval, cancelled: Bool)] = [:]
   static let callObserver = CXCallObserver()
   static let callWatcher = CallWatcher()
+  static var watchingCalls = false
 
   /** Answered → cancel the notice. Declined by me before the end → cancel it too (that is not "missed"). */
   final class CallWatcher: NSObject, CXCallObserverDelegate {
@@ -75,7 +76,7 @@ function patchAppDelegate(src) {
   /** Scheduled when the call starts ringing: iOS shows it at expiry even if WIPP is suspended or closed. */
   static func scheduleMissedCall(uuid: String, video: Bool, at expiry: TimeInterval) {
     let key = uuid.lowercased()
-    if callObserver.delegate == nil { callObserver.setDelegate(callWatcher, queue: nil) }
+    if !watchingCalls { watchingCalls = true; callObserver.setDelegate(callWatcher, queue: nil) }
     missedPending[key] = (expiry, false)
     let wait = max(1, expiry - Date().timeIntervalSince1970 + 1)
     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
