@@ -27,7 +27,7 @@
         "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les messages vocaux et les appels audio.",
         "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
         "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque.",
-        "NSFaceIDUsageDescription": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil.",
+        "NSFaceIDUsageDescription": "WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil.",
         "NSLocationWhenInUseUsageDescription": "WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.",
         "NSContactsUsageDescription": "WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.",
         "NSMotionUsageDescription": "WIPP utilise le mouvement de votre téléphone uniquement lorsque vous utilisez WIPP Touch, afin de détecter le rapprochement avec un autre appareil.",
@@ -244,7 +244,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "WIPP Privé utilise Face ID pour déverrouiller l’espace privé sur cet appareil."
+          "faceIDPermission": "WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil."
         }
       ],
       "./plugins/withWippTouchNative",

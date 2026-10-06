@@ -18,7 +18,7 @@ import {
   setLockCode,
   verifyLockCode,
 } from "../lib/chat-lock";
-import { authenticateBiometric, inspectBiometricHardware } from "../lib/private-vault";
+import { authenticateBiometric, authenticateDeviceOwner, inspectBiometricHardware } from "../lib/private-vault";
 
 export const LOCK_MIN = 4;
 
@@ -123,7 +123,7 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
                   value={lockBiometricOn()}
                   onChange={(v) => {
                     void (async () => {
-                      if (v && (await authenticateBiometric()) !== "success") return;
+                      if (v && (await authenticateBiometric("Activer Face ID pour les conversations verrouillées")) !== "success") return;
                       await setLockBiometric(v);
                     })();
                   }}
@@ -136,11 +136,17 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
               label="Code oublié ?"
               onPress={() => {
                 void (async () => {
-                  if (bioHw && (await authenticateBiometric()) === "success") {
+                  const r = await authenticateDeviceOwner("Confirme que c’est toi pour créer un nouveau code");
+                  if (r === "success") {
                     setStep("create");
                     return;
                   }
-                  Alert.alert("Code oublié", "Sans Face ID / empreinte valide, ce code ne peut pas être récupéré. Il n’existe que sur ce téléphone, jamais sur le serveur.");
+                  if (r === "unavailable") {
+                    Alert.alert(
+                      "Code oublié",
+                      "Aucun Face ID ni code n’est activé sur ce téléphone, donc le code ne peut pas être réinitialisé. Active le code de l’iPhone dans Réglages › Face ID et code, puis réessaie.",
+                    );
+                  }
                 })();
               }}
             />

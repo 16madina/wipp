@@ -165,14 +165,40 @@ export async function biometricAvailable() {
 
 export type BiometricOutcome = "success" | "cancel" | "unavailable" | "failed";
 
-export async function authenticateBiometric(): Promise<BiometricOutcome> {
+/**
+ * Face ID / empreinte first, then the iPhone's own passcode if Face ID fails or is not set up
+ * (used for « Code oublié ? »: whoever knows how to unlock this phone may set a new code).
+ */
+export async function authenticateDeviceOwner(promptMessage: string): Promise<BiometricOutcome> {
+  if (Platform.OS === "web") return "unavailable";
+  try {
+    const LocalAuthentication = await import("expo-local-authentication");
+    const level = await LocalAuthentication.getEnrolledLevelAsync();
+    if (level === LocalAuthentication.SecurityLevel.NONE) return "unavailable";
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage,
+      cancelLabel: "Annuler",
+      fallbackLabel: "Utiliser le code de l’iPhone",
+      disableDeviceFallback: false,
+    });
+    if (result.success) return "success";
+    const err = result.error ?? "";
+    if (err === "user_cancel" || err === "system_cancel" || err === "app_cancel") return "cancel";
+    if (err === "not_enrolled" || err === "not_available" || err === "passcode_not_set") return "unavailable";
+    return "failed";
+  } catch {
+    return "unavailable";
+  }
+}
+
+export async function authenticateBiometric(promptMessage = "WIPP Privé"): Promise<BiometricOutcome> {
   if (Platform.OS === "web") return "unavailable";
   const hw = await inspectBiometricHardware();
   if (!hw.hasHardware || !hw.enrolled) return "unavailable";
   try {
     const LocalAuthentication = await import("expo-local-authentication");
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "WIPP Privé",
+      promptMessage,
       cancelLabel: "Annuler",
       disableDeviceFallback: true,
     });
