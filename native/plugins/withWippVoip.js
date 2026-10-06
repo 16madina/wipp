@@ -13,6 +13,16 @@ function patchAppDelegate(src) {
   if (src.includes(MARK)) return src;
   src = src.replace("import Expo\n", `import Expo\nimport PushKit ${MARK}\nimport CallKit ${MARK}\n`);
   src = src.replace(
+    "  ) -> Bool {\n    let delegate = ReactNativeDelegate()",
+    `  ) -> Bool {
+    // WIPP-VOIP: official ringtone stored before CallKit is set up (works from the very first launch after an update).
+    var callKeepSettings = UserDefaults.standard.dictionary(forKey: "RNCallKeepSettings")
+      ?? ["appName": "WIPP", "imageName": "CallKitLogo", "supportsVideo": true, "maximumCallGroups": "1", "maximumCallsPerCallGroup": "1"]
+    callKeepSettings["ringtoneSound"] = "wipp_ring.caf"
+    UserDefaults.standard.set(callKeepSettings, forKey: "RNCallKeepSettings")
+    let delegate = ReactNativeDelegate()`,
+  );
+  src = src.replace(
     "public class AppDelegate: ExpoAppDelegate {",
     "public class AppDelegate: ExpoAppDelegate, PKPushRegistryDelegate {",
   );
