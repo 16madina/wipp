@@ -324,6 +324,9 @@ for (const pack of Object.values(STICKER_PACKS)) {
   pack.stickers = pack.stickers.map((row) => WIPP_STICKERS.find((item) => item.id === row.id) ?? row);
 }
 
+/** Noms de stickers (FR/EN) : sert à réparer les stickers devenus du texte à cause d'une ancienne synchro. */
+export const STICKER_LABELS = new Set(WIPP_STICKERS.flatMap((s) => [s.labelFr, s.labelEn]));
+
 export type StickerId = string;
 export type StickerPackId = keyof typeof STICKER_PACKS;
 

@@ -27,6 +27,11 @@ import type { WippChatSummary, WippMessage } from "./types";
 import { isPrivateChat } from "@/lib/private-vault";
 import { isSeedDemoChat } from "@/lib/seed";
 import type { Chat, Message, User } from "@/lib/types";
+import { STICKER_LABELS } from "@/lib/stickers";
+
+function isStickerLabel(text: string) {
+  return text === "Sticker" || STICKER_LABELS.has(text);
+}
 
 const SRV = "srv:";
 
@@ -128,7 +133,34 @@ export async function mapServerMessageAsync(
   }
 }
 
-const MEDIA_FIELDS = ["type", "imageUrl", "videoUrl", "audioUrl", "gifUrl", "file", "album", "duration", "viewOnce", "viewed", "mediaState", "progress", "attachmentId", "mediaKey", "mediaChunks", "text"] as const;
+const MEDIA_FIELDS = [
+  "type",
+  "imageUrl",
+  "videoUrl",
+  "audioUrl",
+  "gifUrl",
+  "file",
+  "album",
+  "duration",
+  "viewOnce",
+  "viewed",
+  "mediaState",
+  "progress",
+  "attachmentId",
+  "mediaKey",
+  "mediaChunks",
+  "mediaMime",
+  "text",
+  // Sans ces champs, un sticker / une carte / une surprise redevenait un simple texte à la synchro suivante.
+  "stickerId",
+  "shopId",
+  "scratchCardId",
+  "scratchDesign",
+  "effectId",
+  "contactCard",
+  "geo",
+  "linkCard",
+] as const;
 
 /** Keeps the sender's local preview (blob URLs, progress) when the server copy lands. */
 function keepLocalMedia(local: Message | undefined, next: Message): Message {
@@ -432,7 +464,10 @@ export function mergeServerMessagesIntoState(
     }
     const prev = byId.get(sm.id);
     const ctChanged = Boolean(prev?.enc?.ct && mapped.enc?.ct && prev.enc.ct !== mapped.enc.ct);
-    if (prev?.text && mapped.enc && !mapped.text && !ctChanged && !mapped.deletedForAll) {
+    if (prev?.text && mapped.enc && !mapped.text && !ctChanged && !mapped.deletedForAll && prev.type !== "text" && prev.type !== "system" && prev.type !== "scratch") {
+      // Déjà déchiffré en sticker / photo / carte… : la copie serveur ne dit que « texte chiffré », on garde le type local.
+      byId.set(sm.id, keepLocalMedia(prev, { ...mapped, replyPreview: mapped.replyPreview ?? prev.replyPreview, forwarded: mapped.forwarded ?? prev.forwarded, storyRef: mapped.storyRef ?? prev.storyRef }));
+    } else if (prev?.text && mapped.enc && !mapped.text && !ctChanged && !mapped.deletedForAll) {
       byId.set(sm.id, {
         ...mapped,
         text: prev.text,
@@ -509,7 +544,9 @@ export async function decryptMergedMessages(
   let changed = false;
   const next = [];
   for (const m of list) {
-    if (m.text || !m.enc) {
+    // Réparation : un sticker abîmé par l'ancienne synchro est devenu un texte égal à son nom (« Bisou », « Sticker »…).
+    const suspect = m.type === "text" && Boolean(m.text) && !(m as { healed?: boolean }).healed && isStickerLabel(m.text ?? "");
+    if ((m.text && !suspect) || !m.enc) {
       next.push(m);
       continue;
     }
@@ -534,7 +571,9 @@ export async function decryptMergedMessages(
       const plain = decodePlain(text);
       const { parseMedia, mediaLabel } = await import("./media-crypto");
       const media = m.deletedForAll ? null : parseMedia(plain.text);
-      const base: Message = media ? applyMediaEnvelope(m, media, mediaLabel(media.kind)) : { ...m, text: m.deletedForAll ? "Message supprimé" : plain.text };
+      const base: Message = media
+        ? applyMediaEnvelope(m, media, mediaLabel(media.kind))
+        : ({ ...m, text: m.deletedForAll ? "Message supprimé" : plain.text, ...(suspect ? { healed: true } : {}) } as Message);
       next.push(
         applySurprise(
           {

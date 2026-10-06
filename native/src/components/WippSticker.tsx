@@ -26,7 +26,41 @@ function clipHtml(file: string, loop?: boolean) {
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent;overflow:hidden}canvas,video{position:absolute;inset:0;width:100%;height:100%}video{opacity:0.02}</style></head><body><video id="v" src="${file}" muted playsinline webkit-playsinline ${loop ? "loop" : ""} autoplay></video><canvas id="c"></canvas><script>`;
 }
 
-function ChromaClip({ source, loop, onReady }: { source: number; loop?: boolean; onReady: () => void }) {
+/** Navigateur (aperçu web) : même lecteur fond vert, dans une iframe (pas de WebView ni de fichiers locaux). */
+function ChromaClipWeb({ source, loop, onReady }: { source: number | string; loop?: boolean; onReady: () => void }) {
+  const ready = useRef(onReady);
+  ready.current = onReady;
+  const frame = useRef<HTMLIFrameElement | null>(null);
+  const uri = typeof source === "string" ? source : Asset.fromModule(source).uri;
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data === "wipp-clip-ready" && e.source === frame.current?.contentWindow) ready.current();
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+  // opacity 0 : le navigateur joue quand même la vidéo (sur iPhone il faut 0.02), sans laisser de rectangle visible.
+  const html = (clipHtml(uri, loop) + CLIP_SCRIPT(loop)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
+    "window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready');",
+    "window.parent.postMessage('wipp-clip-ready','*');",
+  );
+  return (
+    <iframe
+      ref={frame}
+      srcDoc={html}
+      title="sticker"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, background: "transparent", pointerEvents: "none" }}
+    />
+  );
+}
+
+function ChromaClip({ source, loop, onReady }: { source: number | string; loop?: boolean; onReady: () => void }) {
+  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} onReady={onReady} />;
+  if (typeof source !== "number") return null;
+  return <ChromaClipNative source={source} loop={loop} onReady={onReady} />;
+}
+
+function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: boolean; onReady: () => void }) {
   const [page, setPage] = useState<string | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const ready = useRef(onReady);
@@ -81,7 +115,7 @@ function fit(){ const w=window.innerWidth,h=window.innerHeight; if(w<2||h<2) ret
 function key(px){ const p=px.data; for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
  if(g>48&&lead>14&&g>(r+b)*0.42){ const spill=Math.min(1,lead/36); p[i+3]=Math.round(p[i+3]*Math.max(0,1-spill*1.35)); }
  else if(g>r&&g>b&&lead>6){ p[i+1]=maxRB+Math.round(lead*0.25); } } }
-function frame(){ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); ctx.drawImage(v,0,0,c.width,c.height); const img=ctx.getImageData(0,0,c.width,c.height); key(img); ctx.putImageData(img,0,0); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } requestAnimationFrame(frame); }
+function frame(){ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } requestAnimationFrame(frame); }
 v.playbackRate=${loop ? "0.92" : "1"};
 v.addEventListener('loadeddata',()=>{ v.play(); });
 ${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=3.05) v.pause(); });"}
@@ -135,7 +169,9 @@ export function WippSticker({
   const row = stickerById(id);
   const poster = row ? wippSrc(row.src) : undefined;
   const anim = row?.anim ? wippSrc(row.anim) : undefined;
-  const video = Boolean(isVideo(row?.anim) && typeof anim === "number");
+  // Sur navigateur, une vidéo locale arrive sous forme d'adresse (texte) et non de numéro de ressource.
+  const clipSource = typeof anim === "number" || (Platform.OS === "web" && typeof anim === "string") ? (anim as number | string) : undefined;
+  const video = Boolean(isVideo(row?.anim) && clipSource != null);
   const imageAnim = !video && (isAnimatedImage(row?.anim) || isAnimatedImage(row?.src));
   const imageSrc = (isAnimatedImage(row?.anim) ? anim : undefined) || (isAnimatedImage(row?.src) ? poster : undefined) || poster;
   const [broken, setBroken] = useState(false);
@@ -149,11 +185,11 @@ export function WippSticker({
     setClipReady(false);
   }, [id]);
 
-  if (video && anim != null && typeof anim === "number") {
+  if (video && clipSource != null) {
     return (
       <View style={box}>
         {poster && !clipReady ? <Image source={poster} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="contain" /> : null}
-        <ChromaClip source={anim} loop={row?.loopSoft} onReady={() => setClipReady(true)} />
+        <ChromaClip source={clipSource} loop={row?.loopSoft} onReady={() => setClipReady(true)} />
       </View>
     );
   }
