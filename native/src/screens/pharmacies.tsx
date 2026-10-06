@@ -6,7 +6,7 @@ import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField }
 import { getMyPosition, kmBetween, kmLabel, osmTile, type LatLng } from "../lib/geo";
 import { wippApi } from "../lib/proximity/wipp-session";
 import { useWippStore } from "../lib/store";
-import { colors } from "../theme";
+import { colors, accentA } from "../theme";
 
 /** Same shape as the server (src/lib/pharmacy/places.ts). */
 export type PharmacyPlace = {
@@ -133,7 +133,7 @@ function PharmacyCard({ p, origin, duty }: { p: PharmacyPlace; origin: LatLng | 
           {p.name}
         </Text>
         {duty ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.16)" }}>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: accentA(0.16) }}>
             <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_700Bold" }}>🌙 DE GARDE</Text>
           </View>
         ) : null}

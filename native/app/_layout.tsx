@@ -2,6 +2,8 @@ import "../src/lib/crypto-polyfill";
 import "../src/lib/alert-web";
 import "../src/lib/push/android-call";
 import { useEffect } from "react";
+import { colors } from "../src/theme";
+import { loadAppearance, useAppearance } from "../src/lib/appearance";
 import { View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -21,6 +23,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { ShareIntentProvider } from "expo-share-intent";
 
 void SplashScreen.preventAutoHideAsync();
+void loadAppearance();
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -33,18 +36,21 @@ export default function RootLayout() {
     DancingScript_600SemiBold,
   });
 
-  useEffect(() => {
-    if (loaded) void SplashScreen.hideAsync();
-  }, [loaded]);
+  const ready = useAppearance((s) => s.ready);
+  const theme = useAppearance((s) => s.theme);
 
-  if (!loaded) return <View style={{ flex: 1, backgroundColor: "#02081e" }} />;
+  useEffect(() => {
+    if (loaded && ready) void SplashScreen.hideAsync();
+  }, [loaded, ready]);
+
+  if (!loaded || !ready) return <View style={{ flex: 1, backgroundColor: "#02081e" }} />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ShareIntentProvider options={{ scheme: "wipp", resetOnBackground: false }}>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, animation: "none", contentStyle: { backgroundColor: "#070a0f" } }} />
+          <StatusBar style={theme === "light" ? "dark" : "light"} />
+          <Stack screenOptions={{ headerShown: false, animation: "none", contentStyle: { backgroundColor: colors.bg } }} />
         </ShareIntentProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

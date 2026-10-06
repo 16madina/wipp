@@ -11,7 +11,6 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const W = 16;
 const H = 12;
 const GREY = "rgba(160,168,184,0.95)";
-const GOLD = colors.accent;
 /** The two dots sit on the top line; the smile arc runs underneath them. */
 const LEFT = { x: 4.5, y: 4 };
 const RIGHT = { x: 11.5, y: 4 };
@@ -88,6 +87,7 @@ export function ReceiptTicks({ status }: { status: Message["status"] }) {
   }
 
   const read = status === "read";
+  const GOLD = colors.accent;
   const fill = animating ? tint.interpolate({ inputRange: [0, 1], outputRange: [GREY, GOLD] }) : read ? GOLD : GREY;
   return (
     <View accessible accessibilityLabel={label} style={box}>

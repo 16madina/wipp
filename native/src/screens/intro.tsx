@@ -5,7 +5,10 @@ import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { bootPoster, bootVideo } from "../lib/assets";
 import { useT } from "../lib/store";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+/** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
+const colors = palettes.dark;
 
 export function IntroSplash({ onDone }: { onDone: () => void }) {
   const t = useT();

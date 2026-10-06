@@ -84,6 +84,8 @@ import {
   StoriesScreen,
 } from "./extra";
 import { useEffect, useState } from "react";
+import { colors } from "../theme";
+import { useAppearance } from "../lib/appearance";
 import { AppState, Platform, View } from "react-native";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
 import { ScreenProtectionHost } from "../components/ScreenProtectionHost";
@@ -233,7 +235,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "group-invite":
       return <GroupInviteScreen token={screen.token} />;
     case "wgo-touch":
-      return <WgoTouchScreen />;
+      return <WgoTouchScreen adopt={screen.adopt} />;
     case "touch-incoming":
       return <TouchIncomingScreen />;
     case "pharmacy":
@@ -277,6 +279,7 @@ export function AppShell() {
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
+  const theme = useAppearance((s) => s.theme);
   const { hasShareIntent } = useShareIntentContext();
 
   useEffect(() => {
@@ -407,11 +410,11 @@ export function AppShell() {
       unbind = bindProximityLifecycle();
       void syncProximityLifecycle(useWippStore.getState().stack.at(-1)?.name ?? "chats");
     });
-    void import("../lib/proximity/touch-receiver").then(({ onTouchReceiverMatch }) => {
-      offMatch = onTouchReceiverMatch(() => {
-        const name = useWippStore.getState().stack.at(-1)?.name;
-        if (name !== "wgo-touch" && name !== "touch-incoming") {
-          useWippStore.getState().push({ name: "touch-incoming" });
+    void import("../lib/proximity/touch-passive").then(({ onPassiveTouchMatch }) => {
+      // Bump felt while WIPP was simply open, paired with a phone in WIPP Touch: show the card here.
+      offMatch = onPassiveTouchMatch((sessionId) => {
+        if (useWippStore.getState().stack.at(-1)?.name !== "wgo-touch") {
+          useWippStore.getState().push({ name: "wgo-touch", adopt: sessionId });
         }
       });
     });
@@ -450,11 +453,14 @@ export function AppShell() {
     <View
       style={{
         flex: 1,
-        backgroundColor: webPreview ? "#05070c" : "#070a0f",
+        backgroundColor: webPreview ? "#05070c" : colors.bg,
         alignItems: tablet || webPreview ? "center" : "stretch",
       }}
     >
       <View
+        // Changement de thème : remonter les écrans pour qu'ils relisent la palette
+        // (la pile de navigation vit dans le store et est conservée).
+        key={theme}
         style={{
           flex: 1,
           width: frameWidth,

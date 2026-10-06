@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { Text, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import type { MeProfile, User } from "../lib/types";
-import { colors } from "../theme";
+import { colors, whiteA } from "../theme";
 
 const signedAvatar = new Map<string, string>();
 
@@ -69,7 +69,7 @@ export function Avatar({
         overflow: "hidden",
         backgroundColor: colors.navy,
         borderWidth: ringOn || unresolved ? 2 : 0,
-        borderColor: unresolved ? colors.danger : ring === "muted" ? "rgba(255,255,255,0.28)" : colors.accent,
+        borderColor: unresolved ? colors.danger : ring === "muted" ? whiteA(0.28) : colors.accent,
         alignItems: "center",
         justifyContent: "center",
       }}

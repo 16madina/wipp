@@ -47,7 +47,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Press, ScreenRoot, Toggle } from "../components/ui";
 import { useWippStore } from "../lib/store";
 import type { Listing } from "../lib/types";
-import { colors } from "../theme";
+import { colors, accentA, bgA, fgA, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
 
 const EVENT_CATS = ["Musique", "Soirée", "Affaires", "Sport", "Culture", "Food", "Communauté", "Autre"];
@@ -219,13 +219,13 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
   }
 
   const listingCountry = findWorldCountry(country) ?? findWorldCountry("CA")!;
-  const row = { flexDirection: "row" as const, gap: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(16,22,36,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginTop: 10 };
-  const iconBox = { width: 42, height: 42, borderRadius: 12, backgroundColor: "rgba(255,216,77,0.10)", alignItems: "center" as const, justifyContent: "center" as const };
+  const row = { flexDirection: "row" as const, gap: 12, padding: 14, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: whiteA(0.06), marginTop: 10 };
+  const iconBox = { width: 42, height: 42, borderRadius: 12, backgroundColor: accentA(0.10), alignItems: "center" as const, justifyContent: "center" as const };
   const rowTitle = { color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" };
-  const box = { minHeight: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 12, justifyContent: "center" as const };
+  const box = { minHeight: 44, borderRadius: 12, backgroundColor: whiteA(0.06), paddingHorizontal: 12, justifyContent: "center" as const };
   const inputStyle = { flex: 1, color: colors.fg, fontSize: 15, paddingVertical: 10, ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) } as object;
   const star = <Text style={{ color: colors.danger }}> *</Text>;
-  const pill = (on: boolean) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingHorizontal: 12, height: 42, borderRadius: 12, borderWidth: 1, borderColor: on ? colors.accent : "rgba(255,255,255,0.15)", backgroundColor: on ? colors.accent : "transparent" });
+  const pill = (on: boolean) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingHorizontal: 12, height: 42, borderRadius: 12, borderWidth: 1, borderColor: on ? colors.accent : whiteA(0.15), backgroundColor: on ? colors.accent : "transparent" });
   const pillText = (on: boolean) => ({ color: on ? colors.accentFg : colors.fg, fontSize: 13, fontFamily: on ? "Inter_600SemiBold" : "Inter_500Medium" });
   const CAT_ICON: Record<string, typeof Car> = { auto: Car, realty: House, electronics: Smartphone, fashion: Shirt, home: Sofa, jobs: Briefcase, leisure: Gamepad2, goods: MoreHorizontal };
 
@@ -235,8 +235,8 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         <ScrollView contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ height: 210, marginHorizontal: -14, marginBottom: 4 }}>
             <Image source={listingHero} style={{ position: "absolute", right: 0, top: 30, width: "68%", height: 180 }} contentFit="cover" />
-            <LinearGradient colors={[colors.ink, "rgba(5,7,13,0.55)", "rgba(5,7,13,0)"]} locations={[0.3, 0.5, 0.75]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
-            <LinearGradient colors={["rgba(5,7,13,0)", colors.ink]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
+            <LinearGradient colors={[colors.bg, bgA(0.55), bgA(0)]} locations={[0.3, 0.5, 0.75]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
+            <LinearGradient colors={[bgA(0), colors.bg]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
             <View style={{ position: "absolute", top: insets.top + 4, left: 6, right: 10, flexDirection: "row", alignItems: "center" }}>
               <Press accessibilityLabel="Retour" onPress={pop} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
                 <ChevronLeft size={26} color={colors.fg} />
@@ -247,7 +247,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
               <Text style={{ color: colors.fg, fontSize: 29, lineHeight: 32, fontFamily: "Inter_800ExtraBold" }}>
                 Vends, achète,{"\n"}<Text style={{ color: colors.accent }}>trouve plus</Text>
               </Text>
-              <Text style={{ marginTop: 6, color: "rgba(249,250,251,0.8)", fontSize: 13, lineHeight: 18 }}>Publie ton annonce et touche la communauté WIPP près de toi.</Text>
+              <Text style={{ marginTop: 6, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>Publie ton annonce et touche la communauté WIPP près de toi.</Text>
             </View>
           </View>
 
@@ -260,7 +260,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {photos.length < 8 ? (
-                  <Press onPress={() => void addPhotos()} style={{ width: 84, height: 84, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.35)", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  <Press onPress={() => void addPhotos()} style={{ width: 84, height: 84, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: whiteA(0.35), alignItems: "center", justifyContent: "center", gap: 4 }}>
                     <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                       <Plus size={16} color={colors.accentFg} />
                     </View>
@@ -281,8 +281,8 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                   </View>
                 ))}
                 {Array.from({ length: Math.max(0, 4 - photos.length) }, (_, k) => (
-                  <View key={`slot${k}`} style={{ width: 84, height: 84, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.05)", alignItems: "center", justifyContent: "center" }}>
-                    <ImageIcon size={20} color="rgba(249,250,251,0.3)" />
+                  <View key={`slot${k}`} style={{ width: 84, height: 84, borderRadius: 14, backgroundColor: whiteA(0.05), alignItems: "center", justifyContent: "center" }}>
+                    <ImageIcon size={20} color={fgA(0.3)} />
                   </View>
                 ))}
               </ScrollView>
@@ -359,7 +359,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                   <View style={[box, { flexDirection: "row", alignItems: "center", gap: 8 }]}>
                     <Text style={{ color: colors.muted, fontSize: 16 }}>$</Text>
                     <TextInput value={amount} onChangeText={setAmount} placeholder={`Prix (${currency})`} placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
-                    <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.12)" }}>
+                    <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: whiteA(0.12) }}>
                       <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{currency}</Text>
                       <ChevronDown size={14} color={colors.muted} />
                     </Press>
@@ -403,7 +403,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                     if (c) setCountry(c.fr);
                   })().finally(() => setLocating(false));
                 }}
-                style={[box, { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,216,77,0.5)", backgroundColor: "transparent" }]}
+                style={[box, { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: accentA(0.5), backgroundColor: "transparent" }]}
               >
                 <LocateFixed size={18} color={colors.accent} />
                 <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{locating ? "Localisation…" : coords ? "Position enregistrée ✓" : "Utiliser ma position"}</Text>
@@ -644,10 +644,10 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
     return d;
   };
   const eventCountry = findWorldCountry(country) ?? findWorldCountry("CA")!;
-  const row = { flexDirection: "row" as const, gap: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(16,22,36,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginTop: 10 };
-  const iconBox = { width: 42, height: 42, borderRadius: 12, backgroundColor: "rgba(255,216,77,0.10)", alignItems: "center" as const, justifyContent: "center" as const };
+  const row = { flexDirection: "row" as const, gap: 12, padding: 14, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: whiteA(0.06), marginTop: 10 };
+  const iconBox = { width: 42, height: 42, borderRadius: 12, backgroundColor: accentA(0.10), alignItems: "center" as const, justifyContent: "center" as const };
   const rowTitle = { color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" };
-  const box = { minHeight: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 12, justifyContent: "center" as const };
+  const box = { minHeight: 44, borderRadius: 12, backgroundColor: whiteA(0.06), paddingHorizontal: 12, justifyContent: "center" as const };
   const inputStyle = { flex: 1, color: colors.fg, fontSize: 15, paddingVertical: 10, ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) } as object;
 
   return (
@@ -657,8 +657,8 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           {/* Hero: illustration on the right, title on the left (artwork has no text). */}
           <View style={{ height: 200, marginHorizontal: -14, marginBottom: 4 }}>
             <Image source={eventHero} style={{ position: "absolute", right: 0, top: 0, width: "62%", height: "100%" }} contentFit="cover" />
-            <LinearGradient colors={[colors.ink, "rgba(5,7,13,0.6)", "rgba(5,7,13,0)"]} locations={[0.35, 0.55, 0.8]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
-            <LinearGradient colors={["rgba(5,7,13,0)", colors.ink]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
+            <LinearGradient colors={[colors.bg, bgA(0.6), bgA(0)]} locations={[0.35, 0.55, 0.8]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
+            <LinearGradient colors={[bgA(0), colors.bg]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
             <Press accessibilityLabel="Retour" onPress={pop} style={{ position: "absolute", top: insets.top + 4, left: 10, width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
               <ChevronLeft size={26} color={colors.fg} />
             </Press>
@@ -666,7 +666,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               <Text style={{ color: colors.fg, fontSize: 30, lineHeight: 33, fontFamily: "Inter_800ExtraBold" }}>
                 {eventId ? "Modifier l’" : "Créer un\n"}<Text style={{ color: colors.accent }}>événement</Text>
               </Text>
-              <Text style={{ marginTop: 8, color: "rgba(249,250,251,0.8)", fontSize: 13, lineHeight: 18 }}>Partage ton événement sur WIPP et rassemble ta communauté.</Text>
+              <Text style={{ marginTop: 8, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>Partage ton événement sur WIPP et rassemble ta communauté.</Text>
             </View>
           </View>
 
@@ -676,7 +676,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               <Text style={rowTitle}>Photo de l’événement</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Ajoute une image attrayante</Text>
             </View>
-            <Press onPress={() => void addCover()} style={{ width: 130, height: 76, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.3)", overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+            <Press onPress={() => void addCover()} style={{ width: 130, height: 76, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: whiteA(0.3), overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
               {cover ? <Image source={{ uri: cover.uri }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : (
                 <>
                   <ImagePlus size={22} color={colors.fg} />
@@ -734,7 +734,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                 <Text style={rowTitle}>Lieu *</Text>
                 <View style={{ flexDirection: "row", gap: 6 }}>
                   {[["place", "En personne"], ["online", "En ligne"]].map(([id, label]) => (
-                    <Press key={id} onPress={() => setOnline(id === "online")} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: (id === "online") === online ? colors.accent : "rgba(255,255,255,0.06)" }}>
+                    <Press key={id} onPress={() => setOnline(id === "online")} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: (id === "online") === online ? colors.accent : whiteA(0.06) }}>
                       <Text style={{ fontSize: 12, color: (id === "online") === online ? colors.accentFg : colors.fg }}>{label}</Text>
                     </Press>
                   ))}
@@ -767,9 +767,9 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <View style={iconBox}><Ticket size={20} color={colors.accent} /></View>
             <Text style={[rowTitle, { flex: 1 }]}>Type</Text>
             {[[true, "Gratuit"], [false, "Payant"]].map(([val, label]) => (
-              <Press key={String(label)} onPress={() => setFree(val as boolean)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, height: 42, borderRadius: 12, borderWidth: 1.5, borderColor: free === val ? colors.accent : "rgba(255,255,255,0.15)" }}>
+              <Press key={String(label)} onPress={() => setFree(val as boolean)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, height: 42, borderRadius: 12, borderWidth: 1.5, borderColor: free === val ? colors.accent : whiteA(0.15) }}>
                 <Text style={{ color: free === val ? colors.accent : colors.fg, fontFamily: "Inter_600SemiBold" }}>{label as string}</Text>
-                <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: free === val ? colors.accent : "rgba(255,255,255,0.4)", alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: free === val ? colors.accent : whiteA(0.4), alignItems: "center", justifyContent: "center" }}>
                   {free === val ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent }} /> : null}
                 </View>
               </Press>
@@ -782,7 +782,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               <Text style={rowTitle}>Catégorie</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {EVENT_CATS.map((c) => (
-                  <Press key={c} onPress={() => setCategory(category === c ? "" : c)} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: category === c ? colors.accent : "transparent", borderWidth: 1, borderColor: category === c ? colors.accent : "rgba(255,255,255,0.18)" }}>
+                  <Press key={c} onPress={() => setCategory(category === c ? "" : c)} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: category === c ? colors.accent : "transparent", borderWidth: 1, borderColor: category === c ? colors.accent : whiteA(0.18) }}>
                     <Text style={{ color: category === c ? colors.accentFg : colors.fg, fontSize: 13 }}>{c}</Text>
                   </Press>
                 ))}
@@ -797,7 +797,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                 <Text style={rowTitle}>Prix du billet *</Text>
                 <View style={[box, { flexDirection: "row", alignItems: "center", gap: 8 }]}>
                   <TextInput value={amount} onChangeText={setAmount} placeholder="Ex. 25" placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
-                  <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.12)" }}>
+                  <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: whiteA(0.12) }}>
                     <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{currency}</Text>
                     <ChevronDown size={14} color={colors.muted} />
                   </Press>

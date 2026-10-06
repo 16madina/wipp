@@ -20,7 +20,10 @@ import {
 import { Avatar } from "./Avatar";
 import { WippWordmark } from "./Logo";
 import { Press } from "./ui";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+/** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
+const colors = palettes.dark;
 import { formatDuration } from "../lib/format";
 import { useT, useWippStore } from "../lib/store";
 import { acceptCurrentCall, declineCurrentCall, upgradeToVideo, useCallSession, type CallPhase, type CallSession } from "../lib/calls/session";
@@ -310,7 +313,7 @@ export function CallScreen({
       .catch(() => undefined);
   };
 
-  const logo = <WippWordmark size={videoLive ? 18 : 30} color="#fff" />;
+  const logo = <WippWordmark size={videoLive ? 18 : 30} variant="dark" />;
   const avatarSize = Math.min(208, Math.round(width * 0.5));
 
   return (

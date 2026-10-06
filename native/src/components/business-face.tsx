@@ -28,7 +28,7 @@ import { cardLink } from "../lib/business-card";
 import type { BusinessCardView } from "../lib/business-card";
 import { businessQr } from "../lib/qr-payload";
 import { qrGrid } from "../lib/qr";
-import { colors } from "../theme";
+import { colors, fgA, whiteA } from "../theme";
 
 export async function exportBusinessQr(value: string, name: string) {
   const grid = qrGrid(value);
@@ -52,7 +52,7 @@ function InfoRow({ icon, text }: { icon: ReactNode; text: string }) {
   return (
     <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
       <View style={{ width: 22, alignItems: "center", marginTop: 1 }}>{icon}</View>
-      <Text style={{ flex: 1, color: "rgba(249,250,251,0.82)", fontSize: 14, lineHeight: 20 }}>{text}</Text>
+      <Text style={{ flex: 1, color: fgA(0.82), fontSize: 14, lineHeight: 20 }}>{text}</Text>
     </View>
   );
 }
@@ -220,7 +220,7 @@ export function BusinessCardExperience({
               )}
               <View style={{ flex: 1, paddingBottom: 6 }}>
                 <Text style={{ color: colors.fg, fontSize: 22, fontFamily: "Inter_600SemiBold" }}>{card.name}</Text>
-                {card.category ? <Text style={{ marginTop: 2, color: "rgba(249,250,251,0.6)", fontSize: 13 }}>{card.category}</Text> : null}
+                {card.category ? <Text style={{ marginTop: 2, color: fgA(0.6), fontSize: 13 }}>{card.category}</Text> : null}
               </View>
             </View>
             <View style={{ marginTop: 16, gap: 10 }}>
@@ -229,7 +229,7 @@ export function BusinessCardExperience({
               {!owner && card.businessPhone ? <InfoRow icon={<Phone size={16} color={colors.accent} />} text={card.businessPhone} /> : null}
               {card.website ? <InfoRow icon={<Globe size={16} color={colors.accent} />} text={card.website} /> : null}
             </View>
-            {card.description ? <Text style={{ marginTop: 14, color: "rgba(249,250,251,0.86)", fontSize: 15, lineHeight: 22 }}>{card.description}</Text> : null}
+            {card.description ? <Text style={{ marginTop: 14, color: fgA(0.86), fontSize: 15, lineHeight: 22 }}>{card.description}</Text> : null}
             {photos.length ? (
               <View style={{ marginTop: 18 }}>
                 <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 10 }}>Photos de la boutique</Text>
@@ -262,7 +262,7 @@ export function BusinessCardExperience({
         </View>
       </ScrollView>
       {owner ? (
-        <View style={{ flexDirection: "row", justifyContent: "space-around", paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-around", paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: whiteA(0.06) }}>
           <Press onPress={onEdit} style={{ alignItems: "center", justifyContent: "center", gap: 6, minWidth: 88, minHeight: 52 }}>
             <Pencil size={20} color={colors.fg} />
             <Text style={{ color: colors.fg, fontSize: 13 }}>Modifier</Text>
@@ -277,7 +277,7 @@ export function BusinessCardExperience({
           </Press>
         </View>
       ) : (
-        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), gap: 10, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), gap: 10, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: whiteA(0.06) }}>
           <Press onPress={onWrite} style={{ height: 54, borderRadius: 16, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", opacity: opening ? 0.6 : 1 }}>
             <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{opening ? "Ouverture…" : "Écrire sur WIPP"}</Text>
           </Press>

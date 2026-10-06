@@ -5,7 +5,7 @@ import { ChevronRight, Compass, Heart, MapPin, MessageCircle, Phone, QrCode, Sca
 import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
-import { colors, layout } from "../theme";
+import { colors, layout, accentA, whiteA } from "../theme";
 import { TouchHero, WippPhonesGlyph, WippWordmark } from "./Logo";
 import { Press } from "./ui";
 
@@ -115,7 +115,7 @@ export function TabBar({ active }: { active: string }) {
         >
           <Animated.View
             pointerEvents={open ? "auto" : "none"}
-            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, opacity: sheetOp, backgroundColor: "rgba(5,7,12,0.55)" }}
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, opacity: sheetOp, backgroundColor: colors.scrim }}
           >
             <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)} />
           </Animated.View>
@@ -124,7 +124,7 @@ export function TabBar({ active }: { active: string }) {
               marginHorizontal: sheetMargin,
               marginBottom: 4,
               maxHeight: sheetMax,
-              backgroundColor: "#0c111a",
+              backgroundColor: colors.tabSheet,
               borderRadius: 28,
               transform: [{ translateY: sheetY }],
               overflow: "hidden",
@@ -135,13 +135,13 @@ export function TabBar({ active }: { active: string }) {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: sheetPad, paddingTop: 4, paddingBottom: 12 }}
             >
-              <View style={{ alignSelf: "center", width: 42, height: 4, borderRadius: 99, backgroundColor: "rgba(255,255,255,0.28)", marginTop: 6, marginBottom: 10 }} />
+              <View style={{ alignSelf: "center", width: 42, height: 4, borderRadius: 99, backgroundColor: whiteA(0.28), marginTop: 6, marginBottom: 10 }} />
               <View style={{ marginRight: 28, marginBottom: 10 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <WippWordmark size={22} color={colors.accent} />
                   <Text style={{ fontSize: compact ? 18 : 20, fontFamily: "Inter_700Bold", color: colors.fg }}>Connect</Text>
                 </View>
-                <Text style={{ marginTop: 4, fontSize: 12.5, lineHeight: 17, color: "rgba(255,255,255,0.55)" }}>{t("wippConnectSub")}</Text>
+                <Text style={{ marginTop: 4, fontSize: 12.5, lineHeight: 17, color: whiteA(0.55) }}>{t("wippConnectSub")}</Text>
                 <Press
                   onPress={() => setOpen(false)}
                   style={{
@@ -151,12 +151,12 @@ export function TabBar({ active }: { active: string }) {
                     width: 32,
                     height: 32,
                     borderRadius: 16,
-                    backgroundColor: "rgba(255,255,255,0.06)",
+                    backgroundColor: whiteA(0.06),
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <X size={16} color="rgba(255,255,255,0.72)" />
+                  <X size={16} color={whiteA(0.72)} />
                 </Press>
               </View>
               <Press
@@ -165,13 +165,13 @@ export function TabBar({ active }: { active: string }) {
                   flexDirection: "row",
                   alignItems: "center",
                   minHeight: 112,
-                  backgroundColor: "#10151f",
+                  backgroundColor: colors.tabSheetRow,
                   borderRadius: 18,
                   paddingVertical: 8,
                   paddingLeft: 4,
                   paddingRight: 8,
                   borderWidth: 1.5,
-                  borderColor: "rgba(255,216,77,0.72)",
+                  borderColor: accentA(0.72),
                   marginBottom: 8,
                 }}
               >
@@ -186,7 +186,7 @@ export function TabBar({ active }: { active: string }) {
                   <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", marginTop: 1 }} numberOfLines={1}>
                     {t("wippTouchCardHint")}
                   </Text>
-                  <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 10.5, lineHeight: 14, marginTop: 2 }} numberOfLines={2}>
+                  <Text style={{ color: whiteA(0.55), fontSize: 10.5, lineHeight: 14, marginTop: 2 }} numberOfLines={2}>
                     {t("wippTouchCardBody")}
                   </Text>
                 </View>
@@ -218,11 +218,11 @@ export function TabBar({ active }: { active: string }) {
                           alignItems: "center",
                           gap: 8,
                           borderRadius: 16,
-                          backgroundColor: "#141a26",
+                          backgroundColor: colors.tabSheetTile,
                           paddingVertical: 10,
                           paddingHorizontal: 10,
                           borderWidth: 1,
-                          borderColor: "rgba(255,255,255,0.07)",
+                          borderColor: whiteA(0.07),
                         }}
                       >
                         <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
@@ -232,7 +232,7 @@ export function TabBar({ active }: { active: string }) {
                           <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: colors.fg, lineHeight: 16 }} numberOfLines={1}>
                             {c.title}
                           </Text>
-                          <Text style={{ fontSize: 10.5, color: "rgba(255,255,255,0.48)", lineHeight: 13, marginTop: 1 }} numberOfLines={2}>
+                          <Text style={{ fontSize: 10.5, color: whiteA(0.48), lineHeight: 13, marginTop: 1 }} numberOfLines={2}>
                             {c.hint}
                           </Text>
                         </View>
@@ -243,7 +243,7 @@ export function TabBar({ active }: { active: string }) {
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, marginHorizontal: 2 }}>
                 <Users size={16} color={colors.accent} />
-                <Text style={{ fontSize: 11, lineHeight: 15, color: "rgba(255,255,255,0.62)", flex: 1, flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, lineHeight: 15, color: whiteA(0.62), flex: 1, flexShrink: 1 }}>
                   {t("wippConnectFoot")} <Text style={{ fontFamily: "Inter_700Bold", color: colors.fg }}>{t("wippConnectFootEm")}</Text>
                 </Text>
                 <Heart size={16} color={colors.accent} />
@@ -261,7 +261,7 @@ export function TabBar({ active }: { active: string }) {
           paddingBottom: insets.bottom,
           paddingTop: 8,
           paddingHorizontal: compact ? 4 : 8,
-          backgroundColor: "#121722",
+          backgroundColor: colors.panel,
           borderTopLeftRadius: 32,
           borderTopRightRadius: 32,
           flexDirection: "row",
@@ -302,7 +302,7 @@ export function TabBar({ active }: { active: string }) {
                 width: 74,
                 height: 74,
                 borderRadius: 37,
-                backgroundColor: "rgba(255,216,77,0.32)",
+                backgroundColor: accentA(0.32),
                 opacity: halo.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0.9] }),
                 transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) }],
               }}

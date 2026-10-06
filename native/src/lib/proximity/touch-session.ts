@@ -474,5 +474,40 @@ export function useTouchSession() {
     scheduleReady();
   }
 
-  return { phase, peer, bumps, uwbLabel, proximity, proposal, start: () => start(), accept, decline, propose, answerProposal, stop: () => teardown(true) };
+  /**
+   * Take over a session already paired while WIPP was simply open (passive bump on another screen):
+   * no new session, no sensors — just follow it (UWB check, cards, double consent).
+   */
+  async function adopt(id: string) {
+    await teardown(false);
+    setPeer(null);
+    setProximity(null);
+    setBumps(1);
+    openedAt.current = Date.now();
+    setUwbLabel("none");
+    uwbState.current = { posted: false, started: false, reported: false, best: Infinity };
+    diag.current = { spikes: 1, maxPeak: 0 };
+    caps.current = getTouchCapabilities();
+    sessionId.current = id;
+    set("verifying");
+    const poll = () =>
+      api
+        .get(id)
+        .then((res) => apply(res.session))
+        .catch((err) => {
+          if (isOffline(err)) {
+            stopAll();
+            set("offline");
+          } else if ((err as { status?: number }).status === 404) {
+            stopAll();
+            set("expired");
+          }
+        });
+    await poll();
+    timers.current.poll = setInterval(() => {
+      if (sessionId.current === id) void poll();
+    }, POLL_MS);
+  }
+
+  return { phase, peer, bumps, uwbLabel, proximity, proposal, start: () => start(), adopt, accept, decline, propose, answerProposal, stop: () => teardown(true) };
 }

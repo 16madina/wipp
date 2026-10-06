@@ -1,7 +1,10 @@
 import { View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { qrGrid } from "../lib/qr";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+// Code QR : toujours foncé sur blanc (lisible par tous les scanners), quel que soit le thème.
+const colors = palettes.dark;
 
 export function QrCard({ value, size = 220, pad = 12 }: { value: string; size?: number; pad?: number }) {
   const grid = qrGrid(value);
@@ -12,7 +15,7 @@ export function QrCard({ value, size = 220, pad = 12 }: { value: string; size?: 
   const mark = Math.round(inner * 0.18);
 
   return (
-    <View style={{ width: size, height: size, padding: pad, borderRadius: 12, backgroundColor: colors.paper, overflow: "hidden" }}>
+    <View style={{ width: size, height: size, padding: pad, borderRadius: 12, backgroundColor: "#F7F9FC", overflow: "hidden" }}>
       <Svg width={inner} height={inner} viewBox={`0 0 ${dim} ${dim}`}>
         <Rect width={dim} height={dim} fill="#F7F9FC" />
         {grid.map((row, r) =>
@@ -36,7 +39,7 @@ export function QrCard({ value, size = 220, pad = 12 }: { value: string; size?: 
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 3,
-          borderColor: colors.paper,
+          borderColor: "#F7F9FC",
         }}
       >
         <Svg width={mark * 0.55} height={mark * 0.55} viewBox="0 0 64 64">

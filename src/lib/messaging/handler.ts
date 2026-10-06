@@ -326,6 +326,15 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await places.nearbyPharmacies(Number(url.searchParams.get("lat")), Number(url.searchParams.get("lng")), lang));
     }
 
+    if (method === "POST" && a === "touch" && b === "passive-bump" && !c) {
+      const me = await resolveSession(bearer(request));
+      const rl = touchRateLimit(`touch:passive:${me.id}`, 30, 60_000);
+      if (!rl.ok) return json({ session: null });
+      const ts = await import("@/lib/messaging/touch-session");
+      const body = await readBody<{ platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string; uwbCapable?: boolean }; at?: number; peak?: number; durMs?: number; energy?: number; rtt?: number }>(request);
+      return json(await ts.passiveTouchBump(me.id, body));
+    }
+
     if (a === "touch" && b === "session") {
       const me = await resolveSession(bearer(request));
       const ts = await import("@/lib/messaging/touch-session");

@@ -32,7 +32,10 @@ import {
 import { haptic } from "../lib/haptics";
 import type { I18nKey } from "../lib/i18n";
 import { useT, useWippStore } from "../lib/store";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+/** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
+const colors = palettes.dark;
 import { Press, SafeTop } from "../components/ui";
 
 const ONB: { kind: "tap" | "globe" | "privacy" | "together"; title: I18nKey; accent: I18nKey; body: I18nKey }[] = [

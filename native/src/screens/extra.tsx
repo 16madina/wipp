@@ -19,7 +19,7 @@ import { REPORT_REASONS, submitContentReport } from "../lib/safety";
 import { QUICK_WIPPMOJI_IDS, isStoryWippmoji, storyWippmojis } from "../lib/story-reply";
 import { stickerById } from "../lib/stickers";
 import { useT, useWippStore } from "../lib/store";
-import { colors } from "../theme";
+import { colors, fgA, palettes, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
 
 export { NewStoryScreen } from "./story-composer";
@@ -31,6 +31,8 @@ function replyFailure(err: unknown) {
 }
 
 export function StoriesScreen({ userId }: { userId: string }) {
+  // Lecteur de stories : toujours sombre (texte sur photo / vidéo).
+  const colors = palettes.dark;
   const pop = useWippStore((s) => s.pop);
   const serverConnected = useWippStore((s) => s.serverConnected);
   const blockedIds = useWippStore((s) => s.blockedIds);
@@ -738,7 +740,7 @@ export function LiveCodeScreen() {
                   width: 36,
                   marginLeft: i === 3 ? 8 : 0,
                   borderRadius: 8,
-                  backgroundColor: "rgba(255,255,255,0.1)",
+                  backgroundColor: whiteA(0.1),
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: live ? 1 : 0.3,
@@ -752,7 +754,7 @@ export function LiveCodeScreen() {
             <Clock size={16} color={colors.accent} />
             <Text style={{ fontSize: 14, color: colors.accent }}>{live ? `${t("codeExpires")} ${remain}` : t("codeExpired")}</Text>
           </View>
-          <Text style={{ marginTop: 20, fontSize: 11, fontFamily: "Inter_500Medium", letterSpacing: 0.6, color: "rgba(247,249,252,0.5)", textTransform: "uppercase" }}>
+          <Text style={{ marginTop: 20, fontSize: 11, fontFamily: "Inter_500Medium", letterSpacing: 0.6, color: fgA(0.5), textTransform: "uppercase" }}>
             {t("chatTtl")}
           </Text>
           <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
@@ -771,14 +773,14 @@ export function LiveCodeScreen() {
                   borderRadius: 999,
                   paddingHorizontal: 14,
                   justifyContent: "center",
-                  backgroundColor: codeChatTtl === ms ? colors.accent : "rgba(255,255,255,0.1)",
+                  backgroundColor: codeChatTtl === ms ? colors.accent : whiteA(0.1),
                 }}
               >
                 <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: codeChatTtl === ms ? colors.accentFg : colors.fg }}>{t(key)}</Text>
               </Press>
             ))}
           </View>
-          <Text style={{ marginTop: 12, maxWidth: 280, textAlign: "center", fontSize: 12, lineHeight: 18, color: "rgba(247,249,252,0.5)" }}>{t("codeVsPerm")}</Text>
+          <Text style={{ marginTop: 12, maxWidth: 280, textAlign: "center", fontSize: 12, lineHeight: 18, color: fgA(0.5) }}>{t("codeVsPerm")}</Text>
           <Btn label={t("regenerate")} onPress={() => regenerateMyCode()} style={{ marginTop: 16, alignSelf: "stretch" }} />
           {__DEV__ ? <Btn label={t("simulateEntered")} variant="ghost" onPress={() => simulateCodeEntered("ines")} style={{ marginTop: 4, alignSelf: "stretch" }} /> : null}
         </ScrollView>
@@ -793,7 +795,7 @@ export function LiveCodeScreen() {
                   width: 36,
                   marginLeft: i === 3 ? 8 : 0,
                   borderRadius: 8,
-                  backgroundColor: "rgba(255,255,255,0.1)",
+                  backgroundColor: whiteA(0.1),
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -810,9 +812,9 @@ export function LiveCodeScreen() {
                 setDigits(lea.code);
                 redeemDigits(lea.code);
               }}
-              style={{ marginBottom: 12, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 10 }}
+              style={{ marginBottom: 12, borderRadius: 8, backgroundColor: whiteA(0.1), paddingHorizontal: 12, paddingVertical: 10 }}
             >
-              <Text style={{ textAlign: "center", fontSize: 13, color: "rgba(247,249,252,0.8)" }}>{t("demoCodeLea")}</Text>
+              <Text style={{ textAlign: "center", fontSize: 13, color: fgA(0.8) }}>{t("demoCodeLea")}</Text>
             </Press>
           ) : null}
           <View style={{ marginTop: "auto", paddingBottom: 32, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -833,7 +835,7 @@ export function LiveCodeScreen() {
                     width: "31%",
                     height: 56,
                     borderRadius: 12,
-                    backgroundColor: "rgba(255,255,255,0.1)",
+                    backgroundColor: whiteA(0.1),
                     alignItems: "center",
                     justifyContent: "center",
                   }}

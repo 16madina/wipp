@@ -27,7 +27,10 @@ import { storyOverlay, type StoryOverlay } from "../lib/story-overlay";
 import { coverScaleForContain, storyCropRect } from "../lib/story-frame";
 import { materializeLibraryVideo, trimVideoSegment } from "wipp-video-trim";
 import { useWippStore } from "../lib/store";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+/** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
+const colors = palettes.dark;
 import { errorText } from "../lib/error-fr";
 
 const MAX_VIDEO_SEC = 60;

@@ -37,7 +37,7 @@ export function MessageMenu({
                 marginBottom: 8,
                 height: 48,
                 borderRadius: 999,
-                backgroundColor: "#1a2230",
+                backgroundColor: colors.menu,
                 borderWidth: 1,
                 borderColor: colors.hair,
                 flexDirection: "row",
@@ -60,7 +60,7 @@ export function MessageMenu({
               ))}
             </View>
           ) : null}
-          <View style={{ borderRadius: 14, backgroundColor: "#1a2230", borderWidth: 1, borderColor: colors.hair, overflow: "hidden", maxHeight: 340 }}>
+          <View style={{ borderRadius: 14, backgroundColor: colors.menu, borderWidth: 1, borderColor: colors.hair, overflow: "hidden", maxHeight: 340 }}>
             <ScrollView bounces={false}>
               {shown.map((action) => (
                 <Press

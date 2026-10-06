@@ -1,6 +1,6 @@
 import { AppState, type AppStateStatus } from "react-native";
 import { useWippStore } from "../store";
-import { startTouchReceiver, stopTouchReceiver } from "./touch-receiver";
+import { startPassiveTouch, stopPassiveTouch } from "./touch-passive";
 import { pauseNearbyAdvertise, resumeNearbyAdvertise } from "./nearby-visibility";
 import { stopNearbyScan } from "./nearby-scan";
 
@@ -11,23 +11,22 @@ export async function syncProximityLifecycle(screenName: string, appState: AppSt
   lastScreen = screenName;
   const onboarded = useWippStore.getState().onboarded;
   if (!onboarded || appState !== "active") {
-    await stopTouchReceiver();
+    // Sensors never run in the background.
+    stopPassiveTouch();
     await stopNearbyScan();
     return;
   }
   if (screenName === "wgo-touch") {
-    await stopTouchReceiver();
+    // The WIPP Touch screen runs its own detection.
+    stopPassiveTouch();
     await stopNearbyScan();
     await pauseNearbyAdvertise();
     return;
   }
   await resumeNearbyAdvertise();
-  if (screenName === "nearby") {
-    await stopTouchReceiver();
-    return;
-  }
-  await stopNearbyScan();
-  await startTouchReceiver();
+  if (screenName !== "nearby") await stopNearbyScan();
+  // WIPP open on any other screen: a bump from a phone that has WIPP Touch open still connects.
+  await startPassiveTouch();
 }
 
 export function bindProximityLifecycle() {
@@ -38,7 +37,7 @@ export function bindProximityLifecycle() {
   return () => {
     appSub?.remove();
     appSub = null;
-    void stopTouchReceiver();
+    stopPassiveTouch();
     void stopNearbyScan();
   };
 }

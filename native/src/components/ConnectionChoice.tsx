@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { Press } from "./ui";
-import { colors } from "../theme";
+import { colors, accentA } from "../theme";
 import { durationLabel } from "../lib/connections";
 import type { ConnectionChoice } from "../lib/types";
 
@@ -61,7 +61,7 @@ export function ConnectionChoicePicker({
             <Press
               key={id}
               onPress={() => onChange(id === "permanent" ? { type: "permanent" } : { type: "ephemeral", minutes })}
-              style={{ flex: 1, padding: 12, borderRadius: 14, backgroundColor: type === id ? "rgba(255,216,77,0.14)" : colors.navy, borderWidth: 1, borderColor: type === id ? colors.accent : colors.hair }}
+              style={{ flex: 1, padding: 12, borderRadius: 14, backgroundColor: type === id ? accentA(0.14) : colors.navy, borderWidth: 1, borderColor: type === id ? colors.accent : colors.hair }}
             >
               <Text style={{ fontSize: 20 }}>{icon}</Text>
               <Text style={{ marginTop: 4, color: colors.fg, fontFamily: "Inter_700Bold" }}>{title}</Text>

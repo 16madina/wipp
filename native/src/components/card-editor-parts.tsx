@@ -3,7 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, T
 import { Image } from "expo-image";
 import { Check, ChevronDown, Clock, MapPin, Search } from "lucide-react-native";
 import { Press } from "./ui";
-import { colors } from "../theme";
+import { colors, accentA, fgA, whiteA } from "../theme";
 import { flagUri, type Country } from "../lib/countries";
 import { WORLD_COUNTRIES } from "../lib/countries-world";
 
@@ -37,7 +37,7 @@ export function Sheet({ open, title, onClose, children }: { open: boolean; title
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <Press onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
         <Press onPress={() => undefined} style={{ maxHeight: "82%", backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 10, paddingHorizontal: 16, paddingBottom: 28 }}>
-          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", marginBottom: 12 }} />
+          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: whiteA(0.25), marginBottom: 12 }} />
           <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>{title}</Text>
           {children}
         </Press>
@@ -164,7 +164,7 @@ export function HoursSheet({ open, onClose, onSave }: { open: boolean; onClose: 
       }}
     >
       {TIMES.map((t) => (
-        <Press key={t} onPress={() => set(t)} style={{ height: ROW, alignItems: "center", justifyContent: "center", backgroundColor: value === t ? "rgba(255,216,77,0.18)" : "transparent" }}>
+        <Press key={t} onPress={() => set(t)} style={{ height: ROW, alignItems: "center", justifyContent: "center", backgroundColor: value === t ? accentA(0.18) : "transparent" }}>
           <Text style={{ color: value === t ? colors.accent : colors.fg, fontSize: 16, fontFamily: value === t ? "Inter_600SemiBold" : undefined }}>{t}</Text>
         </Press>
       ))}
@@ -195,7 +195,7 @@ export function HoursSheet({ open, onClose, onSave }: { open: boolean; onClose: 
         <Press
           disabled={!current}
           onPress={() => setLines((l) => [...l, current])}
-          style={{ marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,216,77,0.5)" }}
+          style={{ marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderRadius: 12, borderWidth: 1, borderColor: accentA(0.5) }}
         >
           <Clock size={16} color={colors.accent} />
           <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Ajouter « {current || "choisis des jours"} »</Text>
@@ -347,7 +347,7 @@ export function AddressField({
         </View>
       </View>
       {hits.length ? (
-        <View style={{ marginTop: 6, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+        <View style={{ marginTop: 6, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: whiteA(0.08) }}>
           {hits.map((h, i) => (
             <Press
               key={h.id}
@@ -358,7 +358,7 @@ export function AddressField({
                 setPicked(true);
                 setHits([]);
               }}
-              style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: i ? 1 : 0, borderTopColor: "rgba(255,255,255,0.06)" }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: i ? 1 : 0, borderTopColor: whiteA(0.06) }}
             >
               <MapPin size={16} color={colors.muted} />
               <View style={{ flex: 1 }}>
@@ -367,7 +367,7 @@ export function AddressField({
               </View>
             </Press>
           ))}
-          <Text style={{ paddingHorizontal: 14, paddingVertical: 6, color: "rgba(249,250,251,0.35)", fontSize: 10 }}>© OpenStreetMap</Text>
+          <Text style={{ paddingHorizontal: 14, paddingVertical: 6, color: fgA(0.35), fontSize: 10 }}>© OpenStreetMap</Text>
         </View>
       ) : null}
     </View>

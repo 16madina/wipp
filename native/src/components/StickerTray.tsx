@@ -111,7 +111,7 @@ export function StickerTray({
     <Animated.View
       style={{
         height: trayH,
-        backgroundColor: "rgba(18,23,34,0.98)",
+        backgroundColor: colors.tray,
         borderTopWidth: 1,
         borderTopColor: colors.hair,
         paddingHorizontal: 12,

@@ -37,7 +37,7 @@ import {
   type SurpriseType,
 } from "../lib/surprise";
 import { useWippStore } from "../lib/store";
-import { colors, layout } from "../theme";
+import { colors, layout, whiteA } from "../theme";
 import { SurpriseReveal } from "./SurpriseReveal";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
@@ -235,7 +235,7 @@ export function ShareSurpriseSheet({
           style={{
             maxHeight: "92%",
             flexGrow: 0,
-            backgroundColor: stage === "compose" ? colors.surprisePanel : "#121722",
+            backgroundColor: stage === "compose" ? colors.surprisePanel : colors.panel,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingBottom: insets.bottom + 8,
@@ -248,7 +248,7 @@ export function ShareSurpriseSheet({
                   <Text style={{ fontSize: compact ? 22 : 27, fontFamily: "Inter_700Bold", color: colors.fg }}>Partager</Text>
                   <Text style={{ marginTop: 4, fontSize: 13, color: colors.shareSubtitle }}>Envoyez du contenu ou créez une surprise.</Text>
                 </View>
-                <Press onPress={close} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" }}>
+                <Press onPress={close} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: whiteA(0.1), alignItems: "center", justifyContent: "center" }}>
                   <X size={22} color={colors.fg} />
                 </Press>
               </View>

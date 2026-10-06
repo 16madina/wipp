@@ -2,7 +2,10 @@ import { useRef, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Btn } from "./ui";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+/** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
+const colors = palettes.dark;
 import { openWippLink } from "../lib/deep-links";
 
 export function LiveScanner({

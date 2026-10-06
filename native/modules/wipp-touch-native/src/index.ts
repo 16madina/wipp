@@ -173,9 +173,13 @@ function emitter(): { addListener: (name: string, fn: (e: never) => void) => { r
   return requireNativeModule("WippTouchNative");
 }
 
+/** The native detector is single: only its latest owner may stop it (WIPP Touch screen ↔ passive listener). */
+let bumpOwner = 0;
+
 export function startBumpDetection(thresholdG: number, maxDurMs: number, onBump: (e: BumpEvent) => void): Unsub | null {
   const n = getNative();
   if (!n?.startBumpDetection) return null;
+  const owner = ++bumpOwner;
   let sub: { remove: () => void } | null = null;
   try {
     sub = emitter().addListener("onBump", (e: BumpEvent) => onBump(e));
@@ -190,6 +194,8 @@ export function startBumpDetection(thresholdG: number, maxDurMs: number, onBump:
   return {
     remove: () => {
       sub?.remove();
+      sub = null;
+      if (owner !== bumpOwner) return;
       try {
         n.stopBumpDetection();
       } catch {

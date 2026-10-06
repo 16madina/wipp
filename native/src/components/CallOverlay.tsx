@@ -7,7 +7,10 @@ import { Press } from "./ui";
 import { CallScreen } from "./CallScreen";
 import { formatDuration } from "../lib/format";
 import { useWippStore } from "../lib/store";
-import { colors } from "../theme";
+import { palettes } from "../theme";
+
+/** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
+const colors = palettes.dark;
 import {
   acceptCurrentCall,
   endCurrentCall,

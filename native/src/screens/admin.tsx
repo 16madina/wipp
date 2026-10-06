@@ -5,7 +5,7 @@ import { Sheet } from "../components/card-editor-parts";
 import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField } from "../components/ui";
 import { wippApi } from "../lib/proximity/wipp-session";
 import { useWippStore } from "../lib/store";
-import { colors } from "../theme";
+import { colors, accentA, whiteA } from "../theme";
 
 type Role = "admin" | "moderator" | null;
 type AdminUser = {
@@ -147,7 +147,7 @@ function AdminPhoneCard() {
         keyboardType="phone-pad"
         placeholder="+1 819 …"
         placeholderTextColor={colors.muted}
-        style={{ height: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 12, color: colors.fg }}
+        style={{ height: 44, borderRadius: 12, backgroundColor: whiteA(0.06), paddingHorizontal: 12, color: colors.fg }}
       />
       <Btn
         label="Enregistrer le numéro"
@@ -312,7 +312,7 @@ function UsersTab({ role }: { role: Role }) {
 
 function Badge({ text, tone }: { text: string; tone: "accent" | "danger" }) {
   return (
-    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: tone === "danger" ? "rgba(255,93,115,0.15)" : "rgba(255,216,77,0.15)" }}>
+    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: tone === "danger" ? colors.dangerSoft : accentA(0.15) }}>
       <Text style={{ color: tone === "danger" ? colors.danger : colors.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{text}</Text>
     </View>
   );
@@ -343,7 +343,7 @@ function ReportsTab() {
             {r.targetType === "message" ? "Message" : r.targetType} {r.targetUsername ? `de @${r.targetUsername}` : ""} · signalé par {r.reporter ? `@${r.reporter}` : "?"} · {when(r.createdAt)} · {r.status}
           </Text>
           {opened[r.id] ? (
-            <View style={{ padding: 10, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.05)" }}>
+            <View style={{ padding: 10, borderRadius: 10, backgroundColor: whiteA(0.05) }}>
               <Text style={{ color: colors.fg }}>{opened[r.id]}</Text>
             </View>
           ) : null}
@@ -455,7 +455,7 @@ function PushTab() {
       <TextInput value={body} onChangeText={(v) => setBody(v.slice(0, 240))} placeholder="Message" placeholderTextColor={colors.muted} multiline style={{ ...field, minHeight: 90, textAlignVertical: "top" }} />
       <Text style={{ alignSelf: "flex-end", color: colors.muted, fontSize: 12 }}>{body.length}/240</Text>
       {/* Preview of what the phone shows */}
-      <View style={{ borderRadius: 16, backgroundColor: "rgba(255,255,255,0.08)", padding: 12 }}>
+      <View style={{ borderRadius: 16, backgroundColor: whiteA(0.08), padding: 12 }}>
         <Text style={{ color: colors.muted, fontSize: 11 }}>APERÇU · WIPP · maintenant</Text>
         <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", marginTop: 4 }}>{title || "Titre"}</Text>
         <Text style={{ color: colors.fg, marginTop: 2 }}>{body || "Message"}</Text>

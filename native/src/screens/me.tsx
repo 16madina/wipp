@@ -30,6 +30,8 @@ import {
   User,
   UserPlus,
   Store,
+  Sun,
+  Check,
 } from "lucide-react-native";
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
@@ -41,6 +43,7 @@ import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
 import { Sheet } from "../components/card-editor-parts";
 import { MOTTO_MAX } from "../lib/profile-motto";
+import { useAppearance, type AppearanceMode } from "../lib/appearance";
 import { AddressField, CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
   CARD_CATEGORIES,
@@ -70,7 +73,7 @@ import { shareWippPublic } from "../lib/share-public";
 import { TAKEN_USERNAMES } from "../lib/seed";
 import { APP_HOST } from "../lib/utils";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
-import { colors, layout } from "../theme";
+import { colors, layout, accentA, fgA } from "../theme";
 import { errorText } from "../lib/error-fr";
 import { EventCard } from "../components/event-parts";
 import { wippSrc } from "../lib/assets";
@@ -118,6 +121,7 @@ export function MeScreen() {
           <Press onPress={() => push({ name: "my-qr" })} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
             <QrCode size={20} color={colors.fg} />
           </Press>
+          <ThemeQuickToggle />
           <Press onPress={() => push({ name: "appearance" })} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
             <Settings size={20} color={colors.fg} />
           </Press>
@@ -149,10 +153,10 @@ export function MeScreen() {
                   <Text numberOfLines={1} style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
                   <BadgeCheck size={16} color={colors.accent} />
                 </View>
-                <Text style={{ fontSize: 12, color: "rgba(247,249,252,0.55)" }}>@{me.username}</Text>
+                <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{me.username}</Text>
                 <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <MapPin size={12} color={colors.accent} />
-                  <Text style={{ fontSize: 11, color: "rgba(247,249,252,0.7)" }}>{me.city}, {country}</Text>
+                  <Text style={{ fontSize: 11, color: fgA(0.7) }}>{me.city}, {country}</Text>
                 </View>
               </View>
             </View>
@@ -174,10 +178,10 @@ export function MeScreen() {
                   {me.motto}
                 </Text>
               ) : (
-                <Text style={{ fontFamily: MOTTO_FONT, fontSize: 20, color: "rgba(255,216,77,0.45)", textAlign: "right" }}>Ta phrase ✎</Text>
+                <Text style={{ fontFamily: MOTTO_FONT, fontSize: 20, color: accentA(0.45), textAlign: "right" }}>Ta phrase ✎</Text>
               )}
             </Press>
-            {me.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: "rgba(247,249,252,0.8)" }}>{me.bio}</Text> : null}
+            {me.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: fgA(0.8) }}>{me.bio}</Text> : null}
             <View style={{ marginTop: 12, flexDirection: "row" }}>
               {[
                 [contacts, t("statContacts"), () => push({ name: "new-chat" })],
@@ -187,16 +191,16 @@ export function MeScreen() {
               ].map(([n, label, go]) => (
                 <Press key={String(label)} onPress={go as () => void} style={{ flex: 1, alignItems: "center" }}>
                   <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{n as number}</Text>
-                  <Text style={{ fontSize: 10, color: "rgba(247,249,252,0.5)" }}>{label as string}</Text>
+                  <Text style={{ fontSize: 10, color: fgA(0.5) }}>{label as string}</Text>
                 </Press>
               ))}
             </View>
             <View style={{ marginTop: 12, flexDirection: "row", gap: 6 }}>
-              <Press onPress={() => push({ name: "account" })} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: "rgba(247,249,252,0.2)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Press onPress={() => push({ name: "account" })} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <Pencil size={14} color={colors.paper} />
                 <Text style={{ fontSize: 11, color: colors.paper }}>{t("editProfile")}</Text>
               </Press>
-              <Press onPress={() => push({ name: "my-qr" })} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: "rgba(247,249,252,0.2)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Press onPress={() => push({ name: "my-qr" })} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <QrCode size={14} color={colors.paper} />
                 <Text style={{ fontSize: 11, color: colors.paper }}>{t("myQr")}</Text>
               </Press>
@@ -221,7 +225,7 @@ export function MeScreen() {
               { icon: CalendarDays, title: t("myEvents"), sub: t("myEventsSub"), go: () => push({ name: "my-activity", kind: "events" }) },
               { icon: Bookmark, title: t("saved"), sub: t("savedSub"), go: () => push({ name: "my-activity", kind: "saved" }) },
             ].map((tile) => (
-              <Press key={tile.title} onPress={tile.go} style={{ flex: 1, minHeight: 118, borderRadius: 16, backgroundColor: "rgba(11,18,32,0.8)", padding: 10, borderWidth: 1, borderColor: colors.hair }}>
+              <Press key={tile.title} onPress={tile.go} style={{ flex: 1, minHeight: 118, borderRadius: 16, backgroundColor: colors.cardDim, padding: 10, borderWidth: 1, borderColor: colors.hair }}>
                 <tile.icon size={20} color={colors.accent} />
                 <Text style={{ marginTop: "auto", fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tile.title}</Text>
                 <Text style={{ marginTop: 2, fontSize: 9, color: colors.muted }}>{tile.sub}</Text>
@@ -280,7 +284,7 @@ export function MeScreen() {
             ) : null}
           </Section>
         </View>
-        <View style={{ marginHorizontal: 16, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, backgroundColor: "rgba(11,18,32,0.8)", paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: colors.hair }}>
+        <View style={{ marginHorizontal: 16, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, backgroundColor: colors.cardDim, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: colors.hair }}>
           <WippWordmark size={18} />
           <Text style={{ flex: 1, fontFamily: "GreatVibes_400Regular", fontSize: 18, color: colors.muted }}>{t("footerTagline")}</Text>
           <Text style={{ fontSize: 11, color: colors.muted }}>{t("appVersion")}</Text>
@@ -303,7 +307,7 @@ export function MeScreen() {
           Un petit message personnel affiché sur ton profil. {MOTTO_MAX} caractères maximum.
         </Text>
         <View style={{ borderRadius: 14, backgroundColor: colors.navy, padding: 14, minHeight: 70, alignItems: "flex-end", justifyContent: "center", marginBottom: 10 }}>
-          <Text style={{ fontFamily: MOTTO_FONT, fontSize: mottoSize(mottoDraft || "Good Vibes Only"), color: mottoDraft ? colors.accent : "rgba(255,216,77,0.4)", textAlign: "right", transform: [{ rotate: "-4deg" }] }}>
+          <Text style={{ fontFamily: MOTTO_FONT, fontSize: mottoSize(mottoDraft || "Good Vibes Only"), color: mottoDraft ? colors.accent : accentA(0.4), textAlign: "right", transform: [{ rotate: "-4deg" }] }}>
             {mottoDraft || "Good Vibes Only"}
           </Text>
         </View>
@@ -757,17 +761,52 @@ export function NotificationsScreen() {
   );
 }
 
+const APPEARANCE_OPTIONS: { id: AppearanceMode; label: string; sub: string }[] = [
+  { id: "dark", label: "Sombre", sub: "Noir et jaune" },
+  { id: "light", label: "Clair", sub: "Blanc et bleu" },
+  { id: "system", label: "Automatique", sub: "Comme le téléphone" },
+];
+
+/** Bouton ☀️/🌙 de la page Moi : bascule directement entre sombre et clair. */
+function ThemeQuickToggle() {
+  const theme = useAppearance((s) => s.theme);
+  const setMode = useAppearance((s) => s.setMode);
+  const light = theme === "light";
+  return (
+    <Press
+      accessibilityLabel={light ? "Passer en thème sombre" : "Passer en thème clair"}
+      onPress={() => setMode(light ? "dark" : "light")}
+      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+    >
+      {light ? <Moon size={20} color={colors.fg} /> : <Sun size={20} color={colors.fg} />}
+    </Press>
+  );
+}
+
 export function AppearanceScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
+  const mode = useAppearance((s) => s.mode);
+  const setMode = useAppearance((s) => s.setMode);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("appearance")} onBack={pop} />
       </GlassHeader>
-      <Row label={t("themeLight")} />
-      <Row label="Sombre" />
-      <Row label="Système" />
+      <Section title="Thème">
+        {APPEARANCE_OPTIONS.map((o) => (
+          <Row
+            key={o.id}
+            label={o.label}
+            value={o.sub}
+            onPress={() => setMode(o.id)}
+            trailing={mode === o.id ? <Check size={18} color={colors.accent} /> : <View style={{ width: 18 }} />}
+          />
+        ))}
+      </Section>
+      <Text style={{ marginHorizontal: 16, marginTop: 10, fontSize: 12, lineHeight: 17, color: colors.muted }}>
+        Les appels, la caméra et les stories restent toujours en couleurs sombres.
+      </Text>
     </ScreenRoot>
   );
 }
@@ -1486,7 +1525,7 @@ export function BusinessCardEditorScreen() {
             placeholder="Ex. Salon de tresses à Abidjan depuis 2019. Box braids, nattes collées, perruques sur mesure. Sur rendez-vous, déplacement possible."
             multiline
           />
-          <Text style={{ marginTop: -6, fontSize: 11, color: "rgba(249,250,251,0.45)" }}>
+          <Text style={{ marginTop: -6, fontSize: 11, color: fgA(0.45) }}>
             Dis ce que tu proposes, pour qui, et ce qui te rend unique. {draft.description.length}/600
           </Text>
           <SelectField
@@ -1511,7 +1550,7 @@ export function BusinessCardEditorScreen() {
           </View>
           <SelectField label="Horaires (facultatifs)" value={draft.hours} placeholder="Choisir les jours et les heures" onPress={() => setHoursOpen(true)} />
           <DialPhoneField country={cardCountry} value={draft.businessPhone ?? ""} onChange={(v) => set("businessPhone", v)} />
-          <Text style={{ fontSize: 11, color: "rgba(249,250,251,0.45)" }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
+          <Text style={{ fontSize: 11, color: fgA(0.45) }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
           <Field label="Lien site web (optionnel)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
         </View>
         <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de la boutique</Text>

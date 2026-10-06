@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Animated, Easing, View } from "react-native";
-import { colors } from "../theme";
+import { colors, whiteA } from "../theme";
 
 /**
  * WIPP Touch hero: two phones that drift together while searching, a gold ripple from the
@@ -61,15 +61,15 @@ export function TouchStage({ mode, pulseKey, size = 220 }: { mode: "search" | "m
           height: phoneH,
           borderRadius: phoneW * 0.22,
           borderWidth: 2,
-          borderColor: lit ? colors.accent : "rgba(255,255,255,0.55)",
-          backgroundColor: "rgba(255,255,255,0.04)",
+          borderColor: lit ? colors.accent : whiteA(0.55),
+          backgroundColor: whiteA(0.04),
           alignItems: "center",
           paddingTop: 6,
         },
         style,
       ]}
     >
-      <View style={{ width: phoneW * 0.3, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)" }} />
+      <View style={{ width: phoneW * 0.3, height: 3, borderRadius: 2, backgroundColor: whiteA(0.35) }} />
     </Animated.View>
   );
   return (

@@ -51,7 +51,7 @@ import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../li
 import type { ConnectionChoice, StoryItem } from "../lib/types";
 import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
-import { colors, layout } from "../theme";
+import { colors, layout, whiteA } from "../theme";
 import { useDeviceLayout } from "../lib/device-layout";
 
 function shopFace(shop: Shop) {
@@ -178,7 +178,7 @@ export function ChatsScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8, gap: 16 }}>
           <Press accessibilityLabel={t("addStory")} onPress={() => push({ name: "new-story" })} style={{ width: 64, alignItems: "center" }}>
-            <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderStyle: "dashed", borderColor: "rgba(139,147,167,0.6)", alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderStyle: "dashed", borderColor: colors.dashed, alignItems: "center", justifyContent: "center" }}>
               <Plus size={24} color={colors.muted} strokeWidth={2.5} />
             </View>
             <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 11, color: colors.muted, width: "100%", textAlign: "center" }}>
@@ -497,7 +497,7 @@ export function RequestsScreen() {
         {!live && __DEV__ ? (
           <Press onPress={() => push({ name: "touch-incoming" })} style={{ marginBottom: 12, minHeight: 48, borderRadius: 12, backgroundColor: colors.surface, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={{ fontSize: 14, color: colors.fg }}>Demande WIPP Touch reçue</Text>
-            <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 2 }}>
+            <View style={{ borderRadius: 999, backgroundColor: whiteA(0.1), paddingHorizontal: 8, paddingVertical: 2 }}>
               <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
             </View>
           </Press>

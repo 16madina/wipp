@@ -16,7 +16,7 @@ import { useT, useWippStore } from "../lib/store";
 import { cardToShop, listPublicBusinessCards, withSignedCardMedia } from "../lib/business-card";
 import { REPORT_REASONS, submitContentReport } from "../lib/safety";
 import type { Listing, Shop, ShopCategory } from "../lib/types";
-import { colors, layout } from "../theme";
+import { colors, layout, accentA, fgA, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
 
 const CATS = ["all", "auto", "realty", "electronics", "fashion", "home", "jobs", "leisure", "goods"] as const;
@@ -222,7 +222,7 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
         {hubs.map((h) => (
           <Press key={h.title} onPress={h.go} style={{ width: "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
             <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
-            <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
+            <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil }} />
             <View style={{ zIndex: 1 }}>
               <h.icon size={20} color={colors.accent} />
               <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{h.title}</Text>
@@ -269,7 +269,7 @@ function ListingRow({ listing }: { listing: Listing }) {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{listing.title}</Text>
           {listing.boosted ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.15)" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: accentA(0.15) }}>
               <Pin size={10} color={colors.accent} />
               <Text style={{ color: colors.accent, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>En avant</Text>
             </View>
@@ -409,7 +409,7 @@ function UtilitiesPane() {
             style={{ minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
           >
             <Image source={HUB_BACKGROUNDS.utilities} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
-            <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(2,8,30,0.46)" }} />
+            <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil }} />
             <View style={{ zIndex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Cross size={20} color={colors.accent} />
@@ -744,13 +744,13 @@ function LifestylePane() {
       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 28, fontFamily: "Inter_800ExtraBold" }}>Événements</Text>
-          <Text style={{ marginTop: 2, color: "rgba(249,250,251,0.7)", fontSize: 13 }}>Découvre, participe et vis des expériences sur WIPP.</Text>
+          <Text style={{ marginTop: 2, color: fgA(0.7), fontSize: 13 }}>Découvre, participe et vis des expériences sur WIPP.</Text>
         </View>
         <Press accessibilityLabel="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} style={{ width: 48, height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
           <CalendarPlus size={24} color={colors.accent} />
         </Press>
       </View>
-      <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 8, height: 46, borderRadius: 999, paddingHorizontal: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+      <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 8, height: 46, borderRadius: 999, paddingHorizontal: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: whiteA(0.08) }}>
         <Search size={18} color={colors.muted} />
         <TextInput
           value={q}
@@ -762,7 +762,7 @@ function LifestylePane() {
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
         {EVENT_FILTERS.map((c) => (
-          <Press key={c} onPress={() => setCat(c)} style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: cat === c ? colors.accent : "transparent", borderWidth: 1, borderColor: cat === c ? colors.accent : "rgba(255,255,255,0.18)" }}>
+          <Press key={c} onPress={() => setCat(c)} style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: cat === c ? colors.accent : "transparent", borderWidth: 1, borderColor: cat === c ? colors.accent : whiteA(0.18) }}>
             <Text style={{ color: cat === c ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{c}</Text>
           </Press>
         ))}
@@ -934,8 +934,8 @@ export function ListingScreen({ listingId }: { listingId: string }) {
     const top = useWippStore.getState().stack.at(-1);
     if (text && top?.name === "conversation") useWippStore.getState().setDraftFor(top.chatId, text);
   };
-  const card = { marginHorizontal: 14, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(16,22,36,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" };
-  const action = (on: boolean) => ({ flex: 1, minHeight: 52, borderRadius: 14, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 8, backgroundColor: on ? colors.accent : "transparent", borderWidth: 1, borderColor: on ? colors.accent : "rgba(255,255,255,0.18)" });
+  const card = { marginHorizontal: 14, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: whiteA(0.06) };
+  const action = (on: boolean) => ({ flex: 1, minHeight: 52, borderRadius: 14, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 8, backgroundColor: on ? colors.accent : "transparent", borderWidth: 1, borderColor: on ? colors.accent : whiteA(0.18) });
   const specs = [
     ["Catégorie", listingCatLabel(listing.category)],
     ["État", listing.condition ? CONDITION_LABEL[listing.condition] : ""],
@@ -1019,7 +1019,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               <Text style={{ color: colors.muted, fontSize: 12 }}>{stats?.views ?? listing.views ?? 0} vue{(stats?.views ?? listing.views ?? 0) > 1 ? "s" : ""}</Text>
             </View>
             {listing.boosted ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.15)" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: accentA(0.15) }}>
                 <Pin size={12} color={colors.accent} />
                 <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>En avant</Text>
               </View>
@@ -1100,8 +1100,8 @@ export function ListingScreen({ listingId }: { listingId: string }) {
 
         <View style={card}>
           <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Description</Text>
-          <Text style={{ marginTop: 8, color: "rgba(249,250,251,0.85)", lineHeight: 21 }}>{listing.description || "Pas de description."}</Text>
-          <View style={{ marginTop: 14, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.04)", padding: 12, gap: 8 }}>
+          <Text style={{ marginTop: 8, color: fgA(0.85), lineHeight: 21 }}>{listing.description || "Pas de description."}</Text>
+          <View style={{ marginTop: 14, borderRadius: 12, backgroundColor: whiteA(0.04), padding: 12, gap: 8 }}>
             {specs.map(([k, v]) => (
               <View key={k} style={{ flexDirection: "row" }}>
                 <Text style={{ width: 90, color: colors.muted, fontSize: 13 }}>{k}</Text>
@@ -1153,7 +1153,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               {similar.map((l) => {
                 const src = l.image ? (l.image.startsWith("http") ? { uri: l.image } : wippSrc(l.image)) : null;
                 return (
-                  <Press key={l.id} onPress={() => push({ name: "listing", listingId: l.id })} style={{ width: 150, borderRadius: 14, overflow: "hidden", backgroundColor: "rgba(16,22,36,0.92)" }}>
+                  <Press key={l.id} onPress={() => push({ name: "listing", listingId: l.id })} style={{ width: 150, borderRadius: 14, overflow: "hidden", backgroundColor: colors.card }}>
                     {src ? <Image source={src} style={{ width: 150, height: 110 }} contentFit="cover" /> : <View style={{ width: 150, height: 110, backgroundColor: colors.navy }} />}
                     <View style={{ padding: 10 }}>
                       <Text numberOfLines={2} style={{ color: colors.fg, fontSize: 13 }}>{l.title}</Text>
@@ -1202,7 +1202,7 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
         )}
       </View>
       <View style={{ position: "absolute", left: "50%", top: 75, marginLeft: -14, marginTop: -30 }}>
-        <MapPin size={28} color={colors.accent} fill="rgba(255,216,77,0.35)" />
+        <MapPin size={28} color={colors.accent} fill={accentA(0.35)} />
       </View>
       <Text style={{ position: "absolute", right: 6, bottom: 4, color: "rgba(0,0,0,0.6)", fontSize: 9 }}>© OpenStreetMap</Text>
     </View>

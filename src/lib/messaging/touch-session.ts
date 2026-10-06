@@ -154,6 +154,7 @@ async function purge(cfg: TouchSessionConfig) {
 export async function startTouchSession(
   meId: string,
   input: { platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string; uwbCapable?: boolean } },
+  opts?: { passive?: boolean },
 ) {
   const cfg = await getTouchSessionConfig();
   await purge(cfg).catch(() => undefined);
@@ -170,15 +171,17 @@ export async function startTouchSession(
     uwbKind: typeof input.caps?.uwbKind === "string" ? input.caps.uwbKind.slice(0, 24) : null,
     // uwbCapable = hardware present; uwb = really usable right now (radio on + permission).
     uwbCapable: Boolean(input.caps?.uwbCapable ?? input.caps?.uwb),
+    // Passive = WIPP simply open (any screen), created at the moment of a felt bump.
+    ...(opts?.passive ? { passive: true } : {}),
   };
   const id = `ts_${token(18)}`;
   const nonce = token(24);
-  const expires = new Date(Date.now() + cfg.sessionTtlMs);
+  const expires = new Date(Date.now() + (opts?.passive ? PASSIVE_TTL_MS : cfg.sessionTtlMs));
   await sql`
     insert into wipp_touch_sessions (id, profile_id, nonce, platform, caps, state, expires_at)
     values (${id}, ${meId}, ${nonce}, ${platform}, ${JSON.stringify(caps)}::jsonb, 'waiting', ${expires.toISOString()})
   `;
-  touchLog("session", { session: id.slice(0, 8), platform, uwb: caps.uwb });
+  touchLog("session", { session: id.slice(0, 8), platform, uwb: caps.uwb, passive: Boolean(opts?.passive) });
   return {
     session: { id, state: "waiting", expiresAt: expires.getTime() },
     serverNow: Date.now(),
@@ -220,19 +223,22 @@ export async function reportTouchBump(
   const energy = Number.isFinite(Number(input.energy)) ? Number(input.energy) : null;
 
   const sql = await getSql();
-  await sql`
+  const stored = await sql<{ id: string }>`
     update wipp_touch_sessions
     set state = 'bumped', bump_at = ${Math.round(at)}, bump_peak = ${peak}, bump_dur_ms = ${dur},
         bump_energy = ${energy}, bump_count = bump_count + 1, updated_at = now()
     where id = ${me.id} and state in ('waiting', 'bumped')
+    returning id
   `;
+  // Paired by the other phone while this request was in flight: this bump is the same gesture, ignore it.
+  if (!stored.length) return view(meId, me.id);
   touchLog("bump", { session: me.id.slice(0, 8), peak: Math.round(peak * 100) / 100, dur, rtt: Math.round(rtt) });
   if (peak < cfg.minPeakG) return view(meId, me.id);
 
   const win = cfg.bumpWindowMs;
   // Every other live session that bumped inside the window (any state that could still pair).
-  const near = await sql<{ id: string; profile_id: string; state: string; bump_peak: number; bump_dur_ms: number; peer_session_id: string | null }>`
-    select id, profile_id, state, bump_peak, bump_dur_ms, peer_session_id
+  const nearAll = await sql<{ id: string; profile_id: string; state: string; bump_peak: number; bump_dur_ms: number; peer_session_id: string | null; passive: boolean | null }>`
+    select id, profile_id, state, bump_peak, bump_dur_ms, peer_session_id, (caps->>'passive')::boolean as passive
     from wipp_touch_sessions
     where id <> ${me.id}
       and profile_id <> ${meId}
@@ -240,6 +246,15 @@ export async function reportTouchBump(
       and expires_at > now()
       and bump_at between ${Math.round(at) - win} and ${Math.round(at) + win}
   `;
+  // Two phones that only have WIPP open are never paired together: at least one person must have
+  // opened WIPP Touch on purpose (otherwise two strangers setting their phones down could match).
+  const mePassive = Boolean((me.caps as { passive?: boolean } | null)?.passive);
+  const near = mePassive ? nearAll.filter((s) => !s.passive) : nearAll;
+  // Already paired with me (my extra bump — the same tap ringing — raced with the pairing): keep that pair.
+  if (near.some((s) => s.peer_session_id === me.id)) {
+    touchLog("bump_after_pair", { session: me.id.slice(0, 8) });
+    return view(meId, me.id);
+  }
   const fits = near.filter((s) => compatible(cfg, { peak, dur }, { peak: s.bump_peak, dur: s.bump_dur_ms }));
   if (!fits.length) return view(meId, me.id);
 
@@ -508,6 +523,29 @@ export async function cancelTouchSession(meId: string, id: string, diag?: { spik
     await finish([me.id], "cancelled");
   }
   return { ok: true };
+}
+
+/** A passive session only lives long enough for the other phone's report to arrive. */
+const PASSIVE_TTL_MS = 12_000;
+
+/**
+ * WIPP open on any screen (not WIPP Touch): the phone felt a bump. Creates a short passive session
+ * and reports the bump at once; it can only pair with a phone that has WIPP Touch open.
+ */
+export async function passiveTouchBump(
+  meId: string,
+  input: { platform?: string; caps?: { motion?: boolean; uwb?: boolean; uwbKind?: string; uwbCapable?: boolean }; at?: number; peak?: number; durMs?: number; energy?: number; rtt?: number },
+) {
+  const cfg = await getTouchSessionConfig();
+  if (!(Number(input.peak) >= cfg.minPeakG)) return { session: null };
+  const sql = await getSql();
+  // Already in a live pairing (passive or WIPP Touch): never replace it with a new passive attempt.
+  const live = await sql<{ id: string }>`
+    select id from wipp_touch_sessions where profile_id = ${meId} and state in ('candidate', 'agreed') and expires_at > now() limit 1
+  `;
+  if (live.length) return { session: null };
+  const started = await startTouchSession(meId, { platform: input.platform, caps: input.caps }, { passive: true });
+  return reportTouchBump(meId, started.session.id, input);
 }
 
 export const TOUCH_SESSION_TERMINAL = TERMINAL;

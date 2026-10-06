@@ -38,10 +38,9 @@ Vérifie que le dernier commit contient le travail WIPP Touch (au moins ces comm
 git log --oneline -12
 ```
 
-Tu dois voir notamment :
-- `feat(touch): UWB Android ↔ Android (Jetpack UWB, paramètres via le serveur) …`
-- `fix(touch/android): disponibilité UWB sans isAvailable … — module compilé`
-- `chore(android): versionCode 5 + dossier d'instructions Windows`
+Tu dois voir notamment (le plus récent en haut) :
+- `feat: thème clair, WIPP Touch avec WIPP simplement ouvert, capteur Android brut … (versionCode 6)`
+- `fix(stickers): un sticker ne redevient plus du texte à la synchronisation …`
 
 S'il y a des modifications locales qui bloquent le `pull`, **ne les écrase pas** :
 montre-les à l'utilisatrice (`git status`) et demande-lui quoi faire.
@@ -66,7 +65,7 @@ npm install
 - Menu **Build → Generate Signed App Bundle / APK… → Android App Bundle**.
 - L'utilisatrice choisit **sa** clé (« wipp keysotre ») et saisit elle-même les mots de passe.
 - Variante : **release**.
-- Version attendue : **versionCode 5**, versionName 1.0.0
+- Version attendue : **versionCode 6**, versionName 1.0.0
   (déjà réglé dans `native/android/app/build.gradle` et `native/app.json`).
 
 ## Étape 5 — Vérifications après le build
@@ -96,11 +95,22 @@ npm install
 ## Étape 6 — Installer sur le Samsung pour le test
 
 Installe le build sur le Samsung (Run ▶ dans Android Studio en variante release/debug,
-ou via le test fermé Play Console avec l'AAB versionCode 5).
+ou via le test fermé Play Console avec l'AAB versionCode 6).
 
 ---
 
 ## Ce qui a changé dans cette version (pour info)
+
+**Nouveau dans le versionCode 6 :**
+- **Thème clair** (blanc et bleu) : Moi → bouton ☀️/🌙, ou Réglages → Apparence (Sombre par défaut, Clair, Automatique).
+  `styles.xml` est déjà en `Theme.AppCompat.DayNight` : rien à changer côté Android.
+- **WIPP Touch avec un seul WIPP Touch ouvert** : l'autre téléphone a seulement WIPP ouvert (n'importe quel écran).
+  Jamais en arrière-plan, jamais Bluetooth.
+- **Capteur Android** : accéléromètre brut (au lieu de l'accéléromètre « linéaire » lissé par Samsung) pour sentir
+  une tape légère dès le premier contact. Fichier : `modules/wipp-touch-native/android/.../WippTouchNativeModule.kt`.
+- **Stickers** : ils ne se transforment plus en texte (« Bisou », « Sticker ») après synchronisation.
+
+**Versions précédentes :**
 
 - **WIPP Touch sans Bluetooth** : capteurs de mouvement → serveur WIPP → (UWB si possible) → carte → double acceptation.
 - **Android** : détection du choc (accéléromètre linéaire), UWB Android ↔ Android (Jetpack UWB)
@@ -121,6 +131,8 @@ ou via le test fermé Play Console avec l'AAB versionCode 5).
 2. Ouvrir WIPP Touch sur les deux (appui long sur le bouton central WIPP).
    Sur le Samsung avec UWB : accepter « Appareils à proximité » si demandé.
 3. A garde son téléphone immobile ; B le touche **une seule fois**.
+   Variante à tester aussi : **seul A ouvre WIPP Touch**, B a juste WIPP ouvert sur ses discussions
+   (téléphone déverrouillé). Après le contact, l'écran WIPP Touch doit s'ouvrir tout seul chez B avec la carte de A.
 4. Attendu : petite vibration → double vibration → carte de l'autre (photo, nom, @pseudo),
    « WIPP Touch détecté », **sans** « Proximité confirmée ».
 5. A « Se connecter » → « En attente de l'autre personne… » ; B « Se connecter » → « WIPP connecté ✓ ».

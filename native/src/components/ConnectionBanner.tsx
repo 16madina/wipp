@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, AppState, Text, View } from "react-native";
 import { Press } from "./ui";
-import { colors } from "../theme";
+import { colors, whiteA } from "../theme";
 import { answerKeepContact, remainingLabel, requestKeepContact, sendRequest } from "../lib/connections";
 import { useWippStore } from "../lib/store";
 import type { Chat, User } from "../lib/types";
@@ -49,7 +49,7 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
 
   const box = { marginHorizontal: 12, marginTop: 8, padding: 12, borderRadius: 14, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, gap: 8 } as const;
   const btn = (primary: boolean) =>
-    ({ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: primary ? colors.accent : "rgba(255,255,255,0.08)", opacity: busy ? 0.6 : 1 }) as const;
+    ({ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: primary ? colors.accent : whiteA(0.08), opacity: busy ? 0.6 : 1 }) as const;
 
   if (expired) {
     if (conn.type !== "ephemeral") return null;

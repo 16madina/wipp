@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { ChevronLeft, ChevronRight, Clock, Heart, MapPin, Navigation } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
-import { colors } from "../theme";
+import { colors, accentA, fgA, whiteA } from "../theme";
 
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const MONTHS_SHORT = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
@@ -23,7 +23,7 @@ function BottomSheet({ open, title, onClose, children }: { open: boolean; title:
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Press onPress={onClose} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
         <Press onPress={() => undefined} style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 30 }}>
-          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", marginBottom: 12 }} />
+          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: whiteA(0.25), marginBottom: 12 }} />
           <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 17, marginBottom: 12 }}>{title}</Text>
           {children}
         </Press>
@@ -71,7 +71,7 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
           return (
             <Press key={d} disabled={past} onPress={() => onPick(date)} style={{ width: `${100 / 7}%`, height: 44, alignItems: "center", justifyContent: "center" }}>
               <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: sel ? colors.accent : "transparent", borderWidth: date.getTime() === today.getTime() && !sel ? 1 : 0, borderColor: colors.accent }}>
-                <Text style={{ color: sel ? colors.accentFg : past ? "rgba(249,250,251,0.25)" : colors.fg, fontFamily: sel ? "Inter_700Bold" : undefined }}>{d}</Text>
+                <Text style={{ color: sel ? colors.accentFg : past ? fgA(0.25) : colors.fg, fontFamily: sel ? "Inter_700Bold" : undefined }}>{d}</Text>
               </View>
             </Press>
           );
@@ -105,7 +105,7 @@ export function TimeSheet({ open, start, end, single, title = "Heure", onClose, 
         }}
       >
         {(allowNone ? ["", ...TIMES] : TIMES).map((t) => (
-          <Press key={t || "none"} onPress={() => set(t)} style={{ height: ROW, alignItems: "center", justifyContent: "center", backgroundColor: value === t ? "rgba(255,216,77,0.18)" : "transparent" }}>
+          <Press key={t || "none"} onPress={() => set(t)} style={{ height: ROW, alignItems: "center", justifyContent: "center", backgroundColor: value === t ? accentA(0.18) : "transparent" }}>
             <Text style={{ color: value === t ? colors.accent : colors.fg, fontSize: 16, fontFamily: value === t ? "Inter_600SemiBold" : undefined }}>{t || "Pas de fin"}</Text>
           </Press>
         ))}
@@ -164,7 +164,7 @@ export function EventCard({
   distance?: string;
 }) {
   return (
-    <Press onPress={onPress} style={{ height: 200, marginBottom: 14, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 1, borderColor: "rgba(255,216,77,0.25)" }}>
+    <Press onPress={onPress} style={{ height: 200, marginBottom: 14, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 1, borderColor: accentA(0.25) }}>
       {image ? <Image source={image} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "75%", backgroundColor: "rgba(0,0,0,0.45)" }} />
       {starts ? (
@@ -197,7 +197,7 @@ export function EventCard({
       ) : null}
       <View style={{ position: "absolute", left: 14, right: interested && interested.count > 0 ? 130 : 14, bottom: 12 }}>
         <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 19, fontFamily: "Inter_800ExtraBold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>{title}</Text>
-        {subtitle ? <Text numberOfLines={1} style={{ marginTop: 2, color: "rgba(249,250,251,0.8)", fontSize: 13 }}>{subtitle}</Text> : null}
+        {subtitle ? <Text numberOfLines={1} style={{ marginTop: 2, color: fgA(0.8), fontSize: 13 }}>{subtitle}</Text> : null}
         <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 14 }}>
           {starts ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

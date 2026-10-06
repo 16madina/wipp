@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
-import { colors } from "../theme";
+import { colors, themeName } from "../theme";
 
 export function WippMark({
   size = 56,
@@ -10,11 +10,11 @@ export function WippMark({
   size?: number;
   invert?: boolean;
 }) {
-  const face = invert ? "#0B1220" : "#F7F9FC";
-  const smile = invert ? "#0B1220" : "#FFD84D";
+  const face = invert ? colors.accentFg : "#F7F9FC";
+  const smile = invert ? colors.accentFg : "#FFD84D";
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64">
-      <Rect width="64" height="64" rx="32" fill={invert ? "#FFD84D" : "#0B1220"} />
+      <Rect width="64" height="64" rx="32" fill={invert ? colors.accent : "#0B1220"} />
       <Circle cx="22" cy="27" r="4.4" fill={face} />
       <Circle cx="42" cy="27" r="4.4" fill={face} />
       <Path
@@ -28,10 +28,15 @@ export function WippMark({
   );
 }
 
-export function WippWordmark({ size = 22 }: { size?: number; color?: string }) {
-  // Logo officiel (PNG fourni) : lettres blanches + sourire jaune.
+const LOGO_DARK = require("../../assets/wipp-logo.png");
+const LOGO_LIGHT = require("../../assets/wipp-logo-light.png");
+
+export function WippWordmark({ size = 22, variant }: { size?: number; color?: string; variant?: "dark" | "light" }) {
+  // Logo officiel (PNG fourni). Sombre : lettres blanches + sourire jaune.
+  // Clair : lettres bleu nuit + point et sourire bleus. `variant` force l'un ou l'autre (écrans immersifs).
   const h = size * 1.35;
-  return <Image source={require("../../assets/wipp-logo.png")} style={{ width: h * (402 / 165), height: h }} resizeMode="contain" accessibilityLabel="WIPP" />;
+  const light = (variant ?? themeName) === "light";
+  return <Image source={light ? LOGO_LIGHT : LOGO_DARK} style={{ width: h * (402 / 165), height: h }} resizeMode="contain" accessibilityLabel="WIPP" />;
 }
 
 export function WippPhonesGlyph({ size = 28, color = colors.navy }: { size?: number; color?: string }) {

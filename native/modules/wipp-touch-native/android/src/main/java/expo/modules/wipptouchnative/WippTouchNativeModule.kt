@@ -73,9 +73,12 @@ class WippTouchNativeModule : Module() {
       stopSensors()
       val ctx = appContext.reactContext ?: return@Function false
       val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return@Function false
-      val linear = sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
-      val sensor = linear ?: sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return@Function false
-      val removeGravity = linear == null
+      // Raw accelerometer first: the "linear acceleration" virtual sensor is smoothed by the maker
+      // (Samsung: a light tap came out as a weak 0.8 g spread over 130 ms, often missed).
+      val raw = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+      val sensor = raw ?: sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) ?: return@Function false
+      val removeGravity = raw != null
+      var lastNs = 0L
       val detector = BumpDetector(thresholdG, maxDurMs)
       val gravity = DoubleArray(3)
       var gravityInit = false
@@ -89,12 +92,15 @@ class WippTouchNativeModule : Module() {
               gravity[0] = x; gravity[1] = y; gravity[2] = z; gravityInit = true
               return
             }
-            val k = 0.9
+            // Time-based low-pass (≈ 0.3 s) so the gravity estimate does not follow — and erase — a 20-40 ms tap.
+            val dt = if (lastNs > 0) ((event.timestamp - lastNs) / 1e9).coerceIn(0.0005, 0.05) else 0.005
+            val k = 0.3 / (0.3 + dt)
             gravity[0] = k * gravity[0] + (1 - k) * x
             gravity[1] = k * gravity[1] + (1 - k) * y
             gravity[2] = k * gravity[2] + (1 - k) * z
             x -= gravity[0]; y -= gravity[1]; z -= gravity[2]
           }
+          lastNs = event.timestamp
           val mag = sqrt(x * x + y * y + z * z) / SensorManager.GRAVITY_EARTH
           // event.timestamp is elapsedRealtimeNanos: convert to wall-clock ms.
           val wallMs = System.currentTimeMillis() - (SystemClock.elapsedRealtimeNanos() - event.timestamp) / 1_000_000.0

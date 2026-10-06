@@ -229,7 +229,7 @@ export type Screen =
   | { name: "group-invite"; token: string }
   | { name: "qr-profile"; key: string }
   | { name: "qr-group"; key: string }
-  | { name: "wgo-touch" }
+  | { name: "wgo-touch"; adopt?: string }
   | { name: "touch-incoming"; demo?: TouchIncomingCase; requestId?: string; touchId?: string }
   | { name: "pharmacy"; pharmacyId: string }
   | { name: "pharmacies" }

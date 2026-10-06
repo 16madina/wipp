@@ -26,7 +26,7 @@ import { shareWippPublic } from "../lib/share-public";
 import { signinOtp } from "../lib/auth-api";
 import { useT, useWippStore } from "../lib/store";
 import type { ConnectionChoice, FoundVia, NearbyMode } from "../lib/types";
-import { colors, layout } from "../theme";
+import { colors, layout, accentA, fgA, whiteA } from "../theme";
 
 export function ConnectScreen() {
   const t = useT();
@@ -61,13 +61,13 @@ export function ConnectScreen() {
             paddingHorizontal: 16,
             paddingVertical: 14,
             borderWidth: 1,
-            borderColor: "rgba(255,216,77,0.35)",
+            borderColor: accentA(0.35),
           }}
         >
           <WippMark size={52} invert />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{t("wgoTouch")}</Text>
-            <Text style={{ fontSize: 12, color: "rgba(247,249,252,0.6)" }}>{t("wgoTouchSub")}</Text>
+            <Text style={{ fontSize: 12, color: fgA(0.6) }}>{t("wgoTouchSub")}</Text>
           </View>
           <View style={{ borderRadius: 999, backgroundColor: colors.accent, paddingHorizontal: 8, paddingVertical: 4 }}>
             <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>{t("touchLive")}</Text>
@@ -203,7 +203,7 @@ export function MyQrScreen() {
           <Avatar user={me} size={72} />
         </View>
         <Text style={{ marginTop: 12, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
-        <Text style={{ fontSize: 14, color: "rgba(247,249,252,0.6)" }}>
+        <Text style={{ fontSize: 14, color: fgA(0.6) }}>
           {username ? `@${username}` : usernameState === "loading" ? "Chargement du @username…" : "Compte serveur introuvable"}
         </Text>
         {expired ? (
@@ -228,12 +228,12 @@ export function MyQrScreen() {
             Expire dans {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
           </Text>
         ) : null}
-        <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: "rgba(247,249,252,0.6)", maxWidth: 280 }}>
+        <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: fgA(0.6), maxWidth: 280 }}>
           {temp
             ? `QR éphémère · usage unique. La connexion durera ${durationLabel(temp.connectionMinutes ?? 1440)}.`
             : "Ce QR ne contient ni ton numéro, ni ton e-mail."}
         </Text>
-        <Text style={{ marginTop: 4, fontSize: 12, color: "rgba(247,249,252,0.4)" }}>{link}</Text>
+        <Text style={{ marginTop: 4, fontSize: 12, color: fgA(0.4) }}>{link}</Text>
         <View style={{ width: "100%", marginTop: 20 }}>
           <Btn
             label={copied ? t("copied") : "Partager mon WIPP"}
@@ -294,7 +294,7 @@ export function ScannerScreen({ error }: { error?: string }) {
         initialError={error}
         onFallback={(to) => replace({ name: to === "search" ? "search-user" : "my-qr" })}
       />
-      <Text style={{ marginTop: 8, textAlign: "center", color: "rgba(247,249,252,0.6)" }}>{t("scanSub")}</Text>
+      <Text style={{ marginTop: 8, textAlign: "center", color: fgA(0.6) }}>{t("scanSub")}</Text>
       {__DEV__ ? (
         <View style={{ padding: 16 }}>
           <SearchField value={q} onChangeText={setQ} placeholder="https://wippapp.com/@username" />
@@ -715,7 +715,7 @@ const TOUCH_COPY = {
   },
 };
 
-export function WgoTouchScreen() {
+export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
   const t = useT();
   const c = TOUCH_COPY[t("all") === "All" ? "en" : "fr"];
   const pop = useWippStore((s) => s.pop);
@@ -728,9 +728,10 @@ export function WgoTouchScreen() {
   const [peerId, setPeerId] = useState<string | null>(null);
 
   // Start right away: the screen IS the "ready to touch" state.
+  // Opened by a bump felt while WIPP was simply open: follow that already-paired session instead.
   useEffect(() => {
-    void touch.start();
-  }, []);
+    void (adopt ? touch.adopt(adopt) : touch.start());
+  }, [adopt]);
 
   // Resolve the public card into a local profile (avatar signing, DM) — public data only.
   useEffect(() => {
@@ -783,7 +784,7 @@ export function WgoTouchScreen() {
         {matched || done ? (
           <View style={{ alignItems: "center" }}>
             <View style={{ padding: 4, borderRadius: 999, borderWidth: 2, borderColor: colors.accent }}>
-              {peerUser ? <Avatar user={peerUser} size={96} /> : <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: "rgba(255,255,255,0.08)" }} />}
+              {peerUser ? <Avatar user={peerUser} size={96} /> : <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: whiteA(0.08) }} />}
             </View>
             <Text style={{ marginTop: 14, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>{name}</Text>
             <Text style={{ marginTop: 2, color: colors.accent, fontFamily: "Inter_500Medium" }}>{handle}</Text>
@@ -832,7 +833,7 @@ export function WgoTouchScreen() {
           <View style={{ alignItems: "center" }}>
             <TouchStage mode={ph === "verifying" ? "match" : "search"} pulseKey={touch.bumps} />
             {searching || ph === "verifying" ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,216,77,0.12)" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: accentA(0.12) }}>
                 <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent }} />
                 <Text style={{ color: colors.accent, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{c.active}</Text>
               </View>
@@ -938,7 +939,7 @@ export function TouchIncomingScreen() {
       </GlassHeader>
       <View style={{ padding: 24, alignItems: "center" }}>
         {__DEV__ && !match ? (
-          <View style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 8, paddingVertical: 4, marginBottom: 16 }}>
+          <View style={{ borderRadius: 999, backgroundColor: whiteA(0.1), paddingHorizontal: 8, paddingVertical: 4, marginBottom: 16 }}>
             <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
           </View>
         ) : null}

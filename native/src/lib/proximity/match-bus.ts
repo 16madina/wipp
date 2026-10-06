@@ -1,4 +1,9 @@
-import type { ReceiverMatch } from "./touch-receiver";
+export type ReceiverMatch = {
+  code: string;
+  senderName: string;
+  senderUsername: string;
+  senderId: string;
+};
 
 let last: ReceiverMatch | null = null;
 const listeners = new Set<(m: ReceiverMatch) => void>();

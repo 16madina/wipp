@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { haptic } from "../lib/haptics";
 import { useT } from "../lib/store";
-import { colors, layout } from "../theme";
+import { colors, layout, accentA } from "../theme";
 
 export function SafeTop() {
   const insets = useSafeAreaInsets();
@@ -61,7 +61,7 @@ export function Btn({
       : variant === "navy"
         ? colors.navy
         : variant === "danger"
-          ? "rgba(255,93,115,0.15)"
+          ? colors.dangerSoft
           : variant === "ghost"
             ? "transparent"
             : colors.glassCard;
@@ -408,9 +408,9 @@ export function PendingNote({ label }: { label?: string }) {
         borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "rgba(255,216,77,0.12)",
+        backgroundColor: accentA(0.12),
         borderWidth: 1,
-        borderColor: "rgba(255,216,77,0.28)",
+        borderColor: accentA(0.28),
       }}
     >
       <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accent }}>{PENDING}</Text>
