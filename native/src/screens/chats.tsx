@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import {
+  BadgeCheck,
+  Ban,
   BellOff,
+  Check,
   ChevronRight,
+  Flag,
+  Palette,
+  Phone,
+  Pin,
+  Share2,
+  Store,
+  Video,
   Clock,
   Hash,
   Lock,
@@ -31,9 +41,21 @@ import {
   IconBtn,
   PendingNote,
   Press,
+  Row,
   ScreenRoot,
   SearchField,
+  Toggle,
 } from "../components/ui";
+import { Image } from "expo-image";
+import { MediaViewer } from "../components/MediaViewer";
+import { CHAT_THEMES, useChatThemes } from "../lib/chat-themes";
+import { remainingLabel } from "../lib/connections";
+import { wippSrc } from "../lib/assets";
+import { getBusinessCardOfOwner, type BusinessCardView } from "../lib/business-card";
+import { findPublicByUsername } from "../lib/public-profiles";
+import { MOTTO_FONT, mottoSize } from "../lib/profile-motto";
+import { shareWippPublic } from "../lib/share-public";
+import { APP_HOST } from "../lib/utils";
 import { formatChatTime, formatRemainShort } from "../lib/format";
 import { haptic } from "../lib/haptics";
 import { usePrivatePinAsk } from "../components/PrivatePinGate";
@@ -48,10 +70,10 @@ import {
 import { pushProtect } from "../lib/screen-protection";
 import { orderedOtherStoryUsers, storyRing, type StoryRing } from "../lib/story-status";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
-import type { ConnectionChoice, StoryItem } from "../lib/types";
+import type { ConnectionChoice, MediaItem, StoryItem } from "../lib/types";
 import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
-import { colors, layout, whiteA } from "../theme";
+import { colors, fgA, layout, whiteA } from "../theme";
 import { useDeviceLayout } from "../lib/device-layout";
 
 function shopFace(shop: Shop) {
@@ -698,37 +720,303 @@ export function MyGroupsScreen() {
   );
 }
 
+const DISAPPEAR_OPTIONS: [string, number][] = [
+  ["Désactivés", 0],
+  ["24 heures", 86_400_000],
+  ["7 jours", 7 * 86_400_000],
+  ["30 jours", 30 * 86_400_000],
+];
+
+/** Contact / group info, like WhatsApp: big photo, quick actions, shared media, chat settings. */
 export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
   const users = useWippStore((s) => s.users);
-  const peer = chat ? chatPeer(chat, users) : undefined;
+  const messages = useWippStore((s) => s.messages[chatId]);
   const setDisappear = useWippStore((s) => s.setDisappear);
+  const pinChat = useWippStore((s) => s.pinChat);
+  const setMute = useWippStore((s) => s.setMute);
+  const blockUser = useWippStore((s) => s.blockUser);
+  const themeId = useChatThemes((s) => s.themes[chatId]);
+  const setChatTheme = useChatThemes((s) => s.setTheme);
+  const peer = chat ? chatPeer(chat, users) : undefined;
+  const group = chat?.type === "group";
+  const [sheet, setSheet] = useState<"theme" | "disappear" | null>(null);
+  const [viewer, setViewer] = useState<{ items: MediaItem[]; start: number } | null>(null);
+  const shops = useWippStore((s) => s.shops);
+  const [fresh, setFresh] = useState<{ motto?: string; bio?: string } | null>(null);
+  const [card, setCard] = useState<BusinessCardView | null>(null);
+
+  // Fresh public data (phrase, bio) and the person's business card, if published.
+  useEffect(() => {
+    if (!peer || group) return;
+    let off = false;
+    if (peer.username) {
+      void findPublicByUsername(peer.username)
+        .then((p) => {
+          if (!off && p) setFresh({ motto: p.motto ?? undefined, bio: p.bio ?? undefined });
+        })
+        .catch(() => undefined);
+    }
+    if (peer.id.startsWith("srvuser:")) {
+      void getBusinessCardOfOwner(peer.id)
+        .then((c) => {
+          if (!off) setCard(c);
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      off = true;
+    };
+  }, [peer?.id, group]);
+
+  // Photos and videos already readable on this phone (decrypted in the conversation); never view-once.
+  const media = useMemo(() => {
+    const out: MediaItem[] = [];
+    for (const m of [...(messages ?? [])].reverse()) {
+      if (m.viewOnce || m.deletedForAll) continue;
+      if (m.album?.length) out.push(...m.album.filter((a) => a.url));
+      else if (m.type === "image" && m.imageUrl) out.push({ type: "image", url: m.imageUrl });
+      else if (m.type === "video" && m.videoUrl) out.push({ type: "video", url: m.videoUrl });
+    }
+    return out;
+  }, [messages]);
+  const docs = (messages ?? []).filter((m) => m.type === "file" && !m.deletedForAll).length;
+
+  if (!chat) return null;
+  const title = chat.name ?? peer?.displayName ?? "";
+  const profile = peer ? { ...peer, motto: fresh?.motto || peer.motto, bio: fresh?.bio || peer.bio } : undefined;
+  const firstName = peer?.firstName || peer?.displayName.split(" ")[0] || (peer ? `@${peer.username}` : "");
+  const localShop = peer ? shops.find((sh) => sh.ownerId === peer.id) : undefined;
+  const members = chat.participantIds.filter((id) => id !== "me").map((id) => users[id]);
+  const theme = CHAT_THEMES.find((t) => t.id === (themeId ?? "default")) ?? CHAT_THEMES[0];
+  const disappearLabel = DISAPPEAR_OPTIONS.find(([, ms]) => ms === (chat.disappearAfterMs ?? 0))?.[0] ?? "Désactivés";
+  const conn = chat.connection;
+  const call = (kind: "audio" | "video") =>
+    push({ name: "active-call", userId: group ? chat.id : peer!.id, kind, dir: "out", group, chatId: group ? chat.id : undefined });
+
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={chat?.name ?? peer?.displayName ?? ""} onBack={pop} />
+        <Header title={group ? "Infos du groupe" : "Infos du contact"} onBack={pop} />
       </GlassHeader>
-      <ScrollView>
-        <Press onPress={() => chat?.type === "group" && push({ name: "group-info", chatId })} style={{ padding: 16 }}>
-          <Text style={{ color: colors.fg }}>{chat?.type === "group" ? "Informations du groupe" : peer?.bio}</Text>
-        </Press>
-        <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ padding: 16 }}>
-          <Text style={{ color: colors.fg }}>{chat?.type === "group" ? "Groupe non chiffré de bout en bout" : "Chiffrement de bout en bout"}</Text>
-        </Press>
-        <Text style={{ paddingHorizontal: 16, paddingTop: 8, color: colors.muted, fontSize: 12 }}>Messages éphémères</Text>
-        {[
-          ["Désactivé", 0],
-          ["24 heures", 86_400_000],
-          ["7 jours", 7 * 86_400_000],
-          ["30 jours", 30 * 86_400_000],
-        ].map(([label, ms]) => (
-          <Press key={String(label)} onPress={() => setDisappear(chatId, ms as number)} style={{ padding: 16 }}>
-            <Text style={{ color: chat?.disappearAfterMs === ms || (!chat?.disappearAfterMs && ms === 0) ? colors.accent : colors.fg }}>{label as string}</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Same card as my own profile (Moi): photo on the left, name + badge, @pseudo, city, phrase, bio. */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <View style={{ borderRadius: 16, backgroundColor: colors.navy, padding: 14, overflow: "hidden" }}>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Press
+                disabled={group || !profile?.avatar}
+                accessibilityLabel="Voir la photo"
+                onPress={() => {
+                  const src = profile?.avatar ? wippSrc(profile.avatar) : undefined;
+                  if (src && typeof src === "object" && "uri" in src && src.uri) setViewer({ items: [{ type: "image", url: src.uri }], start: 0 });
+                }}
+              >
+                <View style={{ borderRadius: 999, borderWidth: 2, borderColor: colors.accent, padding: 2 }}>
+                  {group ? <GroupAvatar users={members} size={72} fallback={chat.avatar} /> : <Avatar user={profile} size={72} />}
+                </View>
+              </Press>
+              <View style={{ flex: 1, paddingTop: 2 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{title}</Text>
+                  {!group ? <BadgeCheck size={16} color={colors.accent} /> : null}
+                </View>
+                {group ? (
+                  <Text style={{ fontSize: 12, color: fgA(0.55) }}>Groupe · {chat.participantIds.length} membres</Text>
+                ) : profile?.username ? (
+                  <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{profile.username}</Text>
+                ) : null}
+                {!group && profile?.city ? (
+                  <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <MapPin size={12} color={colors.accent} />
+                    <Text style={{ fontSize: 11, color: fgA(0.7) }}>{profile.city}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+            {!group && profile?.motto ? (
+              <View style={{ alignSelf: "flex-end", maxWidth: "80%", marginTop: 6, transform: [{ rotate: "-4deg" }] }}>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                  style={{ fontFamily: MOTTO_FONT, fontSize: mottoSize(profile.motto), lineHeight: mottoSize(profile.motto) * 1.15, color: colors.accent, textAlign: "right" }}
+                >
+                  {profile.motto}
+                </Text>
+              </View>
+            ) : null}
+            {!group && profile?.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: fgA(0.8) }}>{profile.bio}</Text> : null}
+            <View style={{ marginTop: 12, flexDirection: "row", gap: 6 }}>
+              <Press onPress={() => call("audio")} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Phone size={14} color={colors.paper} />
+                <Text style={{ fontSize: 11, color: colors.paper }}>Audio</Text>
+              </Press>
+              <Press onPress={() => call("video")} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Video size={14} color={colors.paper} />
+                <Text style={{ fontSize: 11, color: colors.paper }}>Vidéo</Text>
+              </Press>
+              {!group && profile?.username ? (
+                <Press
+                  onPress={() => void shareWippPublic(`@${profile.username} https://${APP_HOST}/@${profile.username}`)}
+                  style={{ flex: 1, height: 40, borderRadius: 999, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  <Share2 size={14} color={colors.accentFg} />
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Partager</Text>
+                </Press>
+              ) : (
+                <Press onPress={() => push({ name: "global-search" })} style={{ flex: 1, height: 40, borderRadius: 999, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <Search size={14} color={colors.accentFg} />
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Rechercher</Text>
+                </Press>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {!group && (card || localShop) ? (
+          <Press
+            onPress={() => (card ? push({ name: "business-card-view", publicId: card.publicId }) : localShop && push({ name: "shop", shopId: localShop.id }))}
+            style={{ marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 12 }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              {card?.logoUrl ? <Image source={{ uri: card.logoUrl }} style={{ width: 44, height: 44 }} contentFit="cover" /> : <Store size={20} color={colors.accent} />}
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 12, color: colors.muted }}>{card ? `Carte de visite de ${firstName}` : `Boutique de ${firstName}`}</Text>
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{card?.name ?? localShop?.name}</Text>
+              {card?.category || localShop?.category ? (
+                <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{card?.category ?? String(localShop?.category ?? "")}</Text>
+              ) : null}
+            </View>
+            <ChevronRight size={16} color={colors.muted} />
           </Press>
-        ))}
+        ) : null}
+
+        <View style={{ marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, backgroundColor: colors.surface }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text style={{ flex: 1, fontSize: 15, color: colors.fg }}>Médias et documents</Text>
+            <Text style={{ fontSize: 13, color: colors.muted }}>{media.length + docs}</Text>
+          </View>
+          {media.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 10 }}>
+              {media.slice(0, 20).map((item, i) => (
+                <Press key={`${item.url}-${i}`} onPress={() => setViewer({ items: media, start: i })} style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+                  {item.type === "image" ? <Image source={{ uri: item.url }} style={{ width: 76, height: 76 }} contentFit="cover" /> : <Play size={22} color={colors.fg} />}
+                </Press>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={{ marginTop: 6, fontSize: 13, color: colors.muted }}>Aucune photo ni vidéo partagée pour l’instant.</Text>
+          )}
+          {docs ? <Text style={{ marginTop: 8, fontSize: 13, color: colors.muted }}>{docs} document{docs > 1 ? "s" : ""}</Text> : null}
+        </View>
+
+        <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
+          <Row icon={<Pin size={18} color={colors.fg} />} label="Épingler la discussion" trailing={<Toggle value={Boolean(chat.pinned)} onChange={(v) => pinChat(chatId, v)} />} />
+          <Row icon={<BellOff size={18} color={colors.fg} />} label="Mettre en sourdine" trailing={<Toggle value={Boolean(chat.muted)} onChange={(v) => setMute(chatId, v ? "always" : "off")} />} />
+          <Row
+            icon={<Palette size={18} color={colors.fg} />}
+            label="Thème de la discussion"
+            value={theme.label}
+            onPress={() => setSheet("theme")}
+          />
+          {!group ? <Row icon={<Clock size={18} color={colors.fg} />} label="Messages éphémères" value={disappearLabel} onPress={() => setSheet("disappear")} /> : null}
+          <Row
+            icon={<Lock size={18} color={colors.fg} />}
+            label={group ? "Groupe non chiffré de bout en bout" : "Chiffrement de bout en bout"}
+            onPress={() => push({ name: "e2e-info", chatId })}
+          />
+          {group ? <Row icon={<Users size={18} color={colors.fg} />} label="Membres et réglages du groupe" onPress={() => push({ name: "group-info", chatId })} /> : null}
+        </View>
+
+        {!group && conn ? (
+          <Text style={{ marginHorizontal: 16, marginTop: 10, fontSize: 12, color: colors.muted }}>
+            {conn.type === "ephemeral" && conn.expiresAt
+              ? `⏳ Contact éphémère · expire dans ${remainingLabel(conn.expiresAt)}`
+              : "♾️ Contact permanent"}
+          </Text>
+        ) : null}
+
+        {!group && peer ? (
+          <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
+            <Row
+              icon={<Ban size={18} color={colors.danger} />}
+              label={`Bloquer ${peer.displayName.split(" ")[0] || "@" + peer.username}`}
+              danger
+              onPress={() =>
+                Alert.alert("Bloquer", `${peer.displayName} ne pourra plus vous contacter.`, [
+                  { text: "Annuler", style: "cancel" },
+                  {
+                    text: "Bloquer",
+                    style: "destructive",
+                    onPress: () => {
+                      blockUser(peer.id);
+                      useWippStore.getState().goTab("chats");
+                    },
+                  },
+                ])
+              }
+            />
+            <Row
+              icon={<Flag size={18} color={colors.danger} />}
+              label="Signaler"
+              danger
+              onPress={() =>
+                Alert.alert("Signaler ce profil", "Seuls le profil et la raison sont envoyés à la modération, jamais vos messages.", [
+                  ...["Contenu inapproprié", "Harcèlement", "Spam ou arnaque", "Faux profil", "Autre"].map((reason) => ({
+                    text: reason,
+                    onPress: () => {
+                      void import("../lib/safety")
+                        .then(({ submitContentReport }) =>
+                          submitContentReport({ contentType: "profile", contentId: peer.id.replace(/^srvuser:/, ""), targetProfileId: peer.id, reason }),
+                        )
+                        .then(
+                          () => Alert.alert("Signalement", "Signalement envoyé."),
+                          () => Alert.alert("Signalement", "Signalement impossible pour le moment."),
+                        );
+                    },
+                  })),
+                  { text: "Annuler", style: "cancel" as const },
+                ])
+              }
+            />
+          </View>
+        ) : null}
       </ScrollView>
+
+      <Sheet open={sheet === "theme"} title="Thème de la discussion" onClose={() => setSheet(null)}>
+        <Text style={{ marginBottom: 12, fontSize: 13, color: colors.muted }}>La couleur de vos bulles, sur ce téléphone uniquement.</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14 }}>
+          {CHAT_THEMES.map((t) => {
+            const on = (themeId ?? "default") === t.id;
+            return (
+              <Press key={t.id} onPress={() => { setChatTheme(chatId, t.id); setSheet(null); }} style={{ width: 64, alignItems: "center", gap: 6 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: t.color ?? colors.bubbleMe, borderWidth: on ? 3 : 1, borderColor: on ? colors.accent : colors.hair, alignItems: "center", justifyContent: "center" }}>
+                  {on ? <Check size={20} color="#ffffff" /> : null}
+                </View>
+                <Text style={{ fontSize: 11, color: colors.fg }}>{t.label}</Text>
+              </Press>
+            );
+          })}
+        </View>
+      </Sheet>
+
+      <Sheet open={sheet === "disappear"} title="Messages éphémères" onClose={() => setSheet(null)}>
+        {DISAPPEAR_OPTIONS.map(([label, ms]) => {
+          const on = (chat.disappearAfterMs ?? 0) === ms;
+          return (
+            <Press key={label} onPress={() => { setDisappear(chatId, ms); setSheet(null); }} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14 }}>
+              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : colors.fg }}>{label}</Text>
+              {on ? <Check size={18} color={colors.accent} /> : null}
+            </Press>
+          );
+        })}
+      </Sheet>
+
+      {viewer ? <MediaViewer items={viewer.items} start={viewer.start} onClose={() => setViewer(null)} /> : null}
     </ScreenRoot>
   );
 }

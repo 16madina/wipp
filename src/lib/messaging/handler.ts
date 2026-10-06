@@ -22,6 +22,7 @@ import { DatabaseConfigError, productionDatabaseMissing } from "@/lib/db";
 import {
   getMyBusinessCard,
   getPublicBusinessCard,
+  getBusinessCardByOwner,
   issueTempQr,
   listPublicBusinessCards,
   listIncomingConnectionRequests,
@@ -1061,6 +1062,11 @@ export async function handleWippApi(request: Request): Promise<Response> {
 
     if (method === "GET" && a === "business-cards" && b === "public" && !c) {
       return json(await listPublicBusinessCards(new URL(request.url).searchParams.get("q") ?? ""));
+    }
+
+    if (method === "GET" && a === "business-cards" && b === "owner" && c) {
+      await resolveSession(bearer(request));
+      return json({ card: await getBusinessCardByOwner(c) });
     }
 
     if (method === "GET" && a === "business-cards" && b === "public" && c) {

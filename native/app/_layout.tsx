@@ -4,6 +4,7 @@ import "../src/lib/push/android-call";
 import { useEffect } from "react";
 import { colors } from "../src/theme";
 import { loadAppearance, useAppearance } from "../src/lib/appearance";
+import { loadChatThemes } from "../src/lib/chat-themes";
 import { View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -24,6 +25,7 @@ import { ShareIntentProvider } from "expo-share-intent";
 
 void SplashScreen.preventAutoHideAsync();
 void loadAppearance();
+loadChatThemes();
 
 export default function RootLayout() {
   const [loaded] = useFonts({

@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { Text, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import type { MeProfile, User } from "../lib/types";
+import { Users } from "lucide-react-native";
 import { colors, whiteA } from "../theme";
 
 const signedAvatar = new Map<string, string>();
@@ -97,13 +98,22 @@ export function GroupAvatar({
   const src = wippSrc(fallback);
   if (src) return <Avatar user={{ displayName: "G", avatar: fallback }} size={size} />;
   const shown = users.filter(Boolean).slice(0, 2) as User[];
+  // Same outer size as a person's avatar: one full circle, plus a small second face as a badge.
+  const badge = Math.round(size * 0.42);
   return (
     <View style={{ width: size, height: size }}>
-      {shown.map((u, i) => (
-        <View key={u.id} style={{ position: "absolute", left: i * size * 0.28, top: i * size * 0.12 }}>
-          <Avatar user={u} size={size * 0.72} />
+      {shown[0] ? (
+        <Avatar user={shown[0]} size={size} />
+      ) : (
+        <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+          <Users size={size * 0.42} color={colors.accent} />
         </View>
-      ))}
+      )}
+      {shown[1] ? (
+        <View style={{ position: "absolute", right: -2, bottom: -2, borderRadius: badge, borderWidth: 2, borderColor: colors.bg }}>
+          <Avatar user={shown[1]} size={badge} />
+        </View>
+      ) : null}
     </View>
   );
 }

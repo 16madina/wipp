@@ -176,6 +176,13 @@ export async function getPublicBusinessCard(publicId: string) {
   return cardsApi<BusinessCardView | null>(`business-cards/public/${encodeURIComponent(publicId)}`);
 }
 
+/** The published business card of a person (contact info), or null. */
+export async function getBusinessCardOfOwner(profileId: string) {
+  const id = profileId.replace(/^srvuser:/, "");
+  const r = await cardsApi<{ card: BusinessCardView | null }>(`business-cards/owner/${encodeURIComponent(id)}`);
+  return r.card;
+}
+
 export async function signBusinessImage(path: string) {
   return signStorageObject("wipp-business-cards", path);
 }

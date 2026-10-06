@@ -42,7 +42,7 @@ import { LEGAL_CONTACT, legalDoc, type LegalDocId } from "../lib/legal";
 import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
 import { Sheet } from "../components/card-editor-parts";
-import { MOTTO_MAX } from "../lib/profile-motto";
+import { MOTTO_FONT, MOTTO_MAX, mottoSize } from "../lib/profile-motto";
 import { useAppearance, type AppearanceMode } from "../lib/appearance";
 import { AddressField, CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
@@ -79,13 +79,6 @@ import { EventCard } from "../components/event-parts";
 import { wippSrc } from "../lib/assets";
 
 /** Personal phrase: a readable handwritten script, slightly slanted. */
-const MOTTO_FONT = "DancingScript_600SemiBold";
-
-/** Bigger script for short phrases, smaller for long ones (it always fits the corner). */
-function mottoSize(text: string) {
-  const n = text.length;
-  return n <= 14 ? 22 : n <= 22 ? 19 : n <= 30 ? 17 : 15;
-}
 
 export function MeScreen() {
   const t = useT();

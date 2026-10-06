@@ -3,6 +3,13 @@ import { supabase } from "./supabase";
 import { useWippStore } from "./store";
 
 export const MOTTO_MAX = 40;
+export const MOTTO_FONT = "DancingScript_600SemiBold";
+
+/** Bigger script for short phrases, smaller for long ones (it always fits the corner). */
+export function mottoSize(text: string) {
+  const n = text.length;
+  return n <= 14 ? 22 : n <= 22 ? 19 : n <= 30 ? 17 : 15;
+}
 
 function apply(motto: string) {
   useWippStore.setState((s) => {

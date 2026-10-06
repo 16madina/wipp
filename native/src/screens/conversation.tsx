@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { MediaViewer } from "../components/MediaViewer";
+import { myBubbleColors, useChatThemes } from "../lib/chat-themes";
 import { MessageMenu } from "../components/MessageMenu";
 import { ReceiptTicks } from "../components/ReceiptTicks";
 import { ShareSurpriseSheet } from "../components/ShareSurpriseSheet";
@@ -76,13 +77,13 @@ function surpriseFromMessage(m: Message): Surprise {
 }
 
 /** Message text with tappable links (maps, WIPP profiles, websites). */
-function LinkedText({ text }: { text: string }) {
+function LinkedText({ text, linkColor }: { text: string; linkColor?: string }) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return (
     <>
       {parts.map((part, i) =>
         /^https?:\/\//.test(part) ? (
-          <Text key={i} onPress={() => void Linking.openURL(part)} style={{ textDecorationLine: "underline", color: colors.accent }}>
+          <Text key={i} onPress={() => void Linking.openURL(part)} style={{ textDecorationLine: "underline", color: linkColor ?? colors.accent }}>
             {/maps\.google\.com/.test(part) ? "Voir sur la carte" : part.replace(/^https?:\/\//, "")}
           </Text>
         ) : (
@@ -93,7 +94,7 @@ function LinkedText({ text }: { text: string }) {
   );
 }
 
-function VoiceBubble({ uri, duration, mine }: { uri?: string; duration?: number; mine: boolean }) {
+function VoiceBubble({ uri, duration, mine, tone }: { uri?: string; duration?: number; mine: boolean; tone: ReturnType<typeof myBubbleColors> }) {
   const sound = useRef<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
@@ -129,14 +130,14 @@ function VoiceBubble({ uri, duration, mine }: { uri?: string; duration?: number;
   const shown = Math.max(duration ?? 0, Math.round(pos / 1000));
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minWidth: 160 }}>
-      <Press onPress={() => void toggle()}>{playing ? <Pause size={18} color={mine ? colors.bubbleMeFg : colors.fg} /> : <Play size={18} color={mine ? colors.bubbleMeFg : colors.fg} />}</Press>
+      <Press onPress={() => void toggle()}>{playing ? <Pause size={18} color={mine ? tone.fg : colors.fg} /> : <Play size={18} color={mine ? tone.fg : colors.fg} />}</Press>
       <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: whiteA(0.2) }}>
-        <View style={{ width: dur ? `${Math.min(100, (pos / dur) * 100)}%` : "0%", height: 4, backgroundColor: mine ? colors.bubbleMeAccent : colors.accent }} />
+        <View style={{ width: dur ? `${Math.min(100, (pos / dur) * 100)}%` : "0%", height: 4, backgroundColor: mine ? tone.accent : colors.accent }} />
       </View>
       <Press onPress={() => void cycleSpeed()}>
-        <Text style={{ fontSize: 11, color: (mine ? colors.bubbleMeMuted : colors.muted) }}>{speed}x</Text>
+        <Text style={{ fontSize: 11, color: (mine ? tone.muted : colors.muted) }}>{speed}x</Text>
       </Press>
-      <Text style={{ fontSize: 11, color: (mine ? colors.bubbleMeMuted : colors.muted) }}>{shown}s</Text>
+      <Text style={{ fontSize: 11, color: (mine ? tone.muted : colors.muted) }}>{shown}s</Text>
     </View>
   );
 }
@@ -180,6 +181,8 @@ function StoryCiteCard({
 
 export function ConversationScreen({ chatId }: { chatId: string }) {
   const t = useT();
+  // Colour of my bubbles chosen for this conversation (contact info → Thème de la discussion).
+  const mb = myBubbleColors(useChatThemes((s) => s.themes[chatId]));
   const insets = useSafeAreaInsets();
   const { compact, icon, headerIcon, tablet } = useDeviceLayout();
   const composerIcon = tablet ? 48 : icon;
@@ -683,24 +686,24 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                 borderRadius: 16,
                 paddingHorizontal: m.type === "scratch" || m.type === "sticker" ? 0 : 12,
                 paddingVertical: m.type === "scratch" || m.type === "sticker" ? 0 : 8,
-                backgroundColor: m.type === "scratch" || m.type === "sticker" ? "transparent" : mine ? colors.bubbleMe : colors.bubbleThem,
+                backgroundColor: m.type === "scratch" || m.type === "sticker" ? "transparent" : mine ? mb.bg : colors.bubbleThem,
                 borderWidth: jumpId === m.id ? 1 : 0,
                 borderColor: colors.accent,
               }}
             >
-              {m.forwarded ? <Text style={{ fontSize: 11, color: (onMe ? colors.bubbleMeMuted : colors.muted), marginBottom: 4 }}>Transféré</Text> : null}
+              {m.forwarded ? <Text style={{ fontSize: 11, color: (onMe ? mb.muted : colors.muted), marginBottom: 4 }}>Transféré</Text> : null}
               {m.storyRef ? <StoryCiteCard cite={m.storyRef} mine={mine} stories={stories} /> : null}
               {m.replyTo ? (
-                <Press onPress={() => jumpTo(m.replyTo!)} style={{ marginBottom: 6, borderLeftWidth: 2, borderLeftColor: (onMe ? colors.bubbleMeAccent : colors.accent), paddingLeft: 8 }}>
-                  <Text numberOfLines={2} style={{ fontSize: 12, color: (onMe ? colors.bubbleMeMuted : colors.muted) }}>
+                <Press onPress={() => jumpTo(m.replyTo!)} style={{ marginBottom: 6, borderLeftWidth: 2, borderLeftColor: (onMe ? mb.accent : colors.accent), paddingLeft: 8 }}>
+                  <Text numberOfLines={2} style={{ fontSize: 12, color: (onMe ? mb.muted : colors.muted) }}>
                     {m.replyPreview || "Message"}
                   </Text>
                 </Press>
               ) : null}
               {m.viewOnce ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 }}>
-                  <Eye size={16} color={(onMe ? colors.bubbleMeAccent : colors.accent)} />
-                  <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg }}>{m.viewed ? t("viewOnceOpened") : t("viewOnceOpen")}</Text>
+                  <Eye size={16} color={(onMe ? mb.accent : colors.accent)} />
+                  <Text style={{ color: mine ? mb.fg : colors.fg }}>{m.viewed ? t("viewOnceOpened") : t("viewOnceOpen")}</Text>
                 </View>
               ) : null}
               {!m.viewOnce && album.length > 1 ? (
@@ -720,16 +723,16 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                   <Play size={28} color="#fff" />
                 </View>
               ) : null}
-              {m.type === "voice" ? <VoiceBubble uri={m.audioUrl} duration={m.duration} mine={mine} /> : null}
+              {m.type === "voice" ? <VoiceBubble uri={m.audioUrl} duration={m.duration} mine={mine} tone={mb} /> : null}
               {m.type === "file" && m.file ? (
                 <Press onPress={() => void openFile(m)} accessibilityLabel={`Ouvrir ${m.file.name}`}>
-                  <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontFamily: "Inter_500Medium" }}>{m.file.name}</Text>
-                  <Text style={{ color: (onMe ? colors.bubbleMeMuted : colors.muted), fontSize: 12 }}>
+                  <Text style={{ color: mine ? mb.fg : colors.fg, fontFamily: "Inter_500Medium" }}>{m.file.name}</Text>
+                  <Text style={{ color: (onMe ? mb.muted : colors.muted), fontSize: 12 }}>
                     {m.file.mime || "Document"}
                     {m.file.size ? ` · ${Math.round(m.file.size / 1024)} Ko` : ""}
                     {m.mediaState === "uploading" ? ` · ${Math.round((m.progress ?? 0) * 100)}%` : ""}
                   </Text>
-                  <Text style={{ marginTop: 4, color: (onMe ? colors.bubbleMeAccent : colors.accent), fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
+                  <Text style={{ marginTop: 4, color: (onMe ? mb.accent : colors.accent), fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
                 </Press>
               ) : null}
               {m.type === "scratch" ? <SurpriseReveal surprise={surpriseFromMessage(m)} onReveal={() => useWippStore.getState().markScratch(chatId, m.id)} onPlayAnimation={(id) => setSurprisePlay({ id, n: ++surpriseSequence.current })} /> : null}
@@ -740,29 +743,29 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
                       <Store size={28} color={colors.accent} />
                     </View>
                   )}
-                  <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{m.text}</Text>
-                  <Text style={{ marginTop: 2, color: (onMe ? colors.bubbleMeMuted : colors.muted), fontSize: 12 }}>Carte professionnelle</Text>
-                  <Text style={{ marginTop: 8, color: (onMe ? colors.bubbleMeAccent : colors.accent), fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
+                  <Text style={{ color: mine ? mb.fg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{m.text}</Text>
+                  <Text style={{ marginTop: 2, color: (onMe ? mb.muted : colors.muted), fontSize: 12 }}>Carte professionnelle</Text>
+                  <Text style={{ marginTop: 8, color: (onMe ? mb.accent : colors.accent), fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
                 </View>
               ) : null}
               {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.type !== "shop" && m.text ? (
-                <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} />}</Text>
+                <Text style={{ color: mine ? mb.fg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} linkColor={onMe ? mb.accent : undefined} />}</Text>
               ) : null}
-              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? colors.bubbleMeMuted : colors.muted) }}>🔒 Message chiffré</Text> : null}
+              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted) }}>🔒 Message chiffré</Text> : null}
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
                 <WippSticker id={m.stickerId ?? ""} size={96} />
               ) : null}
               {m.geo ? (
-                <Text style={{ color: mine ? colors.bubbleMeFg : colors.fg }}>
+                <Text style={{ color: mine ? mb.fg : colors.fg }}>
                   📍 {m.geo.lat.toFixed(4)}, {m.geo.lon.toFixed(4)}
                 </Text>
               ) : null}
-              {m.mediaState === "uploading" || m.mediaState === "preparing" ? <ActivityIndicator color={(onMe ? colors.bubbleMeAccent : colors.accent)} style={{ marginTop: 6 }} /> : null}
+              {m.mediaState === "uploading" || m.mediaState === "preparing" ? <ActivityIndicator color={(onMe ? mb.accent : colors.accent)} style={{ marginTop: 6 }} /> : null}
               <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
-                {m.editedAt ? <Text style={{ fontSize: 10, color: (onMe ? colors.bubbleMeMuted : colors.muted), marginRight: 4 }}>modifié</Text> : null}
-                <Text style={{ fontSize: 10, color: (onMe ? colors.bubbleMeMuted : colors.muted) }}>{formatClock(m.createdAt)}</Text>
+                {m.editedAt ? <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted), marginRight: 4 }}>modifié</Text> : null}
+                <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted) }}>{formatClock(m.createdAt)}</Text>
               </View>
             </View>
           </Press>
@@ -860,14 +863,15 @@ export function ConversationScreen({ chatId }: { chatId: string }) {
         </Press>
       ) : null}
       {!sealed && chat?.type !== "group" ? (
-        <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4, borderRadius: 12, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", gap: 8 }}>
-          <Lock size={14} color={colors.accent} />
-          <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: colors.muted }}>{t("e2eBanner")}</Text>
+        // Small centered pill (like WhatsApp): the details are one tap away.
+        <Press onPress={() => push({ name: "e2e-info", chatId })} accessibilityLabel={t("e2eBanner")} style={{ alignSelf: "center", marginTop: 6, marginBottom: 2, borderRadius: 999, backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <Lock size={10} color={colors.accent} />
+          <Text style={{ fontSize: 10.5, color: colors.muted }}>{t("e2eBannerShort")}</Text>
         </Press>
       ) : null}
       {!sealed && chat?.type === "group" ? (
-        <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4, borderRadius: 12, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 10 }}>
-          <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted }}>Groupe non chiffré de bout en bout</Text>
+        <Press onPress={() => push({ name: "e2e-info", chatId })} style={{ alignSelf: "center", marginTop: 6, marginBottom: 2, borderRadius: 999, backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Text style={{ fontSize: 10.5, color: colors.muted }}>Groupe non chiffré de bout en bout</Text>
         </Press>
       ) : null}
       {shop ? (

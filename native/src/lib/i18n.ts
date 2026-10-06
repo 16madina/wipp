@@ -352,6 +352,7 @@ const fr = {
   e2eAlways: "Toujours activé",
   e2eBanner:
     "Messages, photos et vidéos privés chiffrés de bout en bout. Touchez pour en savoir plus.",
+  e2eBannerShort: "Chiffré de bout en bout",
   e2eInfoTitle: "Chiffrement",
   e2eInfoBody:
     "Sur les messages privés (DM), seul toi et ton contact avez les clés. Le serveur ne stocke que du contenu chiffré (AES-256-GCM), photos et vidéos comprises. Les groupes ne sont pas encore chiffrés de bout en bout.",
@@ -1351,6 +1352,7 @@ const en: Record<keyof typeof fr, string> = {
   e2e: "End-to-end encryption",
   e2eAlways: "Always on",
   e2eBanner: "Private messages, photos and videos are end-to-end encrypted. Tap to learn more.",
+  e2eBannerShort: "End-to-end encrypted",
   e2eInfoTitle: "Encryption",
   e2eInfoBody:
     "On private DMs, only you and your contact hold the keys. The server only stores encrypted content (AES-256-GCM), photos and videos included. Groups are not end-to-end encrypted yet.",

@@ -448,6 +448,22 @@ export async function getPublicBusinessCard(publicId: string) {
   return rows[0] ? withServerMedia(publicCard(rows[0])) : null;
 }
 
+/** A person's published business card (shown on their contact info), or null. */
+export async function getBusinessCardByOwner(profileId: string) {
+  const id = profileId.replace(/^srvuser:/, "").trim();
+  if (!/^[A-Za-z0-9_-]{2,80}$/.test(id)) return null;
+  const sql = await getSql();
+  const rows = await sql<CardRow>`
+    select id, public_id, owner_profile_id, name, category, description, country, city,
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng
+    from wipp_business_cards
+    where owner_profile_id = ${id} and is_published = true
+    order by updated_at desc
+    limit 1
+  `;
+  return rows[0] ? withServerMedia(publicCard(rows[0])) : null;
+}
+
 /**
  * Ephemeral QR: valid 75 s and single-use; it OFFERS an ephemeral connection whose duration the
  * issuer chose. The QR's own expiry and the connection's expiry are independent.
