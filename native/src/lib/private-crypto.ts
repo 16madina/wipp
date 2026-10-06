@@ -7,7 +7,12 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
 
 export const PIN_MIN = 4;
-export const PBKDF2_ITER = 120_000;
+/**
+ * PBKDF2 runs in JS (Hermes): 120 000 rounds froze the phone for tens of seconds.
+ * The real protection is the device Keychain (this-device-only, unlocked) + the growing wait after errors;
+ * existing verifiers keep their own `iter`, so old codes still check.
+ */
+export const PBKDF2_ITER = 8_000;
 export const WAIT_MS = [0, 1_000, 2_000, 5_000, 15_000, 30_000, 60_000] as const;
 
 export type PinVerifier = { salt: string; hash: string; iter: number };

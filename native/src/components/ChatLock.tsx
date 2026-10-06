@@ -36,6 +36,7 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState<"home" | "create" | "confirm">("home");
   const [draft, setDraft] = useState("");
   const [first, setFirst] = useState("");
+  const [busy, setBusy] = useState(false);
   const [bioHw, setBioHw] = useState(false);
   useEffect(() => {
     void inspectBiometricHardware().then((hw) => setBioHw(hw.hasHardware && hw.enrolled));
@@ -55,8 +56,8 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
           </Text>
           <Field label={step === "create" ? "Nouveau code" : "Confirmer le code"} value={draft} onChangeText={(v) => setDraft(v.replace(/\D/g, ""))} secureTextEntry keyboardType="number-pad" />
           <Btn
-            label="Continuer"
-            disabled={draft.length < LOCK_MIN}
+            label={busy ? "Enregistrement…" : "Continuer"}
+            disabled={busy || draft.length < LOCK_MIN}
             onPress={() => {
               if (step === "create") {
                 setFirst(draft);
@@ -71,7 +72,9 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
                 return;
               }
               const existed = hasLockCode();
-              void setLockCode(first).then(() => {
+              setBusy(true);
+              // Let « Enregistrement… » paint before the (synchronous) PBKDF2 runs.
+              void new Promise((r) => setTimeout(r, 60)).then(() => setLockCode(first)).finally(() => setBusy(false)).then(() => {
                 setStep("home");
                 setDraft("");
                 setFirst("");
