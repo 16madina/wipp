@@ -10,7 +10,7 @@ export const INVISIBLE_RING_COLOR: Record<InvisibleRing, string> = {
   other: "#c9ced8",
 };
 
-/** The WIPP Invisible visuals (hat + glasses + W in a glowing ring), one per ring colour. */
+/** The WIPP Invisible visuals provided by the owner (hat + glasses + W in a glowing ring), one per ring colour. */
 const ART: Record<InvisibleRing, number> = {
   man: require("../../assets/invisible/invisible-man.png"),
   woman: require("../../assets/invisible/invisible-woman.png"),
@@ -27,8 +27,7 @@ export function InvisibleAvatar({ size = 52, ring = "other" }: { size?: number; 
       accessibilityLabel="Utilisateur en mode Invisible"
       style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", backgroundColor: "#05070c" }}
     >
-      {/* The artwork has a little glow around the ring: zoom slightly so the circle fills the avatar. */}
-      <Image source={ART[key]} style={{ width: size * 1.12, height: size * 1.12, marginLeft: -size * 0.06, marginTop: -size * 0.06 }} contentFit="cover" />
+      <Image source={ART[key]} style={{ width: size, height: size }} contentFit="cover" />
     </View>
   );
 }
