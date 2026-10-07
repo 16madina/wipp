@@ -1098,6 +1098,11 @@ export async function handleWippApi(request: Request): Promise<Response> {
         coverPath?: string | null;
         logoPath?: string | null;
         photoPaths?: string[];
+        instagram?: string | null;
+        tiktok?: string | null;
+        facebook?: string | null;
+        tags?: string[];
+        weekHours?: unknown;
       }>(request);
       return json(await saveMyBusinessCard(me.id, body));
     }

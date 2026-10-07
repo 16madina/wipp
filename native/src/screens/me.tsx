@@ -1251,6 +1251,11 @@ const emptyDraft: Draft = {
   coverUrl: null,
   logoUrl: null,
   photoUrls: [],
+  instagram: null,
+  tiktok: null,
+  facebook: null,
+  tags: [],
+  weekHours: null,
 };
 
 /** Country from a verified E.164 number: longest calling code wins, "+1" means Canada. */
@@ -1318,6 +1323,11 @@ export function BusinessCardEditorScreen() {
             coverUrl: card.coverUrl,
             logoUrl: card.logoUrl,
             photoUrls: card.photoUrls ?? [],
+            instagram: r.card.instagram ?? null,
+            tiktok: r.card.tiktok ?? null,
+            facebook: r.card.facebook ?? null,
+            tags: r.card.tags ?? [],
+            weekHours: r.card.weekHours ?? null,
           });
           if (card.coverUnresolved || card.logoUnresolved) {
             setError("Une image enregistrée n’a pas pu être affichée. Tu peux la renvoyer.");
@@ -1456,6 +1466,11 @@ export function BusinessCardEditorScreen() {
         coverPath,
         logoPath,
         photoPaths: draft.photoPaths,
+        instagram: draft.instagram,
+        tiktok: draft.tiktok,
+        facebook: draft.facebook,
+        tags: (draft.tags ?? []).map((t) => t.trim()).filter(Boolean),
+        weekHours: draft.weekHours,
       });
       // Position for "à proximité": the picked address, else the city centre.
       void (async () => {
@@ -1586,6 +1601,32 @@ export function BusinessCardEditorScreen() {
           <Text style={{ fontSize: 11, color: fgA(0.45) }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
           <Field label="Lien site web (optionnel)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
         </View>
+        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Étiquettes</Text>
+        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>Jusqu’à 3 mots qui décrivent ton activité (ex. Salon de coiffure, Extensions).</Text>
+        <View style={{ gap: 8 }}>
+          {[0, 1, 2].map((i) => (
+            <Field
+              key={i}
+              label={`Étiquette ${i + 1}`}
+              value={draft.tags?.[i] ?? ""}
+              placeholder={["Salon de coiffure", "Extensions", "Soins capillaires"][i]}
+              onChangeText={(v) =>
+                setDraft((d) => {
+                  const tags = [...(d.tags ?? []), "", "", ""].slice(0, 3);
+                  tags[i] = v.slice(0, 24);
+                  return { ...d, tags };
+                })
+              }
+            />
+          ))}
+        </View>
+        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Réseaux sociaux</Text>
+        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>Ton nom de compte ou le lien de ta page. Les clients pourront l’ouvrir depuis ta carte.</Text>
+        <View style={{ gap: 8 }}>
+          <Field label="Instagram" value={draft.instagram ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("instagram", v || null)} />
+          <Field label="TikTok" value={draft.tiktok ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("tiktok", v || null)} />
+          <Field label="Facebook" value={draft.facebook ?? ""} placeholder="facebook.com/monsalon" autoCapitalize="none" onChangeText={(v) => set("facebook", v || null)} />
+        </View>
         <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de la boutique</Text>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
           {draft.photoUrls.map((url) => (
@@ -1613,7 +1654,11 @@ export function BusinessCardEditorScreen() {
         }}
       />
       <CategorySheet open={categoryOpen} categories={CARD_CATEGORIES} selected={draft.category} onClose={() => setCategoryOpen(false)} onPick={(c) => set("category", c)} />
-      <HoursSheet open={hoursOpen} onClose={() => setHoursOpen(false)} onSave={(v) => set("hours", v)} />
+      <HoursSheet
+        open={hoursOpen}
+        onClose={() => setHoursOpen(false)}
+        onSave={(v, week) => setDraft((d) => ({ ...d, hours: v, weekHours: week }))}
+      />
     </ScreenRoot>
     </EdgeBack>
   );

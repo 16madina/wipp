@@ -146,12 +146,34 @@ function daysLabel(days: number[]) {
 }
 
 /** Pick opening days and hours; stored as text like "Lun–Ven · 09:00–18:00". */
-export function HoursSheet({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (value: string | null) => void }) {
+type HoursLine = { days: number[]; from: string; to: string };
+const lineLabel = (l: HoursLine) => `${daysLabel(l.days)} · ${l.from}–${l.to}`;
+const WEEK_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
+/** Lines → hours per day (a later line wins for the same day). Days not listed are closed. */
+function weekOf(lines: HoursLine[]) {
+  const out: Partial<Record<(typeof WEEK_KEYS)[number], { o: string; c: string } | null>> = {};
+  WEEK_KEYS.forEach((k) => (out[k] = null));
+  for (const l of lines) for (const d of l.days) if (l.from !== l.to) out[WEEK_KEYS[d]!] = { o: l.from, c: l.to };
+  return Object.values(out).some(Boolean) ? out : null;
+}
+
+export function HoursSheet({
+  open,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Text shown on the card + the same hours per day (for « Ouvert maintenant »). */
+  onSave: (value: string | null, week: ReturnType<typeof weekOf>) => void;
+}) {
   const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4]);
   const [from, setFrom] = useState("09:00");
   const [to, setTo] = useState("18:00");
-  const [lines, setLines] = useState<string[]>([]);
-  const current = days.length ? `${daysLabel(days)} · ${from}–${to}` : "";
+  const [lines, setLines] = useState<HoursLine[]>([]);
+  const currentLine: HoursLine | null = days.length ? { days, from, to } : null;
+  const current = currentLine ? lineLabel(currentLine) : "";
   const toggle = (d: number) => setDays((x) => (x.includes(d) ? x.filter((v) => v !== d) : [...x, d]));
   const ROW = 36;
   const column = (value: string, set: (v: string) => void) => (
@@ -194,7 +216,7 @@ export function HoursSheet({ open, onClose, onSave }: { open: boolean; onClose: 
         </View>
         <Press
           disabled={!current}
-          onPress={() => setLines((l) => [...l, current])}
+          onPress={() => currentLine && setLines((l) => [...l, currentLine])}
           style={{ marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderRadius: 12, borderWidth: 1, borderColor: accentA(0.5) }}
         >
           <Clock size={16} color={colors.accent} />
@@ -203,8 +225,8 @@ export function HoursSheet({ open, onClose, onSave }: { open: boolean; onClose: 
         {lines.length ? (
           <View style={{ marginTop: 12, gap: 6 }}>
             {lines.map((l, i) => (
-              <View key={`${l}-${i}`} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 10, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
-                <Text style={{ color: colors.fg }}>{l}</Text>
+              <View key={`${lineLabel(l)}-${i}`} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 10, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
+                <Text style={{ color: colors.fg }}>{lineLabel(l)}</Text>
                 <Press onPress={() => setLines((x) => x.filter((_, j) => j !== i))}>
                   <Text style={{ color: colors.muted }}>Retirer</Text>
                 </Press>
@@ -215,13 +237,13 @@ export function HoursSheet({ open, onClose, onSave }: { open: boolean; onClose: 
           <Text style={{ marginTop: 10, color: colors.muted, fontSize: 12 }}>Horaires différents le week-end ? Ajoute une ligne par groupe de jours.</Text>
         )}
         <View style={{ marginTop: 16, flexDirection: "row", gap: 10 }}>
-          <Press onPress={() => { onSave(null); onClose(); }} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+          <Press onPress={() => { onSave(null, null); onClose(); }} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: colors.fg }}>Effacer</Text>
           </Press>
           <Press
             onPress={() => {
-              const all = lines.length ? lines : current ? [current] : [];
-              onSave(all.length ? all.join(" ; ") : null);
+              const all = lines.length ? lines : currentLine ? [currentLine] : [];
+              onSave(all.length ? all.map(lineLabel).join(" ; ") : null, weekOf(all));
               setLines([]);
               onClose();
             }}

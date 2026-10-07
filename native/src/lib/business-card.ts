@@ -31,7 +31,18 @@ export type BusinessCardView = {
   photoUrls: string[];
   coverUnresolved?: boolean;
   logoUnresolved?: boolean;
+  instagram?: string | null;
+  tiktok?: string | null;
+  facebook?: string | null;
+  tags?: string[];
+  weekHours?: WeekHours | null;
+  /** Blue badge, granted by WIPP. */
+  verified?: boolean;
 };
+
+export const WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export type WeekDay = (typeof WEEK_DAYS)[number];
+export type WeekHours = Partial<Record<WeekDay, { o: string; c: string } | null>>;
 
 export type MyCardResult = {
   profileId: string;
@@ -53,6 +64,11 @@ export type CardInput = {
   coverPath: string | null;
   logoPath: string | null;
   photoPaths: string[];
+  instagram?: string | null;
+  tiktok?: string | null;
+  facebook?: string | null;
+  tags?: string[];
+  weekHours?: WeekHours | null;
 };
 
 export const CARD_CATEGORIES = [
