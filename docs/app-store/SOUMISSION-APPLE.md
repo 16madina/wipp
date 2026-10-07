@@ -75,7 +75,7 @@ Répondre honnêtement :
 
 ## 5. Liste à cocher avant « Soumettre »
 
-- [ ] Comptes `wipp_test_a` / `wipp_test_b` (« REMOVE BEFORE PRODUCTION ») masqués ou supprimés sur le serveur
+- [x] (fait le 2026-10-07) Comptes `wipp_test_a` / `wipp_test_b` (« REMOVE BEFORE PRODUCTION ») masqués ou supprimés sur le serveur
 - [ ] Compte démo créé (section 2) et notes remplies (section 1)
 - [ ] France : déclaration ANSSI faite **ou** France retirée des pays
 - [ ] Politique de confidentialité en ligne et à jour : chiffrement de bout en bout, vocaux, stories, zone approximative (À proximité), abonnés des boutiques, suppression du compte
@@ -84,7 +84,7 @@ Répondre honnêtement :
 - [ ] Captures d'écran de la vraie app, sans données de démo
 - [ ] Testé sans plantage sur un iPhone propre (nouvelle installation, premier lancement, refus des autorisations)
 - [ ] Questionnaire d'âge rempli
-- [ ] Filtre de mots injurieux actif sur les textes publics
+- [x] (fait le 2026-10-07, migration 0049) Filtre de mots injurieux actif sur les textes publics
 
 ## Sources
 
