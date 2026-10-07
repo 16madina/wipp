@@ -1116,6 +1116,20 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ card: await getBusinessCardByOwner(c) });
     }
 
+    if (a === "business-cards" && b === "social" && c) {
+      const { businessCardSocial, followBusinessCard } = await import("@/lib/messaging/social");
+      if (method === "GET") {
+        const token = bearer(request);
+        const me = token ? await resolveSession(token).catch(() => null) : null;
+        return json(await businessCardSocial(me?.id ?? null, c));
+      }
+      if (method === "POST") {
+        const me = await resolveSession(bearer(request));
+        const body = await readBody<{ on?: boolean }>(request);
+        return json(await followBusinessCard(me.id, c, body.on !== false));
+      }
+    }
+
     if (method === "GET" && a === "business-cards" && b === "public" && c) {
       return json(await getPublicBusinessCard(c));
     }

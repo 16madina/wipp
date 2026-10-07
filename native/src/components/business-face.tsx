@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, Share, Text, View } from "react-native";
@@ -8,6 +8,9 @@ import * as Clipboard from "expo-clipboard";
 import { cacheDirectory, writeAsStringAsync } from "expo-file-system/legacy";
 import {
   BadgeCheck,
+  Bookmark,
+  Check,
+  UserPlus,
   Camera,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +33,8 @@ import { QrCard } from "./QrCard";
 import { WippWordmark } from "./Logo";
 import { businessIntro } from "../lib/assets";
 import { EdgeBack, GlassHeader, Header, Press, ScreenRoot, SearchField } from "./ui";
-import { cardLink } from "../lib/business-card";
+import { cardLink, fetchCardSocial, followCard, formatCount, type CardSocial } from "../lib/business-card";
+import { useWippStore } from "../lib/store";
 import type { BusinessCardView } from "../lib/business-card";
 import { businessQr } from "../lib/qr-payload";
 import { openState, socialUrl, websiteUrl } from "../lib/business-hours";
@@ -169,6 +173,44 @@ export function BusinessCardExperience({
 }) {
   const [share, setShare] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [social, setSocial] = useState<CardSocial | null>(null);
+  const [followBusy, setFollowBusy] = useState(false);
+  const saved = useWippStore((st) => st.saves.some((x) => x.kind === "business" && x.id === card.publicId));
+  useEffect(() => {
+    let live = true;
+    void fetchCardSocial(card.publicId)
+      .then((r) => live && setSocial(r))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [card.publicId]);
+  async function toggleFollow() {
+    if (!social || followBusy) return;
+    const next = !social.following;
+    setFollowBusy(true);
+    // Shown at once, corrected by the server answer.
+    setSocial({ ...social, following: next, followers: Math.max(0, social.followers + (next ? 1 : -1)) });
+    try {
+      setSocial(await followCard(card.publicId, next));
+    } catch (err) {
+      setSocial(social);
+      Alert.alert("Abonnement", err instanceof Error ? err.message : "Réessaie dans un instant.");
+    } finally {
+      setFollowBusy(false);
+    }
+  }
+  async function toggleSaved() {
+    try {
+      const { toggleSave } = await import("../lib/lot7/api");
+      await toggleSave("business", card.publicId, !saved);
+      useWippStore.setState((st) => ({
+        saves: saved ? st.saves.filter((x) => !(x.kind === "business" && x.id === card.publicId)) : [...st.saves, { kind: "business", id: card.publicId }],
+      }));
+    } catch {
+      Alert.alert("Enregistrer", "L’enregistrement n’a pas abouti. Réessaie.");
+    }
+  }
   const [q, setQ] = useState("");
   const insets = useSafeAreaInsets();
   const back = share ? () => setShare(false) : onBack;
@@ -299,6 +341,41 @@ export function BusinessCardExperience({
           </View>
         ) : null}
 
+        {/* Followers · photos · follow */}
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginTop: 16, gap: 22 }}>
+          <View>
+            <Text style={{ color: colors.fg, fontSize: 20, fontFamily: "Inter_700Bold" }}>{social ? formatCount(social.followers) : "–"}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Abonné{social && social.followers > 1 ? "s" : ""}</Text>
+          </View>
+          <View>
+            <Text style={{ color: colors.fg, fontSize: 20, fontFamily: "Inter_700Bold" }}>{social ? formatCount(social.photos) : String(photos.length)}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Photo{(social?.photos ?? photos.length) > 1 ? "s" : ""}</Text>
+          </View>
+          <View style={{ flex: 1 }} />
+          {!owner && social && !social.owner ? (
+            <Press
+              onPress={() => void toggleFollow()}
+              disabled={followBusy}
+              accessibilityLabel={social.following ? "Se désabonner" : "S’abonner"}
+              style={{
+                paddingHorizontal: 18,
+                height: 40,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 6,
+                backgroundColor: social.following ? colors.surface2 : "transparent",
+                borderWidth: 1.5,
+                borderColor: social.following ? colors.hair : colors.accent,
+              }}
+            >
+              {social.following ? <Check size={16} color={colors.fg} /> : <UserPlus size={16} color={colors.accent} />}
+              <Text style={{ color: social.following ? colors.fg : colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{social.following ? "Abonné" : "S’abonner"}</Text>
+            </Press>
+          ) : null}
+        </View>
+
         {/* Main actions */}
         <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, marginTop: 16 }}>
           {owner ? (
@@ -407,15 +484,26 @@ export function BusinessCardExperience({
 
       {!owner ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: whiteA(0.06) }}>
-          <Press onPress={() => void Share.share({ message: `${card.name}\n${link}` })} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair }}>
-            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-              <QrCode size={22} color={colors.accentFg} />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+          <Press onPress={() => void Share.share({ message: `${card.name}\n${link}` })} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+              <QrCode size={20} color={colors.accentFg} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>Partager la boutique</Text>
-              <Text style={{ color: colors.muted, fontSize: 13 }}>QR WIPP · Lien · Réseaux</Text>
+              <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Partager</Text>
+              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>QR · Lien</Text>
             </View>
           </Press>
+          <Press onPress={() => void toggleSaved()} accessibilityLabel={saved ? "Retirer de mes boutiques" : "Enregistrer dans mes boutiques"} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: saved ? colors.accent : colors.hair }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: saved ? colors.accent : colors.navy, alignItems: "center", justifyContent: "center" }}>
+              <Bookmark size={20} color={saved ? colors.accentFg : colors.fg} fill={saved ? colors.accentFg : "transparent"} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{saved ? "Enregistrée" : "Enregistrer"}</Text>
+              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>Mes boutiques</Text>
+            </View>
+          </Press>
+          </View>
         </View>
       ) : null}
     </View>

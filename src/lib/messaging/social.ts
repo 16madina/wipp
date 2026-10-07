@@ -741,3 +741,44 @@ export async function listBusinessChatContexts(meId: string) {
     ownerIsMe: row.business_owner_id === meId,
   }));
 }
+
+/* ───────────── Followers of a business card ───────────── */
+
+async function cardByPublicId(publicId: string) {
+  const id = publicId.trim().toLowerCase();
+  if (!/^[a-z0-9._-]{2,40}$/.test(id)) throw new WippHttpError(404, "not_found", "Carte introuvable.");
+  const sql = await getSql();
+  const rows = await sql<{ id: string; owner_profile_id: string; photo_urls: string[] | null }>`
+    select id, owner_profile_id, photo_urls from wipp_business_cards where lower(public_id) = ${id} and is_published = true limit 1
+  `;
+  if (!rows[0]) throw new WippHttpError(404, "not_found", "Carte introuvable.");
+  return rows[0];
+}
+
+/** Followers count, photos count and whether I follow it. */
+export async function businessCardSocial(meId: string | null, publicId: string) {
+  const card = await cardByPublicId(publicId);
+  const sql = await getSql();
+  const [count] = await sql<{ n: number }>`select count(*)::int as n from wipp_business_follows where card_id = ${card.id}`;
+  const mine = meId
+    ? await sql`select 1 from wipp_business_follows where card_id = ${card.id} and profile_id = ${meId} limit 1`
+    : [];
+  return {
+    followers: count?.n ?? 0,
+    following: mine.length > 0,
+    photos: (card.photo_urls ?? []).filter(Boolean).length,
+    owner: meId === card.owner_profile_id,
+  };
+}
+
+export async function followBusinessCard(meId: string, publicId: string, on: boolean) {
+  const card = await cardByPublicId(publicId);
+  if (card.owner_profile_id === meId) throw new WippHttpError(400, "own_card", "Tu ne peux pas t’abonner à ta propre boutique.");
+  const sql = await getSql();
+  if (on) {
+    await sql`insert into wipp_business_follows (card_id, profile_id) values (${card.id}, ${meId}) on conflict do nothing`;
+  } else {
+    await sql`delete from wipp_business_follows where card_id = ${card.id} and profile_id = ${meId}`;
+  }
+  return businessCardSocial(meId, publicId);
+}

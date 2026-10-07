@@ -308,3 +308,21 @@ export async function messageCardOwner(ownerProfileId: string) {
   const { useWippStore } = await import("./store");
   await useWippStore.getState().openServerDm(data.username);
 }
+
+export type CardSocial = { followers: number; following: boolean; photos: number; owner: boolean };
+
+/** Followers / photos counts and whether I follow this card. */
+export async function fetchCardSocial(publicId: string) {
+  return cardsApi<CardSocial>(`business-cards/social/${encodeURIComponent(publicId)}`);
+}
+
+export async function followCard(publicId: string, on: boolean) {
+  return cardsApi<CardSocial>(`business-cards/social/${encodeURIComponent(publicId)}`, { method: "POST", body: JSON.stringify({ on }) });
+}
+
+/** 950 → "950", 1 234 → "1,2 k", 12 500 → "12,5 k". */
+export function formatCount(n: number) {
+  if (n < 1000) return String(n);
+  const k = n / 1000;
+  return `${k >= 100 ? Math.round(k) : (Math.round(k * 10) / 10).toString().replace(".", ",")} k`;
+}
