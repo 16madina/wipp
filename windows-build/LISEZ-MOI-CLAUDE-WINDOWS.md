@@ -173,6 +173,32 @@ Fait côté iPhone le 2026-10-06, tout est sur `main`. Pour Android :
 
 ---
 
+## Fait côté iPhone le 2026-10-07 (code commun, à vérifier sur Android au prochain build)
+
+Tout est sur `main`. Le code ci-dessous est commun ; rien de spécifique à Android sauf mention.
+
+- **Stickers** : panneau en images fixes + aperçu animé un par un (sinon l'app est tuée) ; barre du bas
+  Récents · Wippmoji · Wippie · EMO · Moments · Surprises ; recherche par mots-clés (`src/lib/sticker-keywords.ts`).
+  Les animations lourdes sont servies par le site (`public/wipp-media`, `?v=2`).
+- **Bonhomme WIPP** dans le champ de message (jaune thème sombre / bleu thème clair) → ouvre les stickers.
+- **Messages vocaux façon WhatsApp** (`VoiceComposer.tsx`, `voice-recorder.ts`) : maintenir / glisser / cadenas,
+  panneau verrouillé, éphémère « 1 », forme de la voix envoyée chiffrée.
+  ⚠️ Android : pas d'assemblage des morceaux (module Swift `concatAudio` seulement) → pause simple, pas d'écoute avant l'envoi.
+  Vérifier l'autorisation RECORD_AUDIO et la lecture des .m4a sur le Samsung.
+- **Appels de groupe + liens d'appel** (`wippapp.com/c/<code>`) : sur Android, ajouter `/c/*` aux App Links
+  (`assetlinks.json` existe déjà ; vérifier l'intent-filter `pathPrefix="/c/"` après prebuild).
+- **Stories** : éditeur de calques (textes polices/couleurs/fonds, stickers Wippmoji et Wippie, gestes),
+  cercle découpé par élément, découpe vidéo 10/15/30/45/60 s. Polices « Manuscrit / Machine / Élégant » :
+  sur Android elles tombent sur `casual` / `monospace` / `serif` (normal).
+- **Boutiques** : nouvelle page (bannière, étiquettes, Ouvert maintenant, Instagram/TikTok/Facebook, abonnés,
+  Enregistrer, Nos services, QR en bas).
+- **Chats** : filtre « Non lus » (remplace « Personnel »).
+- **Plus de données de démo** dès qu'un vrai compte est connu (au lancement), boutiques des conversations gardées
+  dans la mémoire chiffrée de la messagerie.
+- Serveur (déjà en production) : migrations 0022, 0044–0048.
+
+---
+
 ## Rapport à donner à l'utilisatrice
 
 1. Commit récupéré (`git log --oneline -1`)
