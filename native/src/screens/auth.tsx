@@ -1076,9 +1076,9 @@ export function ProfileReferenceScreen() {
           Complète ton <Text style={{ color: colors.accent }}>profil</Text>
         </Text>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10, marginBottom: 10 }}>
-          <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.38)" }}>
-            {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={22} color={colors.accent} />}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginTop: 12, marginBottom: 12 }}>
+          <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ width: 84, height: 84, borderRadius: 42, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.38)" }}>
+            {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={30} color={colors.accent} />}
           </Pressable>
           <Pressable accessibilityLabel="Choisir une photo" onPress={() => void choosePhoto()}>
             <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{photoUri ? "Changer la photo" : "Ajouter une photo"}</Text>
@@ -1101,7 +1101,7 @@ export function ProfileReferenceScreen() {
           </View>
         </View>
 
-        <Text style={[label, { marginTop: 10 }]}>Ton WIPP · c’est ainsi qu’on te trouvera</Text>
+        <Text style={[label, { marginTop: 12 }]}>Ton WIPP · c’est ainsi qu’on te trouvera</Text>
         <View ref={usernameBlockRef} style={[field, { flexDirection: "row", alignItems: "center" }]}>
           <Text style={{ color: colors.accent, fontSize: 15, marginRight: 2 }}>@</Text>
           <TextInput
@@ -1122,7 +1122,7 @@ export function ProfileReferenceScreen() {
           {status ? <Text style={{ marginLeft: 8, fontSize: 12, fontFamily: "Inter_600SemiBold", color: status.color }}>{status.text}</Text> : null}
         </View>
 
-        <View style={[field, { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10 }]}>
+        <View style={[field, { marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10 }]}>
           <Text style={{ fontSize: 18 }}>{flagEmoji(countryLabel.id)}</Text>
           <Text style={{ color: colors.fg, fontSize: 15 }}>
             {countryLabel.fr} ({countryLabel.dial})
@@ -1131,11 +1131,13 @@ export function ProfileReferenceScreen() {
 
         {error ? <Text style={{ marginTop: 8, color: colors.danger, fontSize: 13 }}>{error}</Text> : null}
 
+        {/* Small gap only: the button stays close to the country box (extra space goes below). */}
+        <View style={{ flexGrow: 1, minHeight: 14, maxHeight: 24 }} />
         <Pressable
           accessibilityLabel="Continuer"
           disabled={busy}
           onPress={() => void finish()}
-          style={{ marginTop: "auto", height: 52, borderRadius: 26, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? 0.7 : 1 }}
+          style={{ height: 52, borderRadius: 26, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? 0.7 : 1 }}
         >
           {busy ? <ActivityIndicator color={colors.accentFg} /> : <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Continuer</Text>}
           {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
