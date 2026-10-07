@@ -117,7 +117,7 @@ export function ChatsScreen() {
   const verifiedIds = useWippStore((s) => s.verifiedIds);
   const blockedIds = useWippStore((s) => s.blockedIds);
   const { compact, headerIcon } = useDeviceLayout();
-  const [filter, setFilter] = useState<"all" | "personal" | "shops" | "groups">("all");
+  const [filter, setFilter] = useState<"all" | "unread" | "shops" | "groups">("all");
   const [menuChatId, setMenuChatId] = useState<string | null>(null);
   const menuChat = menuChatId ? chats.find((c) => c.id === menuChatId) : undefined;
   const now = Date.now();
@@ -136,17 +136,22 @@ export function ChatsScreen() {
   }, []);
 
   const archivedCount = chats.filter((c) => c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id) && (!serverConnected || !isSeedDemoChat(c.id))).length;
-  const visible = chats
+  const listed = chats
     .filter((c) => !c.archived && !c.isRequest && c.participantIds.includes("me") && !isPrivateChat(c.id))
     .filter((c) => !serverConnected || !isSeedDemoChat(c.id))
     .filter((c) => {
-      if (c.type === "dm") {
-        const other = c.participantIds.find((id) => id !== "me");
-        if (other && blockedIds.includes(other)) return false;
-      }
+      if (c.type !== "dm") return true;
+      const other = c.participantIds.find((id) => id !== "me");
+      return !(other && blockedIds.includes(other));
+    });
+  // Unread = new messages, or marked « non lu » by hand from the conversation menu.
+  const isUnread = (c: (typeof chats)[number]) => c.unread > 0 || Boolean(c.manuallyUnreadAt);
+  const unreadChats = listed.filter(isUnread).length;
+  const visible = listed
+    .filter((c) => {
       if (filter === "shops") return Boolean(c.shopId);
       if (filter === "groups") return c.type === "group";
-      if (filter === "personal") return !c.shopId && c.type !== "group";
+      if (filter === "unread") return isUnread(c);
       return true;
     })
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.lastAt - a.lastAt);
@@ -255,7 +260,12 @@ export function ChatsScreen() {
         </Press>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, height: 44, alignItems: "center", gap: 8 }}>
           <Chip label={t("chatsAll")} active={filter === "all"} onPress={() => setFilter("all")} />
-          <Chip label={t("chatsPersonal")} active={filter === "personal"} onPress={() => setFilter("personal")} />
+          <Chip
+            label={t("chatsUnread")}
+            active={filter === "unread"}
+            onPress={() => setFilter("unread")}
+            trailing={unreadChats > 0 ? <View style={{ marginLeft: 6 }}><Badge n={unreadChats} /></View> : null}
+          />
           <Chip
             label={t("chatsShops")}
             active={filter === "shops"}
@@ -273,7 +283,9 @@ export function ChatsScreen() {
             <Text style={{ fontSize: 13, color: colors.muted }}>{archivedCount}</Text>
           </Press>
         ) : null}
-        {visible.length === 0 ? (
+        {visible.length === 0 && filter === "unread" ? (
+          <Empty title={t("unreadEmpty")} body={t("unreadEmptySub")} action={<Btn label={t("seeAllChats")} variant="secondary" onPress={() => setFilter("all")} />} />
+        ) : visible.length === 0 ? (
           <Empty
             title={filter === "groups" ? t("groupsEmpty") : t("chatsEmpty")}
             body={filter === "groups" ? t("groupsEmptySub") : t("chatsEmptySub")}
