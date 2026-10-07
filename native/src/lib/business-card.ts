@@ -232,8 +232,21 @@ export async function withSignedCardMedia(card: BusinessCardView): Promise<Busin
       }
     }),
   );
+  // Service photos: same private bucket, signed here like the gallery.
+  const services = await Promise.all(
+    (card.services ?? []).map(async (x) => {
+      if (x.photoUrl && /^https?:\/\//i.test(x.photoUrl)) return x;
+      if (!x.photoPath) return x;
+      try {
+        return { ...x, photoUrl: await signBusinessImage(x.photoPath) };
+      } catch {
+        return x;
+      }
+    }),
+  );
   return {
     ...card,
+    services,
     coverUrl: cover.url,
     logoUrl: logo.url,
     photoUrls: photoUrls.filter(Boolean),
