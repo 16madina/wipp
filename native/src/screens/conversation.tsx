@@ -60,7 +60,7 @@ import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../li
 import { isSeedDemoChat } from "../lib/seed";
 import { stickerById, stickerLabel, stickersInPack } from "../lib/stickers";
 import type { Surprise } from "../lib/surprise";
-import { storyRing } from "../lib/story-status";
+import { storyRing, storySegments } from "../lib/story-status";
 import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors, fgA, fixed, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
@@ -927,7 +927,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                       else push({ name: "chat-info", chatId });
                     }}
                   >
-                    <Avatar user={shop && shopFace ? shopFace : peer} size={32} ring={headerRing} />
+                    <Avatar user={shop && shopFace ? shopFace : peer} size={32} ring={headerRing} segments={headerRing !== "none" && peer ? storySegments(stories, peer.id) : undefined} />
                   </Press>
                 )}
                 <Press onPress={() => push({ name: "chat-info", chatId })} style={{ minWidth: 0, flexShrink: 1, flex: 1 }}>

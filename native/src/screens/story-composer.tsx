@@ -152,6 +152,7 @@ export function NewStoryScreen() {
       pop();
     } catch (err) {
       const message = errorText(err, "Publication impossible");
+      void import("../lib/crash-log").then(({ logAppError }) => logAppError(err, false, `story ${phase.name === "edit" ? phase.kind : "text"}`));
       if (overlay && /could not find|schema cache|p_overlay|function/i.test(message)) {
         setError("Le texte sur la vidéo attend une mise à jour du serveur. La story n’a pas été publiée.");
       } else {
@@ -579,6 +580,9 @@ function VideoTrim({
   const responder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      // Keep the finger on the strip (the screen must not steal the drag).
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (event) => {
         const total = Math.max(durationRef.current, 0.01);
         const x = event.nativeEvent.locationX;
@@ -719,7 +723,8 @@ function VideoTrim({
           {...responder.panHandlers}
           style={{ height: 64, borderRadius: 8, overflow: "hidden", backgroundColor: colors.surface2, justifyContent: "center" }}
         >
-          <View style={{ flexDirection: "row", height: "100%" }}>
+          {/* pointerEvents none: the finger position is measured on the whole strip, not on one thumbnail. */}
+          <View pointerEvents="none" style={{ flexDirection: "row", height: "100%" }}>
             {(thumbs.length ? thumbs : Array.from({ length: 8 }, () => "")).map((thumb, index) =>
               thumb ? (
                 <Image key={`${thumb}-${index}`} source={{ uri: thumb }} style={{ flex: 1, height: "100%" }} contentFit="cover" />
@@ -734,6 +739,25 @@ function VideoTrim({
           </View>
           <View pointerEvents="none" style={{ position: "absolute", left: `${headLeft}%`, top: 0, bottom: 0, width: 2, backgroundColor: "#fff" }} />
         </View>
+        {duration > MIN_VIDEO_SEC + 1 ? (
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 8 }}>
+            {[10, 15, 30, 45, 60]
+              .filter((sec) => sec <= Math.min(MAX_VIDEO_SEC, Math.ceil(duration)))
+              .map((sec) => {
+                const on = Math.abs(length - Math.min(sec, duration)) < 0.5;
+                return (
+                  <Press
+                    key={sec}
+                    accessibilityLabel={`Garder ${sec} secondes`}
+                    onPress={() => apply(startRef.current, sec, "start")}
+                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: on ? colors.accent : "rgba(255,255,255,0.12)" }}
+                  >
+                    <Text style={{ color: on ? colors.accentFg : "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{sec} s</Text>
+                  </Press>
+                );
+              })}
+          </View>
+        ) : null}
         {error ? <Text style={{ color: colors.danger, textAlign: "center" }}>{error}</Text> : null}
         <Press disabled={busy} onPress={() => void confirm()} style={{ height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", opacity: busy ? 0.7 : 1 }}>
           {busy ? (

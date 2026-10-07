@@ -76,7 +76,7 @@ import {
   unlockChatFromPrivate,
 } from "../lib/private-vault";
 import { pushProtect } from "../lib/screen-protection";
-import { orderedOtherStoryUsers, storyRing, type StoryRing } from "../lib/story-status";
+import { orderedOtherStoryUsers, storyRing, storySegments, type StoryRing } from "../lib/story-status";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
 import type { ConnectionChoice, MediaItem, StoryItem } from "../lib/types";
 import { isSeedDemoChat } from "../lib/seed";
@@ -224,7 +224,7 @@ export function ChatsScreen() {
             </Text>
           </Press>
           <Press onPress={() => { if (myStory) push({ name: "stories", userId: "me" }); }} style={{ width: 64, alignItems: "center" }}>
-            <Avatar user={me} size={56} ring={storyRing(stories, "me")} />
+            <Avatar user={me} size={56} ring={storyRing(stories, "me")} segments={storySegments(stories, "me")} />
             <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 11, color: colors.muted, width: "100%", textAlign: "center" }}>
               {t("yourStory")}
             </Text>
@@ -237,7 +237,7 @@ export function ChatsScreen() {
             return (
               <Press key={id} onPress={() => push({ name: "stories", userId: id })} style={{ width: 64, alignItems: "center" }}>
                 <View>
-                  <Avatar user={u} size={56} ring={ring === "none" ? "muted" : ring} />
+                  <Avatar user={u} size={56} ring={ring === "none" ? "muted" : ring} segments={storySegments(stories, id)} />
                   {withVideo || withMusic ? (
                     <View style={{ position: "absolute", right: -2, bottom: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                       {withVideo ? <Play size={12} color={colors.accentFg} /> : <Music size={12} color={colors.accentFg} />}
@@ -470,7 +470,7 @@ function ChatRow({
         {chat.type === "group" ? (
           <GroupAvatar name={chat.name} size={52} fallback={chat.avatar} />
         ) : (
-          <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} ring={ring} />
+          <Avatar user={shop && !mineShop ? shopFace(shop) : peer} size={52} ring={ring} segments={ring !== "none" && peer ? storySegments(stories, peer.id) : undefined} />
         )}
       </Press>
       <Press onPress={onOpen} onLongPress={onMenu} style={{ flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: colors.hair, paddingBottom: 10 }}>

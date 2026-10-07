@@ -1,3 +1,4 @@
+import Svg, { Circle, Path } from "react-native-svg";
 import { useEffect, useState } from "react";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
@@ -42,15 +43,45 @@ function useAvatarSource(path?: string) {
   return { source: undefined, unresolved: storage && unresolved };
 }
 
+/** Ring around a story avatar, cut in one piece per story item (small gaps between pieces). */
+function SegmentRing({ size, segments }: { size: number; segments: boolean[] }) {
+  const stroke = 2.5;
+  const r = size / 2 - stroke / 2;
+  const c = size / 2;
+  const n = Math.min(segments.length, 30);
+  const gap = n > 1 ? Math.min(10, 40 / n) : 0;
+  const sweep = 360 / n - gap;
+  const point = (deg: number) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return `${c + r * Math.cos(rad)} ${c + r * Math.sin(rad)}`;
+  };
+  return (
+    <Svg width={size} height={size} style={{ position: "absolute" }}>
+      {n === 1 ? (
+        <Circle cx={c} cy={c} r={r} stroke={segments[0] ? whiteA(0.28) : colors.accent} strokeWidth={stroke} fill="none" />
+      ) : (
+        segments.slice(0, n).map((seen, i) => {
+          const from = i * (360 / n) + gap / 2;
+          const to = from + sweep;
+          return <Path key={i} d={`M ${point(from)} A ${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${point(to)}`} stroke={seen ? whiteA(0.28) : colors.accent} strokeWidth={stroke} strokeLinecap="round" fill="none" />;
+        })
+      )}
+    </Svg>
+  );
+}
+
 export function Avatar({
   user,
   size = 48,
   ring,
+  segments,
   square,
 }: {
   user?: User | MeProfile | { displayName?: string; avatar?: string; firstName?: string };
   size?: number;
   ring?: "accent" | "muted" | "none";
+  /** Story items (true = seen): the ring is split in as many pieces, gold when new, grey when seen. */
+  segments?: boolean[];
   /** Fill a rectangular frame (parent clips) instead of a circle. */
   square?: boolean;
 }) {
@@ -62,6 +93,21 @@ export function Avatar({
     .slice(0, 1)
     .toUpperCase();
   const ringOn = ring === "accent" || ring === "muted";
+  if (ringOn && segments && segments.length && !square && !unresolved) {
+    const inner = size - 8;
+    return (
+      <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+        <SegmentRing size={size} segments={segments} />
+        <View style={{ width: inner, height: inner, borderRadius: inner / 2, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+          {src ? (
+            <Image source={src} style={{ width: inner, height: inner }} contentFit="cover" />
+          ) : (
+            <Text style={{ color: colors.accent, fontSize: inner * 0.38, fontFamily: "Inter_600SemiBold" }}>{initial}</Text>
+          )}
+        </View>
+      </View>
+    );
+  }
   return (
     <View
       style={{

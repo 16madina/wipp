@@ -14,6 +14,13 @@ export function storyRing(stories: StoryItem[], userId: string, now = Date.now()
   return live.some((story) => !story.viewed) ? "accent" : "muted";
 }
 
+/** One entry per live story item, oldest first: true when already seen. Drives the split ring around the avatar. */
+export function storySegments(stories: StoryItem[], userId: string, now = Date.now()): boolean[] {
+  return liveStoriesFor(stories, userId, now)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((story) => Boolean(story.viewed));
+}
+
 /** Other people only. Unviewed owners first, then fully viewed. Recency is stable inside each group. */
 export function orderedOtherStoryUsers(stories: StoryItem[], now = Date.now()) {
   const latest = new Map<string, { unseen: boolean; at: number }>();
