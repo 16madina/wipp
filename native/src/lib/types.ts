@@ -361,6 +361,8 @@ export type MediaItem = {
 
 export type Message = {
   id: string;
+  /** Id this phone gave the message before the server confirmed it: keeps the bubble (and its animation) stable when the server id replaces it. */
+  localKey?: string;
   chatId: string;
   fromId: string;
   type: "text" | "voice" | "image" | "video" | "listing" | "shop" | "system" | "sticker" | "scratch" | "file" | "gif" | "poll" | "event";

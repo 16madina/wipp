@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, FlatList, ScrollView, Text, TextInput, View } from "react-native";
-import { Clock, Gift, Search, Smile, Sparkles, User } from "lucide-react-native";
+import { Clock, Gift, Search, SendHorizontal, Smile, Sparkles, User, X } from "lucide-react-native";
 import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import { stickerRemoteUri } from "../lib/sticker-cdn";
@@ -33,6 +33,36 @@ function prefetchMoments() {
   })();
 }
 
+/** Has a real animation (WebP / video): previewed before sending instead of animating in the grid. */
+function isMoving(s: StickerDef) {
+  return Boolean(s.anim) || /\.(webp|gif)(\?|$)/i.test(s.src);
+}
+
+/** One sticker playing, big, over the grid: « Envoyer » or touch it to send, outside / × to close. */
+function StickerPreview({ sticker, size, onSend, onClose }: { sticker: StickerDef; size: number; onSend: () => void; onClose: () => void }) {
+  return (
+    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 52, zIndex: 5 }}>
+      <Press onPress={onClose} accessibilityLabel="Fermer l’aperçu" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} />
+      <View pointerEvents="box-none" style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 12 }}>
+        <View style={{ width: Math.min(300, size + 120), borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, paddingTop: 10, paddingBottom: 12, paddingHorizontal: 14, alignItems: "center" }}>
+          <Press onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 6, right: 6, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+            <X size={18} color={colors.muted} />
+          </Press>
+          <Press onPress={onSend} accessibilityLabel={`Envoyer ${sticker.labelFr}`} style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+            {/* key: switching sticker restarts the animation from the start */}
+            <WippSticker key={sticker.id} id={sticker.id} size={size} />
+          </Press>
+          <Text numberOfLines={1} style={{ marginTop: 6, color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{sticker.labelFr}</Text>
+          <Press onPress={onSend} style={{ marginTop: 10, alignSelf: "stretch", height: 42, borderRadius: 999, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+            <SendHorizontal size={18} color={colors.accentFg} />
+            <Text style={{ color: colors.accentFg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Envoyer</Text>
+          </Press>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export function StickerTray({
   onPick,
   onSurprise,
@@ -47,6 +77,8 @@ export function StickerTray({
   const [q, setQ] = useState("");
   const [closing, setClosing] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  /** Sticker being previewed (animated, alone) before sending. */
+  const [preview, setPreview] = useState<StickerDef | null>(null);
   const slideY = useRef(new Animated.Value(0)).current;
   const moji = stickersInPack("moji");
   const moments = stickersInPack("ani");
@@ -101,11 +133,30 @@ export function StickerTray({
 
   function pick(s: StickerDef) {
     haptic("select");
+    setPreview(null);
     dismiss(() => onPick(s));
+  }
+
+  /**
+   * The grid shows first images only (dozens of animations at once froze the iPhone).
+   * Touch = see it move, big, alone; touch again (or « Envoyer ») = send.
+   */
+  function tapSticker(s: StickerDef) {
+    if (!isMoving(s)) {
+      pick(s);
+      return;
+    }
+    if (preview?.id === s.id) {
+      pick(s);
+      return;
+    }
+    haptic("select");
+    setPreview(s);
   }
 
   function goto(next: Tab) {
     setQ("");
+    setPreview(null);
     setTab(next);
   }
 
@@ -221,7 +272,9 @@ export function StickerTray({
           contentContainerStyle={{ paddingBottom: 8 }}
           renderItem={({ item: s }) => (
             <Press
-              onPress={() => pick(s)}
+              onPress={() => tapSticker(s)}
+              onLongPress={() => setPreview(s)}
+              accessibilityLabel={s.labelFr}
               style={{
                 flex: 1,
                 aspectRatio: 1,
@@ -230,6 +283,8 @@ export function StickerTray({
                 alignItems: "center",
                 justifyContent: "center",
                 overflow: "hidden",
+                borderWidth: 2,
+                borderColor: preview?.id === s.id ? colors.accent : "transparent",
               }}
             >
               <WippSticker id={s.id} size={stickerSize} fill={tab === "pop"} still />
@@ -237,6 +292,14 @@ export function StickerTray({
           )}
         />
       )}
+      {preview ? (
+        <StickerPreview
+          sticker={preview}
+          size={Math.max(110, Math.min(170, trayH - 170))}
+          onSend={() => pick(preview)}
+          onClose={() => setPreview(null)}
+        />
+      ) : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: colors.hair, marginHorizontal: -12, paddingTop: 2, paddingBottom: 6 }}>
         {(
           [

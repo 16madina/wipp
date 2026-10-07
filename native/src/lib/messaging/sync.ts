@@ -474,12 +474,15 @@ export function mergeServerMessagesIntoState(
   const byId = new Map(existing.map((m) => [m.id, m]));
   for (const sm of serverMessages) {
     const mapped = mapServerMessageSync(sm, meServerId);
+    // The bubble keeps its first key across the optimistic → server id swap and later syncs (no remount, no replay).
+    const stableKey = byId.get(sm.id)?.localKey ?? (sm.clientId && sm.clientId !== sm.id && byId.has(sm.clientId) ? byId.get(sm.clientId)?.localKey ?? sm.clientId : undefined);
+    if (stableKey) mapped.localKey = stableKey;
     if (sm.clientId && sm.clientId !== sm.id) {
       const optimistic = byId.get(sm.clientId);
       if (optimistic) {
         byId.delete(sm.clientId);
         if (optimistic.type !== "text" && optimistic.type !== "system") {
-          byId.set(sm.id, keepLocalMedia(optimistic, mapped));
+          byId.set(sm.id, { ...keepLocalMedia(optimistic, mapped), localKey: stableKey });
           continue;
         }
         if (optimistic.text && mapped.enc && !mapped.text) {

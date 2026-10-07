@@ -9,6 +9,15 @@
         "dev"
       ],
       "port": 5173
+    },
+    {
+      "name": "native-web",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd native && CI=1 npx expo start --web --port 8083"
+      ],
+      "port": 8083
     }
   ]
 }

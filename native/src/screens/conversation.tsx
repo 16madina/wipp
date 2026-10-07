@@ -287,11 +287,13 @@ function ConversationInner({ chatId }: { chatId: string }) {
 
   useEffect(() => {
     const last = messages[messages.length - 1];
-    if (!last || last.id === seenMoment.current) return;
+    // Stable key: the server confirming my message (new id) must not play the Moment a second time.
+    const key = last ? last.localKey ?? last.id : null;
+    if (!last || key === seenMoment.current) return;
     if (last.type !== "sticker" || !last.stickerId) return;
     if (Date.now() - last.createdAt > 2000) return;
     if (!stickerById(last.stickerId)?.playMs) return;
-    seenMoment.current = last.id;
+    seenMoment.current = key;
     setMomentPlay((prev) => ({ id: last.stickerId as string, n: (prev?.n ?? 0) + 1 }));
   }, [messages]);
 
@@ -654,7 +656,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
 
   const pinned = messages.filter((m) => m.pinned && !m.deletedForAll);
   // Only the 3 most recent stickers animate; older ones show their first image (tap still plays them).
-  const liveStickers = new Set(messages.filter((m) => m.type === "sticker").slice(-3).map((m) => m.id));
+  const liveStickers = new Set(messages.filter((m) => m.type === "sticker").slice(-3).map((m) => m.localKey ?? m.id));
 
   function renderMessage({ item: m }: { item: Message }) {
     const mine = m.fromId === "me";
@@ -786,7 +788,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
-                <WippSticker id={m.stickerId ?? ""} size={96} still={!liveStickers.has(m.id)} />
+                <WippSticker id={m.stickerId ?? ""} size={96} still={!liveStickers.has(m.localKey ?? m.id)} />
               ) : null}
               {m.geo ? (
                 <Text style={{ color: mine ? mb.fg : colors.fg }}>
@@ -920,7 +922,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
           ref={listRef}
           scrollEnabled={!scratching}
           data={messages}
-          keyExtractor={(m) => m.id}
+          keyExtractor={(m) => m.localKey ?? m.id}
           renderItem={renderMessage}
           contentContainerStyle={{ padding: 12, paddingBottom: 16 }}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
