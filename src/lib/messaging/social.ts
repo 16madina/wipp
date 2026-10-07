@@ -251,18 +251,32 @@ type CardRow = {
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type WeekHours = Partial<Record<(typeof DAYS)[number], { o: string; c: string } | null>>;
 
-/** Social account: a handle ("salon.wipp") or a profile link → the handle. Null if unusable. */
-function socialHandle(raw: unknown, host: RegExp) {
+/**
+ * Social account: a profile link from the right site (kept whole, e.g. facebook.com/profile.php?id=…)
+ * or a handle (« @salon.wipp »). Anything else is refused with a clear message (never dropped silently).
+ */
+function socialValue(raw: unknown, domain: string, label: string) {
   if (typeof raw !== "string") return null;
-  let v = raw.trim();
+  const v = raw.trim();
   if (!v) return null;
-  const m = v.match(/^(?:https?:\/\/)?(?:www\.|m\.)?([a-z.]+)\/(@?[A-Za-z0-9._-]{1,60})/i);
-  if (m) {
-    if (!host.test(m[1]!)) return null;
-    v = m[2]!;
+  const looksLikeLink = /^https?:\/\//i.test(v) || /^(www\.|m\.|vm\.)?[a-z0-9.-]+\.[a-z]{2,}\//i.test(v) || v.toLowerCase().includes(domain);
+  if (looksLikeLink) {
+    try {
+      const url = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`);
+      const host = url.hostname.toLowerCase();
+      if (host === domain || host.endsWith(`.${domain}`) || (domain === "facebook.com" && (host === "fb.com" || host.endsWith(".fb.com")))) {
+        url.protocol = "https:";
+        url.hash = "";
+        return url.toString().slice(0, 300);
+      }
+    } catch {
+      /* falls through to the error */
+    }
+    throw new WippHttpError(400, "invalid_social", `Le lien ${label} doit venir de ${domain}.`);
   }
-  v = v.replace(/^@/, "");
-  return /^[A-Za-z0-9._-]{1,60}$/.test(v) ? v : null;
+  const handle = v.replace(/^@/, "");
+  if (/^[A-Za-z0-9._-]{1,60}$/.test(handle)) return handle;
+  throw new WippHttpError(400, "invalid_social", `${label} : mets ton @pseudo (sans espace ni accent) ou colle le lien de ta page.`);
 }
 
 function cleanTags(raw: unknown) {
@@ -441,9 +455,9 @@ export async function saveMyBusinessCard(
     hours: input.hours ? input.hours.slice(0, 200) : null,
     businessPhone: input.businessPhone ? input.businessPhone.slice(0, 40) : null,
     website: input.website ? input.website.slice(0, 200) : null,
-    instagram: socialHandle(input.instagram, /instagram\.com$/i),
-    tiktok: socialHandle(input.tiktok, /tiktok\.com$/i),
-    facebook: socialHandle(input.facebook, /(facebook|fb)\.com$/i),
+    instagram: socialValue(input.instagram, "instagram.com", "Instagram"),
+    tiktok: socialValue(input.tiktok, "tiktok.com", "TikTok"),
+    facebook: socialValue(input.facebook, "facebook.com", "Facebook"),
     tags: cleanTags(input.tags),
     weekHours: cleanWeekHours(input.weekHours),
   };

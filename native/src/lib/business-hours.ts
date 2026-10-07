@@ -29,10 +29,12 @@ export function openState(week: WeekHours | null | undefined, now = new Date()):
 }
 
 /** Profile links from the handles saved on the card. */
+/** A saved full link is opened as is; a handle becomes the profile link. */
+const linkOr = (v: string, make: (h: string) => string) => (/^https?:\/\//i.test(v) ? v : make(encodeURIComponent(v)));
 export const socialUrl = {
-  instagram: (h: string) => `https://instagram.com/${encodeURIComponent(h)}`,
-  tiktok: (h: string) => `https://www.tiktok.com/@${encodeURIComponent(h)}`,
-  facebook: (h: string) => `https://www.facebook.com/${encodeURIComponent(h)}`,
+  instagram: (v: string) => linkOr(v, (h) => `https://instagram.com/${h}`),
+  tiktok: (v: string) => linkOr(v, (h) => `https://www.tiktok.com/@${h}`),
+  facebook: (v: string) => linkOr(v, (h) => `https://www.facebook.com/${h}`),
 };
 
 export function websiteUrl(raw: string) {
