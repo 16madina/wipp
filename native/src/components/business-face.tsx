@@ -447,6 +447,21 @@ export function BusinessCardExperience({
           </View>
         ) : null}
 
+        {(card.services ?? []).length ? (
+          <View style={{ marginTop: 18 }}>
+            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>Nos services</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
+              {(card.services ?? []).map((x, i) => (
+                <View key={`${x.name}-${i}`} style={{ width: 132, height: 150, borderRadius: 18, overflow: "hidden", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair }}>
+                  {x.photoUrl ? <Image source={{ uri: x.photoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
+                  <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.75)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 64 }} />
+                  <Text numberOfLines={1} style={{ position: "absolute", left: 10, right: 10, bottom: 10, color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{x.name}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
         {photos.length ? (
           <View style={{ marginTop: 18 }}>
             <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>Photos de la boutique</Text>
@@ -458,11 +473,12 @@ export function BusinessCardExperience({
           </View>
         ) : null}
 
-        {owner ? (
+        {/* QR of the card, for everyone (owner and visitors): scan or download it. */}
+        {card.publicId ? (
           <View style={{ marginHorizontal: 16, marginTop: 18, borderRadius: 20, backgroundColor: colors.surface2, padding: 14, flexDirection: "row", gap: 14, alignItems: "center" }}>
             <QrCard value={qr} size={120} pad={6} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>Scannez pour{"\n"}découvrir ma carte{"\n"}sur WIPP</Text>
+              <Text style={{ color: colors.fg, fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>{owner ? "Scannez pour\ndécouvrir ma carte\nsur WIPP" : "Scannez pour\ndécouvrir cette\nboutique sur WIPP"}</Text>
               <Press onPress={() => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", "Le téléchargement a échoué."))} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Download size={16} color={colors.accent} />
                 <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Télécharger le QR</Text>

@@ -14,6 +14,8 @@ import {
   Hand,
   HelpCircle,
   ImagePlus,
+  Plus,
+  X,
   Lock,
   LogOut,
   MapPin,
@@ -1232,7 +1234,8 @@ function cardErrorMessage(e: unknown, fallback: string): string {
   return fallback;
 }
 
-type Draft = CardInput & { coverUrl: string | null; logoUrl: string | null; photoUrls: string[] };
+type DraftService = { name: string; photo: string | null; url: string | null };
+type Draft = Omit<CardInput, "services"> & { coverUrl: string | null; logoUrl: string | null; photoUrls: string[]; services: DraftService[] };
 const emptyDraft: Draft = {
   name: "",
   category: "",
@@ -1256,6 +1259,7 @@ const emptyDraft: Draft = {
   facebook: null,
   tags: [],
   weekHours: null,
+  services: [],
 };
 
 /** Country from a verified E.164 number: longest calling code wins, "+1" means Canada. */
@@ -1280,6 +1284,8 @@ export function BusinessCardEditorScreen() {
   const [countryOpen, setCountryOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [hoursOpen, setHoursOpen] = useState(false);
+  /** Service being added: its photo is already sent, the name is typed next. */
+  const [newService, setNewService] = useState<{ name: string; photo: string | null; url: string | null } | null>(null);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const cardCountry = findWorldCountry(draft.country) ?? DEFAULT_COUNTRY;
   function rememberProfile(id: string) {
@@ -1328,6 +1334,7 @@ export function BusinessCardEditorScreen() {
             facebook: r.card.facebook ?? null,
             tags: r.card.tags ?? [],
             weekHours: r.card.weekHours ?? null,
+            services: (card.services ?? []).map((x) => ({ name: x.name, photo: x.photoPath, url: x.photoUrl })),
           });
           if (card.coverUnresolved || card.logoUnresolved) {
             setError("Une image enregistrée n’a pas pu être affichée. Tu peux la renvoyer.");
@@ -1396,6 +1403,28 @@ export function BusinessCardEditorScreen() {
     }
     return media.path;
   }
+  async function pickServicePhoto() {
+    setError("");
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setError("Accès aux photos refusé.");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: [1, 1] });
+    const asset = res.assets?.[0];
+    if (res.canceled || !asset?.uri) return;
+    setUploadLabel("Envoi…");
+    try {
+      const id = await resolveProfile();
+      const media = await uploadBusinessImageFile(id, asset.uri, asset.mimeType ?? "image/jpeg", "photo");
+      setNewService((cur) => ({ name: cur?.name ?? "", photo: media.path, url: media.url || asset.uri }));
+    } catch (e) {
+      setError(cardErrorMessage(e, "Envoi de l’image impossible. Réessaie."));
+    } finally {
+      setUploadLabel("");
+    }
+  }
+
   async function pick(role: "cover" | "logo" | "photo") {
     setError("");
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1471,6 +1500,7 @@ export function BusinessCardEditorScreen() {
         facebook: draft.facebook,
         tags: (draft.tags ?? []).map((t) => t.trim()).filter(Boolean),
         weekHours: draft.weekHours,
+        services: draft.services.map((x) => ({ name: x.name.trim(), photo: x.photo })).filter((x) => x.name),
       });
       // Position for "à proximité": the picked address, else the city centre.
       void (async () => {
@@ -1633,6 +1663,63 @@ export function BusinessCardEditorScreen() {
           <Field label="TikTok" value={draft.tiktok ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("tiktok", v || null)} />
           <Field label="Facebook" value={draft.facebook ?? ""} placeholder="facebook.com/monsalon" autoCapitalize="none" onChangeText={(v) => set("facebook", v || null)} />
         </View>
+        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Nos services</Text>
+        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>Ce que tu proposes (ex. Coupes, Tresses, Coloration), avec une photo. Jusqu’à 12.</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {draft.services.map((x, i) => (
+            <View key={`${x.name}-${i}`} style={{ width: 96 }}>
+              <View style={{ width: 96, height: 96, borderRadius: 14, overflow: "hidden", backgroundColor: colors.navy }}>
+                {x.url ? <Image source={{ uri: x.url }} style={{ width: 96, height: 96 }} contentFit="cover" /> : null}
+                <Press
+                  accessibilityLabel={`Retirer ${x.name}`}
+                  onPress={() => setDraft((d) => ({ ...d, services: d.services.filter((_s, k) => k !== i) }))}
+                  style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}
+                >
+                  <X size={14} color="#fff" />
+                </Press>
+              </View>
+              <Text numberOfLines={1} style={{ marginTop: 4, color: colors.fg, fontSize: 12, textAlign: "center" }}>{x.name}</Text>
+            </View>
+          ))}
+          {draft.services.length < 12 && !newService ? (
+            <Press onPress={() => setNewService({ name: "", photo: null, url: null })} style={{ width: 96, height: 96, borderRadius: 14, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <Plus size={22} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontSize: 12 }}>Ajouter</Text>
+            </Press>
+          ) : null}
+        </ScrollView>
+        {newService ? (
+          <View style={{ marginTop: 10, padding: 12, borderRadius: 16, backgroundColor: colors.navy, flexDirection: "row", gap: 12, alignItems: "center" }}>
+            <Press onPress={() => void pickServicePhoto()} accessibilityLabel="Choisir la photo du service" style={{ width: 72, height: 72, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+              {newService.url ? <Image source={{ uri: newService.url }} style={{ width: 72, height: 72 }} contentFit="cover" /> : <ImagePlus size={22} color={colors.accent} />}
+            </Press>
+            <View style={{ flex: 1, gap: 8 }}>
+              <TextInput
+                value={newService.name}
+                onChangeText={(v) => setNewService((cur) => (cur ? { ...cur, name: v.slice(0, 30) } : cur))}
+                placeholder="Nom du service (ex. Tresses)"
+                placeholderTextColor={colors.muted}
+                style={{ height: 40, borderRadius: 10, backgroundColor: colors.surface2, paddingHorizontal: 10, color: colors.fg }}
+              />
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Press onPress={() => setNewService(null)} style={{ flex: 1, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}>
+                  <Text style={{ color: colors.fg }}>Annuler</Text>
+                </Press>
+                <Press
+                  disabled={!newService.name.trim()}
+                  onPress={() => {
+                    const ns = newService;
+                    setDraft((d) => ({ ...d, services: [...d.services, { name: ns.name.trim(), photo: ns.photo, url: ns.url }].slice(0, 12) }));
+                    setNewService(null);
+                  }}
+                  style={{ flex: 1, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: newService.name.trim() ? 1 : 0.5 }}
+                >
+                  <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>Ajouter</Text>
+                </Press>
+              </View>
+            </View>
+          </View>
+        ) : null}
         <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de la boutique</Text>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
           {draft.photoUrls.map((url) => (

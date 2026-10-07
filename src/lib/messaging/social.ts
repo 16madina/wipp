@@ -246,7 +246,28 @@ type CardRow = {
   tags?: string[] | null;
   week_hours?: unknown;
   is_verified?: boolean | null;
+  services?: unknown;
 };
+
+type Service = { name: string; photo: string | null };
+
+/** Stored services → clean list (max 12). Photos must be in the owner's folder when saving. */
+function cleanServices(raw: unknown, ownerId?: string): Service[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Service[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as { name?: unknown; photo?: unknown; photoPath?: unknown };
+    const name = typeof r.name === "string" ? r.name.replace(/\s+/g, " ").trim().slice(0, 30) : "";
+    if (!name) continue;
+    const rawPhoto = typeof r.photo === "string" ? r.photo : typeof r.photoPath === "string" ? r.photoPath : "";
+    const photo = rawPhoto.trim() || null;
+    if (photo && ownerId && !photo.startsWith(`${ownerId}/`)) throw new WippHttpError(400, "invalid", "Image hors du dossier du compte.");
+    out.push({ name, photo });
+    if (out.length >= 12) break;
+  }
+  return out;
+}
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type WeekHours = Partial<Record<(typeof DAYS)[number], { o: string; c: string } | null>>;
@@ -343,7 +364,14 @@ async function withServerMedia(card: ReturnType<typeof mapCard>) {
     card.logoUrl ? Promise.resolve(card.logoUrl) : signCardPath(card.logoPath),
     ...card.photoPaths.map((path) => signCardPath(path)),
   ]);
-  return { ...card, coverUrl, logoUrl, photoUrls: photos.filter((url): url is string => Boolean(url)) };
+  const serviceUrls = await Promise.all(card.services.map((x) => (x.photoPath ? signCardPath(x.photoPath) : Promise.resolve(null))));
+  return {
+    ...card,
+    coverUrl,
+    logoUrl,
+    photoUrls: photos.filter((url): url is string => Boolean(url)),
+    services: card.services.map((x, i) => ({ ...x, photoUrl: serviceUrls[i] ?? null })),
+  };
 }
 
 function mapCard(row: CardRow) {
@@ -374,6 +402,7 @@ function mapCard(row: CardRow) {
     tags: (row.tags ?? []).slice(0, 3),
     weekHours: cleanWeekHours(row.week_hours),
     verified: Boolean(row.is_verified),
+    services: cleanServices(row.services).map((x) => ({ name: x.name, photoPath: x.photo, photoUrl: null as string | null })),
     coverUrl: http(row.cover_url),
     logoUrl: http(row.logo_url),
     photoUrls: (row.photo_urls ?? []).filter((path) => http(path)).slice(0, 8),
@@ -405,7 +434,7 @@ export async function getMyBusinessCard(meId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
     from wipp_business_cards where owner_profile_id = ${meId} limit 1
   `;
   return { profileId: meId, userCountry: null as string | null, card: rows[0] ? await withServerMedia(mapCard(rows[0])) : null };
@@ -432,6 +461,7 @@ export async function saveMyBusinessCard(
     facebook?: string | null;
     tags?: string[];
     weekHours?: unknown;
+    services?: unknown;
   },
 ) {
   const name = (input.name ?? "").trim();
@@ -441,7 +471,7 @@ export async function saveMyBusinessCard(
   const sql = await getSql();
   const current = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
     from wipp_business_cards where owner_profile_id = ${meId} limit 1
   `;
   const fields = {
@@ -462,6 +492,8 @@ export async function saveMyBusinessCard(
     weekHours: cleanWeekHours(input.weekHours),
   };
   const weekJson = fields.weekHours ? JSON.stringify(fields.weekHours) : null;
+  // Not sent (older app) → keep the services already saved.
+  const servicesJson = JSON.stringify(input.services === undefined ? cleanServices(current[0]?.services) : cleanServices(input.services, meId));
   const tagsJoined = fields.tags.join("\u001f");
   const photos = galleryPaths(meId, input.photoPaths, current[0]?.photo_urls ?? []).join("\u001f");
   if (current[0]) {
@@ -482,6 +514,7 @@ export async function saveMyBusinessCard(
         facebook = ${fields.facebook},
         tags = ARRAY(SELECT x FROM unnest(string_to_array(${tagsJoined}, E'\u001f')) AS t(x) WHERE x <> ''),
         week_hours = ${weekJson}::jsonb,
+        services = ${servicesJson}::jsonb,
         cover_url = ${cover},
         logo_url = ${logo},
         photo_urls = ARRAY(SELECT trim(x) FROM unnest(string_to_array(${photos}, E'\u001f')) AS t(x) WHERE trim(x) <> ''),
@@ -491,7 +524,7 @@ export async function saveMyBusinessCard(
     `;
     const next = await sql<CardRow>`
       select id, public_id, owner_profile_id, name, category, description, country, city,
-             address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+             address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
       from wipp_business_cards where id = ${current[0].id} and owner_profile_id = ${meId} limit 1
     `;
     if (!next[0]) throw new WippHttpError(404, "not_found", "Carte introuvable.");
@@ -502,7 +535,7 @@ export async function saveMyBusinessCard(
     insert into wipp_business_cards (
       public_id, owner_profile_id, name, category, description, country, city,
       address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published,
-      instagram, tiktok, facebook, tags, week_hours
+      instagram, tiktok, facebook, tags, week_hours, services
     ) values (
       ${publicId}, ${meId}, ${fields.name}, ${fields.category}, ${fields.description},
       ${fields.country}, ${fields.city}, ${fields.address}, ${fields.showAddress}, ${fields.hours},
@@ -511,10 +544,11 @@ export async function saveMyBusinessCard(
       true,
       ${fields.instagram}, ${fields.tiktok}, ${fields.facebook},
       ARRAY(SELECT x FROM unnest(string_to_array(${tagsJoined}, E'\u001f')) AS t(x) WHERE x <> ''),
-      ${weekJson}::jsonb
+      ${weekJson}::jsonb,
+      ${servicesJson}::jsonb
     )
     returning id, public_id, owner_profile_id, name, category, description, country, city,
-      address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+      address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
   `;
   if (!created[0]) throw new WippHttpError(500, "profile_missing", "Carte introuvable.");
   return withServerMedia(mapCard(created[0]));
@@ -525,7 +559,7 @@ export async function listPublicBusinessCards(q = "") {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
     from wipp_business_cards
     where is_published = true
       and (
@@ -547,7 +581,7 @@ export async function getPublicBusinessCard(publicId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
     from wipp_business_cards
     where lower(public_id) = ${id} and is_published = true
     limit 1
@@ -562,7 +596,7 @@ export async function getBusinessCardByOwner(profileId: string) {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
     from wipp_business_cards
     where owner_profile_id = ${id} and is_published = true
     order by updated_at desc

@@ -38,6 +38,8 @@ export type BusinessCardView = {
   weekHours?: WeekHours | null;
   /** Blue badge, granted by WIPP. */
   verified?: boolean;
+  /** « Nos services »: name + photo (max 12). */
+  services?: { name: string; photoPath: string | null; photoUrl: string | null }[];
 };
 
 export const WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -69,6 +71,7 @@ export type CardInput = {
   facebook?: string | null;
   tags?: string[];
   weekHours?: WeekHours | null;
+  services?: { name: string; photo: string | null }[];
 };
 
 export const CARD_CATEGORIES = [

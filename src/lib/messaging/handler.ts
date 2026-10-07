@@ -1103,6 +1103,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         facebook?: string | null;
         tags?: string[];
         weekHours?: unknown;
+        services?: unknown;
       }>(request);
       return json(await saveMyBusinessCard(me.id, body));
     }
