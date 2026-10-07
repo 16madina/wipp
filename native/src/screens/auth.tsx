@@ -47,7 +47,7 @@ const ONB: { kind: "tap" | "globe" | "privacy" | "together"; title: I18nKey; acc
 
 type Measurable = { measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void };
 
-function Artwork({ source, children, fit = "fill" }: { source: number; fit?: "fill" | "cover"; children?: ReactNode | ((reveal: (target: Measurable | null) => void) => ReactNode) }) {
+function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: number; fit?: "fill" | "cover"; imageTop?: number; children?: ReactNode | ((reveal: (target: Measurable | null) => void) => ReactNode) }) {
   const insets = useSafeAreaInsets();
   const active = useRef<Measurable | null>(null);
   const keyboardTop = useRef<number | null>(null);
@@ -102,11 +102,11 @@ function Artwork({ source, children, fit = "fill" }: { source: number; fit?: "fi
   }, [revealActive]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: imageTop ? "#000" : colors.bg }}>
       <Image
         pointerEvents="none"
         source={source}
-        style={{ position: "absolute", zIndex: 0, width: "100%", height: "100%" }}
+        style={{ position: "absolute", zIndex: 0, top: imageTop, left: 0, right: 0, bottom: 0 }}
         contentFit={fit}
       />
       <Animated.View style={{ flex: 1, zIndex: 1, elevation: 2, transform: [{ translateY }] }}>
@@ -1053,18 +1053,21 @@ export function ProfileReferenceScreen() {
   // The background is drawn "cover": find where the mascot's feet land on this screen,
   // so the form starts right under them (image 941×1670, feet at ~38.5 % of its height).
   const win = useWindowDimensions();
-  const imgH = Math.max((win.width / 941) * 1670, win.height);
-  const feetY = (win.height - imgH) / 2 + imgH * 0.385;
+  // The picture starts under the status bar, so the clock never covers the WIPP sign.
+  const boxH = win.height - insets.top;
+  const imgH = Math.max((win.width / 941) * 1670, boxH);
+  const feetY = insets.top + (boxH - imgH) / 2 + imgH * 0.385;
   const field = { height: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,216,77,0.28)", backgroundColor: "rgba(0,0,0,0.38)", paddingHorizontal: 12, justifyContent: "center" as const };
   const input = { flex: 1, color: colors.fg, fontSize: 15, ...noWebOutline };
   const label = { color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 5 };
 
   return (
-    <Artwork source={authProfileBg} fit="cover">
+    <Artwork source={authProfileBg} fit="cover" imageTop={insets.top}>
       {(reveal) => <>
-      <View style={{ position: "absolute", top: insets.top + 6, left: 0 }}>
-        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ marginLeft: 8, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
-          <ChevronLeft size={24} color={colors.fg} />
+      {/* Thin arrow in the corner, clear of the WIPP sign (no dark disc over the picture). */}
+      <View style={{ position: "absolute", top: insets.top, left: 0 }}>
+        <Pressable accessibilityLabel="Retour" hitSlop={10} onPress={pop} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <ChevronLeft size={24} color="rgba(255,255,255,0.85)" />
         </Pressable>
       </View>
       {/* No card: the form sits in the empty space of the picture, under the mascot. */}
