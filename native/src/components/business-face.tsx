@@ -191,11 +191,12 @@ export function BusinessCardExperience({
           right={<MoreHorizontal size={22} color={colors.fg} />}
         />
       </GlassHeader>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+      {/* Centred: the card sits lower and the visitor buttons follow it (no big empty gap). */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 16 }}>
         <View style={{ marginHorizontal: 16, borderRadius: 24, overflow: "hidden", backgroundColor: colors.navy }}>
-          <View style={{ height: 168, backgroundColor: colors.navy }}>
+          <View style={{ height: 130, backgroundColor: colors.navy }}>
             {card.coverUrl ? (
-              <Image source={{ uri: card.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 168 }} contentFit="cover" />
+              <Image source={{ uri: card.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 130 }} contentFit="cover" />
             ) : owner ? (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ color: card.coverUnresolved ? colors.danger : colors.muted, textAlign: "center", paddingHorizontal: 16 }}>
@@ -260,6 +261,31 @@ export function BusinessCardExperience({
             ) : null}
           </View>
         </View>
+        {!owner ? (
+          <View style={{ paddingHorizontal: 16, marginTop: 16, gap: 10 }}>
+            <Press onPress={onWrite} style={{ height: 54, borderRadius: 16, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", opacity: opening ? 0.6 : 1 }}>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{opening ? "Ouverture…" : "Écrire sur WIPP"}</Text>
+            </Press>
+            <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+              {onCall ? (
+                <Press onPress={onCall} style={{ alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, minWidth: 72 }}>
+                  <Phone size={20} color={colors.fg} />
+                  <Text style={{ color: colors.fg, fontSize: 13 }}>Appeler</Text>
+                </Press>
+              ) : null}
+              {onRoute ? (
+                <Press onPress={onRoute} style={{ alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, minWidth: 72 }}>
+                  <MapPin size={20} color={colors.fg} />
+                  <Text style={{ color: colors.fg, fontSize: 13 }}>Itinéraire</Text>
+                </Press>
+              ) : null}
+              <Press onPress={() => void Share.share({ message: `${card.name}\n${link}` })} style={{ alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, minWidth: 72 }}>
+                <Share2 size={20} color={colors.fg} />
+                <Text style={{ color: colors.fg, fontSize: 13 }}>Partager</Text>
+              </Press>
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
       {owner ? (
         <View style={{ flexDirection: "row", justifyContent: "space-around", paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: whiteA(0.06) }}>
@@ -276,31 +302,7 @@ export function BusinessCardExperience({
             <Text style={{ color: colors.fg, fontSize: 13 }}>Télécharger</Text>
           </Press>
         </View>
-      ) : (
-        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), gap: 10, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: whiteA(0.06) }}>
-          <Press onPress={onWrite} style={{ height: 54, borderRadius: 16, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", opacity: opening ? 0.6 : 1 }}>
-            <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{opening ? "Ouverture…" : "Écrire sur WIPP"}</Text>
-          </Press>
-          <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-            {onCall ? (
-              <Press onPress={onCall} style={{ alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, minWidth: 72 }}>
-                <Phone size={20} color={colors.fg} />
-                <Text style={{ color: colors.fg, fontSize: 13 }}>Appeler</Text>
-              </Press>
-            ) : null}
-            {onRoute ? (
-              <Press onPress={onRoute} style={{ alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, minWidth: 72 }}>
-                <MapPin size={20} color={colors.fg} />
-                <Text style={{ color: colors.fg, fontSize: 13 }}>Itinéraire</Text>
-              </Press>
-            ) : null}
-            <Press onPress={() => void Share.share({ message: `${card.name}\n${link}` })} style={{ alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, minWidth: 72 }}>
-              <Share2 size={20} color={colors.fg} />
-              <Text style={{ color: colors.fg, fontSize: 13 }}>Partager</Text>
-            </Press>
-          </View>
-        </View>
-      )}
+      ) : null}
     </ScreenRoot>
     </EdgeBack>
   );
