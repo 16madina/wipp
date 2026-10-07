@@ -77,7 +77,7 @@ Répondre honnêtement :
 
 - [x] (fait le 2026-10-07) Comptes `wipp_test_a` / `wipp_test_b` (« REMOVE BEFORE PRODUCTION ») masqués ou supprimés sur le serveur
 - [ ] Compte démo créé (section 2) et notes remplies (section 1)
-- [ ] France : déclaration ANSSI faite **ou** France retirée des pays
+- [x] France : déclaration ANSSI acceptée le 2026-10-07 — dossier n° 34493862 (« WIPP Messenger »). Déposer l’attestation PDF dans App Store Connect → Informations sur l’app → Documentation sur le chiffrement. Valable pour les versions suivantes tant que le chiffrement ne change pas.
 - [ ] Politique de confidentialité en ligne et à jour : chiffrement de bout en bout, vocaux, stories, zone approximative (À proximité), abonnés des boutiques, suppression du compte
 - [ ] Étiquettes de confidentialité d'App Store Connect qui correspondent (téléphone, contacts si utilisés, localisation approximative, photos/vidéos, identifiants)
 - [ ] Lien Support qui marche (page avec un e-mail de contact)
