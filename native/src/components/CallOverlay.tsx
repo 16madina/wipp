@@ -32,6 +32,13 @@ function streamURL(track: { mediaStream?: unknown } | null) {
   return stream?.toURL?.() ?? null;
 }
 
+type RoomTile = { key: string; local: boolean; identity: string; url: string | null; micOn: boolean; speaking: boolean };
+
+/** LiveKit identity is "p_" + the profile id without symbols (see the token route). */
+function identityKey(profileId: string) {
+  return `p_${profileId.replace(/^srvuser:/, "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 40)}`;
+}
+
 function terminalPhases(phase: CallPhase) {
   return phase === "ended" || phase === "declined" || phase === "missed" || phase === "busy" || phase === "failed";
 }
@@ -51,6 +58,10 @@ export function CallOverlay() {
   const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
   const [localUrl, setLocalUrl] = useState<string | null>(null);
   const [remoteMuted, setRemoteMuted] = useState(false);
+  /** Group call: everyone in the room (me first), for the mosaic. */
+  const [tiles, setTiles] = useState<RoomTile[]>([]);
+  const users = useWippStore((s) => s.users);
+  const me = useWippStore((s) => s.me);
   const [swapped, setSwapped] = useState(false);
   // iOS video views can come back black after being unmounted (mini player, background): remount them.
   const [viewEpoch, setViewEpoch] = useState(0);
@@ -206,6 +217,39 @@ export function CallOverlay() {
     room.on(RoomEvent.LocalTrackPublished, (pub) => {
       if (pub.track) bind(pub.track as LocalVideoTrack, true);
     });
+    // Mosaic (group calls): rebuild the list of people on every room change.
+    const refreshTiles = () => {
+      if (cancelled || !session.group) return;
+      const people = [room.localParticipant, ...room.remoteParticipants.values()];
+      setTiles(
+        people.map((p) => {
+          const cam = p.getTrackPublication(Track.Source.Camera);
+          const mic = p.getTrackPublication(Track.Source.Microphone);
+          return {
+            key: p.identity || p.sid,
+            local: p === room.localParticipant,
+            identity: p.identity,
+            url: cam?.track && !cam.isMuted ? streamURL(cam.track) : null,
+            micOn: Boolean(mic && !mic.isMuted),
+            speaking: p.isSpeaking,
+          };
+        }),
+      );
+    };
+    for (const ev of [
+      RoomEvent.Connected,
+      RoomEvent.ParticipantConnected,
+      RoomEvent.ParticipantDisconnected,
+      RoomEvent.TrackSubscribed,
+      RoomEvent.TrackUnsubscribed,
+      RoomEvent.TrackMuted,
+      RoomEvent.TrackUnmuted,
+      RoomEvent.LocalTrackPublished,
+      RoomEvent.LocalTrackUnpublished,
+      RoomEvent.ActiveSpeakersChanged,
+    ]) {
+      room.on(ev, refreshTiles);
+    }
     room.on(RoomEvent.Reconnecting, () => patch({ phase: "reconnecting" }));
     room.on(RoomEvent.Reconnected, () => patch({ phase: "connected" }));
     room.on(RoomEvent.Disconnected, () => {
@@ -383,6 +427,15 @@ export function CallOverlay() {
     if (state.stack.at(-1)?.name === "active-call") state.pop();
     patch({ pip: true });
   };
+  // Names and photos of the people in a group call (from the contacts list, else a neutral tile).
+  const byIdentity = new Map<string, { displayName: string; avatar?: string }>();
+  for (const u of Object.values(users)) if (u?.id) byIdentity.set(identityKey(u.id), { displayName: u.displayName || `@${u.username}`, avatar: u.avatar });
+  const groupTiles = session.group
+    ? tiles.map((tile) => {
+        const who = tile.local ? { displayName: "Toi", avatar: me.avatar } : byIdentity.get(tile.identity) ?? { displayName: "Membre" };
+        return { key: tile.key, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };
+      })
+    : undefined;
   const peer = {
     displayName: title,
     username: user?.username || session.peerUsername,
@@ -400,6 +453,7 @@ export function CallOverlay() {
       swapped={swapped}
       setSwapped={setSwapped}
       viewEpoch={viewEpoch}
+      groupTiles={groupTiles}
       onMinimize={minimize}
       RTCView={RTCView as never}
       onHangup={() => {

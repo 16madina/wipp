@@ -223,6 +223,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite: await createGroupCall({ callerId: me.id, chatId: body.chatId, kind: body.kind }) }, 201);
     }
 
+    if (method === "GET" && a === "calls" && b === "group" && c && d === "active") {
+      const me = await resolveSession(bearer(request));
+      const { activeGroupCall } = await import("@/lib/messaging/calls");
+      return json({ call: await activeGroupCall(me.id, c) });
+    }
+
     if (method === "POST" && a === "calls" && b === "group" && c && d === "state") {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ state?: string }>(request);

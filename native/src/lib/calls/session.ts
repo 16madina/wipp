@@ -1,3 +1,4 @@
+import { useWippStore } from "../store";
 import { create } from "zustand";
 import {
   answerCall,
@@ -195,7 +196,7 @@ export async function openCall(input: {
         return;
       }
       useCallSession.getState().patch({
-        displayName: invite.caller.displayName || "WIPP",
+        displayName: (invite.group && groupName(invite.chatId)) || invite.caller.displayName || "WIPP",
         userId: `srvuser:${invite.caller.id}`,
         peerUsername: invite.caller.username || undefined,
         peerAvatar: invite.caller.avatarUrl || undefined,
@@ -210,7 +211,7 @@ export async function openCall(input: {
     }
     if (input.group && input.chatId) {
       const created = await startGroupCall(input.chatId, input.kind);
-      useCallSession.getState().patch({ callId: created.invite.id, phase: "connecting", displayName: "Groupe" });
+      useCallSession.getState().patch({ callId: created.invite.id, phase: "connecting", displayName: groupName(input.chatId) || "Groupe" });
       await attachToken(created.invite.id, input.kind === "video");
       return;
     }
@@ -227,6 +228,32 @@ export async function openCall(input: {
       phase: "failed",
       note: errorText(err, "Appel impossible."),
     });
+  }
+}
+
+/** Name of a group chat from the local list ("srv:g_…" or "g_…"). */
+function groupName(chatId?: string | null) {
+  if (!chatId) return undefined;
+  const id = chatId.startsWith("srv:") ? chatId : `srv:${chatId}`;
+  return useWippStore.getState().chats.find((c) => c.id === id)?.name;
+}
+
+/** Join a group call already in progress (from the banner in the group conversation). */
+export async function joinGroupCall(input: { callId: string; chatId: string; kind: "audio" | "video" }) {
+  const current = useCallSession.getState().session;
+  if (current?.callId === input.callId) {
+    useCallSession.getState().patch({ pip: false });
+    return;
+  }
+  useCallSession.setState({
+    session: { ...seed({ userId: "call", kind: input.kind, dir: "in", callId: input.callId, chatId: input.chatId, group: true, displayName: groupName(input.chatId) || "Groupe" }), phase: "connecting" },
+  });
+  try {
+    await setGroupState(input.callId, "joining");
+    await attachToken(input.callId, input.kind === "video");
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    useCallSession.getState().patch({ phase: status === 410 ? "ended" : "failed", note: status === 410 ? "Cet appel est terminé." : errorText(err, "Impossible de rejoindre l’appel.") });
   }
 }
 

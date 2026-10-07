@@ -230,6 +230,51 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
+export type GroupTile = { key: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean };
+
+/** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
+function GroupMosaic({ tiles, RTCView, viewEpoch }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number }) {
+  const shown = tiles.slice(0, 8);
+  const cols = shown.length <= 2 ? 1 : 2;
+  const rows = Math.ceil(shown.length / cols);
+  return (
+    <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap" }}>
+      {shown.map((tile) => (
+        <View key={tile.key} style={{ width: `${100 / cols}%`, height: `${100 / rows}%`, padding: 4 }}>
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 18,
+              overflow: "hidden",
+              backgroundColor: "rgba(255,255,255,0.06)",
+              borderWidth: 2,
+              borderColor: tile.speaking ? GOLD : "transparent",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {tile.url ? (
+              <RTCView key={`tile-${viewEpoch}-${tile.url}`} streamURL={tile.url} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={tile.local} zOrder={1} />
+            ) : (
+              <Avatar user={{ displayName: tile.name, avatar: tile.avatar }} size={rows > 2 ? 56 : 84} />
+            )}
+            <View style={{ position: "absolute", left: 8, right: 8, bottom: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
+                {tile.name}
+              </Text>
+              {!tile.micOn ? (
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                  <MicOff size={12} color="#fff" />
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function CallScreen({
   session,
   peer,
@@ -241,6 +286,7 @@ export function CallScreen({
   swapped,
   setSwapped,
   viewEpoch,
+  groupTiles,
   onMinimize,
   onHangup,
   RTCView,
@@ -255,6 +301,8 @@ export function CallScreen({
   swapped: boolean;
   setSwapped: (fn: (v: boolean) => boolean) => void;
   viewEpoch: number;
+  /** Group call: everyone in the room (me first). */
+  groupTiles?: GroupTile[];
   onMinimize: () => void;
   onHangup: () => void;
   RTCView: RTC;
@@ -273,8 +321,10 @@ export function CallScreen({
   const connected = session.phase === "connected";
   const remoteVid = remoteUrl && !remoteMuted ? remoteUrl : null;
   const localVid = localUrl && video && !session.camOff ? localUrl : null;
+  // Group call in progress: mosaic of everyone instead of the 1-to-1 layout.
+  const mosaic = Boolean(session.group && (connected || session.phase === "reconnecting") && groupTiles && groupTiles.length > 0);
   // The remote camera is only shown once the call is accepted and connected.
-  const videoLive = video && connected && !!remoteVid;
+  const videoLive = !mosaic && video && connected && !!remoteVid;
   const flip = swapped && !!remoteVid && !!localVid;
   const main = videoLive ? (flip ? localVid : remoteVid) : null;
   const mini = videoLive ? (flip ? remoteVid : localVid) : null;
@@ -348,8 +398,20 @@ export function CallScreen({
         </View>
       ) : null}
 
+      {mosaic && groupTiles ? (
+        <View style={{ position: "absolute", top: insets.top + 56, left: 8, right: 8, bottom: insets.bottom + 190 }}>
+          <View style={{ alignItems: "center", marginBottom: 6 }}>
+            <Text numberOfLines={1} style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{peer.displayName}</Text>
+            <Text style={{ color: GREY, fontSize: 13, fontVariant: ["tabular-nums"] }}>
+              {status} · {groupTiles.length} participant{groupTiles.length > 1 ? "s" : ""}
+            </Text>
+          </View>
+          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} />
+        </View>
+      ) : null}
+
       {/* Identity block (everything except live video) */}
-      {!videoLive ? (
+      {!videoLive && !mosaic ? (
         <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 54, left: 0, right: 0, alignItems: "center" }}>
           {logo}
           {incoming || session.phase === "outgoing" ? (
@@ -381,7 +443,7 @@ export function CallScreen({
       ) : null}
 
       {/* Local camera, floating bottom-right on live video */}
-      {mini ? (
+      {mini && !mosaic ? (
         <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.5)", backgroundColor: "#000", shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 10 }}>
           <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={!flip} zOrder={1} />
         </Press>

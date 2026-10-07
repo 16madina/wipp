@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { GroupSafetyBanner } from "../components/GroupSafety";
+import { GroupCallBanner } from "../components/GroupCallBanner";
 import { ChatLockGate } from "../components/ChatLock";
 import { isChatLocked, isChatUnlocked, relockChat } from "../lib/chat-lock";
 import { MediaViewer } from "../components/MediaViewer";
@@ -902,6 +903,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
         </Press>
       ) : null}
       {chat?.type === "group" && chatId.startsWith("srv:") ? <GroupSafetyBanner chatId={chatId} serverId={chatId.slice(4)} name={chat.name} /> : null}
+      {chat?.type === "group" && chatId.startsWith("srv:") ? <GroupCallBanner chatId={chatId} /> : null}
       {shop ? (
         <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 14, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
           <Text style={{ color: fgA(0.72), fontSize: 13, lineHeight: 18 }}>

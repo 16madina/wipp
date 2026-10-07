@@ -71,6 +71,13 @@ export async function setGroupState(callId: string, state: string) {
   });
 }
 
+export type ActiveGroupCall = { id: string; kind: "audio" | "video"; startedAt: number; participantIds: string[]; iAmIn: boolean };
+
+/** Group call in progress in this chat (banner « Appel en cours · Rejoindre »). */
+export async function activeGroupCall(chatId: string) {
+  return wippApi<{ call: ActiveGroupCall | null }>(`calls/group/${serverProfileId(chatId)}/active`);
+}
+
 export async function incomingCalls() {
   return wippApi<{
     invites: { id: string; kind: "audio" | "video"; caller: { id: string; displayName: string; username: string } }[];

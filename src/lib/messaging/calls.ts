@@ -710,6 +710,34 @@ export async function listCallHistory(meId: string) {
 
 const LIVE_GROUP_STATES = ["joining", "joined", "reconnecting", "disconnected"];
 
+/** Group call in progress in this chat (for the « Appel en cours · Rejoindre » banner), or null. */
+export async function activeGroupCall(meId: string, chatId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const id = chatId.replace(/^srv:/, "");
+  const member = await sql`select 1 from wipp_chat_members where chat_id = ${id} and profile_id = ${meId} limit 1`;
+  if (!member.length) throw new WippHttpError(403, "forbidden", "Tu n’es pas membre de ce groupe.");
+  const calls = await sql<{ id: string; kind: string; created_at: string }>`
+    select id, kind, created_at::text from wipp_group_calls
+    where chat_id = ${id} and ended_at is null and status <> 'ended' and created_at > now() - interval '6 hours'
+    order by created_at desc limit 1
+  `;
+  const call = calls[0];
+  if (!call) return null;
+  const people = await sql<{ profile_id: string; state: string }>`
+    select profile_id, state from wipp_group_call_members
+    where call_id = ${call.id} and state in ('joining', 'joined', 'reconnecting')
+  `;
+  if (!people.length) return null;
+  return {
+    id: call.id,
+    kind: call.kind === "video" ? ("video" as const) : ("audio" as const),
+    startedAt: Date.parse(call.created_at),
+    participantIds: people.map((p) => p.profile_id),
+    iAmIn: people.some((p) => p.profile_id === meId),
+  };
+}
+
 export async function authorizeLiveKitJoin(meId: string, callId: string) {
   await ensureMessagingReady();
   const sql = await getSql();
@@ -785,25 +813,35 @@ export async function createGroupCall(input: { callerId: string; chatId: string;
     insert into wipp_group_calls (id, chat_id, kind, room_name, status, created_by)
     values (${id}, ${chatId}, ${kind}, ${roomName}, ${"ringing"}, ${input.callerId})
   `;
+  const groupRow = await sql<{ name: string | null }>`select name from wipp_groups where chat_id = ${chatId} limit 1`;
+  const groupName = groupRow[0]?.name?.trim() || "Groupe WIPP";
+  const expiresAt = Date.now() + 60_000;
+  const ringing: string[] = [];
   for (const member of members) {
     const state = member.profile_id === input.callerId ? "joining" : "ringing";
     await sql`
       insert into wipp_group_call_members (call_id, profile_id, state)
       values (${id}, ${member.profile_id}, ${state})
     `;
-    if (state !== "ringing") continue;
-    const tokens = await listPushTokens(member.profile_id);
-    const expoTokens = tokens.filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken")).map((t) => t.token);
-    if (!expoTokens.length) continue;
-    void sendExpoPush(expoTokens, {
-      title: "WIPP",
-      body: kind === "video" ? "Appel vidéo de groupe" : "Appel audio de groupe",
-      priority: "high",
-      channelId: "incoming_calls",
-      categoryId: "incoming_call",
-      data: { type: "call", eventId: id, inviteId: id, group: true, chatId },
-    }).catch(() => undefined);
+    if (state === "ringing") ringing.push(member.profile_id);
   }
+  // Same path as 1-to-1 calls: CallKit (iPhone VoIP) / full-screen call (Android), showing the group name.
+  const label = kind === "video" ? "Appel vidéo de groupe" : "Appel audio de groupe";
+  await Promise.allSettled(
+    ringing.map((profileId) =>
+      pushCall(profileId, `${groupName} · ${label}`, {
+        type: "call",
+        eventId: id,
+        inviteId: id,
+        kind,
+        callerName: groupName,
+        action: "ring",
+        expiresAt,
+        group: true,
+        chatId,
+      }),
+    ),
+  );
   return { id, kind, status: "ringing", group: true as const, chatId };
 }
 
@@ -821,10 +859,11 @@ export async function setGroupCallState(input: { meId: string; callId: string; s
     select 1 from wipp_chat_members where chat_id = ${call.chat_id} and profile_id = ${input.meId} limit 1
   `;
   if (!member.length) throw new WippHttpError(403, "forbidden", "Tu n’es pas membre de ce groupe.");
+  // Upsert: a member can join a call already in progress (missed the ringing, left earlier, joined the group later).
   await sql`
-    update wipp_group_call_members
-    set state = ${input.state}, updated_at = now()
-    where call_id = ${input.callId} and profile_id = ${input.meId}
+    insert into wipp_group_call_members (call_id, profile_id, state)
+    values (${input.callId}, ${input.meId}, ${input.state})
+    on conflict (call_id, profile_id) do update set state = excluded.state, updated_at = now()
   `;
   if (input.state === "joining" || input.state === "joined") {
     await sql`
@@ -842,6 +881,24 @@ export async function setGroupCallState(input: { meId: string; callId: string; s
       await sql`
         update wipp_group_calls set status = 'ended', ended_at = now() where id = ${input.callId}
       `;
+      // Nobody left in the call: stop the phones that are still ringing.
+      const stillRinging = await sql<{ profile_id: string; kind: string }>`
+        select m.profile_id, c.kind from wipp_group_call_members m join wipp_group_calls c on c.id = m.call_id
+        where m.call_id = ${input.callId} and m.state = 'ringing'
+      `;
+      await Promise.allSettled(
+        stillRinging.map((r) =>
+          pushCall(r.profile_id, "Appel de groupe terminé", {
+            type: "call",
+            eventId: input.callId,
+            inviteId: input.callId,
+            kind: r.kind === "video" ? "video" : "audio",
+            action: "cancel",
+            group: true,
+            chatId: call.chat_id,
+          }),
+        ),
+      );
     }
   }
   return { ok: true as const, state: input.state };
@@ -881,7 +938,17 @@ export async function getOutgoingCallStatus(meId: string, callId: string) {
     id: row.id,
     kind: row.kind === "video" ? "video" as const : "audio" as const,
     roomName: "",
-    status: row.state === "declined" ? "rejected" : row.status === "ended" ? "ended" : row.state === "joining" || row.state === "joined" ? "accepted" : row.status,
+    // Per member: someone else joining does not mean *I* answered.
+    status:
+      row.state === "declined"
+        ? "rejected"
+        : row.status === "ended"
+          ? "ended"
+          : row.state === "joining" || row.state === "joined" || row.state === "reconnecting"
+            ? "accepted"
+            : row.state === "ringing" && Date.now() > Date.parse(row.created_at) + 60_000
+              ? "missed"
+              : "ringing",
     createdAt: Date.parse(row.created_at),
     expiresAt: Date.parse(row.created_at) + 60_000,
     caller: { id: host.id, username: host.username, displayName: host.display_name, avatarUrl: host.avatar_url },
