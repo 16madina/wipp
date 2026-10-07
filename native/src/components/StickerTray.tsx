@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, FlatList, ScrollView, Text, TextInput, View } from "react-native";
-import { Clock, Gift, Search, SendHorizontal, Smile, Sparkles, User, X } from "lucide-react-native";
+import { Clapperboard, Clock, Drama, Gift, Search, SendHorizontal, Smile, User, X } from "lucide-react-native";
 import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import { stickerRemoteUri } from "../lib/sticker-cdn";
@@ -10,16 +10,21 @@ import { colors } from "../theme";
 import { Press } from "./ui";
 import { WippSticker } from "./WippSticker";
 
-type Tab = "recent" | "moji" | "wippie" | "pop" | "moment";
-type Wippie = "tous" | "femme" | "homme" | "comique" | "emo";
+type Tab = "recent" | "moji" | "wippie" | "emo" | "pop" | "moment";
+type Wippie = "tous" | "femme" | "homme" | "comique";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "recent", label: "Récents" },
-  { id: "moji", label: "Wippmoji" },
-  { id: "wippie", label: "Wippie" },
-  { id: "pop", label: "WIPP Moments" },
-  { id: "moment", label: "Surprises" },
-];
+/** Bottom bar, left to right. `label` = search placeholder, `short` = name under the icon. */
+const TABS = [
+  { id: "recent", label: "Récents", short: "Récents", icon: Clock },
+  { id: "moji", label: "Wippmoji", short: "Wippmoji", icon: Smile },
+  { id: "wippie", label: "Wippie", short: "Wippie", icon: User },
+  { id: "emo", label: "EMO", short: "EMO", icon: Drama },
+  { id: "pop", label: "WIPP Moments", short: "Moments", icon: Clapperboard },
+  { id: "moment", label: "Surprises", short: "Surprises", icon: Gift },
+] as const satisfies readonly { id: Tab; label: string; short: string; icon: unknown }[];
+
+/** Height of the bottom bar (icon + name), without its padding. */
+const BAR_H = 48;
 
 function prefetchMoments() {
   const urls = stickersInPack("ani")
@@ -41,7 +46,7 @@ function isMoving(s: StickerDef) {
 /** One sticker playing, big, over the grid: « Envoyer » or touch it to send, outside / × to close. */
 function StickerPreview({ sticker, size, onSend, onClose }: { sticker: StickerDef; size: number; onSend: () => void; onClose: () => void }) {
   return (
-    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 52, zIndex: 5 }}>
+    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: BAR_H + 8, zIndex: 5 }}>
       <Press onPress={onClose} accessibilityLabel="Fermer l’aperçu" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} />
       <View pointerEvents="box-none" style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 12 }}>
         <View style={{ width: Math.min(300, size + 120), borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, paddingTop: 10, paddingBottom: 12, paddingHorizontal: 14, alignItems: "center" }}>
@@ -82,11 +87,12 @@ export function StickerTray({
   const slideY = useRef(new Animated.Value(0)).current;
   const moji = stickersInPack("moji");
   const moments = stickersInPack("ani");
+  const emo = stickersInPack("emo");
   const wippies = wippieStickers(wippie);
   const recents = [...moji.slice(0, 8), ...wippies.slice(0, 8)];
   const query = q.trim().toLowerCase();
   const shown = query
-    ? [...moji, ...wippies, ...moments].filter(
+    ? [...moji, ...wippieStickers("tous"), ...emo, ...moments].filter(
         (s) => s.labelFr.toLowerCase().includes(query) || s.labelEn.toLowerCase().includes(query),
       )
     : tab === "recent"
@@ -95,13 +101,17 @@ export function StickerTray({
         ? moji
         : tab === "wippie"
           ? wippies
-          : tab === "pop"
-            ? moments
-            : [];
+          : tab === "emo"
+            ? emo
+            : tab === "pop"
+              ? moments
+              : [];
   const title = TABS.find((item) => item.id === tab)?.label ?? "Stickers";
-  const minCell = !query && tab === "pop" ? 104 : !query && tab === "moji" ? 64 : 80;
-  const cols = Math.max(!query && tab === "pop" ? 3 : !query && tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
-  const stickerSize = tab === "pop" ? 84 : tab === "moji" ? 52 : 68;
+  // EMO and Moments are full scenes: 3 big cells per row.
+  const scenes = !query && (tab === "pop" || tab === "emo");
+  const minCell = scenes ? 104 : !query && tab === "moji" ? 64 : 80;
+  const cols = Math.max(scenes ? 3 : !query && tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
+  const stickerSize = scenes ? 84 : tab === "moji" ? 52 : 68;
   const trayH = Math.min(tablet ? 420 : 360, Math.round(height * 0.42));
 
   useEffect(() => {
@@ -205,7 +215,7 @@ export function StickerTray({
           style={{ flexGrow: 0, flexShrink: 0, height: 36 }}
           contentContainerStyle={{ gap: 6, alignItems: "center", paddingBottom: 6 }}
         >
-          {(["tous", "femme", "homme", "comique", "emo"] as const).map((id) => (
+          {(["tous", "femme", "homme", "comique"] as const).map((id) => (
             <Press
               key={id}
               onPress={() => setWippie(id)}
@@ -218,7 +228,7 @@ export function StickerTray({
               }}
             >
               <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: wippie === id ? colors.accentFg : colors.muted }}>
-                {id === "tous" ? "Tous" : id === "femme" ? "Elle" : id === "homme" ? "Lui" : id === "comique" ? "Comique" : "EMO"}
+                {id === "tous" ? "Tous" : id === "femme" ? "Elle" : id === "homme" ? "Lui" : "Comique"}
               </Text>
             </Press>
           ))}
@@ -287,7 +297,7 @@ export function StickerTray({
                 borderColor: preview?.id === s.id ? colors.accent : "transparent",
               }}
             >
-              <WippSticker id={s.id} size={stickerSize} fill={tab === "pop"} still />
+              <WippSticker id={s.id} size={stickerSize} fill={scenes} still />
             </Press>
           )}
         />
@@ -300,17 +310,10 @@ export function StickerTray({
           onClose={() => setPreview(null)}
         />
       ) : null}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: colors.hair, marginHorizontal: -12, paddingTop: 2, paddingBottom: 6 }}>
-        {(
-          [
-            { id: "recent" as const, label: "Récents", icon: Clock },
-            { id: "moji" as const, label: "Wippmoji", icon: Smile },
-            { id: "wippie" as const, label: "Wippie", icon: User },
-            { id: "pop" as const, label: "WIPP Moments", icon: Sparkles },
-            { id: "moment" as const, label: "Surprises", icon: Gift },
-          ] as const
-        ).map((item) => {
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: colors.hair, marginHorizontal: -12, paddingHorizontal: 2, paddingTop: 4, paddingBottom: 4 }}>
+        {TABS.map((item) => {
           const on = tab === item.id && !query;
+          const tint = on ? colors.accent : colors.muted;
           return (
             <Press
               key={item.id}
@@ -318,13 +321,21 @@ export function StickerTray({
               onPress={() => goto(item.id)}
               style={{
                 flex: 1,
-                height: 44,
+                height: BAR_H,
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 3,
               }}
             >
-              <item.icon size={22} color={on ? colors.accent : colors.muted} />
-              <View style={{ marginTop: 4, width: 18, height: 2, borderRadius: 1, backgroundColor: on ? colors.accent : "transparent" }} />
+              <item.icon size={21} color={tint} />
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                style={{ fontSize: 10.5, color: tint, fontFamily: on ? "Inter_600SemiBold" : "Inter_500Medium", textAlign: "center" }}
+              >
+                {item.short}
+              </Text>
             </Press>
           );
         })}

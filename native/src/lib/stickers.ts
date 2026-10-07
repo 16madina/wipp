@@ -344,9 +344,9 @@ export function stickersInPack(pack: StickerPackId) {
   return STICKER_PACKS[pack].stickers;
 }
 
-const WIPPIE_SUBS = ["femme", "homme", "comique", "emo"] as const;
+const WIPPIE_SUBS = ["femme", "homme", "comique"] as const;
 
-/** All Wippie characters, one row per id. Does not include Wippmoji or WIPP Moments. */
+/** All Wippie characters, one row per id. Does not include Wippmoji, EMO (own tab) or WIPP Moments. */
 export function wippieStickers(sub: "tous" | (typeof WIPPIE_SUBS)[number]) {
   if (sub !== "tous") return STICKER_PACKS[sub].stickers;
   const seen = new Set<string>();

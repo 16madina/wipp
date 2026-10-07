@@ -15,7 +15,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd native && CI=1 npx expo start --web --port 8083"
+        "cd native && npx expo start --web --port 8083"
       ],
       "port": 8083
     }
