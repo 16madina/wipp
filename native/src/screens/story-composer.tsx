@@ -23,7 +23,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, ChevronRight, Pause, Play, Type, X } from "lucide-react-native";
 import { Press } from "../components/ui";
-import { storyOverlay, type StoryOverlay } from "../lib/story-overlay";
+import { overlayFromLayers, type StoryLayer } from "../lib/story-overlay";
+import { StoryLayerEditor } from "../components/StoryLayerEditor";
 import { coverScaleForContain, storyCropRect } from "../lib/story-frame";
 import { materializeLibraryVideo, trimVideoSegment } from "wipp-video-trim";
 import { useWippStore } from "../lib/store";
@@ -58,7 +59,9 @@ export function NewStoryScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [publishLabel, setPublishLabel] = useState("");
-  const [overlay, setOverlay] = useState<StoryOverlay | null>(null);
+  /** Texts and stickers placed on the photo / video. */
+  const [layers, setLayers] = useState<StoryLayer[]>([]);
+  const overlay = overlayFromLayers(layers);
   const frame = useRef({ scale: 1, x: 0, y: 0, canvasW: 0, canvasH: 0, imageW: 0, imageH: 0 });
   const uploadedPath = useRef<string | null>(null);
 
@@ -134,7 +137,7 @@ export function NewStoryScreen() {
         body: text.trim(),
         mediaUrl,
         audience,
-        overlay: phase.name === "edit" && phase.kind === "video" ? overlay : null,
+        overlay: phase.name === "edit" ? overlay : null,
       });
       rpcMs = Date.now() - rpcStarted;
       setPublishLabel("Publié");
@@ -167,7 +170,7 @@ export function NewStoryScreen() {
 
   function openAsset(asset: { uri: string; kind: "image" | "video"; mime: string; duration?: number; width?: number; height?: number }) {
     uploadedPath.current = null;
-    setOverlay(null);
+    setLayers([]);
     if (asset.kind === "video") {
       setPhase({ name: "trim", uri: asset.uri, mime: asset.mime, duration: asset.duration ?? 0 });
       return;
@@ -182,10 +185,16 @@ export function NewStoryScreen() {
         <TextStoryCanvas text={text} onChange={setText} />
       ) : null}
       {phase.name === "edit" && phase.kind === "image" ? (
-        <PhotoStage uri={phase.uri} width={phase.width} height={phase.height} frame={frame} />
+        <View style={{ flex: 1 }}>
+          <PhotoStage uri={phase.uri} width={phase.width} height={phase.height} frame={frame} />
+          <StoryLayerEditor layers={layers} onChange={setLayers} topInset={insets.top} />
+        </View>
       ) : null}
       {phase.name === "edit" && phase.kind === "video" ? (
-        <VideoStage uri={phase.uri} overlay={overlay} onOverlay={setOverlay} />
+        <View style={{ flex: 1 }}>
+          <VideoStage uri={phase.uri} />
+          <StoryLayerEditor layers={layers} onChange={setLayers} topInset={insets.top} />
+        </View>
       ) : null}
       {phase.name === "trim" ? (
         <VideoTrim
@@ -195,7 +204,7 @@ export function NewStoryScreen() {
           onCancel={() => setPhase({ name: "gallery" })}
           onConfirm={(uri, mime) => {
             uploadedPath.current = null;
-            setOverlay(null);
+            setLayers([]);
             setPhase({ name: "edit", uri, kind: "video", mime });
           }}
         />
@@ -354,7 +363,7 @@ function PhotoStage({
   );
 }
 
-function VideoStage({ uri, overlay, onOverlay }: { uri: string; overlay: StoryOverlay | null; onOverlay: (value: StoryOverlay | null) => void }) {
+function VideoStage({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, (clip) => {
     clip.loop = true;
     clip.muted = false;
@@ -367,112 +376,6 @@ function VideoStage({ uri, overlay, onOverlay }: { uri: string; overlay: StoryOv
   return (
     <View style={{ flex: 1 }}>
       <VideoView player={player} style={{ flex: 1 }} contentFit="contain" nativeControls={false} />
-      <VideoTextLayer overlay={overlay} onOverlay={onOverlay} />
-    </View>
-  );
-}
-
-function VideoTextLayer({ overlay, onOverlay }: { overlay: StoryOverlay | null; onOverlay: (value: StoryOverlay | null) => void }) {
-  const [draft, setDraft] = useState(overlay?.text ?? "");
-  const [editing, setEditing] = useState(false);
-  const [canvas, setCanvas] = useState({ w: 1, h: 1 });
-  const x = useSharedValue(overlay?.x ?? 0.5);
-  const y = useSharedValue(overlay?.y ?? 0.22);
-  const scale = useSharedValue(overlay?.scale ?? 1);
-  const origin = useSharedValue({ x: overlay?.x ?? 0.5, y: overlay?.y ?? 0.22, scale: overlay?.scale ?? 1 });
-  const canvasW = useSharedValue(1);
-  const canvasH = useSharedValue(1);
-  const halfW = useSharedValue(0);
-  const halfH = useSharedValue(0);
-
-  function commit(nextX: number, nextY: number, nextScale: number, nextText = draft) {
-    const next = storyOverlay(nextText, nextX, nextY, nextScale);
-    if (next) {
-      x.value = next.x;
-      y.value = next.y;
-      scale.value = next.scale;
-    }
-    onOverlay(next);
-  }
-
-  const pan = Gesture.Pan()
-    .enabled(!editing)
-    .onBegin(() => {
-      origin.value = { x: x.value, y: y.value, scale: scale.value };
-    })
-    .onUpdate((event) => {
-      x.value = origin.value.x + event.translationX / Math.max(canvasW.value, 1);
-      y.value = origin.value.y + event.translationY / Math.max(canvasH.value, 1);
-    })
-    .onEnd(() => {
-      runOnJS(commit)(x.value, y.value, scale.value);
-    });
-  const pinch = Gesture.Pinch()
-    .enabled(!editing)
-    .onBegin(() => {
-      origin.value = { x: x.value, y: y.value, scale: scale.value };
-    })
-    .onUpdate((event) => {
-      scale.value = origin.value.scale * event.scale;
-    })
-    .onEnd(() => {
-      runOnJS(commit)(x.value, y.value, scale.value);
-    });
-  const style = useAnimatedStyle(() => ({
-    left: x.value * canvasW.value - halfW.value,
-    top: y.value * canvasH.value - halfH.value,
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <View
-      style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
-      onLayout={(event) => {
-        const next = { w: event.nativeEvent.layout.width, h: event.nativeEvent.layout.height };
-        canvasW.value = next.w;
-        canvasH.value = next.h;
-        setCanvas(next);
-      }}
-    >
-      <Press accessibilityLabel="Fermer le clavier" onPress={() => { Keyboard.dismiss(); setEditing(false); }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-      <Press
-        accessibilityLabel="Texte sur la vidéo"
-        onPress={() => {
-          setEditing(true);
-          if (!overlay) {
-            x.value = 0.5;
-            y.value = 0.22;
-            scale.value = 1;
-          }
-        }}
-        style={{ position: "absolute", top: 64, right: 16, zIndex: 5, minWidth: 44, height: 44, borderRadius: 22, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}
-      >
-        <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 18 }}>Aa</Text>
-      </Press>
-      {editing || overlay ? (
-        <GestureDetector gesture={Gesture.Simultaneous(pan, pinch)}>
-          <Animated.View style={[{ position: "absolute", zIndex: 4 }, style]}>
-            <TextInput
-              value={draft}
-              onChangeText={(value) => {
-                setDraft(value);
-                onOverlay(storyOverlay(value, x.value, y.value, scale.value));
-              }}
-              autoFocus={editing}
-              editable={editing}
-              multiline
-              onFocus={() => setEditing(true)}
-              placeholder="Texte"
-              placeholderTextColor="rgba(255,255,255,0.7)"
-              style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 32, textAlign: "center", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 8, minWidth: 80, maxWidth: canvas.w * 0.8 }}
-              onLayout={(event) => {
-                halfW.value = event.nativeEvent.layout.width / 2;
-                halfH.value = event.nativeEvent.layout.height / 2;
-              }}
-            />
-          </Animated.View>
-        </GestureDetector>
-      ) : null}
     </View>
   );
 }

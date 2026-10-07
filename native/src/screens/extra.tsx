@@ -1,3 +1,5 @@
+import { StoryLayersView } from "../components/StoryLayers";
+import { layersOf, type StoryOverlay } from "../lib/story-overlay";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -308,7 +310,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
           }}
         />
       ) : null}
-      {story.overlay?.text ? <PlacedOverlay overlay={story.overlay} /> : null}
+      {story.overlay ? <PlacedOverlay overlay={story.overlay} /> : null}
       {story.type !== "text" && story.text ? (
         <View pointerEvents="none" style={{ position: "absolute", left: 24, right: 24, bottom: 108, zIndex: 3 }}>
           <Text style={{ color: "#fff", textAlign: "center", fontFamily: "Inter_500Medium", fontSize: 16, textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 6 }}>
@@ -475,29 +477,12 @@ export function StoriesScreen({ userId }: { userId: string }) {
   );
 }
 
-function PlacedOverlay({ overlay }: { overlay: { text: string; x: number; y: number; scale: number } }) {
-  const [canvas, setCanvas] = useState({ w: 1, h: 1 });
-  const [size, setSize] = useState({ w: 0, h: 0 });
+/** Texts and stickers placed on the story (old stories: one white text). */
+function PlacedOverlay({ overlay }: { overlay: StoryOverlay }) {
+  const [canvas, setCanvas] = useState({ w: 0, h: 0 });
   return (
     <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 3 }} onLayout={(event) => setCanvas({ w: event.nativeEvent.layout.width, h: event.nativeEvent.layout.height })}>
-      <Text
-        onLayout={(event) => setSize({ w: event.nativeEvent.layout.width, h: event.nativeEvent.layout.height })}
-        style={{
-          position: "absolute",
-          left: overlay.x * canvas.w - size.w / 2,
-          top: overlay.y * canvas.h - size.h / 2,
-          maxWidth: canvas.w * 0.8,
-          color: "#fff",
-          textAlign: "center",
-          fontFamily: "Inter_700Bold",
-          fontSize: 32,
-          transform: [{ scale: overlay.scale }],
-          textShadowColor: "rgba(0,0,0,0.7)",
-          textShadowRadius: 8,
-        }}
-      >
-        {overlay.text}
-      </Text>
+      <StoryLayersView layers={layersOf(overlay)} canvas={canvas} />
     </View>
   );
 }
