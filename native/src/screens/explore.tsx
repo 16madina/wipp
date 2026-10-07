@@ -167,7 +167,7 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
   const listings = useWippStore((s) => s.listings);
   const allShops = useWippStore((s) => s.shops);
   const realShops = allShops.filter((s) => s.id.startsWith("business:"));
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const shops = serverConnected ? realShops : realShops.length ? realShops : allShops;
   const events = useWippStore((s) => s.lifestyle);
   const pharmacies = useWippStore((s) => s.pharmacies);
@@ -387,7 +387,7 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
 function UtilitiesPane() {
   const [pharmaMode, setPharmaMode] = useState<"open" | "h24" | null>(null);
   const pharmacies = useWippStore((s) => s.pharmacies);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const push = useWippStore((s) => s.push);
   const [services, setServices] = useState<{ id: string; name: string; address: string; city: string; phone: string; category: string }[]>([]);
   const shown = serverConnected ? [] : pharmacies;
@@ -488,7 +488,7 @@ function ShopSearch({ q }: { q: string }) {
   }, [q]);
   const [kind, setKind] = useState<"all" | "shops" | "users" | "groups">("shops");
   const users = useWippStore((s) => s.users);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const chats = useWippStore((s) => s.chats);
   const needle = fold(q);
   const people = useMemo(

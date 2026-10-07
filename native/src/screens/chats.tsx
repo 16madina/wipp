@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
   BadgeCheck,
   Ban,
@@ -94,7 +94,8 @@ export function ChatsScreen() {
   const me = useWippStore((s) => s.me);
   const users = useWippStore((s) => s.users);
   const chats = useWippStore((s) => s.chats);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  // Real account on this phone (known at launch, before the sync ends): never show the demo data.
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const shops = useWippStore((s) => s.shops);
   const onboarded = useWippStore((s) => s.onboarded);
   const storyRows = useWippStore((s) => s.stories);
@@ -102,7 +103,7 @@ export function ChatsScreen() {
   const pending = useWippStore(
     (s) =>
       s.requests.filter((r) => r.status === "pending").length +
-      (s.serverConnected ? 0 : s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length),
+      ((s.serverConnected || Boolean(s.serverProfileId)) ? 0 : s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length),
   );
   const push = useWippStore((s) => s.push);
   const markRead = useWippStore((s) => s.markRead);
@@ -283,7 +284,12 @@ export function ChatsScreen() {
             <Text style={{ fontSize: 13, color: colors.muted }}>{archivedCount}</Text>
           </Press>
         ) : null}
-        {visible.length === 0 && filter === "unread" ? (
+        {visible.length === 0 && serverConnected && !serverOn ? (
+          // Real account, first sync not finished yet: wait quietly (no demo, no « aucune conversation »).
+          <View style={{ paddingVertical: 48, alignItems: "center" }}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        ) : visible.length === 0 && filter === "unread" ? (
           <Empty title={t("unreadEmpty")} body={t("unreadEmptySub")} action={<Btn label={t("seeAllChats")} variant="secondary" onPress={() => setFilter("all")} />} />
         ) : visible.length === 0 ? (
           <Empty
@@ -565,7 +571,7 @@ export function RequestsScreen() {
   const declineRequest = useWippStore((s) => s.declineRequest);
   const blockUser = useWippStore((s) => s.blockUser);
   const blockedIds = useWippStore((s) => s.blockedIds);
-  const live = useWippStore((s) => s.serverConnected);
+  const live = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   // Accepting = choosing how to connect: ♾️ permanent or ⏳ ephemeral (+ duration).
   const [accepting, setAccepting] = useState<string | null>(null);
   const [choice, setChoice] = useState<ConnectionChoice | null>({ type: "permanent" });
@@ -666,7 +672,8 @@ export function GlobalSearchScreen() {
   const users = useWippStore((s) => s.users);
   const chats = useWippStore((s) => s.chats);
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  // Real account on this phone (known at launch, before the sync ends): never show the demo data.
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const blocked = useWippStore((s) => s.blockedIds);
   const myServerId = useWippStore((s) => s.serverProfileId);
   const [q, setQ] = useState("");

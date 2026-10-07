@@ -403,7 +403,7 @@ export function SearchUserScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const blocked = useWippStore((s) => s.blockedIds);
   const users = useWippStore((s) => s.users);
   const [q, setQ] = useState("");

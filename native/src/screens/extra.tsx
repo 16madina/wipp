@@ -40,7 +40,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
   // Lecteur de stories : toujours sombre (texte sur photo / vidéo).
   const colors = palettes.dark;
   const pop = useWippStore((s) => s.pop);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const blockedIds = useWippStore((s) => s.blockedIds);
   const users = useWippStore((s) => s.users);
   const me = useWippStore((s) => s.me);

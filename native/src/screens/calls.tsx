@@ -12,7 +12,7 @@ import { colors, layout } from "../theme";
 export function CallsScreen() {
   const t = useT();
   const lang = useWippStore((s) => s.language);
-  const serverConnected = useWippStore((s) => s.serverConnected);
+  const serverConnected = useWippStore((s) => (s.serverConnected || Boolean(s.serverProfileId)));
   const allCalls = useWippStore((s) => s.calls);
   const calls = useMemo(
     () => (serverConnected ? allCalls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("gcall_") || c.id.startsWith("srvcall:")) : allCalls),
