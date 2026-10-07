@@ -4,7 +4,10 @@
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
   <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" tools:node="remove"/>
   <uses-permission android:name="android.permission.BLUETOOTH"/>
+  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" tools:node="remove"/>
+  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" tools:node="remove"/>
   <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+  <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:node="remove"/>
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
@@ -19,16 +22,13 @@
   <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
   <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
   <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
-  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
   <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
   <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
   <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
   <uses-permission android:name="android.permission.UWB_RANGING"/>
-  <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:node="remove"/>
-  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" tools:node="remove"/>
-  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" tools:node="remove"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -50,6 +50,14 @@
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
+    <service android:name="expo.modules.location.services.LocationTaskService" tools:node="remove"/>
+    <service android:name="com.oney.WebRTCModule.MediaProjectionService" tools:node="remove"/>
+    <service android:name="io.wazo.callkeep.VoiceConnectionService" android:label="WIPP" android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE" android:foregroundServiceType="camera|microphone" android:exported="true">
+      <intent-filter>
+        <action android:name="android.telecom.ConnectionService"/>
+      </intent-filter>
+    </service>
+    <service android:name="io.wazo.callkeep.RNCallKeepBackgroundMessagingService"/>
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait" android:showWhenLocked="true" android:turnScreenOn="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
@@ -85,11 +93,17 @@
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
     </activity>
-    <service android:name="io.wazo.callkeep.VoiceConnectionService" android:label="WIPP" android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE" android:foregroundServiceType="camera|microphone" android:exported="true">
-      <intent-filter>
-        <action android:name="android.telecom.ConnectionService"/>
+    <receiver android:name="expo.modules.taskManager.TaskBroadcastReceiver" android:enabled="true" android:exported="false" tools:node="replace">
+      <intent-filter android:priority="-1">
+        <action android:name="expo.modules.taskManager.TaskBroadcastReceiver.INTENT_ACTION"/>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
       </intent-filter>
-    </service>
-    <service android:name="io.wazo.callkeep.RNCallKeepBackgroundMessagingService"/>
+    </receiver>
+    <receiver android:name="expo.modules.notifications.service.NotificationsService" android:enabled="true" android:exported="false" tools:node="replace">
+      <intent-filter android:priority="-1">
+        <action android:name="expo.modules.notifications.NOTIFICATION_EVENT"/>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>

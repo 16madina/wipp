@@ -199,6 +199,20 @@ Tout est sur `main`. Le code ci-dessous est commun ; rien de spécifique à Andr
 
 ---
 
+## Avertissements Google Play sur la version 6 (vus le 2026-10-07) — à traiter au versionCode 7
+
+1. **« Types de services de premier plan restreints » (BOOT_COMPLETED) — CORRIGÉ dans le code (Mac).**
+   Nouveau plugin `native/plugins/withWippAndroidBootFix.js` (déjà dans `app.json`) + manifeste `native/android` régénéré :
+   - plus de `RECEIVE_BOOT_COMPLETED` (dans `android.blockedPermissions`) ;
+   - récepteurs `expo.modules.taskManager.TaskBroadcastReceiver` et `expo.modules.notifications.service.NotificationsService` remplacés **sans** BOOT_COMPLETED / REBOOT / QUICKBOOT (le reste gardé) ;
+   - services inutilisés retirés : `expo.modules.location.services.LocationTaskService` (pas de localisation en arrière-plan) et `com.oney.WebRTCModule.MediaProjectionService` (pas de partage d'écran).
+   WIPP n'a rien à relancer au démarrage du téléphone (aucune notification programmée pour plus tard).
+   ⚠️ Si tu refais `npx expo prebuild -p android`, **dédoublonne** les intent-filters SEND / SEND_MULTIPLE (expo-share-intent les ajoute deux fois) et ne laisse pas prebuild écraser l'écran de démarrage / les couleurs (remets `res/` et `gradle.properties` avec `git checkout`).
+   À vérifier au build : appels entrants (CallKeep), notifications, partage vers WIPP — tout doit marcher comme avant.
+
+2. **« Optimisation du code DEX inférieure au seuil » (brouillage 1 %) — à faire avant février 2027, PAS urgent.**
+   Cause : `android.enableMinifyInReleaseBuilds` est à false (R8 désactivé). Solution : l'activer (`expo-build-properties` → `android.enableMinifyInReleaseBuilds: true` + `enableShrinkResourcesInReleaseBuilds: true`), puis **tester à fond** une version de release (appels LiveKit, CallKeep, Firebase, notifications, chiffrement, partage), en ajoutant des règles `-keep` dans `proguard-rules.pro` si une bibliothèque casse. Ne pas l'activer sans ces tests.
+
 ## Rapport à donner à l'utilisatrice
 
 1. Commit récupéré (`git log --oneline -1`)

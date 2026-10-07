@@ -157,7 +157,6 @@
         "BLUETOOTH",
         "BLUETOOTH_CONNECT",
         "POST_NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED",
         "MODIFY_AUDIO_SETTINGS",
         "WAKE_LOCK",
         "FOREGROUND_SERVICE",
@@ -201,6 +200,7 @@
         }
       ],
       "blockedPermissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.ACTIVITY_RECOGNITION",
         "com.google.android.gms.permission.ACTIVITY_RECOGNITION"
       ]
@@ -300,7 +300,8 @@
           ]
         }
       ],
-      "./plugins/withWippNotificationService"
+      "./plugins/withWippNotificationService",
+      "./plugins/withWippAndroidBootFix"
     ],
     "web": {
       "favicon": "./assets/brand/favicon-48.png"
