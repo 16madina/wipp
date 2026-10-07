@@ -165,6 +165,9 @@ Fait côté iPhone le 2026-10-06, tout est sur `main`. Pour Android :
   sondages, événements avec photo — code commun, rien de spécifique à Android à faire.
 - **Conversations verrouillées par code** : utilise `expo-secure-store` et `expo-local-authentication`
   (déjà installés) ; vérifier que l'empreinte / le code du téléphone s'ouvrent bien sur le Samsung.
+- **Messages vocaux (pause → écouter → reprendre)** : sur iPhone, chaque pause ferme un morceau et les morceaux
+  sont assemblés par `modules/wipp-video-trim` (`concatAudio`, Swift). Sur Android ce module n'existe pas encore :
+  la pause est une pause simple, sans écoute avant l'envoi. À ajouter côté Android (MediaMuxer) si besoin.
 - **Appel manqué** : sur iPhone, c'est le code natif (`withWippVoip`) qui affiche « Appel manqué ».
   Sur Android, il faudra l'ajouter (notification quand l'appel plein écran s'arrête sans réponse).
 

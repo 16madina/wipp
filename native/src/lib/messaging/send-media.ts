@@ -28,7 +28,8 @@ function patch(chatId: string, id: string, p: Partial<Message>) {
   useWippStore.setState((st) => ({
     messages: {
       ...st.messages,
-      [chatId]: (st.messages[chatId] ?? []).map((m) => (m.id === id ? { ...m, ...p } : m)),
+      // localKey: the server may already have replaced the id this upload started with.
+      [chatId]: (st.messages[chatId] ?? []).map((m) => (m.id === id || m.localKey === id ? { ...m, ...p } : m)),
     },
   }));
 }

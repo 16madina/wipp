@@ -3,7 +3,20 @@ import { Platform } from "react-native";
 type NativeTrim = {
   materialize: (assetId: string) => Promise<{ uri: string; duration: number; ext?: string; bytes?: number }>;
   trim: (uri: string, start: number, end: number) => Promise<{ uri: string; duration: number; ext?: string; bytes?: number }>;
+  concatAudio?: (uris: string[]) => Promise<{ uri: string; duration: number }>;
 };
+
+/** iPhone: voice parts can be joined into one file (pause → listen → resume). */
+export function isAudioJoinAvailable() {
+  return typeof native()?.concatAudio === "function";
+}
+
+/** Joins voice message parts, in order, into one .m4a file. */
+export async function joinAudioParts(uris: string[]) {
+  const mod = native();
+  if (!mod?.concatAudio) throw new Error("audio_join_unavailable");
+  return mod.concatAudio(uris);
+}
 
 function native(): NativeTrim | null {
   if (Platform.OS !== "ios") return null;

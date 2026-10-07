@@ -78,26 +78,88 @@ function askForMic(canAskAgain: boolean) {
   );
 }
 
+type Part = { uri: string; ms: number };
+
 /**
- * Voice messages, WhatsApp style: start / pause / resume / stop(send or delete).
+ * Voice messages, WhatsApp style.
+ * iPhone: each pause closes the current part (so it can be listened to), resume records a new part,
+ * and the parts are joined into one file when sending. Elsewhere: a plain pause, no listening before sending.
  * `onTake` receives the finished message when it must be sent.
  */
 export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
   const [phase, setPhase] = useState<VoicePhase>("idle");
   const [ms, setMs] = useState(0);
   const [levels, setLevels] = useState<number[]>([]);
+  const [wave, setWave] = useState("");
   const rec = useRef<Audio.Recording | null>(null);
   const phaseRef = useRef<VoicePhase>("idle");
+  const parts = useRef<Part[]>([]);
+  const doneMs = useRef(0);
+  const currentMs = useRef(0);
   const all = useRef<number[]>([]);
-  const lastMs = useRef(0);
   /** Stop asked while the microphone was still starting: true = send, false = delete. */
   const pendingStop = useRef<boolean | null>(null);
   const take = useRef(onTake);
   take.current = onTake;
+  const joinable = useRef<boolean | null>(null);
 
   const go = (next: VoicePhase) => {
     phaseRef.current = next;
     setPhase(next);
+  };
+  const canJoin = () => {
+    if (joinable.current === null) {
+      try {
+        joinable.current = (require("wipp-video-trim") as typeof import("wipp-video-trim")).isAudioJoinAvailable();
+      } catch {
+        joinable.current = false;
+      }
+    }
+    return joinable.current;
+  };
+  const drop = (list: Part[]) => {
+    if (Platform.OS === "web") return;
+    for (const p of list) void deleteAsync(p.uri, { idempotent: true }).catch(() => undefined);
+  };
+
+  /** Closes the part being recorded and keeps it. */
+  const closePart = async () => {
+    const recording = rec.current;
+    rec.current = null;
+    if (!recording) return;
+    let partMs = currentMs.current;
+    try {
+      const status = await recording.stopAndUnloadAsync();
+      partMs = Math.max(partMs, status.durationMillis ?? 0);
+    } catch {
+      /* the file may still be usable */
+    }
+    const uri = recording.getURI();
+    if (uri && partMs > 150) parts.current.push({ uri, ms: partMs });
+    doneMs.current += partMs;
+    currentMs.current = 0;
+  };
+
+  /** Opens a new part (first one, or after a pause). */
+  const openPart = async () => {
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+    const { recording } = await Audio.Recording.createAsync(
+      OPTIONS,
+      (st) => {
+        if (!st.isRecording) return;
+        currentMs.current = st.durationMillis;
+        const total = doneMs.current + st.durationMillis;
+        setMs(total);
+        if (typeof st.metering === "number") {
+          const lv = level(st.metering);
+          all.current.push(lv);
+          setLevels((prev) => (prev.length >= LIVE_BARS ? [...prev.slice(1), lv] : [...prev, lv]));
+        }
+        if (total >= MAX_MS) void stop(true);
+      },
+      70,
+    );
+    rec.current = recording;
   };
 
   const stop = useCallback(async (send: boolean) => {
@@ -106,43 +168,54 @@ export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
       pendingStop.current = send;
       return;
     }
-    const recording = rec.current;
-    rec.current = null;
     go("idle");
+    await closePart();
+    const list = parts.current;
+    const total = doneMs.current;
+    const shape = toWave(all.current);
+    parts.current = [];
+    doneMs.current = 0;
     setMs(0);
     setLevels([]);
-    if (!recording) return;
-    let uri: string | null = null;
-    let durationMs = lastMs.current;
-    try {
-      const status = await recording.stopAndUnloadAsync();
-      durationMs = Math.max(durationMs, status.durationMillis ?? 0);
-      uri = recording.getURI();
-    } catch {
-      uri = recording.getURI();
+    setWave("");
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => undefined);
+    if (!send || total < MIN_MS || !list.length) {
+      drop(list);
+      return;
     }
-    void Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => undefined);
-    if (send && uri && durationMs >= MIN_MS) {
-      take.current({ uri, durationMs, wave: toWave(all.current) });
-    } else if (uri && Platform.OS !== "web") {
-      void deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+    let uri = list[0]!.uri;
+    if (list.length > 1) {
+      try {
+        const { joinAudioParts } = require("wipp-video-trim") as typeof import("wipp-video-trim");
+        uri = (await joinAudioParts(list.map((p) => p.uri))).uri;
+        drop(list);
+      } catch {
+        Alert.alert("Message vocal", "Le message n’a pas pu être assemblé. Réessaie.");
+        drop(list);
+        return;
+      }
     }
+    take.current({ uri, durationMs: total, wave: shape });
   }, []);
 
   const start = useCallback(async () => {
     if (phaseRef.current !== "idle") return false;
     // The microphone already belongs to the call.
     const { useCallSession } = await import("./calls/session");
-    if (useCallSession.getState().session && !["ended", "declined", "missed", "busy", "failed"].includes(useCallSession.getState().session!.phase)) {
+    const call = useCallSession.getState().session;
+    if (call && !["ended", "declined", "missed", "busy", "failed"].includes(call.phase)) {
       Alert.alert("Message vocal", "Impossible d’enregistrer pendant un appel.");
       return false;
     }
     go("starting");
     pendingStop.current = null;
+    parts.current = [];
+    doneMs.current = 0;
+    currentMs.current = 0;
     all.current = [];
-    lastMs.current = 0;
     setMs(0);
     setLevels([]);
+    setWave("");
     try {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
@@ -150,23 +223,7 @@ export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
         askForMic(perm.canAskAgain);
         return false;
       }
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(
-        OPTIONS,
-        (st) => {
-          if (!st.isRecording) return;
-          lastMs.current = st.durationMillis;
-          setMs(st.durationMillis);
-          if (typeof st.metering === "number") {
-            const lv = level(st.metering);
-            all.current.push(lv);
-            setLevels((prev) => (prev.length >= LIVE_BARS ? [...prev.slice(1), lv] : [...prev, lv]));
-          }
-          if (st.durationMillis >= MAX_MS) void stop(true);
-        },
-        70,
-      );
-      rec.current = recording;
+      await openPart();
       go("recording");
       if (pendingStop.current !== null) {
         const send = pendingStop.current;
@@ -185,27 +242,51 @@ export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
   const pause = useCallback(async () => {
     if (phaseRef.current !== "recording" || !rec.current) return;
     try {
-      await rec.current.pauseAsync();
+      if (canJoin()) await closePart();
+      else await rec.current.pauseAsync();
+      setWave(toWave(all.current));
       go("paused");
+      void Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => undefined);
     } catch {
       /* keeps recording */
     }
   }, []);
 
   const resume = useCallback(async () => {
-    if (phaseRef.current !== "paused" || !rec.current) return;
+    if (phaseRef.current !== "paused") return;
     try {
-      await rec.current.startAsync();
+      if (rec.current) {
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        await rec.current.startAsync();
+      } else {
+        await openPart();
+      }
       go("recording");
     } catch {
       /* stays paused */
     }
   }, []);
 
+  /** Paused (iPhone): one playable file of everything said so far, or null. */
+  const listenUri = useCallback(async () => {
+    if (phaseRef.current !== "paused" || rec.current || !parts.current.length) return null;
+    if (parts.current.length === 1) return parts.current[0]!.uri;
+    try {
+      const { joinAudioParts } = require("wipp-video-trim") as typeof import("wipp-video-trim");
+      const joined = await joinAudioParts(parts.current.map((p) => p.uri));
+      const old = parts.current;
+      parts.current = [{ uri: joined.uri, ms: doneMs.current }];
+      drop(old);
+      return joined.uri;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // Leaving the conversation while recording: the take is deleted, the microphone is released.
   useEffect(() => () => void stop(false), [stop]);
 
-  return { phase, ms, levels, start, stop, pause, resume };
+  return { phase, ms, levels, wave, canListen: phase === "paused" && canJoin(), start, stop, pause, resume, listenUri };
 }
 
 /** 0:07, 1:24 … */

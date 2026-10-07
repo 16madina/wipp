@@ -120,7 +120,7 @@ function fallbackWave(seed: string) {
 }
 
 /** WhatsApp-style voice bubble: play · shape of the voice (fills while playing, touch to jump) · time · speed. */
-function VoiceBubble({ uri, duration, wave, seed, mine, tone }: { uri?: string; duration?: number; wave?: string; seed: string; mine: boolean; tone: ReturnType<typeof myBubbleColors> }) {
+function VoiceBubble({ uri, duration, wave, seed, mine, tone, sending }: { uri?: string; duration?: number; wave?: string; seed: string; mine: boolean; tone: ReturnType<typeof myBubbleColors>; sending?: boolean }) {
   const sound = useRef<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
@@ -199,25 +199,32 @@ function VoiceBubble({ uri, duration, wave, seed, mine, tone }: { uri?: string; 
   const shownMs = playing || pos > 0 ? pos : total;
   const s = Math.floor(shownMs / 1000);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, width: 236, paddingVertical: 2 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, width: 196 }}>
       <Press
         onPress={() => void toggle()}
+        disabled={sending && !uri}
         accessibilityLabel={playing ? "Mettre en pause" : "Écouter le message vocal"}
-        style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: mine ? "rgba(255,255,255,0.18)" : colors.navy }}
+        style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: mine ? "rgba(255,255,255,0.18)" : colors.navy }}
       >
-        {playing ? <Pause size={18} color={fg} fill={fg} /> : <Play size={18} color={fg} fill={fg} style={{ marginLeft: 2 }} />}
+        {sending ? (
+          <ActivityIndicator size="small" color={fg} />
+        ) : playing ? (
+          <Pause size={15} color={fg} fill={fg} />
+        ) : (
+          <Play size={15} color={fg} fill={fg} style={{ marginLeft: 2 }} />
+        )}
       </Press>
       <View style={{ flex: 1 }}>
         <Pressable
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           onPress={(e) => void seek(e.nativeEvent.locationX)}
           accessibilityLabel="Aller à un moment du message"
-          style={{ height: 28, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+          style={{ height: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
         >
           {bars.map((lv, i) => (
             <View
               key={i}
-              style={{ width: 3, height: 4 + lv * 2.4, borderRadius: 2, backgroundColor: (i + 0.5) / bars.length <= progress ? lit : muted, opacity: (i + 0.5) / bars.length <= progress ? 1 : 0.55 }}
+              style={{ width: 2.5, height: 3 + lv * 2, borderRadius: 2, backgroundColor: (i + 0.5) / bars.length <= progress ? lit : muted, opacity: (i + 0.5) / bars.length <= progress ? 1 : 0.55 }}
             />
           ))}
         </Pressable>
@@ -322,6 +329,17 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const [eventOpen, setEventOpen] = useState(false);
   const [viewOnce, setViewOnce] = useState(false);
   const [viewOnceProtect, setViewOnceProtect] = useState(false);
+  /** Ephemeral voice message being listened to (decrypted local file). */
+  const [onceVoice, setOnceVoice] = useState<string | null>(null);
+  function closeOnceVoice() {
+    const uri = onceVoice;
+    setOnceVoice(null);
+    if (viewOnceProtect) {
+      popProtect("view_once");
+      setViewOnceProtect(false);
+    }
+    if (uri && uri.startsWith("file:")) void import("expo-file-system/legacy").then(({ deleteAsync }) => deleteAsync(uri, { idempotent: true })).catch(() => undefined);
+  }
   const [viewer, setViewer] = useState<{ items: MediaItem[]; start: number } | null>(null);
   const [momentPlay, setMomentPlay] = useState<{ id: string; n: number } | null>(null);
   const [surprisePlay, setSurprisePlay] = useState<{ id: string; n: number } | null>(null);
@@ -713,7 +731,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
         chunks: m.mediaChunks,
         mime: m.mediaMime,
       });
-      setViewer({ items: [{ type: m.type === "video" ? "video" : "image", url: uri }], start: 0 });
+      if (m.type === "voice") setOnceVoice(uri);
+      else setViewer({ items: [{ type: m.type === "video" ? "video" : "image", url: uri }], start: 0 });
       if (m.fromId !== "me") {
         const { consumeServerAttachment } = await import("../lib/messaging/client");
         await consumeServerAttachment(m.attachmentId);
@@ -816,7 +835,9 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.viewOnce ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 }}>
                   <Eye size={16} color={(onMe ? mb.accent : colors.accent)} />
-                  <Text style={{ color: mine ? mb.fg : colors.fg }}>{m.viewed ? t("viewOnceOpened") : t("viewOnceOpen")}</Text>
+                  <Text style={{ color: mine ? mb.fg : colors.fg }}>
+                    {m.type === "voice" ? (m.viewed ? "Vocal écouté" : "Vocal éphémère · toucher pour écouter") : m.viewed ? t("viewOnceOpened") : t("viewOnceOpen")}
+                  </Text>
                 </View>
               ) : null}
               {!m.viewOnce && album.length > 1 ? (
@@ -836,7 +857,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   <Play size={28} color="#fff" />
                 </View>
               ) : null}
-              {m.type === "voice" ? <VoiceBubble uri={m.audioUrl} duration={m.duration} wave={m.waveform} seed={m.localKey ?? m.id} mine={mine} tone={mb} /> : null}
+              {m.type === "voice" && !m.viewOnce ? <VoiceBubble uri={m.audioUrl} duration={m.duration} wave={m.waveform} seed={m.localKey ?? m.id} mine={mine} tone={mb} sending={m.status === "sending" && (m.mediaState === "uploading" || m.mediaState === "preparing")} /> : null}
               {m.type === "file" && m.file ? (
                 <Press onPress={() => void openFile(m)} accessibilityLabel={`Ouvrir ${m.file.name}`}>
                   <Text style={{ color: mine ? mb.fg : colors.fg, fontFamily: "Inter_500Medium" }}>{m.file.name}</Text>
@@ -881,7 +902,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   📍 {m.geo.lat.toFixed(4)}, {m.geo.lon.toFixed(4)}
                 </Text>
               ) : null}
-              {m.mediaState === "uploading" || m.mediaState === "preparing" ? <ActivityIndicator color={(onMe ? mb.accent : colors.accent)} style={{ marginTop: 6 }} /> : null}
+              {(m.mediaState === "uploading" || m.mediaState === "preparing") && m.status === "sending" && m.type !== "voice" ? <ActivityIndicator color={(onMe ? mb.accent : colors.accent)} style={{ marginTop: 6 }} /> : null}
               <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                 {m.editedAt ? <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted), marginRight: 4 }}>modifié</Text> : null}
                 <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted) }}>{formatClock(m.createdAt)}</Text>
@@ -1141,12 +1162,13 @@ function ConversationInner({ chatId }: { chatId: string }) {
                 <VoiceComposer
                   size={composerIcon}
                   onActiveChange={setVoiceActive}
-                  onSend={(take) => {
+                  onSend={(take, opts) => {
                     const id = sendMessage(chatId, {
                       type: "voice",
                       audioUrl: take.uri,
                       duration: Math.round(take.durationMs / 1000),
                       waveform: take.wave,
+                      viewOnce: opts.viewOnce || undefined,
                       mediaState: "preparing",
                     });
                     startUpload({
@@ -1157,6 +1179,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                       mime: "audio/m4a",
                       durationMs: take.durationMs,
                       wave: take.wave,
+                      viewOnce: opts.viewOnce || undefined,
                     });
                   }}
                 />
@@ -1305,6 +1328,18 @@ function ConversationInner({ chatId }: { chatId: string }) {
             }
           }}
         />
+      ) : null}
+      {onceVoice ? (
+        // Ephemeral voice message: listened here once, then gone.
+        <Modal visible transparent animationType="fade" onRequestClose={() => closeOnceVoice()}>
+          <Press onPress={() => closeOnceVoice()} accessibilityLabel="Fermer" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <Pressable onPress={() => undefined} style={{ alignSelf: "stretch", borderRadius: 22, backgroundColor: colors.surface, padding: 18, gap: 12, alignItems: "center" }}>
+              <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>Message vocal éphémère</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>Il disparaîtra quand tu fermeras cette fenêtre.</Text>
+              <VoiceBubble uri={onceVoice} seed={onceVoice} mine={false} tone={mb} />
+            </Pressable>
+          </Press>
+        </Modal>
       ) : null}
       <MessageMenu
         open={Boolean(picked)}

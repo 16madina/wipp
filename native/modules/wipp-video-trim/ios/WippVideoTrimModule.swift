@@ -25,6 +25,37 @@ public class WippVideoTrimModule: Module {
       ]
     }
 
+    /// Voice messages recorded in several parts (pause → listen → resume): one .m4a file, parts in order.
+    AsyncFunction("concatAudio") { (uris: [String]) async throws -> [String: Any] in
+      guard !uris.isEmpty else { throw TrimFailure("audio_empty") }
+      let composition = AVMutableComposition()
+      guard let track = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
+        throw TrimFailure("audio_track")
+      }
+      var cursor = CMTime.zero
+      for uri in uris {
+        let url = Self.fileURL(uri)
+        guard FileManager.default.fileExists(atPath: url.path) else { throw TrimFailure("audio_part_missing") }
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration)
+        guard let source = try await asset.loadTracks(withMediaType: .audio).first, CMTimeGetSeconds(duration) > 0.05 else { continue }
+        try track.insertTimeRange(CMTimeRange(start: .zero, duration: duration), of: source, at: cursor)
+        cursor = CMTimeAdd(cursor, duration)
+      }
+      guard CMTimeGetSeconds(cursor) > 0 else { throw TrimFailure("audio_empty") }
+      let output = FileManager.default.temporaryDirectory.appendingPathComponent("wipp-voice-\(UUID().uuidString).m4a")
+      guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetAppleM4A) else {
+        throw TrimFailure("audio_export")
+      }
+      export.outputURL = output
+      export.outputFileType = .m4a
+      await export.export()
+      guard export.status == .completed else {
+        throw TrimFailure("audio_export \(export.error.map { Self.describe($0) } ?? "status")")
+      }
+      return ["uri": output.absoluteString, "duration": CMTimeGetSeconds(cursor)]
+    }
+
     AsyncFunction("trim") { (uri: String, start: Double, end: Double) async throws -> [String: Any] in
       let source = Self.fileURL(uri)
       guard source.isFileURL, FileManager.default.fileExists(atPath: source.path) else {
