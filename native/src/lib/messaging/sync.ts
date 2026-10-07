@@ -142,6 +142,7 @@ const MEDIA_FIELDS = [
   "file",
   "album",
   "duration",
+  "waveform",
   "viewOnce",
   "viewed",
   "mediaState",
@@ -216,6 +217,7 @@ export function applyMediaEnvelope(m: Message, media: ParsedMedia, label: string
     geo: media.location ?? m.geo,
     linkCard: media.link ?? m.linkCard,
     duration: media.durationMs ? Math.round(media.durationMs / 1000) : m.duration,
+    waveform: media.wave ?? m.waveform,
   };
 }
 

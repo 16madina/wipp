@@ -90,6 +90,8 @@ export type MediaEnvelope = {
   mime?: string;
   viewOnce?: boolean;
   durationMs?: number;
+  /** Voice: shape of the voice, 32 levels from 0 to 9 ("0137…"), drawn as bars in the bubble. */
+  wave?: string;
   chunks?: { i: number; iv: string; sha256: string }[];
   contact?: { userId: string; username: string; displayName: string; fingerprint?: string };
   location?: { lat: number; lon: number };

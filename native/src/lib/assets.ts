@@ -23,8 +23,9 @@ export const logoGold = require("../../assets/auth/wipp-logo-gold.png");
 export const brandOfficial = require("../../assets/wipp/brand/wipp-official.png");
 export const bootVideo = require("../../assets/wipp/brand/wipp-boot.mp4");
 export const bootPoster = require("../../assets/wipp/brand/wipp-boot.jpg");
-/** The little WIPP guy on the sticker button (background removed, 168 px). */
-export const composerMascot = require("../../assets/composer/wipp-mascot.png");
+/** The little WIPP guy on the sticker button: gold on the dark theme, blue on the light (blue) theme. */
+export const composerMascotGold = require("../../assets/composer/wipp-mascot-gold.png");
+export const composerMascotBlue = require("../../assets/composer/wipp-mascot-blue.png");
 
 export const eventHero = require("../../assets/events/create-hero.png");
 export const businessIntro = require("../../assets/business/business-intro.png");

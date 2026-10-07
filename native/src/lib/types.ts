@@ -363,6 +363,8 @@ export type Message = {
   id: string;
   /** Id this phone gave the message before the server confirmed it: keeps the bubble (and its animation) stable when the server id replaces it. */
   localKey?: string;
+  /** Voice message: shape of the voice, 32 levels 0–9. */
+  waveform?: string;
   chatId: string;
   fromId: string;
   type: "text" | "voice" | "image" | "video" | "listing" | "shop" | "system" | "sticker" | "scratch" | "file" | "gif" | "poll" | "event";

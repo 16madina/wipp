@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, Easing } from "react-native";
 import { Image } from "expo-image";
-import { composerMascot } from "../lib/assets";
+import { composerMascotBlue, composerMascotGold } from "../lib/assets";
+import { useAppearance } from "../lib/appearance";
+
+/** Width / height of the images (240×182 gold, 240×189 blue). */
+const RATIO = 1.3;
 
 /**
- * The little WIPP guy on the sticker button. Every few seconds he hops and sways on his feet, as if calling you
+ * The little WIPP guy on the sticker button. Every few seconds he hops and sways, as if calling you
  * to send a sticker. One small image moved by the native driver: it costs almost nothing (unlike animated stickers).
  * Still while the sticker tray is open, and when the iPhone asks for less motion.
  */
 export function ComposerMascot({ size, active }: { size: number; active: boolean }) {
+  const theme = useAppearance((s) => s.theme);
+  const width = Math.round(size * RATIO);
   const hop = useRef(new Animated.Value(0)).current;
   const sway = useRef(new Animated.Value(0)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -49,13 +55,13 @@ export function ComposerMascot({ size, active }: { size: number; active: boolean
   return (
     <Animated.View
       style={{
-        width: size,
+        width,
         height: size,
-        // Sways around his feet (bottom centre), not around his belly.
+        // Sways from his bottom edge (like a wave hello), not around his middle.
         transform: [{ translateY }, { translateY: size / 2 }, { rotate }, { translateY: -size / 2 }, { scale: active ? 1.08 : 1 }],
       }}
     >
-      <Image source={composerMascot} style={{ width: size, height: size }} contentFit="contain" />
+      <Image source={theme === "light" ? composerMascotBlue : composerMascotGold} style={{ width, height: size }} contentFit="contain" />
     </Animated.View>
   );
 }

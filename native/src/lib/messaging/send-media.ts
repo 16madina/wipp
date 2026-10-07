@@ -17,6 +17,8 @@ export type MediaJob = {
   viewOnce?: boolean;
   durationMs?: number;
   caption?: string;
+  /** Voice: 32 levels 0–9 drawn as bars in the bubble. */
+  wave?: string;
 };
 
 const jobs = new Map<string, MediaJob>();
@@ -76,6 +78,7 @@ export async function uploadMedia(job: MediaJob) {
       mime: job.mime,
       durationMs: job.durationMs,
       caption: job.caption,
+      wave: job.wave,
       size: bytes.byteLength,
       identity: st.identity,
       peerPublicJwk: peer,

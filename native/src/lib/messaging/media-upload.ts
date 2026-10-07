@@ -88,6 +88,8 @@ export async function uploadCipherFile(input: {
   onProgress?: (fraction: number) => void;
   caption?: string;
   size?: number;
+  /** Voice: 32 levels 0–9 (see MediaEnvelope.wave). */
+  wave?: string;
   /** Groups: send the media description sealed with the group key instead of the private-chat key. */
   sendInner?: (inner: string) => Promise<{ id: string } | null>;
 }) {
@@ -103,6 +105,7 @@ export async function uploadCipherFile(input: {
     caption: input.caption || undefined,
     size: stored.size,
     chunks: stored.chunks,
+    wave: input.wave || undefined,
   });
   const message = input.sendInner
     ? await input.sendInner(inner)

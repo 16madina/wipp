@@ -551,6 +551,7 @@ export const useWippStore = create<Store>((set, get) => ({
       status: "sending",
       reactions: [],
       duration: data.duration,
+      waveform: data.waveform,
       audioUrl: data.audioUrl,
       imageUrl: data.imageUrl,
       videoUrl: data.videoUrl,

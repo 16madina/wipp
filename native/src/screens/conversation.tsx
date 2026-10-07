@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -38,7 +39,7 @@ import { StickerTray } from "../components/StickerTray";
 import { SurpriseReveal } from "../components/SurpriseReveal";
 import { SurpriseAnimOverlay } from "../components/SurpriseAnimOverlay";
 import { SwipeableBubble } from "../components/SwipeableBubble";
-import { VoiceHoldButton } from "../components/VoiceHoldButton";
+import { VoiceComposer } from "../components/VoiceComposer";
 import { mentionIdsInText } from "../lib/lot7/api";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { WippSticker } from "../components/WippSticker";
@@ -102,50 +103,131 @@ function LinkedText({ text, linkColor }: { text: string; linkColor?: string }) {
   );
 }
 
-function VoiceBubble({ uri, duration, mine, tone }: { uri?: string; duration?: number; mine: boolean; tone: ReturnType<typeof myBubbleColors> }) {
+/** Only one voice message plays at a time. */
+let playingVoice: Audio.Sound | null = null;
+
+/** A plausible voice shape when the message carries none (older messages): stable for a given message. */
+function fallbackWave(seed: string) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  let out = "";
+  for (let i = 0; i < 32; i++) {
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    const base = 3 + Math.round(4 * Math.abs(Math.sin(i / 3.1)));
+    out += String(Math.min(9, Math.max(1, base + ((h >>> 28) % 4) - 1)));
+  }
+  return out;
+}
+
+/** WhatsApp-style voice bubble: play · shape of the voice (fills while playing, touch to jump) · time · speed. */
+function VoiceBubble({ uri, duration, wave, seed, mine, tone }: { uri?: string; duration?: number; wave?: string; seed: string; mine: boolean; tone: ReturnType<typeof myBubbleColors> }) {
   const sound = useRef<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
+  const [total, setTotal] = useState((duration ?? 0) * 1000);
   const [speed, setSpeed] = useState(1);
-  useEffect(() => () => void sound.current?.unloadAsync(), []);
-  async function toggle() {
-    if (!uri) return;
-    if (!sound.current) {
-      const created = await Audio.Sound.createAsync({ uri }, { shouldPlay: true, rate: speed, shouldCorrectPitch: true });
-      sound.current = created.sound;
-      created.sound.setOnPlaybackStatusUpdate((st) => {
-        if (!st.isLoaded) return;
-        setPlaying(st.isPlaying);
-        setPos(st.positionMillis);
-        if (st.didJustFinish) {
-          setPlaying(false);
-          setPos(0);
-        }
-      });
-      setPlaying(true);
-      return;
-    }
-    const st = await sound.current.getStatusAsync();
-    if (st.isLoaded && st.isPlaying) await sound.current.pauseAsync();
-    else await sound.current.playAsync();
+  const [width, setWidth] = useState(0);
+  const bars = (wave && /^[0-9]{8,}$/.test(wave) ? wave : fallbackWave(seed)).split("").map(Number);
+  const fg = mine ? tone.fg : colors.fg;
+  const muted = mine ? tone.muted : colors.muted;
+  const lit = mine ? tone.accent : colors.accent;
+
+  useEffect(
+    () => () => {
+      const s = sound.current;
+      sound.current = null;
+      if (s && playingVoice === s) playingVoice = null;
+      void s?.unloadAsync();
+    },
+    [],
+  );
+
+  async function load() {
+    if (sound.current || !uri) return sound.current;
+    const created = await Audio.Sound.createAsync({ uri }, { shouldPlay: false, rate: speed, shouldCorrectPitch: true, progressUpdateIntervalMillis: 80 });
+    sound.current = created.sound;
+    created.sound.setOnPlaybackStatusUpdate((st) => {
+      if (!st.isLoaded) return;
+      setPlaying(st.isPlaying);
+      setPos(st.positionMillis);
+      if (st.durationMillis) setTotal(st.durationMillis);
+      if (st.didJustFinish) {
+        setPlaying(false);
+        setPos(0);
+        void created.sound.setPositionAsync(0);
+        if (playingVoice === created.sound) playingVoice = null;
+      }
+    });
+    return created.sound;
   }
+
+  async function play(s: Audio.Sound) {
+    if (playingVoice && playingVoice !== s) void playingVoice.pauseAsync().catch(() => undefined);
+    playingVoice = s;
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => undefined);
+    await s.playAsync();
+  }
+
+  async function toggle() {
+    const s = await load();
+    if (!s) return;
+    const st = await s.getStatusAsync();
+    if (st.isLoaded && st.isPlaying) await s.pauseAsync();
+    else await play(s);
+  }
+
+  async function seek(x: number) {
+    if (!width) return;
+    const s = await load();
+    if (!s) return;
+    const st = await s.getStatusAsync();
+    const length = (st.isLoaded && st.durationMillis) || total;
+    if (!length) return;
+    const to = Math.max(0, Math.min(1, x / width)) * length;
+    setPos(to);
+    await s.setPositionAsync(to);
+    if (!(st.isLoaded && st.isPlaying)) await play(s);
+  }
+
   async function cycleSpeed() {
     const next = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
     setSpeed(next);
     if (sound.current) await sound.current.setRateAsync(next, true);
   }
-  const dur = (duration ?? 0) * (duration && duration > 20 ? 1 : 1000);
-  const shown = Math.max(duration ?? 0, Math.round(pos / 1000));
+
+  const progress = total ? Math.min(1, pos / total) : 0;
+  const shownMs = playing || pos > 0 ? pos : total;
+  const s = Math.floor(shownMs / 1000);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minWidth: 160 }}>
-      <Press onPress={() => void toggle()}>{playing ? <Pause size={18} color={mine ? tone.fg : colors.fg} /> : <Play size={18} color={mine ? tone.fg : colors.fg} />}</Press>
-      <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: whiteA(0.2) }}>
-        <View style={{ width: dur ? `${Math.min(100, (pos / dur) * 100)}%` : "0%", height: 4, backgroundColor: mine ? tone.accent : colors.accent }} />
-      </View>
-      <Press onPress={() => void cycleSpeed()}>
-        <Text style={{ fontSize: 11, color: (mine ? tone.muted : colors.muted) }}>{speed}x</Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, width: 236, paddingVertical: 2 }}>
+      <Press
+        onPress={() => void toggle()}
+        accessibilityLabel={playing ? "Mettre en pause" : "Écouter le message vocal"}
+        style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: mine ? "rgba(255,255,255,0.18)" : colors.navy }}
+      >
+        {playing ? <Pause size={18} color={fg} fill={fg} /> : <Play size={18} color={fg} fill={fg} style={{ marginLeft: 2 }} />}
       </Press>
-      <Text style={{ fontSize: 11, color: (mine ? tone.muted : colors.muted) }}>{shown}s</Text>
+      <View style={{ flex: 1 }}>
+        <Pressable
+          onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+          onPress={(e) => void seek(e.nativeEvent.locationX)}
+          accessibilityLabel="Aller à un moment du message"
+          style={{ height: 28, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+        >
+          {bars.map((lv, i) => (
+            <View
+              key={i}
+              style={{ width: 3, height: 4 + lv * 2.4, borderRadius: 2, backgroundColor: (i + 0.5) / bars.length <= progress ? lit : muted, opacity: (i + 0.5) / bars.length <= progress ? 1 : 0.55 }}
+            />
+          ))}
+        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+          <Text style={{ fontSize: 11, color: muted, fontVariant: ["tabular-nums"] }}>{`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`}</Text>
+          <Press onPress={() => void cycleSpeed()} accessibilityLabel="Vitesse de lecture" hitSlop={6} style={{ paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: mine ? "rgba(255,255,255,0.16)" : colors.surface2 }}>
+            <Text style={{ fontSize: 11, color: fg, fontFamily: "Inter_600SemiBold" }}>{speed === 1.5 ? "1,5×" : `${speed}×`}</Text>
+          </Press>
+        </View>
+      </View>
     </View>
   );
 }
@@ -207,8 +289,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const insets = useSafeAreaInsets();
   const { compact, icon, headerIcon, tablet } = useDeviceLayout();
   const composerIcon = tablet ? 48 : icon;
-  // The little WIPP guy is a bit taller than the other icons and stands on the bar.
-  const mascotSize = tablet ? 50 : compact ? 40 : 42;
+  // The little WIPP guy inside the message field (opens the stickers).
+  const mascotSize = tablet ? 40 : compact ? 32 : 34;
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
@@ -229,6 +311,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const [shareStage, setShareStage] = useState<"share" | "compose">("share");
   const [emojiBar, setEmojiBar] = useState(false);
   const [stickerBar, setStickerBar] = useState(false);
+  /** A voice message is being recorded: the recorder takes the whole bar. */
+  const [voiceActive, setVoiceActive] = useState(false);
   const [picked, setPicked] = useState<Message | null>(null);
   const [reply, setReply] = useState<Message | null>(null);
   const [editing, setEditing] = useState<Message | null>(null);
@@ -752,7 +836,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   <Play size={28} color="#fff" />
                 </View>
               ) : null}
-              {m.type === "voice" ? <VoiceBubble uri={m.audioUrl} duration={m.duration} mine={mine} tone={mb} /> : null}
+              {m.type === "voice" ? <VoiceBubble uri={m.audioUrl} duration={m.duration} wave={m.waveform} seed={m.localKey ?? m.id} mine={mine} tone={mb} /> : null}
               {m.type === "file" && m.file ? (
                 <Press onPress={() => void openFile(m)} accessibilityLabel={`Ouvrir ${m.file.name}`}>
                   <Text style={{ color: mine ? mb.fg : colors.fg, fontFamily: "Inter_500Medium" }}>{m.file.name}</Text>
@@ -997,74 +1081,56 @@ function ConversationInner({ chatId }: { chatId: string }) {
               </ScrollView>
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: compact ? 2 : 4, paddingHorizontal: compact ? 6 : 8, paddingTop: 6 }}>
-              <Press
-                accessibilityLabel="Plus"
-                onPress={() => openShare("share")}
-                onLongPress={() => openShare("compose")}
-                style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, borderRadius: composerIcon / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}
-              >
-                <Plus size={tablet ? 24 : 20} color={colors.fg} />
-              </Press>
-              <Press
-                accessibilityLabel={t("viewOnce")}
-                onPress={() => setViewOnce((v) => !v)}
-                style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
-              >
-                <Eye size={tablet ? 22 : 18} color={viewOnce ? colors.accent : colors.muted} />
-              </Press>
-              <View style={{ flex: 1, minWidth: 0, minHeight: 44, flexDirection: "row", alignItems: "flex-end", borderRadius: 22, backgroundColor: colors.surface2 }}>
-                <TextInput
-                  value={draft}
-                  onChangeText={setDraftPersist}
-                  placeholder={t("writeMessage")}
-                  placeholderTextColor={colors.muted}
-                  multiline
-                  style={{ flex: 1, minWidth: 0, minHeight: 44, maxHeight: 112, paddingHorizontal: 14, paddingVertical: 10, color: colors.fg, fontSize: 15 }}
-                />
-                <Press
-                  onPress={() => {
-                    if (compact) {
-                      Keyboard.dismiss();
-                      setEmojiBar(false);
-                      setStickerBar((v) => !v);
-                    } else {
-                      setStickerBar(false);
-                      setEmojiBar((v) => !v);
-                    }
-                  }}
-                  accessibilityLabel={compact ? "Stickers" : undefined}
-                  hitSlop={6}
-                  style={{ width: compact ? mascotSize : composerIcon, height: composerIcon, flexShrink: 0, marginRight: 4, marginBottom: 4, alignItems: "center", justifyContent: compact ? "flex-end" : "center" }}
-                >
-                  {compact ? (
-                    <ComposerMascot size={mascotSize} active={stickerBar} />
-                  ) : (
-                    <Smile size={tablet ? 22 : 20} color={emojiBar ? colors.accent : colors.muted} />
-                  )}
-                </Press>
-              </View>
-              {!compact || tablet ? (
-                <Press
-                  accessibilityLabel="Stickers"
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setEmojiBar(false);
-                    setStickerBar((v) => !v);
-                  }}
-                  hitSlop={6}
-                  style={{ width: mascotSize, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "flex-end" }}
-                >
-                  <ComposerMascot size={mascotSize} active={stickerBar} />
-                </Press>
-              ) : null}
-              <Press
-                accessibilityLabel={t("shareCamera") ?? "Caméra"}
-                onPress={() => void pickCamera()}
-                style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
-              >
-                <Camera size={tablet ? 24 : 20} color={colors.fg} />
-              </Press>
-              {draft.trim() ? (
+              {voiceActive ? null : (
+                <>
+                  <Press
+                    accessibilityLabel="Plus"
+                    onPress={() => openShare("share")}
+                    onLongPress={() => openShare("compose")}
+                    style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, borderRadius: composerIcon / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Plus size={tablet ? 24 : 20} color={colors.fg} />
+                  </Press>
+                  <Press
+                    accessibilityLabel={t("viewOnce")}
+                    onPress={() => setViewOnce((v) => !v)}
+                    style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Eye size={tablet ? 22 : 18} color={viewOnce ? colors.accent : colors.muted} />
+                  </Press>
+                  <View style={{ flex: 1, minWidth: 0, minHeight: 44, flexDirection: "row", alignItems: "flex-end", borderRadius: 22, backgroundColor: colors.surface2 }}>
+                    <TextInput
+                      value={draft}
+                      onChangeText={setDraftPersist}
+                      placeholder={t("writeMessage")}
+                      placeholderTextColor={colors.muted}
+                      multiline
+                      style={{ flex: 1, minWidth: 0, minHeight: 44, maxHeight: 112, paddingHorizontal: 14, paddingVertical: 10, color: colors.fg, fontSize: 15 }}
+                    />
+                    {/* The little WIPP guy (in place of the old smiley) opens the stickers. */}
+                    <Press
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setEmojiBar(false);
+                        setStickerBar((v) => !v);
+                      }}
+                      accessibilityLabel="Stickers"
+                      hitSlop={6}
+                      style={{ width: Math.round(mascotSize * 1.3), height: 44, flexShrink: 0, marginRight: 6, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <ComposerMascot size={mascotSize} active={stickerBar} />
+                    </Press>
+                  </View>
+                  <Press
+                    accessibilityLabel={t("shareCamera") ?? "Caméra"}
+                    onPress={() => void pickCamera()}
+                    style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Camera size={tablet ? 24 : 20} color={colors.fg} />
+                  </Press>
+                </>
+              )}
+              {draft.trim() && !voiceActive ? (
                 <Press
                   onPress={sendDraft}
                   style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, borderRadius: composerIcon / 2, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}
@@ -1072,22 +1138,25 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   <Send size={tablet ? 22 : 18} color={colors.accentFg} />
                 </Press>
               ) : (
-                <VoiceHoldButton
+                <VoiceComposer
                   size={composerIcon}
-                  onSend={(rec) => {
+                  onActiveChange={setVoiceActive}
+                  onSend={(take) => {
                     const id = sendMessage(chatId, {
                       type: "voice",
-                      audioUrl: rec.uri,
-                      duration: Math.round(rec.durationMs / 1000),
+                      audioUrl: take.uri,
+                      duration: Math.round(take.durationMs / 1000),
+                      waveform: take.wave,
                       mediaState: "preparing",
                     });
                     startUpload({
                       chatId,
                       messageId: id,
-                      blobUrl: rec.uri,
+                      blobUrl: take.uri,
                       kind: "voice",
                       mime: "audio/m4a",
-                      durationMs: rec.durationMs,
+                      durationMs: take.durationMs,
+                      wave: take.wave,
                     });
                   }}
                 />
