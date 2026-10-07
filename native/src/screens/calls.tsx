@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { Mic, MicOff, Phone, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Video, VideoOff } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
-import { Chip, Empty, GlassHeader, Header, PendingNote, Press, ScreenRoot, SearchField, Btn } from "../components/ui";
+import { Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField, Btn } from "../components/ui";
 import { QrCard } from "../components/QrCard";
 import { asEpochMs, formatChatTime, formatDuration } from "../lib/format";
 import { useT, useWippStore } from "../lib/store";
@@ -170,20 +170,207 @@ export function ActiveCallScreen({
   return <View style={{ flex: 1, backgroundColor: colors.navy }} />;
 }
 
+const LINK_HOURS: { h: number; label: string }[] = [
+  { h: 1, label: "1 heure" },
+  { h: 24, label: "24 heures" },
+  { h: 168, label: "7 jours" },
+];
+
+function untilLabel(ms: number) {
+  const left = Math.max(0, ms - Date.now());
+  const h = Math.round(left / 3_600_000);
+  if (h < 1) return "moins d’une heure";
+  if (h < 48) return `${h} h`;
+  return `${Math.round(h / 24)} jours`;
+}
+
+/** Créer un lien d’appel : audio / vidéo, durée, puis partager ; liste des liens actifs (annulables). */
 export function CallLinkScreen() {
   const pop = useWippStore((s) => s.pop);
-  const me = useWippStore((s) => s.me);
-  const value = `${profileQr(me.username)}/call`;
+  const [kind, setKind] = useState<"audio" | "video">("audio");
+  const [hours, setHours] = useState(24);
+  const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<{ token: string; url: string; kind: "audio" | "video"; expiresAt: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [links, setLinks] = useState<import("../lib/calls/livekit-client").CallLink[]>([]);
+
+  const refresh = () =>
+    void import("../lib/calls/livekit-client")
+      .then(({ listCallLinks }) => listCallLinks())
+      .then((r) => setLinks(r.links))
+      .catch(() => undefined);
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const create = async () => {
+    setBusy(true);
+    try {
+      const { createCallLink } = await import("../lib/calls/livekit-client");
+      const { link } = await createCallLink(kind, hours);
+      setCreated(link);
+      setCopied(false);
+      refresh();
+    } catch (err) {
+      const { Alert } = await import("react-native");
+      Alert.alert("Lien d’appel", err instanceof Error ? err.message : "Impossible de créer le lien.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const chip = (on: boolean, label: string, onPress: () => void) => (
+    <Press key={label} onPress={onPress} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: on ? colors.accent : colors.surface2, borderWidth: 1, borderColor: on ? colors.accent : colors.hair }}>
+      <Text style={{ color: on ? colors.accentFg : colors.fg, fontSize: 13, fontFamily: on ? "Inter_600SemiBold" : undefined }}>{label}</Text>
+    </Press>
+  );
+
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="Lien d’appel" onBack={pop} />
       </GlassHeader>
-      <PendingNote label="Lien d’appel serveur" />
-      <View style={{ alignItems: "center", padding: 24 }}>
-        <QrCard value={value} size={200} />
-        <Text style={{ marginTop: 16, color: colors.muted, textAlign: "center" }}>{value}</Text>
-        <Btn label="Fermer" onPress={pop} style={{ marginTop: 20, alignSelf: "stretch" }} />
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {created ? (
+          <View style={{ alignItems: "center" }}>
+            <QrCard value={created.url} size={200} />
+            <Text selectable style={{ marginTop: 14, color: colors.fg, fontSize: 13, textAlign: "center" }}>{created.url}</Text>
+            <Text style={{ marginTop: 4, color: colors.muted, fontSize: 12 }}>
+              {created.kind === "video" ? "Appel vidéo" : "Appel audio"} · expire dans {untilLabel(created.expiresAt)}
+            </Text>
+            <View style={{ alignSelf: "stretch", gap: 10, marginTop: 18 }}>
+              <Btn
+                label={copied ? "Lien copié ✓" : "Copier le lien"}
+                onPress={() => void import("expo-clipboard").then((C) => C.setStringAsync(created.url)).then(() => setCopied(true))}
+              />
+              <Btn
+                label="Partager le lien"
+                variant="secondary"
+                onPress={() => void import("../lib/share-public").then(({ shareWippPublic }) => shareWippPublic(`Rejoins mon appel WIPP : ${created.url}`))}
+              />
+              <Btn
+                label="Rejoindre l’appel maintenant"
+                variant="secondary"
+                onPress={() => {
+                  void import("../lib/calls/session").then(({ joinCallByLink }) => joinCallByLink(created.token, "Lien d’appel"));
+                }}
+              />
+              <Btn label="Créer un autre lien" variant="ghost" onPress={() => setCreated(null)} />
+            </View>
+          </View>
+        ) : (
+          <View>
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 14 }}>
+              Partage ce lien : toute personne qui a WIPP peut rejoindre l’appel. Plusieurs personnes peuvent le rejoindre en même temps.
+            </Text>
+            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>Type d’appel</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
+              {chip(kind === "audio", "Audio", () => setKind("audio"))}
+              {chip(kind === "video", "Vidéo", () => setKind("video"))}
+            </View>
+            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>Le lien expire après</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 22 }}>{LINK_HOURS.map((o) => chip(hours === o.h, o.label, () => setHours(o.h)))}</View>
+            <Btn label={busy ? "Création…" : "Créer le lien"} disabled={busy} onPress={() => void create()} />
+          </View>
+        )}
+
+        {links.length ? (
+          <View style={{ marginTop: 28 }}>
+            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>Mes liens actifs</Text>
+            {links.map((l) => (
+              <View key={l.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.hair }}>
+                {l.kind === "video" ? <Video size={18} color={colors.accent} /> : <Phone size={18} color={colors.accent} />}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.fg, fontSize: 14 }}>{l.kind === "video" ? "Appel vidéo" : "Appel audio"}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>
+                    Expire dans {untilLabel(l.expiresAt)}
+                    {l.participants ? ` · ${l.participants} dans l’appel` : ""}
+                  </Text>
+                </View>
+                <Press
+                  onPress={async () => {
+                    const { Alert } = await import("react-native");
+                    Alert.alert("Annuler le lien", "Le lien ne fonctionnera plus et l’appel en cours sera terminé.", [
+                      { text: "Garder", style: "cancel" },
+                      {
+                        text: "Annuler le lien",
+                        style: "destructive",
+                        onPress: () =>
+                          void import("../lib/calls/livekit-client")
+                            .then(({ revokeCallLink }) => revokeCallLink(l.id))
+                            .then(refresh)
+                            .catch(() => undefined),
+                      },
+                    ]);
+                  }}
+                  style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.danger }}
+                >
+                  <Text style={{ color: colors.danger, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Annuler</Text>
+                </Press>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </ScrollView>
+    </ScreenRoot>
+  );
+}
+
+/** Opened from a wippapp.com/c/<code> link: who is calling, then « Rejoindre l’appel ». */
+export function CallJoinScreen({ token }: { token: string }) {
+  const pop = useWippStore((s) => s.pop);
+  const [peek, setPeek] = useState<import("../lib/calls/livekit-client").CallLinkPeek | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    void import("../lib/calls/livekit-client")
+      .then(({ peekCallLink }) => peekCallLink(token))
+      .then(setPeek)
+      .catch(() => setError("Impossible de vérifier le lien."));
+  }, [token]);
+  const ok = peek?.status === "ok" ? peek : null;
+  const name = ok?.owner?.displayName || (ok?.owner?.username ? `@${ok.owner.username}` : "WIPP");
+  return (
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title="Lien d’appel" onBack={pop} />
+      </GlassHeader>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 28 }}>
+        {!peek && !error ? <Text style={{ color: colors.muted }}>Vérification du lien…</Text> : null}
+        {ok ? (
+          <>
+            <Avatar user={{ displayName: name, avatar: ok.owner?.avatarUrl ?? undefined }} size={96} />
+            <Text style={{ marginTop: 16, color: colors.fg, fontSize: 20, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>
+              {ok.kind === "video" ? "Appel vidéo" : "Appel audio"} de {name}
+            </Text>
+            {ok.owner?.username ? <Text style={{ marginTop: 2, color: colors.muted }}>@{ok.owner.username}</Text> : null}
+            <Text style={{ marginTop: 10, color: colors.muted, fontSize: 13 }}>
+              {ok.participants ? `${ok.participants} personne${ok.participants > 1 ? "s" : ""} dans l’appel` : "Personne n’est encore dans l’appel"}
+            </Text>
+            <View style={{ alignSelf: "stretch", marginTop: 24 }}>
+              <Btn
+                label={busy ? "Connexion…" : "Rejoindre l’appel"}
+                disabled={busy}
+                onPress={() => {
+                  setBusy(true);
+                  void import("../lib/calls/session")
+                    .then(({ joinCallByLink }) => joinCallByLink(token, `Appel de ${name}`))
+                    .then(() => pop())
+                    .catch((err) => {
+                      setBusy(false);
+                      setError(err instanceof Error ? err.message : "Impossible de rejoindre l’appel.");
+                    });
+                }}
+              />
+            </View>
+          </>
+        ) : null}
+        {peek && peek.status !== "ok" ? (
+          <Text style={{ color: colors.danger, textAlign: "center" }}>
+            {peek.status === "expired" ? "Ce lien d’appel a expiré." : peek.status === "revoked" ? "Ce lien d’appel a été annulé." : "Lien d’appel invalide."}
+          </Text>
+        ) : null}
+        {error ? <Text style={{ marginTop: 12, color: colors.danger, textAlign: "center" }}>{error}</Text> : null}
       </View>
     </ScreenRoot>
   );

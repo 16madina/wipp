@@ -257,6 +257,20 @@ export async function joinGroupCall(input: { callId: string; chatId: string; kin
   }
 }
 
+/** Join a call through a WIPP call link (wippapp.com/c/<code>). */
+export async function joinCallByLink(token: string, title: string) {
+  const { joinCallLink } = await import("./livekit-client");
+  const joined = await joinCallLink(token);
+  useCallSession.setState({
+    session: { ...seed({ userId: "call", kind: joined.kind, dir: "in", callId: joined.callId, chatId: `link_${joined.linkId}`, group: true, displayName: title }), phase: "connecting" },
+  });
+  try {
+    await attachToken(joined.callId, joined.kind === "video");
+  } catch (err) {
+    useCallSession.getState().patch({ phase: "failed", note: errorText(err, "Impossible de rejoindre l’appel.") });
+  }
+}
+
 export async function acceptCurrentCall() {
   const live = useCallSession.getState().session;
   if (!live?.callId) return;

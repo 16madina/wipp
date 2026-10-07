@@ -223,6 +223,23 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite: await createGroupCall({ callerId: me.id, chatId: body.chatId, kind: body.kind }) }, 201);
     }
 
+    if (a === "calls" && b === "links") {
+      const links = await import("@/lib/messaging/calls");
+      // Public: lets wippapp.com/c/<code> show « Appel WIPP de @x » to someone without the app.
+      if (method === "GET" && c === "peek" && d) return json(await links.peekCallLink(d));
+      const me = await resolveSession(bearer(request));
+      if (method === "POST" && !c) {
+        const body = await readBody<{ kind?: string; hours?: number }>(request);
+        return json({ link: await links.createCallLink(me.id, body.kind, body.hours) }, 201);
+      }
+      if (method === "GET" && !c) return json({ links: await links.listCallLinks(me.id) });
+      if (method === "POST" && c === "join") {
+        const body = await readBody<{ token?: string }>(request);
+        return json(await links.joinCallLink(me.id, body.token ?? ""));
+      }
+      if (method === "POST" && c && d === "revoke") return json(await links.revokeCallLink(me.id, c));
+    }
+
     if (method === "GET" && a === "calls" && b === "group" && c && d === "active") {
       const me = await resolveSession(bearer(request));
       const { activeGroupCall } = await import("@/lib/messaging/calls");

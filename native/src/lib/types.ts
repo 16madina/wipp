@@ -117,6 +117,7 @@ export type ScreenName =
   | "calls"
   | "active-call"
   | "call-link"
+  | "call-join"
   | "connect"
   | "my-qr"
   | "scanner"
@@ -193,6 +194,7 @@ export type Screen =
   | { name: "calls" }
   | { name: "active-call"; userId: string; kind: "audio" | "video"; dir?: "in" | "out"; callId?: string; chatId?: string; group?: boolean }
   | { name: "call-link" }
+  | { name: "call-join"; token: string }
   | { name: "connect" }
   | { name: "my-qr" }
   | { name: "scanner"; error?: string }

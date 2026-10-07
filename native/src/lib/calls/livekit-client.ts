@@ -78,6 +78,30 @@ export async function activeGroupCall(chatId: string) {
   return wippApi<{ call: ActiveGroupCall | null }>(`calls/group/${serverProfileId(chatId)}/active`);
 }
 
+export type CallLink = { id: string; kind: "audio" | "video"; createdAt: number; expiresAt: number; participants: number };
+export type CallLinkPeek =
+  | { status: "ok"; kind: "audio" | "video"; expiresAt: number; owner: { id: string; username: string; displayName: string; avatarUrl: string | null } | null; participants: number }
+  | { status: "invalid" | "expired" | "revoked" };
+
+export async function createCallLink(kind: "audio" | "video", hours: number) {
+  return wippApi<{ link: { id: string; token: string; url: string; kind: "audio" | "video"; expiresAt: number } }>("calls/links", {
+    method: "POST",
+    body: JSON.stringify({ kind, hours }),
+  });
+}
+export async function listCallLinks() {
+  return wippApi<{ links: CallLink[] }>("calls/links");
+}
+export async function revokeCallLink(id: string) {
+  return wippApi<{ ok: true }>(`calls/links/${encodeURIComponent(id)}/revoke`, { method: "POST" });
+}
+export async function peekCallLink(token: string) {
+  return wippApi<CallLinkPeek>(`calls/links/peek/${encodeURIComponent(token)}`);
+}
+export async function joinCallLink(token: string) {
+  return wippApi<{ callId: string; kind: "audio" | "video"; linkId: string }>("calls/links/join", { method: "POST", body: JSON.stringify({ token }) });
+}
+
 export async function incomingCalls() {
   return wippApi<{
     invites: { id: string; kind: "audio" | "video"; caller: { id: string; displayName: string; username: string } }[];

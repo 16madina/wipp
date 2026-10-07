@@ -5,7 +5,7 @@ function body() {
   const team = process.env.APPLE_TEAM_ID?.trim() || "6XW2XM3NDF";
   const details =
     /^[A-Z0-9]{10}$/.test(team)
-      ? [{ appID: `${team}.com.wipp.app`, paths: ["/@*", "/t/*", "/g/*", "/b/*"] }]
+      ? [{ appID: `${team}.com.wipp.app`, paths: ["/@*", "/t/*", "/g/*", "/b/*", "/c/*"] }]
       : [];
   return { applinks: { apps: [] as string[], details } };
 }

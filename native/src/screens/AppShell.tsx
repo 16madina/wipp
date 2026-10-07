@@ -42,7 +42,7 @@ import {
   WgoTouchScreen,
 } from "./connect";
 import { CallOverlay } from "../components/CallOverlay";
-import { ActiveCallScreen, CallLinkScreen, CallsScreen } from "./calls";
+import { ActiveCallScreen, CallJoinScreen, CallLinkScreen, CallsScreen } from "./calls";
 import {
   CreateShopScreen,
   ExploreScreen,
@@ -155,6 +155,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <ActiveCallScreen userId={screen.userId} kind={screen.kind} dir={screen.dir} callId={screen.callId} chatId={screen.chatId} group={screen.group} />;
     case "call-link":
       return <CallLinkScreen />;
+    case "call-join":
+      return <CallJoinScreen token={screen.token} />;
     case "connect":
       return <ConnectScreen />;
     case "my-qr":

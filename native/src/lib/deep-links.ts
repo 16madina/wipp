@@ -4,7 +4,25 @@ import { resolveWippQr, type QrDestination } from "./qr-resolver";
 
 export { upsertRemoteProfile } from "./public-profiles";
 
+/** wippapp.com/c/<code> or wipp://c/<code> → the call link code. */
+export function callLinkToken(raw: string) {
+  const m = /^(?:https?:\/\/(?:www\.)?(?:wippapp\.com|wipp\.me)|wipp:\/)\/c\/([A-Za-z0-9_-]{16,64})(?:[/?#]|$)/i.exec(raw.trim());
+  return m ? m[1]! : null;
+}
+
 export async function openWippLink(raw: string, mode: "push" | "replace" = "push") {
+  const callToken = callLinkToken(raw);
+  if (callToken) {
+    const st = useWippStore.getState();
+    const screen = { name: "call-join" as const, token: callToken };
+    if (!st.onboarded) {
+      const { setPendingNav } = await import("./push/nav-intent");
+      setPendingNav({ kind: "screen", screen });
+      return { ok: true as const, kind: "pending" as const };
+    }
+    (mode === "replace" ? st.replace : st.push)(screen);
+    return { ok: true as const, kind: "internal" as const };
+  }
   const { screenFromWippScheme } = await import("./push/router");
   const internal = screenFromWippScheme(raw);
   if (internal) {

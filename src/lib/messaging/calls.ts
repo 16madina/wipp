@@ -2,7 +2,7 @@
  * Call invite signaling + push token registration.
  * Works with LiveKit room names minted at invite time.
  */
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { sendFcmCall, sendVoipCall } from "@/lib/push/native";
 import { getSql } from "@/lib/db";
 import { sendExpoPush } from "@/lib/push/expo";
@@ -778,6 +778,9 @@ export async function authorizeLiveKitJoin(meId: string, callId: string) {
   if (!g || g.ended_at || !LIVE_GROUP_STATES.includes(g.state) || g.status === "ended" || g.status === "cancelled") {
     throw new WippHttpError(403, "forbidden", "Appel non autorisé");
   }
+  const linkOk = await linkCallAllowed(g.chat_id);
+  if (linkOk === false) throw new WippHttpError(410, "call_closed", "Ce lien d’appel n’est plus valable.");
+  if (linkOk) return { roomName: g.room_name, kind: g.kind === "video" ? "video" as const : "audio" as const };
   const member = await sql<{ ok: number }>`
     select 1 as ok from wipp_chat_members
     where chat_id = ${g.chat_id} and profile_id = ${meId}
@@ -855,9 +858,9 @@ export async function setGroupCallState(input: { meId: string; callId: string; s
   `;
   const call = rows[0];
   if (!call || call.ended_at) throw new WippHttpError(410, "call_closed", "Cet appel est terminé.");
-  const member = await sql`
-    select 1 from wipp_chat_members where chat_id = ${call.chat_id} and profile_id = ${input.meId} limit 1
-  `;
+  const member = call.chat_id.startsWith("link_")
+    ? await sql`select 1 from wipp_group_call_members where call_id = ${input.callId} and profile_id = ${input.meId} limit 1`
+    : await sql`select 1 from wipp_chat_members where chat_id = ${call.chat_id} and profile_id = ${input.meId} limit 1`;
   if (!member.length) throw new WippHttpError(403, "forbidden", "Tu n’es pas membre de ce groupe.");
   // Upsert: a member can join a call already in progress (missed the ringing, left earlier, joined the group later).
   await sql`
@@ -956,4 +959,154 @@ export async function getOutgoingCallStatus(meId: string, callId: string) {
     group: true,
     chatId: row.chat_id,
   };
+}
+
+
+/* ───────────── Call links (wippapp.com/c/<code>) ───────────── */
+
+const LINK_HOURS = [1, 24, 168];
+const linkHash = (token: string) => createHash("sha256").update(token).digest("hex");
+const linkChat = (linkId: string) => `link_${linkId}`;
+
+type LinkRow = { id: string; owner_id: string; kind: string; expires_at: string; revoked_at: string | null };
+
+async function findLink(token: string): Promise<LinkRow | null> {
+  const clean = String(token || "").trim();
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(clean)) return null;
+  const sql = await getSql();
+  const rows = await sql<LinkRow>`
+    select id, owner_id, kind, expires_at::text, revoked_at::text from wipp_call_links where token_hash = ${linkHash(clean)} limit 1
+  `;
+  return rows[0] ?? null;
+}
+
+const linkUsable = (l: LinkRow) => !l.revoked_at && Date.parse(l.expires_at) > Date.now();
+
+async function liveLinkCall(linkId: string) {
+  const sql = await getSql();
+  const rows = await sql<{ id: string; kind: string }>`
+    select id, kind from wipp_group_calls
+    where chat_id = ${linkChat(linkId)} and ended_at is null and status <> 'ended'
+    order by created_at desc limit 1
+  `;
+  return rows[0] ?? null;
+}
+
+async function linkParticipants(callId: string) {
+  const sql = await getSql();
+  const rows = await sql<{ n: number }>`
+    select count(*)::int as n from wipp_group_call_members where call_id = ${callId} and state in ('joining', 'joined', 'reconnecting')
+  `;
+  return rows[0]?.n ?? 0;
+}
+
+export async function createCallLink(ownerId: string, kind?: string, hours?: number) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const k = kind === "video" ? "video" : "audio";
+  const h = LINK_HOURS.includes(Number(hours)) ? Number(hours) : 24;
+  const token = randomBytes(18).toString("base64url");
+  const id = uid("clink");
+  const expiresAt = new Date(Date.now() + h * 3_600_000).toISOString();
+  await sql`
+    insert into wipp_call_links (id, token_hash, owner_id, kind, expires_at)
+    values (${id}, ${linkHash(token)}, ${ownerId}, ${k}, ${expiresAt})
+  `;
+  // Anchor row for the call tables (no members, no messages: never shown in any inbox).
+  await sql`insert into wipp_chats (id) values (${linkChat(id)}) on conflict do nothing`;
+  return { id, token, url: `https://wippapp.com/c/${token}`, kind: k, expiresAt: Date.parse(expiresAt) };
+}
+
+export async function listCallLinks(ownerId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const rows = await sql<{ id: string; kind: string; created_at: string; expires_at: string }>`
+    select id, kind, created_at::text, expires_at::text from wipp_call_links
+    where owner_id = ${ownerId} and revoked_at is null and expires_at > now()
+    order by created_at desc limit 20
+  `;
+  const out = [];
+  for (const r of rows) {
+    const call = await liveLinkCall(r.id);
+    out.push({
+      id: r.id,
+      kind: r.kind === "video" ? ("video" as const) : ("audio" as const),
+      createdAt: Date.parse(r.created_at),
+      expiresAt: Date.parse(r.expires_at),
+      participants: call ? await linkParticipants(call.id) : 0,
+    });
+  }
+  return out;
+}
+
+/** Owner cancels the link: it stops working and the call in progress (if any) ends. */
+export async function revokeCallLink(ownerId: string, linkId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const done = await sql`
+    update wipp_call_links set revoked_at = now() where id = ${linkId} and owner_id = ${ownerId} and revoked_at is null returning id
+  `;
+  if (!done.length) throw new WippHttpError(404, "not_found", "Lien introuvable.");
+  await sql`
+    update wipp_group_calls set status = 'ended', ended_at = now()
+    where chat_id = ${linkChat(linkId)} and ended_at is null
+  `;
+  return { ok: true as const };
+}
+
+/** What the link is, before joining (no secrets, no participants' identities). */
+export async function peekCallLink(token: string) {
+  await ensureMessagingReady();
+  const link = await findLink(token);
+  if (!link) return { status: "invalid" as const };
+  if (link.revoked_at) return { status: "revoked" as const };
+  if (Date.parse(link.expires_at) <= Date.now()) return { status: "expired" as const };
+  const owner = await profileRow(link.owner_id);
+  const call = await liveLinkCall(link.id);
+  return {
+    status: "ok" as const,
+    kind: link.kind === "video" ? ("video" as const) : ("audio" as const),
+    expiresAt: Date.parse(link.expires_at),
+    owner: owner ? { id: owner.id, username: owner.username, displayName: owner.display_name, avatarUrl: owner.avatar_url } : null,
+    participants: call ? await linkParticipants(call.id) : 0,
+  };
+}
+
+/** Join through the link: reuses the live call of this link, or starts it. */
+export async function joinCallLink(meId: string, token: string) {
+  await ensureMessagingReady();
+  const link = await findLink(token);
+  if (!link) throw new WippHttpError(404, "invalid", "Lien d’appel invalide.");
+  if (!linkUsable(link)) throw new WippHttpError(410, "expired", "Ce lien d’appel n’est plus valable.");
+  await assertNotBlocked(meId, link.owner_id).catch(() => {
+    throw new WippHttpError(403, "blocked", "Tu ne peux pas rejoindre cet appel.");
+  });
+  const sql = await getSql();
+  let call = await liveLinkCall(link.id);
+  if (!call) {
+    await sql`insert into wipp_chats (id) values (${linkChat(link.id)}) on conflict do nothing`;
+    const id = uid("gcall");
+    const roomName = `wippl${id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 48)}`;
+    await sql`
+      insert into wipp_group_calls (id, chat_id, kind, room_name, status, created_by, answered_at)
+      values (${id}, ${linkChat(link.id)}, ${link.kind}, ${roomName}, ${"accepted"}, ${meId}, now())
+    `;
+    call = { id, kind: link.kind };
+  }
+  await sql`
+    insert into wipp_group_call_members (call_id, profile_id, state)
+    values (${call.id}, ${meId}, ${"joining"})
+    on conflict (call_id, profile_id) do update set state = 'joining', updated_at = now()
+  `;
+  return { callId: call.id, kind: call.kind === "video" ? ("video" as const) : ("audio" as const), linkId: link.id };
+}
+
+/** Link calls have no conversation: allowed while the link is valid and the person joined it. */
+export async function linkCallAllowed(chatId: string) {
+  if (!chatId.startsWith("link_")) return null;
+  const sql = await getSql();
+  const rows = await sql<LinkRow>`
+    select id, owner_id, kind, expires_at::text, revoked_at::text from wipp_call_links where id = ${chatId.slice(5)} limit 1
+  `;
+  return Boolean(rows[0] && linkUsable(rows[0]));
 }
