@@ -116,6 +116,7 @@ function dbCode(err: unknown): string {
 
 function safeDbMessage(err: unknown): { code: string; message: string } | null {
   const code = dbCode(err);
+  if (code === "WP001") return { code: "offensive_text", message: "Ce texte contient un mot interdit. Modifie-le et réessaie." };
   if (code === "22P02") return { code: "invalid_payload", message: "Une information envoyée n’a pas le format attendu." };
   if (code === "23505") return { code: "conflict", message: "Cette fiche existe déjà." };
   if (code === "23503") return { code: "missing_profile", message: "Profil WIPP introuvable." };
