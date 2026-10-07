@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { ActivityIndicator, Alert, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, View, type KeyboardEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowRight, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
+import { ArrowRight, Camera, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
 import { signinOtp, signupPhone, usernameAvailable } from "../lib/auth-api";
 import {
   clearPending,
@@ -22,7 +22,7 @@ import { enterLinkedProfile } from "../lib/enter-session";
 import {
   authLogin,
   authPhone,
-  authProfile,
+  authProfileBg,
   authSms,
   authWelcome,
   brandOfficial,
@@ -47,7 +47,7 @@ const ONB: { kind: "tap" | "globe" | "privacy" | "together"; title: I18nKey; acc
 
 type Measurable = { measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void };
 
-function Artwork({ source, children }: { source: number; children?: ReactNode | ((reveal: (target: Measurable | null) => void) => ReactNode) }) {
+function Artwork({ source, children, fit = "fill" }: { source: number; fit?: "fill" | "cover"; children?: ReactNode | ((reveal: (target: Measurable | null) => void) => ReactNode) }) {
   const insets = useSafeAreaInsets();
   const active = useRef<Measurable | null>(null);
   const keyboardTop = useRef<number | null>(null);
@@ -107,7 +107,7 @@ function Artwork({ source, children }: { source: number; children?: ReactNode | 
         pointerEvents="none"
         source={source}
         style={{ position: "absolute", zIndex: 0, width: "100%", height: "100%" }}
-        contentFit="fill"
+        contentFit={fit}
       />
       <Animated.View style={{ flex: 1, zIndex: 1, elevation: 2, transform: [{ translateY }] }}>
         {Platform.OS === "web" ? (
@@ -926,6 +926,7 @@ export function ProfileReferenceScreen() {
   const lastNameBlockRef = useRef<View>(null);
   const usernameBlockRef = useRef<View>(null);
   const profileAccessoryId = "wipp-profile-keyboard";
+  const insets = useSafeAreaInsets();
   const okUser = /^[a-z0-9_]{3,20}$/.test(username);
   const countryLabel = countryById(country);
 
@@ -1037,34 +1038,76 @@ export function ProfileReferenceScreen() {
     }
   }
 
+  const status =
+    username.length > 0 && !okUser
+      ? { text: "3 à 20 caractères (a-z, 0-9, _)", color: colors.muted }
+      : availability === "checking"
+        ? { text: "Vérification…", color: colors.muted }
+        : checkedUsername === username && availability === "available"
+          ? { text: "✓ Disponible", color: colors.success }
+          : checkedUsername === username && availability === "taken"
+            ? { text: "Déjà utilisé", color: colors.danger }
+            : checkedUsername === username && availability === "error"
+              ? { text: "Vérification impossible", color: colors.danger }
+              : null;
+  const field = { height: 46, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(20,20,24,0.82)", paddingHorizontal: 12, justifyContent: "center" as const };
+  const input = { flex: 1, color: colors.fg, fontSize: 15, ...noWebOutline };
+  const label = { color: "rgba(255,255,255,0.78)", fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 6 };
+
   return (
-    <Artwork source={authProfile}>
+    <Artwork source={authProfileBg} fit="cover">
       {(reveal) => <>
-      <Abs t={8} l={4} h={5} w={12}>
-        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      {/* The photo stays visible on top; the bottom fades to black under the form. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)", "rgba(0,0,0,0.94)"]}
+        locations={[0.22, 0.4, 0.55]}
+        style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
+      />
+      <View style={{ position: "absolute", top: insets.top + 6, left: 0 }}>
+        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ marginLeft: 8, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
-      </Abs>
-      <Abs t={40.6} l={10} h={11} w={22}>
-        <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ flex: 1, borderRadius: 999, overflow: "hidden" }}>
-          {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
-        </Pressable>
-      </Abs>
-      <Abs t={41.2} l={33} h={10} w={16}>
-        <Pressable accessibilityLabel="Choisir une photo" onPress={() => void choosePhoto()} style={{ flex: 1 }} />
-      </Abs>
-      <Abs t={53.8} l={10.5} h={4.4} w={37}>
-        <View ref={firstNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
-          <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Prénom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, ...noWebOutline }} />
+      </View>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) }}>
+        <View style={{ flexDirection: "row", gap: 6, marginBottom: 12 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={{ width: 34, height: 4, borderRadius: 2, backgroundColor: i < 3 ? colors.accent : "rgba(255,255,255,0.25)" }} />
+          ))}
         </View>
-      </Abs>
-      <Abs t={53.8} l={52} h={4.4} w={37}>
-        <View ref={lastNameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
-          <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Nom" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, ...noWebOutline }} />
+        <Text style={{ color: colors.fg, fontSize: 28, fontFamily: "Inter_700Bold" }}>
+          Complète ton <Text style={{ color: colors.accent }}>profil</Text>
+        </Text>
+        <Text style={{ marginTop: 4, marginBottom: 14, color: "rgba(255,255,255,0.72)", fontSize: 14 }}>Ces informations seront visibles par tes contacts sur WIPP.</Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(20,20,24,0.82)" }}>
+            {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={26} color={colors.accent} />}
+          </Pressable>
+          <Pressable accessibilityLabel="Choisir une photo" onPress={() => void choosePhoto()}>
+            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{photoUri ? "Changer la photo" : "Ajouter une photo"}</Text>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 }}>Facultatif</Text>
+          </Pressable>
         </View>
-      </Abs>
-      <Abs t={61.6} l={10} h={4.3} w={60}>
-        <View ref={usernameBlockRef} style={{ flex: 1, borderRadius: 8, overflow: "hidden", backgroundColor: colors.authInput }}>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={label}>Prénom</Text>
+            <View ref={firstNameBlockRef} style={field}>
+              <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Prénom" placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="givenName" style={input} />
+            </View>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={label}>Nom</Text>
+            <View ref={lastNameBlockRef} style={field}>
+              <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Nom" placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="familyName" style={input} />
+            </View>
+          </View>
+        </View>
+
+        <Text style={[label, { marginTop: 12 }]}>Ton WIPP</Text>
+        <View ref={usernameBlockRef} style={[field, { flexDirection: "row", alignItems: "center" }]}>
+          <Text style={{ color: colors.accent, fontSize: 15, marginRight: 2 }}>@</Text>
           <TextInput
             onFocus={() => reveal(usernameBlockRef.current)}
             value={username}
@@ -1072,44 +1115,38 @@ export function ProfileReferenceScreen() {
               setUser(v.toLowerCase().replace(/[^a-z0-9_]/g, ""));
               setAvailability(null);
             }}
-            placeholder="@pseudo"
+            placeholder="pseudo"
             placeholderTextColor={colors.muted}
             autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={20}
             inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined}
-            style={{ flex: 1, color: colors.fg, fontSize: 15, paddingHorizontal: 8, ...noWebOutline }}
+            style={input}
           />
+          {status ? <Text style={{ marginLeft: 8, fontSize: 12, fontFamily: "Inter_600SemiBold", color: status.color }}>{status.text}</Text> : null}
         </View>
-      </Abs>
-      <Abs t={62.7} l={72} h={3} w={18}>
-        <Text style={{ fontSize: 11, color: availability === "taken" || availability === "error" ? colors.danger : availability === "checking" ? colors.muted : colors.success }}>
-          {username.length > 0 && !okUser
-            ? "3 à 20 caractères"
-            : availability === "checking"
-              ? "Vérification…"
-              : checkedUsername === username && availability === "available"
-                ? "✓ Disponible"
-                : checkedUsername === username && availability === "taken"
-                  ? "Déjà utilisé"
-                  : checkedUsername === username && availability === "error"
-                    ? "Vérification impossible"
-                    : ""}
-        </Text>
-      </Abs>
-      <Abs t={72.1} l={11} h={4} w={78}>
-        <Text style={{ color: colors.fg, fontSize: 14 }}>
-          {countryLabel.fr} ({countryLabel.dial})
-        </Text>
-      </Abs>
-      {error ? (
-        <Abs t={88} l={8} h={4} w={84}>
-          <Text style={{ color: colors.danger, fontSize: 12 }}>{error}</Text>
-        </Abs>
-      ) : null}
-      <Abs t={89.4} l={6} h={6.1} w={88}>
-        <Pressable accessibilityLabel="Continuer" disabled={busy} onPress={() => void finish()} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          {busy ? <ActivityIndicator color={colors.accent} /> : null}
+        <Text style={{ marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 12 }}>C’est ainsi que les autres te trouveront sur WIPP.</Text>
+
+        <Text style={[label, { marginTop: 12 }]}>Pays</Text>
+        <View style={[field, { flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10 }]}>
+          <Text style={{ fontSize: 20 }}>{flagEmoji(countryLabel.id)}</Text>
+          <Text style={{ color: colors.fg, fontSize: 15 }}>
+            {countryLabel.fr} ({countryLabel.dial})
+          </Text>
+        </View>
+
+        {error ? <Text style={{ marginTop: 10, color: colors.danger, fontSize: 13 }}>{error}</Text> : null}
+
+        <Pressable
+          accessibilityLabel="Continuer"
+          disabled={busy}
+          onPress={() => void finish()}
+          style={{ marginTop: 16, height: 54, borderRadius: 27, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? 0.7 : 1 }}
+        >
+          {busy ? <ActivityIndicator color={colors.accentFg} /> : <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Continuer</Text>}
+          {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
         </Pressable>
-      </Abs>
+      </View>
       <KeyboardDone nativeID={profileAccessoryId} />
       </>}
     </Artwork>

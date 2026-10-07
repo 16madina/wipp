@@ -17,6 +17,7 @@ export function wippSrc(path?: string | null) {
 export const authLogin = require("../../assets/auth/wipp-auth-login.png");
 export const authSms = require("../../assets/auth/wipp-auth-sms-clean2.png");
 export const authProfile = require("../../assets/auth/wipp-auth-profile-no-password.png");
+export const authProfileBg = require("../../assets/auth/wipp-auth-profile-bg.jpg");
 export const authWelcome = require("../../assets/auth/wipp-auth-welcome.png");
 export const authPhone = require("../../assets/auth/wipp-auth-phone.png");
 export const logoGold = require("../../assets/auth/wipp-logo-gold.png");
