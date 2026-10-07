@@ -5,6 +5,7 @@ import { Clapperboard, Clock, Drama, Gift, Search, SendHorizontal, Smile, User, 
 import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import { stickerRemoteUri } from "../lib/sticker-cdn";
+import { normalizeSearch, searchStickers } from "../lib/sticker-search";
 import { stickersInPack, wippieStickers, type StickerDef } from "../lib/stickers";
 import { colors } from "../theme";
 import { Press } from "./ui";
@@ -41,6 +42,28 @@ function prefetchMoments() {
 /** Has a real animation (WebP / video): previewed before sending instead of animating in the grid. */
 function isMoving(s: StickerDef) {
   return Boolean(s.anim) || /\.(webp|gif)(\?|$)/i.test(s.src);
+}
+
+const SURPRISES = [
+  { name: "Carte à gratter", hint: "Gratte pour découvrir la surprise.", big: true },
+  { name: "Cadeau", hint: "Un message à dévoiler", big: false },
+  { name: "Confettis", hint: "Une surprise qui éclate", big: false },
+  { name: "Compte à rebours", hint: "Une surprise à attendre", big: false },
+  { name: "Secret", hint: "Un message à débloquer", big: false },
+] as const;
+
+function surpriseMatches(item: (typeof SURPRISES)[number], query: string) {
+  const typed = normalizeSearch(query).split(" ").filter(Boolean);
+  const words = normalizeSearch(`${item.name} ${item.hint} surprise`).split(" ");
+  return typed.every((t) => words.some((w) => w.startsWith(t)));
+}
+
+function NoResult({ query }: { query: string }) {
+  return (
+    <View style={{ width: "100%", paddingVertical: 28, alignItems: "center" }}>
+      <Text style={{ color: colors.muted, fontSize: 14, textAlign: "center" }}>Aucun résultat pour « {query} »</Text>
+    </View>
+  );
 }
 
 /** One sticker playing, big, over the grid: « Envoyer » or touch it to send, outside / × to close. */
@@ -90,13 +113,13 @@ export function StickerTray({
   const emo = stickersInPack("emo");
   const wippies = wippieStickers(wippie);
   const recents = [...moji.slice(0, 8), ...wippies.slice(0, 8)];
-  const query = q.trim().toLowerCase();
-  const shown = query
-    ? [...moji, ...wippieStickers("tous"), ...emo, ...moments].filter(
-        (s) => s.labelFr.toLowerCase().includes(query) || s.labelEn.toLowerCase().includes(query),
-      )
-    : tab === "recent"
-      ? recents
+  const query = q.trim();
+  // The search stays inside the open tab (Wippie: the chosen chip); « Récents » searches every sticker.
+  const tabStickers =
+    tab === "recent"
+      ? query
+        ? [...moji, ...wippieStickers("tous"), ...emo, ...moments]
+        : recents
       : tab === "moji"
         ? moji
         : tab === "wippie"
@@ -106,13 +129,16 @@ export function StickerTray({
             : tab === "pop"
               ? moments
               : [];
-  const title = TABS.find((item) => item.id === tab)?.label ?? "Stickers";
+  const shown = query ? searchStickers(tabStickers, query) : tabStickers;
+  const title = tab === "recent" ? "tous les stickers" : TABS.find((item) => item.id === tab)?.label ?? "Stickers";
   // EMO and Moments are full scenes: 3 big cells per row.
-  const scenes = !query && (tab === "pop" || tab === "emo");
-  const minCell = scenes ? 104 : !query && tab === "moji" ? 64 : 80;
-  const cols = Math.max(scenes ? 3 : !query && tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
+  const scenes = tab === "pop" || tab === "emo";
+  const minCell = scenes ? 104 : tab === "moji" ? 64 : 80;
+  const cols = Math.max(scenes ? 3 : tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
   const stickerSize = scenes ? 84 : tab === "moji" ? 52 : 68;
-  const trayH = Math.min(tablet ? 420 : 360, Math.round(height * 0.42));
+  const fullH = Math.min(tablet ? 420 : 360, Math.round(height * 0.42));
+  // Typing a search opens the keyboard: a shorter tray keeps the results visible above it (iPhone 12 / mini).
+  const trayH = search ? Math.min(fullH, 290) : fullH;
 
   useEffect(() => {
     if (tab === "pop") prefetchMoments();
@@ -164,8 +190,8 @@ export function StickerTray({
     setPreview(s);
   }
 
+  // The typed words stay when changing tab: « rire » in Wippmoji, then in Wippie…
   function goto(next: Tab) {
-    setQ("");
     setPreview(null);
     setTab(next);
   }
@@ -186,17 +212,31 @@ export function StickerTray({
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.hair }} />
       </View>
       {search ? (
-        <TextInput
-          value={q}
-          onChangeText={setQ}
-          autoFocus
-          onBlur={() => {
-            if (!q.trim()) setSearch(false);
-          }}
-          placeholder={`Rechercher dans ${title}`}
-          placeholderTextColor={colors.muted}
-          style={{ height: 36, borderRadius: 10, backgroundColor: colors.surface2, paddingHorizontal: 12, color: colors.fg, marginBottom: 8, fontSize: 15 }}
-        />
+        <View style={{ height: 36, borderRadius: 10, backgroundColor: colors.surface2, paddingLeft: 12, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Search size={16} color={colors.muted} />
+          <TextInput
+            value={q}
+            onChangeText={(text) => {
+              setQ(text);
+              setPreview(null);
+            }}
+            autoFocus
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            onBlur={() => {
+              if (!q.trim()) setSearch(false);
+            }}
+            placeholder={`Rechercher dans ${title}`}
+            placeholderTextColor={colors.muted}
+            style={{ flex: 1, height: 36, color: colors.fg, fontSize: 15, padding: 0 }}
+          />
+          {q ? (
+            <Press onPress={() => setQ("")} accessibilityLabel="Effacer la recherche" hitSlop={8} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+              <X size={16} color={colors.muted} />
+            </Press>
+          ) : null}
+        </View>
       ) : (
         <Press
           onPress={() => setSearch(true)}
@@ -207,7 +247,7 @@ export function StickerTray({
           <Text style={{ fontSize: 15, color: colors.muted }}>{`Rechercher dans ${title}`}</Text>
         </Press>
       )}
-      {tab === "wippie" && !query ? (
+      {tab === "wippie" ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -234,42 +274,26 @@ export function StickerTray({
           ))}
         </ScrollView>
       ) : null}
-      {tab === "moment" && !query ? (
+      {tab === "moment" ? (
         <ScrollView style={{ flex: 1 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
-          <Press
-            onPress={() => {
-              haptic("select");
-              dismiss(onSurprise);
-            }}
-            style={{ width: "100%", borderRadius: 16, backgroundColor: colors.navy, padding: 12, borderWidth: 1, borderColor: colors.accent }}
-          >
-            <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: colors.accent }}>Carte à gratter</Text>
-            <Text style={{ marginTop: 2, fontSize: 12, color: colors.muted }}>Gratte pour découvrir la surprise.</Text>
-          </Press>
-          {(
-            [
-              { name: "Cadeau", hint: "Un message à dévoiler" },
-              { name: "Confettis", hint: "Une surprise qui éclate" },
-              { name: "Compte à rebours", hint: "Une surprise à attendre" },
-              { name: "Secret", hint: "Un message à débloquer" },
-            ] as const
-          ).map((item) => (
+          {SURPRISES.filter((item) => surpriseMatches(item, query)).map((item) => (
             <Press
               key={item.name}
               onPress={() => {
                 haptic("select");
                 dismiss(onSurprise);
               }}
-              style={{ width: "48%", borderRadius: 16, backgroundColor: colors.navy, padding: 12, borderWidth: 1, borderColor: colors.hair }}
+              style={{ width: item.big ? "100%" : "48%", borderRadius: 16, backgroundColor: colors.navy, padding: 12, borderWidth: 1, borderColor: item.big ? colors.accent : colors.hair }}
             >
-              <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: colors.fg }}>{item.name}</Text>
-              <Text style={{ marginTop: 2, fontSize: 11, color: colors.muted }}>{item.hint}</Text>
+              <Text style={{ fontSize: item.big ? 15 : 13, fontFamily: "Inter_700Bold", color: item.big ? colors.accent : colors.fg }}>{item.name}</Text>
+              <Text style={{ marginTop: 2, fontSize: item.big ? 12 : 11, color: colors.muted }}>{item.hint}</Text>
             </Press>
           ))}
+          {query && !SURPRISES.some((item) => surpriseMatches(item, query)) ? <NoResult query={query} /> : null}
         </ScrollView>
       ) : (
         <FlatList
-          key={`${tab}-${cols}-${query}`}
+          key={`${tab}-${cols}`}
           data={shown}
           numColumns={cols}
           style={{ flex: 1, minHeight: 0 }}
@@ -280,6 +304,7 @@ export function StickerTray({
           showsVerticalScrollIndicator
           columnWrapperStyle={cols > 1 ? { gap: 4 } : undefined}
           contentContainerStyle={{ paddingBottom: 8 }}
+          ListEmptyComponent={query ? <NoResult query={query} /> : null}
           renderItem={({ item: s }) => (
             <Press
               onPress={() => tapSticker(s)}
@@ -312,7 +337,7 @@ export function StickerTray({
       ) : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: colors.hair, marginHorizontal: -12, paddingHorizontal: 2, paddingTop: 4, paddingBottom: 4 }}>
         {TABS.map((item) => {
-          const on = tab === item.id && !query;
+          const on = tab === item.id;
           const tint = on ? colors.accent : colors.muted;
           return (
             <Press
