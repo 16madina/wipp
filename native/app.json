@@ -23,6 +23,7 @@
       ],
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": true,
         "NSCameraUsageDescription": "WIPP utilise la caméra pour le scan QR, les photos et les appels vidéo.",
         "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les messages vocaux et les appels audio.",
         "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
