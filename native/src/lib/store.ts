@@ -96,8 +96,10 @@ export function scheduleInboxSave(get: () => Store) {
     const st = get();
     if (!st.serverConnected || !st.serverProfileId) return;
     const chats = st.chats.filter((c) => c.id.startsWith("srv:"));
+    const shopIds = new Set(chats.map((c) => c.shopId).filter(Boolean));
+    const shops = st.shops.filter((x) => shopIds.has(x.id));
     void import("./inbox-cache").then(({ saveInboxSnapshot }) =>
-      saveInboxSnapshot({ profileId: st.serverProfileId!, chats, messages: st.messages, users: st.users, meAvatar: st.me.avatar || "" }),
+      saveInboxSnapshot({ profileId: st.serverProfileId!, chats, messages: st.messages, users: st.users, meAvatar: st.me.avatar || "", shops }),
     );
   }, 2500);
 }

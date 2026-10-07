@@ -102,7 +102,8 @@ export function ChatsScreen() {
   const stories = onboarded ? storyRows.filter((story) => story.id.startsWith("sty_")) : storyRows;
   const pending = useWippStore(
     (s) =>
-      s.requests.filter((r) => r.status === "pending").length +
+      // Real account: only real requests (from server people), never the demo ones still in memory.
+      s.requests.filter((r) => r.status === "pending" && (!(s.serverConnected || s.serverProfileId) || r.fromId.startsWith("srvuser:"))).length +
       ((s.serverConnected || Boolean(s.serverProfileId)) ? 0 : s.intros.filter((i) => i.recipientId === "me" && i.status === "pending").length),
   );
   const push = useWippStore((s) => s.push);
@@ -563,7 +564,9 @@ export function RequestsScreen() {
   const t = useT();
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
-  const requests = useWippStore((s) => s.requests);
+  const allRequests = useWippStore((s) => s.requests);
+  const realAccount = useWippStore((s) => s.serverConnected || Boolean(s.serverProfileId));
+  const requests = realAccount ? allRequests.filter((r) => r.fromId.startsWith("srvuser:")) : allRequests;
   const intros = useWippStore((s) => s.intros);
   const users = useWippStore((s) => s.users);
   const acceptRequest = useWippStore((s) => s.acceptRequest);

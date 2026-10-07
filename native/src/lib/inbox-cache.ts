@@ -9,7 +9,7 @@ import { documentDirectory, deleteAsync, readAsStringAsync, writeAsStringAsync }
 import { gcm } from "@noble/ciphers/aes.js";
 import { randomBytes } from "@noble/hashes/utils.js";
 import { b64, unb64 } from "./crypto";
-import type { Chat, Message, User } from "./types";
+import type { Chat, Message, User, Shop } from "./types";
 
 const FILE = `${documentDirectory ?? ""}wipp-inbox-v1.bin`;
 const KEY_NAME = "wipp-inbox-cache-key";
@@ -25,6 +25,8 @@ export type InboxSnapshot = {
   messages: Record<string, Message[]>;
   users: Record<string, User>;
   meAvatar: string;
+  /** Shops of the business chats (name, logo), so « Professionnel » chats look right at once. */
+  shops?: Shop[];
 };
 
 async function cacheKey(): Promise<Uint8Array | null> {
