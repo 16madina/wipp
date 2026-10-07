@@ -416,7 +416,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
             {(tray === "all" ? storyWippmojis() : QUICK_WIPPMOJI_IDS.map((id) => stickerById(id)).filter((item) => item != null)).map((sticker) => (
               <Press key={sticker.id} accessibilityLabel={sticker.labelFr} onPress={() => void sendMoji(sticker.id)} style={{ width: 52, height: 52, alignItems: "center", justifyContent: "center" }}>
-                <WippSticker id={sticker.id} size={44} />
+                <WippSticker id={sticker.id} size={44} still />
               </Press>
             ))}
             {tray === "quick" ? (

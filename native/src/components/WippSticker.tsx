@@ -160,11 +160,14 @@ export function WippSticker({
   id,
   size = 48,
   fill = false,
+  still = false,
 }: {
   id: string;
   size?: number;
   loop?: boolean;
   fill?: boolean;
+  /** Picker grid: first image only — no animation, no video player (dozens at once froze the iPhone). */
+  still?: boolean;
 }) {
   const row = stickerById(id);
   const poster = row ? wippSrc(row.src) : undefined;
@@ -184,6 +187,21 @@ export function WippSticker({
     setBroken(false);
     setClipReady(false);
   }, [id]);
+
+  if (still) {
+    if (!poster) return <View style={box} />;
+    return (
+      <Image
+        recyclingKey={`still-${id}`}
+        source={typeof poster === "number" ? poster : { uri: poster.uri, isAnimated: false }}
+        style={box}
+        contentFit="contain"
+        autoplay={false}
+        allowDownscaling
+        cachePolicy="memory-disk"
+      />
+    );
+  }
 
   if (video && clipSource != null) {
     return (

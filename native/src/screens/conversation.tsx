@@ -653,6 +653,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
   }
 
   const pinned = messages.filter((m) => m.pinned && !m.deletedForAll);
+  // Only the 3 most recent stickers animate; older ones show their first image (tap still plays them).
+  const liveStickers = new Set(messages.filter((m) => m.type === "sticker").slice(-3).map((m) => m.id));
 
   function renderMessage({ item: m }: { item: Message }) {
     const mine = m.fromId === "me";
@@ -784,7 +786,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
-                <WippSticker id={m.stickerId ?? ""} size={96} />
+                <WippSticker id={m.stickerId ?? ""} size={96} still={!liveStickers.has(m.id)} />
               ) : null}
               {m.geo ? (
                 <Text style={{ color: mine ? mb.fg : colors.fg }}>
@@ -962,7 +964,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     onPress={() => sendMessage(chatId, { type: "sticker", text: item.labelFr, stickerId: item.id })}
                     style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
                   >
-                    <WippSticker id={item.id} size={40} />
+                    <WippSticker id={item.id} size={40} still />
                   </Press>
                 )}
               />

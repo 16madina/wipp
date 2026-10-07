@@ -27,7 +27,8 @@ function prefetchMoments() {
     .filter((u): u is string => Boolean(u));
   void (async () => {
     for (let i = 0; i < urls.length; i += 4) {
-      await Image.prefetch(urls.slice(i, i + 4), "memory-disk");
+      // Disk only: keeping 42 decoded animations in memory was enough to get WIPP killed.
+      await Image.prefetch(urls.slice(i, i + 4), "disk");
     }
   })();
 }
@@ -74,6 +75,7 @@ export function StickerTray({
   useEffect(() => {
     if (tab === "pop") prefetchMoments();
   }, [tab]);
+
 
   useEffect(() => {
     let mounted = true;
@@ -230,7 +232,7 @@ export function StickerTray({
                 overflow: "hidden",
               }}
             >
-              <WippSticker id={s.id} size={stickerSize} fill={tab === "pop"} />
+              <WippSticker id={s.id} size={stickerSize} fill={tab === "pop"} still />
             </Press>
           )}
         />
