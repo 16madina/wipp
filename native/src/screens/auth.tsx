@@ -54,7 +54,13 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
   const currentShift = useRef(0);
   const translateY = useRef(new Animated.Value(0)).current;
 
+  // Layout of each field measured once, at rest (never mid-animation): re-measuring while the
+  // screen slides gave a wrong position each time the keyboard height changed a little
+  // (QuickType bar, « Code de Messages »…), so the form bounced up and down.
+  const baseOf = useRef(new Map<Measurable, { top: number; bottom: number }>());
+
   const animateTo = useCallback((next: number, duration = 220) => {
+    if (Math.abs(next - currentShift.current) < 2) return;
     currentShift.current = next;
     Animated.timing(translateY, {
       toValue: next,
@@ -63,23 +69,39 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
     }).start();
   }, [translateY]);
 
+  const applyShift = useCallback((base: { top: number; bottom: number }, duration: number) => {
+    const top = keyboardTop.current;
+    if (top == null) return;
+    const gap = 12;
+    const requiredShift = Math.min(0, top - gap - base.bottom);
+    const safeShift = Math.max(requiredShift, insets.top + gap - base.top);
+    animateTo(safeShift, duration);
+  }, [animateTo, insets.top]);
+
   const revealActive = useCallback((duration = 220) => {
     const target = active.current;
-    const top = keyboardTop.current;
-    if (!target || top == null) return;
-    target.measureInWindow((_x, y, _width, height) => {
-      const baseTop = y - currentShift.current;
-      const baseBottom = baseTop + height;
-      const gap = 12;
-      const requiredShift = Math.min(0, top - gap - baseBottom);
-      const safeShift = Math.max(requiredShift, insets.top + gap - baseTop);
-      animateTo(safeShift, duration);
+    if (!target || keyboardTop.current == null) return;
+    const known = baseOf.current.get(target);
+    if (known) {
+      applyShift(known, duration);
+      return;
+    }
+    // Stop any slide first, so the measure and the real offset match.
+    translateY.stopAnimation((live) => {
+      currentShift.current = live;
+      target.measureInWindow((_x, y, _width, height) => {
+        const base = { top: y - live, bottom: y - live + height };
+        baseOf.current.set(target, base);
+        applyShift(base, duration);
+      });
     });
-  }, [animateTo, insets.top]);
+  }, [applyShift, translateY]);
 
   useEffect(() => {
     const onFrame = (event: KeyboardEvent) => {
-      keyboardTop.current = event.endCoordinates.screenY;
+      const next = event.endCoordinates.screenY;
+      if (keyboardTop.current != null && Math.abs(next - keyboardTop.current) < 1) return;
+      keyboardTop.current = next;
       requestAnimationFrame(() => revealActive(event.duration || 220));
     };
     const onHide = (event: KeyboardEvent) => {
@@ -97,6 +119,7 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
   }, [animateTo, revealActive]);
 
   const reveal = useCallback((target: Measurable | null) => {
+    if (active.current === target && keyboardTop.current != null) return;
     active.current = target;
     requestAnimationFrame(() => revealActive());
   }, [revealActive]);
@@ -1066,8 +1089,8 @@ export function ProfileReferenceScreen() {
       {(reveal) => <>
       {/* Thin arrow in the corner, clear of the WIPP sign (no dark disc over the picture). */}
       <View style={{ position: "absolute", top: insets.top, left: 0 }}>
-        <Pressable accessibilityLabel="Retour" hitSlop={10} onPress={pop} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-          <ChevronLeft size={24} color="rgba(255,255,255,0.85)" />
+        <Pressable accessibilityLabel="Retour" hitSlop={10} onPress={pop} style={{ marginLeft: 4, marginTop: 2, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,216,77,0.45)" }}>
+          <ChevronLeft size={22} color="#fff" strokeWidth={3} />
         </Pressable>
       </View>
       {/* No card: the form sits in the empty space of the picture, under the mascot. */}
