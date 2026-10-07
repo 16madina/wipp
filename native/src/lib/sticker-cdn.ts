@@ -182,5 +182,7 @@ const REMOTE = new Set(remoteMedia);
 export function stickerRemoteUri(path: string) {
   const key = path.replace(/^\//, "").split("?")[0];
   // The old stickerCdn host (/__l5e/) no longer serves files: only the website copy is used.
-  return REMOTE.has(key) ? `https://wippapp.com/wipp-media/${key}` : undefined;
+  // ?v=2: lighter animations (2026-10-07). New version → phones fetch them again instead of the cached heavy ones.
+  if (!REMOTE.has(key)) return undefined;
+  return /\.webp$/i.test(key) ? `https://wippapp.com/wipp-media/${key}?v=2` : `https://wippapp.com/wipp-media/${key}`;
 }

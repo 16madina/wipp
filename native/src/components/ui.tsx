@@ -18,6 +18,7 @@ export function Press({
   style,
   disabled,
   accessibilityLabel,
+  hitSlop,
 }: {
   onPress?: () => void;
   onLongPress?: () => void;
@@ -25,9 +26,12 @@ export function Press({
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
   accessibilityLabel?: string;
+  /** Extra touch area around small buttons (back, close…). */
+  hitSlop?: number;
 }) {
   return (
     <Pressable
+      hitSlop={hitSlop}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
       onPress={() => {
@@ -106,6 +110,7 @@ export function IconBtn({
     <Press
       onPress={onPress}
       accessibilityLabel={label}
+      hitSlop={10}
       style={{
         width: s,
         height: s,

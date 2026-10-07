@@ -42,6 +42,10 @@ import {
   WgoTouchScreen,
 } from "./connect";
 import { CallOverlay } from "../components/CallOverlay";
+import { ScreenErrorBoundary } from "../components/ScreenErrorBoundary";
+import { installCrashLog, noteScreen } from "../lib/crash-log";
+
+installCrashLog();
 import { ActiveCallScreen, CallJoinScreen, CallLinkScreen, CallsScreen } from "./calls";
 import {
   CreateShopScreen,
@@ -462,6 +466,7 @@ export function AppShell() {
     return <IntroSplash onDone={() => setIntroDone(true)} />;
   }
 
+  noteScreen(top.name);
   const webPreview = Platform.OS === "web";
   const frameWidth = webPreview ? Math.min(430, contentWidth || 430) : tablet ? contentWidth : "100%";
 
@@ -486,9 +491,20 @@ export function AppShell() {
       >
         {Platform.OS === "web" ? <View nativeID="wipp-recaptcha" /> : <RecaptchaHost />}
         <ScreenProtectionHost>
-          <ScreenSwitch screen={top} />
+          <ScreenErrorBoundary
+            resetKey={JSON.stringify(top)}
+            onBack={() => {
+              const st = useWippStore.getState();
+              if (st.stack.length > 1) st.pop();
+              else st.goTab("chats");
+            }}
+          >
+            <ScreenSwitch screen={top} />
+          </ScreenErrorBoundary>
           {showTabs ? <TabBar active={top.name} /> : null}
-          <CallOverlay />
+          <ScreenErrorBoundary resetKey="call" silent onBack={() => undefined}>
+            <CallOverlay />
+          </ScreenErrorBoundary>
         </ScreenProtectionHost>
       </View>
     </View>

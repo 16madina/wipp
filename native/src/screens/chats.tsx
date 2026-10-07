@@ -733,19 +733,43 @@ export function ArchivesScreen() {
   const allChats = useWippStore((s) => s.chats);
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   void vaultEpoch;
-  const chats = allChats.filter((c) => c.archived && !isPrivateChat(c.id));
+  const chats = allChats.filter((c) => c.archived && !isPrivateChat(c.id)).sort((a, b) => b.lastAt - a.lastAt);
   const users = useWippStore((s) => s.users);
+  const lang = useWippStore((s) => s.language);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title="Archives" onBack={pop} />
       </GlassHeader>
       <ScrollView>
-        {chats.length === 0 ? <Empty title={t("chatsEmpty")} /> : chats.map((c) => (
-          <Press key={c.id} onPress={() => push({ name: "conversation", chatId: c.id })} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-            <Text style={{ color: colors.fg, fontSize: 16 }}>{c.name ?? chatPeer(c, users)?.displayName}</Text>
-          </Press>
-        ))}
+        {chats.length === 0 ? <Empty title={t("chatsEmpty")} /> : chats.map((c) => {
+          const peer = c.type === "group" ? undefined : chatPeer(c, users);
+          const title = c.type === "group" ? c.name ?? "Groupe" : peer?.displayName ?? "Conversation";
+          return (
+            <Press
+              key={c.id}
+              onPress={() => push({ name: "conversation", chatId: c.id })}
+              onLongPress={() =>
+                Alert.alert(title, undefined, [
+                  { text: "Désarchiver", onPress: () => useWippStore.getState().archiveChat(c.id, false) },
+                  { text: "Annuler", style: "cancel" },
+                ])
+              }
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}
+            >
+              {c.type === "group" ? <GroupAvatar name={c.name} size={52} fallback={c.avatar} /> : <Avatar user={peer} size={52} />}
+              <View style={{ flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: colors.hair, paddingBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text numberOfLines={1} style={{ flex: 1, color: colors.fg, fontSize: 16, fontFamily: "Inter_500Medium" }}>{title}</Text>
+                  <Text style={{ fontSize: 12, color: colors.muted }}>{formatChatTime(c.lastAt, lang)}</Text>
+                </View>
+                <Text numberOfLines={1} style={{ marginTop: 2, color: colors.muted, fontSize: 14 }}>
+                  {isChatLocked(c.id) ? "Conversation verrouillée" : c.preview}
+                </Text>
+              </View>
+            </Press>
+          );
+        })}
       </ScrollView>
     </ScreenRoot>
   );
