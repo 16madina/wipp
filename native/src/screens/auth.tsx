@@ -2,7 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, View, type KeyboardEvent } from "react-native";
+import { ActivityIndicator, Alert, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, View, type KeyboardEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
 import { signinOtp, signupPhone, usernameAvailable } from "../lib/auth-api";
@@ -765,6 +765,25 @@ export function SmsReferenceScreen() {
       return;
     }
     setVerifiedSignup(result);
+    // « Créer un compte » with a number that already has one: open that account
+    // instead of asking for a new profile (the server would ignore it anyway).
+    setBusy(true);
+    try {
+      const existing = await signinOtp();
+      if (existing.ok) {
+        clearPending();
+        enterLinkedProfile(existing.profile, phone);
+        Alert.alert(
+          "Bon retour !",
+          `Ce numéro a déjà un compte WIPP${existing.profile.username ? ` (@${existing.profile.username})` : ""}. On t’a connecté·e à ce compte.`,
+        );
+        return;
+      }
+    } catch {
+      /* network: the profile step still links an existing number at the end */
+    } finally {
+      setBusy(false);
+    }
     push({ name: "profile-reference" });
   }
 
@@ -899,7 +918,7 @@ export function ProfileReferenceScreen() {
   const [lastName, setLast] = useState("");
   const [username, setUser] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [availability, setAvailability] = useState<"available" | "taken" | "checking" | null>(null);
+  const [availability, setAvailability] = useState<"available" | "taken" | "checking" | "error" | null>(null);
   const [checkedUsername, setCheckedUsername] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -923,7 +942,10 @@ export function ProfileReferenceScreen() {
           }
         })
         .catch(() => {
-          if (!cancelled) setAvailability(null);
+          if (!cancelled) {
+            setCheckedUsername(username);
+            setAvailability("error");
+          }
         });
     }, 450);
     return () => {
@@ -959,12 +981,23 @@ export function ProfileReferenceScreen() {
       setError("Renseigne ton prénom, ton nom et un pseudo valide.");
       return;
     }
-    if (availability !== "available" || checkedUsername !== username) {
-      setError("Vérifie la disponibilité du pseudo.");
-      return;
-    }
     setBusy(true);
     setError("");
+    // Always ask the server again right before creating: someone may have taken it meanwhile.
+    try {
+      const free = await usernameAvailable(username);
+      setCheckedUsername(username);
+      setAvailability(free ? "available" : "taken");
+      if (!free) {
+        setError(`@${username} est déjà utilisé. Choisis un autre pseudo.`);
+        setBusy(false);
+        return;
+      }
+    } catch {
+      setError("Impossible de vérifier le pseudo. Vérifie ta connexion et réessaie.");
+      setBusy(false);
+      return;
+    }
     try {
       const result = await signupPhone({
         firstName: firstName.trim(),
@@ -1048,8 +1081,18 @@ export function ProfileReferenceScreen() {
         </View>
       </Abs>
       <Abs t={62.7} l={72} h={3} w={18}>
-        <Text style={{ fontSize: 11, color: availability === "taken" ? colors.danger : colors.success }}>
-          {checkedUsername === username && availability === "available" ? "✓ Disponible" : checkedUsername === username && availability === "taken" ? "Déjà utilisé" : ""}
+        <Text style={{ fontSize: 11, color: availability === "taken" || availability === "error" ? colors.danger : availability === "checking" ? colors.muted : colors.success }}>
+          {username.length > 0 && !okUser
+            ? "3 à 20 caractères"
+            : availability === "checking"
+              ? "Vérification…"
+              : checkedUsername === username && availability === "available"
+                ? "✓ Disponible"
+                : checkedUsername === username && availability === "taken"
+                  ? "Déjà utilisé"
+                  : checkedUsername === username && availability === "error"
+                    ? "Vérification impossible"
+                    : ""}
         </Text>
       </Abs>
       <Abs t={72.1} l={11} h={4} w={78}>

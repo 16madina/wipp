@@ -45,6 +45,19 @@ function assertUsername(username: string) {
   }
 }
 
+/** Names nobody can take: they would look official (WIPP staff, support) or technical. */
+const RESERVED_USERNAMES = new Set([
+  "wipp", "wippapp", "wipp_app", "wippteam", "wipp_team", "wippofficial", "wipp_officiel", "wippsupport", "wipp_support",
+  "admin", "administrateur", "administrator", "moderateur", "moderator", "moderation", "staff", "equipe", "team",
+  "support", "aide", "help", "contact", "info", "officiel", "official", "securite", "security", "system", "systeme",
+  "root", "null", "undefined", "apple", "google", "me", "moi", "anonymous", "anonyme",
+]);
+
+export function isReservedUsername(username: string) {
+  const u = normalizeUsername(username);
+  return RESERVED_USERNAMES.has(u) || /^wipp_?(admin|support|officiel|official|team|equipe|staff)/.test(u);
+}
+
 export class WippHttpError extends Error {
   status: number;
   code: string;
@@ -59,11 +72,13 @@ export class WippHttpError extends Error {
 export async function isUsernameAvailable(raw: string): Promise<boolean> {
   const username = normalizeUsername(raw);
   assertUsername(username);
+  if (isReservedUsername(username)) return false;
   const sql = await getSql();
-  const rows = await sql<{ id: string }>`
-    select id from wipp_profiles where lower(username) = ${username} limit 1
+  const rows = await sql<{ id: string; offensive: boolean }>`
+    select (select id from wipp_profiles where lower(username) = ${username} limit 1) as id,
+           public.wipp_text_is_offensive(${username}) as offensive
   `;
-  return rows.length === 0;
+  return !rows[0]?.id && !rows[0]?.offensive;
 }
 
 export async function isBlocked(a: string, b: string) {
@@ -747,6 +762,7 @@ export async function linkFirebaseThirdPartyProfile(
   }
   const username = normalizeUsername(input.username ?? "");
   assertUsername(username);
+  if (isReservedUsername(username)) throw new WippHttpError(409, "username_taken", `@${username} n’est pas disponible.`);
   const taken = await sql`select id from wipp_profiles where lower(username) = ${username} limit 1`;
   if (taken.length) throw new WippHttpError(409, "username_taken", `@${username} est déjà pris.`);
   const displayName = `${(input.firstName ?? "").trim()} ${(input.lastName ?? "").trim()}`.trim() || "Wipp";
