@@ -1522,7 +1522,13 @@ export function BusinessCardEditorScreen() {
           ) : undefined}
         />
       </GlassHeader>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+      {/* The keyboard pushes the form up: the field being typed in (e.g. Facebook, at the bottom) stays visible. */}
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <View>
           <Press accessibilityLabel="Bannière" onPress={() => void pick("cover")} style={{ height: 168, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
             {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
