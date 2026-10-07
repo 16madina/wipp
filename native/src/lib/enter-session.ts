@@ -75,6 +75,7 @@ export function restoreFirebaseSession(profile: LinkedProfile | null, phone: str
         me: { ...s.me, avatar: s.me.avatar || snap.meAvatar },
         // Business chats show their shop (name, logo) right away; the server refreshes them a moment later.
         shops: [...s.shops.filter((x) => !(snap.shops ?? []).some((y) => y.id === x.id)), ...(snap.shops ?? [])],
+        blockedIds: [...new Set([...s.blockedIds, ...(snap.blockedIds ?? [])])],
       }));
     });
   }

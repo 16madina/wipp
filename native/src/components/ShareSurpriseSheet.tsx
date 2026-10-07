@@ -43,6 +43,7 @@ import { colors, layout, whiteA } from "../theme";
 import { SurpriseReveal } from "./SurpriseReveal";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
+import { gifProviderConfigured } from "../lib/gifs";
 
 const CONTENT = [
   { label: "Galerie", icon: Images },
@@ -258,7 +259,7 @@ export function ShareSurpriseSheet({
                 </Press>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {[...CONTENT, ...(showPoll ? [{ label: "Sondage", icon: BarChart3 } as const, { label: "Événement", icon: CalendarDays } as const] : [])].map(({ label, icon: Icon }) => (
+                {[...CONTENT.filter((c) => c.label !== "GIF" || gifProviderConfigured()), ...(showPoll ? [{ label: "Sondage", icon: BarChart3 } as const, { label: "Événement", icon: CalendarDays } as const] : [])].map(({ label, icon: Icon }) => (
                   <Press
                     key={label}
                     onPress={() => pick(label)}

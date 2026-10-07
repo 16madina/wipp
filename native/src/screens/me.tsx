@@ -26,7 +26,7 @@ import {
   Settings,
   Share2,
   Shield,
-  Smartphone,
+
   Sparkles,
   Tag,
   User,
@@ -79,6 +79,7 @@ import { APP_HOST } from "../lib/utils";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
 import { colors, layout, accentA, fgA } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { hapticsEnabled, setHapticsEnabled } from "../lib/haptics";
 import { EventCard } from "../components/event-parts";
 import { wippSrc } from "../lib/assets";
 
@@ -255,7 +256,6 @@ export function MeScreen() {
         </View>
         <View style={{ marginTop: 16 }}>
           <Section title={t("devicesHelp")}>
-            <Row icon={<Smartphone size={16} color={colors.fg} />} label={t("devices")} onPress={() => push({ name: "devices" })} />
             <Row icon={<HelpCircle size={16} color={colors.fg} />} label={t("help")} onPress={() => push({ name: "help" })} />
             <Row icon={<FileText size={16} color={colors.fg} />} label={t("termsOfUse")} onPress={() => push({ name: "legal", doc: "terms" })} />
             <Row icon={<Shield size={16} color={colors.fg} />} label={t("privacyPolicy")} onPress={() => push({ name: "legal", doc: "privacy" })} />
@@ -716,8 +716,6 @@ export function SecurityScreen() {
         <Header title={t("security")} onBack={useWippStore.getState().pop} />
       </GlassHeader>
       <Section title="">
-        <Row label="Verrouillage WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} />
-        <Row label="Appareils liés" onPress={() => useWippStore.getState().push({ name: "devices" })} />
         <Row label={t("deleteAccount")} danger onPress={() => useWippStore.getState().push({ name: "delete-account" })} />
       </Section>
     </ScreenRoot>
@@ -848,16 +846,25 @@ export function AppearanceScreen() {
 
 export function AccessibilityScreen() {
   const t = useT();
-  const [h, setH] = useState(true);
+  const [h, setH] = useState(hapticsEnabled());
   const pop = useWippStore((s) => s.pop);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("accessibility")} onBack={pop} />
       </GlassHeader>
-      <Row label="Retours haptiques" trailing={<Toggle value={h} onChange={setH} />} />
-      <Row label="Texte plus grand" trailing={<Toggle value={false} onChange={() => {}} />} />
-      <Row label="Réduire les animations" trailing={<Toggle value={false} onChange={() => {}} />} />
+      <Row
+        label="Retours haptiques"
+        trailing={
+          <Toggle
+            value={h}
+            onChange={(on) => {
+              setHapticsEnabled(on);
+              setH(on);
+            }}
+          />
+        }
+      />
     </ScreenRoot>
   );
 }

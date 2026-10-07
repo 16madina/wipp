@@ -23,13 +23,26 @@ type Report = {
   id: string;
   targetType: string;
   targetId: string;
+  targetProfileId?: string | null;
   targetUsername: string | null;
   reporter: string | null;
   reason: string;
   status: string;
   hasContent: boolean;
+  /** Story, listing or shop: can be taken down from here. */
+  removable?: boolean;
   createdAt: number;
 };
+
+const REPORT_TYPE: Record<string, string> = {
+  message: "Message",
+  story: "Story",
+  profile: "Profil",
+  listing: "Annonce",
+  business_card: "Boutique",
+  group: "Groupe",
+};
+const REPORT_STATUS: Record<string, string> = { open: "ouvert", resolved: "traité", dismissed: "classé" };
 type Template = { id: string; label: string; title: string; body: string };
 type Tab = "stats" | "users" | "messages" | "reports" | "suspended" | "push" | "audit";
 
@@ -340,7 +353,7 @@ function ReportsTab() {
         <Card key={r.id}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold" }}>🚩 {r.reason || "Signalement"}</Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
-            {r.targetType === "message" ? "Message" : r.targetType} {r.targetUsername ? `de @${r.targetUsername}` : ""} · signalé par {r.reporter ? `@${r.reporter}` : "?"} · {when(r.createdAt)} · {r.status}
+            {REPORT_TYPE[r.targetType] ?? r.targetType} {r.targetUsername ? `de @${r.targetUsername}` : ""} · signalé par {r.reporter ? `@${r.reporter}` : "?"} · {when(r.createdAt)} · {REPORT_STATUS[r.status] ?? r.status}
           </Text>
           {opened[r.id] ? (
             <View style={{ padding: 10, borderRadius: 10, backgroundColor: whiteA(0.05) }}>
@@ -361,8 +374,40 @@ function ReportsTab() {
             ) : null}
             {r.status === "open" ? (
               <>
+                {r.removable ? (
+                  <Btn
+                    label="Retirer le contenu"
+                    variant="danger"
+                    onPress={() =>
+                      Alert.alert("Retirer le contenu", `${REPORT_TYPE[r.targetType] ?? "Ce contenu"} ne sera plus visible pour personne.`, [
+                        { text: "Annuler", style: "cancel" },
+                        { text: "Retirer", style: "destructive", onPress: () => void api(`reports/${r.id}/resolve`, { action: "removed" }).then(load).catch(fail) },
+                      ])
+                    }
+                  />
+                ) : null}
                 <Btn label="Traité" onPress={() => void api(`reports/${r.id}/resolve`, { action: "resolved" }).then(load).catch(fail)} />
                 <Btn label="Classer" variant="secondary" onPress={() => void api(`reports/${r.id}/resolve`, { action: "dismissed" }).then(load).catch(fail)} />
+                {r.targetProfileId ? (
+                  <Btn
+                    label="Suspendre le compte"
+                    variant="danger"
+                    onPress={() =>
+                      Alert.alert("Suspendre le compte", `${r.targetUsername ? `@${r.targetUsername}` : "Ce compte"} ne pourra plus utiliser WIPP. Tu peux le rétablir dans « Suspendus ».`, [
+                        { text: "Annuler", style: "cancel" },
+                        {
+                          text: "Suspendre",
+                          style: "destructive",
+                          onPress: () =>
+                            void api(`users/${encodeURIComponent(String(r.targetProfileId).replace(/^srvuser:/, ""))}/suspend`, { suspend: true, reason: `Signalement : ${r.reason}` })
+                              .then(() => api(`reports/${r.id}/resolve`, { action: "resolved" }))
+                              .then(load)
+                              .catch(fail),
+                        },
+                      ])
+                    }
+                  />
+                ) : null}
               </>
             ) : null}
           </View>

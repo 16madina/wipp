@@ -359,13 +359,27 @@ export function StoriesScreen({ userId }: { userId: string }) {
                     ...REPORT_REASONS.map((reason) => ({
                       text: reason,
                       onPress: () => {
+                        // The reported story disappears for me right away, even before the server answers.
+                        hideStoryLocal(story.id);
+                        move(1);
                         void submitContentReport({
                           contentType: "story" as const,
                           contentId: story.id,
                           targetProfileId: group.id,
                           reason,
                         }).then(
-                          () => Alert.alert("Signalement", "Signalement envoyé."),
+                          () =>
+                            Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner. Cette story ne s’affichera plus pour toi.\n\nVeux-tu aussi bloquer cette personne ?", [
+                              { text: "Non", style: "cancel" },
+                              {
+                                text: "Bloquer",
+                                style: "destructive",
+                                onPress: () => {
+                                  useWippStore.getState().blockUser(group.id);
+                                  closeViewer();
+                                },
+                              },
+                            ]),
                           (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
                         );
                       },

@@ -50,7 +50,7 @@ function SupportPage() {
 
         <h2>Nous écrire</h2>
         <p>
-          Email : <a href="mailto:support@wippapp.com">support@wippapp.com</a>
+          Email : <a href="mailto:lazoneclient@gmail.com">lazoneclient@gmail.com</a>
         </p>
 
         <div className="site-store-box">

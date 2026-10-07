@@ -27,6 +27,8 @@ export type InboxSnapshot = {
   meAvatar: string;
   /** Shops of the business chats (name, logo), so « Professionnel » chats look right at once. */
   shops?: Shop[];
+  /** People I blocked (both id forms), so their chats and stories stay hidden from the first frame. */
+  blockedIds?: string[];
 };
 
 async function cacheKey(): Promise<Uint8Array | null> {

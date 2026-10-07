@@ -1,9 +1,9 @@
 import type { Lang } from "./types";
 
-export const LEGAL_VERSION = "2026-09-21";
+export const LEGAL_VERSION = "2026-10-07";
 export const LEGAL_CONTACT = "lazoneclient@gmail.com";
 
-export type LegalDocId = "privacy" | "terms";
+export type LegalDocId = "privacy" | "terms" | "age";
 
 export type LegalSection = {
   title: string;
@@ -19,7 +19,7 @@ export type LegalDocument = {
 
 const privacyFr: LegalDocument = {
   title: "Politique de confidentialité",
-  updated: "21 septembre 2026",
+  updated: "7 octobre 2026",
   intro:
     "Cette politique explique comment WIPP, exploité au Canada par DeeDigital et, pour les activités concernées en Afrique, par Dee Digital Group, recueille, utilise, communique, conserve et supprime vos renseignements personnels. Contact : lazoneclient@gmail.com.",
   sections: [
@@ -52,8 +52,8 @@ const privacyFr: LegalDocument = {
     {
       title: "4. Chiffrement de bout en bout — et ses limites",
       paragraphs: [
-        "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages. Les groupes et médias suivront.",
-        "Le E2EE ne couvre pas encore : groupes, médias, profils publics, Stories publiques, annonces, Boutiques, événements, listes de membres, métadonnées techniques, ni un contenu que vous copiez, transférez ou capturez.",
+        "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages. Les photos, vidéos et vocaux sont chiffrés de la même façon. Les groupes sont chiffrés de bout en bout avec une clé partagée uniquement entre leurs membres actuels ; les messages de groupe envoyés avant l’activation de ce chiffrement restent stockés tels quels.",
+        "Ne sont pas chiffrés de bout en bout, car ils sont faits pour être vus par d’autres : profils publics, Stories, annonces, Boutiques, événements, listes de membres, ainsi que les métadonnées techniques (par exemple qui écrit à qui et quand). Le chiffrement ne protège pas non plus un contenu que vous copiez, transférez ou capturez.",
         "Une capture d’écran, un enregistrement d’écran, un mini-lecteur système (PiP) ou un appareil compromis peut révéler un contenu autrement chiffré. Les messages éphémères disparaissent de WIPP selon le délai choisi; ils ne empêchent pas un destinataire de les photographier.",
         "Si vous signalez un message, les éléments nécessaires à l’examen peuvent être transmis à WIPP.",
       ],
@@ -120,7 +120,7 @@ const privacyFr: LegalDocument = {
     {
       title: "13. Mineurs",
       paragraphs: [
-        "WIPP n’est pas destiné aux enfants de moins de 13 ans. Au Québec, les renseignements d’un mineur de moins de 14 ans ne sont pas recueillis auprès de lui sans le titulaire de l’autorité parentale, sauf exception légale. Un compte créé en violation de ces règles peut être supprimé.",
+        "WIPP est réservé aux personnes de 18 ans et plus. Une personne mineure ne peut pas créer de compte. Un compte créé en violation de cette règle peut être supprimé.",
       ],
     },
     {
@@ -128,6 +128,7 @@ const privacyFr: LegalDocument = {
       paragraphs: [
         "Mesures raisonnables : contrôle d’accès, chiffrement, sessions, détection d’abus. Aucun service n’est infaillible. En cas d’incident, WIPP évalue, réduit les risques et notifie selon la loi (Loi 25 / PIPEDA).",
         "WIPP n’effectue pas de profilage publicitaire ni de décision automatisée produisant des effets juridiques à votre égard, hors filtres anti-spam et anti-abus.",
+        "Signaler et bloquer : vous pouvez signaler une Story, un profil, un message, un groupe, une annonce ou une Boutique, et bloquer une personne. Un contenu signalé disparaît aussitôt pour vous ; l’équipe WIPP examine les signalements et peut retirer le contenu ou suspendre le compte. Les textes publics (noms, bios, Boutiques, groupes, annonces) passent par un filtre automatique de mots injurieux. Un signalement de message n’envoie que l’identifiant du message et la raison, jamais son contenu chiffré.",
         "Les mises à jour importantes de cette politique seront indiquées dans l’application. Version " +
           LEGAL_VERSION +
           ".",
@@ -138,7 +139,7 @@ const privacyFr: LegalDocument = {
 
 const termsFr: LegalDocument = {
   title: "Conditions d’utilisation",
-  updated: "21 septembre 2026",
+  updated: "7 octobre 2026",
   intro:
     "En créant un compte WIPP, vous acceptez ces Conditions et reconnaissez avoir lu la Politique de confidentialité. Exploitants : DeeDigital (Canada) et Dee Digital Group (activités concernées en Afrique). Contact : lazoneclient@gmail.com.",
   sections: [
@@ -151,7 +152,7 @@ const termsFr: LegalDocument = {
     {
       title: "2. Admissibilité",
       paragraphs: [
-        "Vous déclarez avoir l’âge légal requis dans votre territoire, et au moins 13 ans. Au Québec, un mineur de moins de 14 ans ne s’inscrit pas sans le titulaire de l’autorité parentale. Un compte, une personne. Informations exactes. Vous protégez l’accès à votre appareil.",
+        "Vous déclarez avoir au moins 18 ans pour utiliser WIPP. Les personnes de moins de 18 ans ne peuvent pas créer de compte, même avec une autorisation parentale. Un compte, une personne. Informations exactes. Vous protégez l’accès à votre appareil.",
       ],
     },
     {
@@ -231,7 +232,7 @@ const termsFr: LegalDocument = {
 
 const privacyEn: LegalDocument = {
   title: "Privacy Policy",
-  updated: "21 September 2026",
+  updated: "7 October 2026",
   intro:
     "This policy explains how WIPP — operated in Canada by DeeDigital and, for relevant activities in Africa, by Dee Digital Group — collects, uses, shares, keeps and deletes personal information. Contact: lazoneclient@gmail.com.",
   sections: [
@@ -264,8 +265,8 @@ const privacyEn: LegalDocument = {
     {
       title: "4. End-to-end encryption — and its limits",
       paragraphs: [
-        "Private DMs covered by WIPP’s E2EE are encrypted. WIPP does not keep private keys in a way that lets it read those messages. Groups and media come next.",
-        "E2EE does not yet cover groups, media, public profiles, public Stories, listings, shops, events, group member lists, technical metadata, or content you copy, forward or screenshot.",
+        "Private DMs covered by WIPP’s E2EE are encrypted. WIPP does not keep private keys in a way that lets it read those messages. Photos, videos and voice notes are encrypted the same way. Groups are end-to-end encrypted with a key shared only among their current members; group messages sent before this encryption was turned on stay stored as they were.",
+        "Not end-to-end encrypted, because they are meant to be seen by others: public profiles, Stories, listings, shops, events, group member lists, and technical metadata (for example who writes to whom and when). Encryption also does not protect content you copy, forward or screenshot.",
         "A screenshot, screen recording, system picture-in-picture tile or a compromised device can reveal otherwise encrypted content. Disappearing messages leave WIPP after the delay you set; they do not stop someone from photographing them.",
         "If you report a message, the pieces needed to review it may be sent to WIPP.",
       ],
@@ -332,7 +333,7 @@ const privacyEn: LegalDocument = {
     {
       title: "13. Minors",
       paragraphs: [
-        "WIPP is not for children under 13. In Québec, personal information of a minor under 14 is not collected from them without the holder of parental authority, except as the law allows. An account that breaks these rules may be deleted.",
+        "WIPP is for people aged 18 and over. Minors cannot create an account. An account that breaks this rule may be deleted.",
       ],
     },
     {
@@ -340,6 +341,7 @@ const privacyEn: LegalDocument = {
       paragraphs: [
         "Reasonable measures: access control, encryption, sessions, abuse detection. No service is unbreakable. After an incident, WIPP assesses, reduces harm and notifies as required (Law 25 / PIPEDA).",
         "WIPP does not run advertising profiling or automated decisions with legal effects about you, aside from spam and abuse filters.",
+        "Report and block: you can report a Story, profile, message, group, listing or shop, and block a person. Reported content disappears for you right away; the WIPP team reviews reports and may remove the content or suspend the account. Public text (names, bios, shops, groups, listings) goes through an automatic offensive-word filter. A message report only sends the message id and the reason, never its encrypted content.",
         "Material updates to this policy will appear in the app. Version " + LEGAL_VERSION + ".",
       ],
     },
@@ -361,7 +363,7 @@ const termsEn: LegalDocument = {
     {
       title: "2. Eligibility",
       paragraphs: [
-        "You state that you are old enough in your territory, and at least 13. In Québec, a minor under 14 does not sign up without the holder of parental authority. One person, one account. Accurate information. You keep your device secure.",
+        "You confirm that you are at least 18 to use WIPP. People under 18 cannot create an account, even with parental consent. One person, one account. Accurate information. You keep your device secure.",
       ],
     },
     {
@@ -439,9 +441,31 @@ const termsEn: LegalDocument = {
   ],
 };
 
+const ageFr: LegalDocument = {
+  title: "18 ans et plus",
+  updated: "28 septembre 2026",
+  intro: "WIPP est réservé aux personnes de 18 ans et plus.",
+  sections: [
+    { title: "Âge minimum", paragraphs: ["Pour créer un compte et utiliser WIPP, tu dois avoir au moins 18 ans. Une autorisation parentale ne remplace pas cette condition."] },
+    { title: "Confirmation lors de l’accès", paragraphs: ["Avant de continuer avec ton numéro de téléphone, tu dois confirmer avoir 18 ans et plus. Si tu n’as pas encore 18 ans, ne crée pas de compte et n’utilise pas WIPP."] },
+    { title: "Comptes non admissibles", paragraphs: ["WIPP peut désactiver ou supprimer un compte dont le titulaire ne respecte pas l’âge minimum, conformément aux Conditions d’utilisation."] },
+  ],
+};
+
+const ageEn: LegalDocument = {
+  title: "Ages 18 and over",
+  updated: "28 September 2026",
+  intro: "WIPP is for people aged 18 and over.",
+  sections: [
+    { title: "Minimum age", paragraphs: ["You must be at least 18 to create an account and use WIPP. Parental permission does not replace this requirement."] },
+    { title: "Confirmation before continuing", paragraphs: ["Before continuing with your phone number, you must confirm you are 18 or older. If you are under 18, do not create an account or use WIPP."] },
+    { title: "Ineligible accounts", paragraphs: ["WIPP may disable or delete an account if its owner does not meet the minimum age, in accordance with the Terms of Use."] },
+  ],
+};
+
 const DOCS: Record<Lang, Record<LegalDocId, LegalDocument>> = {
-  fr: { privacy: privacyFr, terms: termsFr },
-  en: { privacy: privacyEn, terms: termsEn },
+  fr: { privacy: privacyFr, terms: termsFr, age: ageFr },
+  en: { privacy: privacyEn, terms: termsEn, age: ageEn },
 };
 
 export function legalDoc(lang: Lang, id: LegalDocId): LegalDocument {

@@ -99,7 +99,7 @@ export function scheduleInboxSave(get: () => Store) {
     const shopIds = new Set(chats.map((c) => c.shopId).filter(Boolean));
     const shops = st.shops.filter((x) => shopIds.has(x.id));
     void import("./inbox-cache").then(({ saveInboxSnapshot }) =>
-      saveInboxSnapshot({ profileId: st.serverProfileId!, chats, messages: st.messages, users: st.users, meAvatar: st.me.avatar || "", shops }),
+      saveInboxSnapshot({ profileId: st.serverProfileId!, chats, messages: st.messages, users: st.users, meAvatar: st.me.avatar || "", shops, blockedIds: st.blockedIds }),
     );
   }, 2500);
 }
@@ -245,6 +245,8 @@ type Store = {
   declineRequest: (id: string) => void;
   blockUser: (userId: string) => void;
   refreshIncomingRequests: () => Promise<void>;
+  /** Reloads the people I blocked from the server (kept across restarts). */
+  refreshBlocked: () => Promise<void>;
   viewStory: (userId: string) => void;
   createGroup: (name: string, participantIds: string[], extra?: { description?: string; photoUri?: string; photoMime?: string }) => void;
   ensureMyCode: () => LiveCode;
@@ -307,6 +309,7 @@ function fresh(): Omit<
   | "declineRequest"
   | "blockUser"
   | "refreshIncomingRequests"
+  | "refreshBlocked"
   | "viewStory"
   | "createGroup"
   | "ensureMyCode"
@@ -1043,6 +1046,7 @@ export const useWippStore = create<Store>((set, get) => ({
         void get().syncBusinessContexts();
         void get().refreshConnections();
         void get().refreshIncomingRequests();
+        void get().refreshBlocked();
         // The chat list only has ciphertext for the last message: decrypt it so the
         // preview shows the real text instead of "Message chiffré".
         void (async () => {
@@ -1433,7 +1437,25 @@ export const useWippStore = create<Store>((set, get) => ({
       chats: s.chats.filter((c) => !(c.type === "dm" && c.participantIds.includes(userId))),
       requests: s.requests.filter((r) => r.fromId !== userId),
     }));
+    scheduleInboxSave(get);
     void get().refreshIncomingRequests();
+  },
+  refreshBlocked: async () => {
+    try {
+      const { listBlockedIds } = await import("./connections");
+      const ids = await listBlockedIds();
+      set((s) => {
+        const blockedIds = [...new Set(ids.flatMap((id) => [id, `srvuser:${id}`]))];
+        return {
+          blockedIds,
+          chats: s.chats.filter((c) => !(c.type === "dm" && c.participantIds.some((p) => blockedIds.includes(p)))),
+          requests: s.requests.filter((r) => !blockedIds.includes(r.fromId)),
+        };
+      });
+      scheduleInboxSave(get);
+    } catch {
+      /* offline: keep the list already known */
+    }
   },
   refreshIncomingRequests: async () => {
     try {

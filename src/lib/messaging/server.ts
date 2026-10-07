@@ -290,7 +290,7 @@ export async function adminStats(meId: string): Promise<WippAdminStats> {
   const [messages] = await sql<{ c: number }>`select count(*)::int as c from wipp_messages`;
   const [blocks] = await sql<{ c: number }>`select count(*)::int as c from wipp_blocks`;
   const [flags] = await sql<{ c: number }>`
-    select count(*)::int as c from wipp_moderation_flags where status = 'open'
+    select ((select count(*) from wipp_moderation_flags where status = 'open') + (select count(*) from wipp_content_reports where status = 'open'))::int as c
   `;
   const [admins] = await sql<{ c: number }>`
     select count(*)::int as c from wipp_profiles where role = 'admin'

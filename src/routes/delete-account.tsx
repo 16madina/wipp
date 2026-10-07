@@ -76,7 +76,7 @@ function DeleteAccountPage() {
           <li>Confirmez la suppression. L’action est <strong>irréversible</strong>.</li>
           <li>
             Si vous ne pouvez pas vous connecter, écrivez à{" "}
-            <a href="mailto:support@wippapp.com">support@wippapp.com</a> depuis une adresse liée au
+            <a href="mailto:lazoneclient@gmail.com">lazoneclient@gmail.com</a> depuis une adresse liée au
             compte ; nous traitons la demande sous <strong>7 jours</strong>.
           </li>
           <li>
@@ -165,7 +165,7 @@ function DeleteAccountPage() {
 
         <p>
           Politique de confidentialité : <Link to="/privacy">/privacy</Link> · Support :{" "}
-          <a href="mailto:support@wippapp.com">support@wippapp.com</a>
+          <a href="mailto:lazoneclient@gmail.com">lazoneclient@gmail.com</a>
         </p>
       </article>
     </SiteShell>

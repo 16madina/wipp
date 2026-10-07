@@ -35,6 +35,8 @@ import { businessIntro } from "../lib/assets";
 import { EdgeBack, GlassHeader, Header, Press, ScreenRoot, SearchField } from "./ui";
 import { cardLink, fetchCardSocial, followCard, formatCount, type CardSocial } from "../lib/business-card";
 import { useWippStore } from "../lib/store";
+import { REPORT_REASONS, submitContentReport } from "../lib/safety";
+import { errorText } from "../lib/error-fr";
 import type { BusinessCardView } from "../lib/business-card";
 import { businessQr } from "../lib/qr-payload";
 import { openState, socialUrl, websiteUrl } from "../lib/business-hours";
@@ -215,6 +217,28 @@ export function BusinessCardExperience({
   const insets = useSafeAreaInsets();
   const back = share ? () => setShare(false) : onBack;
   const link = cardLink(card.publicId);
+  function visitorMenu() {
+    Alert.alert(card.name, undefined, [
+      { text: "Partager", onPress: () => void Share.share({ message: `${card.name}\n${link}` }) },
+      {
+        text: "Signaler la boutique",
+        style: "destructive",
+        onPress: () =>
+          Alert.alert("Signaler la boutique", undefined, [
+            ...REPORT_REASONS.map((reason) => ({
+              text: reason,
+              onPress: () =>
+                void submitContentReport({ contentType: "business_card", contentId: card.id, targetProfileId: card.ownerProfileId, reason }).then(
+                  () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va examiner cette boutique."),
+                  (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                ),
+            })),
+            { text: "Annuler", style: "cancel" as const },
+          ]),
+      },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
   const qr = businessQr(card.publicId);
   const photos = (card.photoUrls ?? []).filter((url) => url.startsWith("http") || url.startsWith("file"));
   const shown = photos.slice(0, 4);
@@ -246,7 +270,6 @@ export function BusinessCardExperience({
             ))}
           </ScrollView>
           {[
-            { icon: Share2, title: "Partager sur WIPP", sub: "Envoyer ma carte à un contact WIPP", go: () => undefined },
             { icon: Globe, title: "Copier le lien de ma carte", sub: "Le lien sera copié dans le presse-papiers", go: () => void copyLink() },
             { icon: QrCode, title: "Partager le QR code", sub: "Envoyer mon QR en image", go: () => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", "Le partage du QR a échoué.")) },
             { icon: Share2, title: "Partager ailleurs", sub: "WhatsApp, Instagram, etc.", go: () => void Share.share({ message: `${card.name} sur WIPP\n${link}` }) },
@@ -493,7 +516,7 @@ export function BusinessCardExperience({
         <Press accessibilityLabel="Retour" onPress={onBack} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <ChevronLeft size={24} color="#fff" />
         </Press>
-        <Press accessibilityLabel="Partager" onPress={() => (owner ? setShare(true) : void Share.share({ message: `${card.name}\n${link}` }))} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
+        <Press accessibilityLabel="Partager" onPress={() => (owner ? setShare(true) : visitorMenu())} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <MoreHorizontal size={22} color="#fff" />
         </Press>
       </View>

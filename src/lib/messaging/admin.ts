@@ -59,7 +59,7 @@ export async function adminOverview(meId: string) {
       (select count(*)::int from wipp_chats) as chats,
       (select count(*)::int from wipp_connections where status = 'active' and (expires_at is null or expires_at > now())) as connections,
       (select count(*)::int from wipp_connections where status = 'active' and connection_type = 'ephemeral' and expires_at > now()) as ephemeral_connections,
-      (select count(*)::int from wipp_moderation_flags where status = 'open') as open_reports,
+      ((select count(*)::int from wipp_moderation_flags where status = 'open') + (select count(*)::int from wipp_content_reports where status = 'open')) as open_reports,
       (select count(distinct profile_id)::int from wipp_push_tokens where disabled_at is null) as push_reachable
   `;
   return row ?? {};
@@ -162,7 +162,11 @@ export async function adminSuspended(meId: string) {
   }));
 }
 
-/** Reports (user-submitted). The reported message content stays sealed until a staff member opens it. */
+/**
+ * Reports (user-submitted), from both places:
+ *  - wipp_moderation_flags: sealed message reports (content opened only by staff, logged);
+ *  - wipp_content_reports: stories, profiles, listings, shops, groups, messages (id + reason only).
+ */
 export async function adminReports(meId: string, status = "open") {
   await assertStaff(meId);
   const sql = await getSql();
@@ -170,40 +174,75 @@ export async function adminReports(meId: string, status = "open") {
     id: string;
     target_type: string;
     target_id: string;
+    target_profile: string | null;
     reason: string;
     status: string;
     created_at: string;
     reporter: string | null;
     target_username: string | null;
     has_content: boolean;
+    removable: boolean;
   }>`
-    select f.id, f.target_type, f.target_id, f.reason, f.status, f.created_at::text,
-           r.username as reporter,
-           t.username as target_username,
-           (f.sealed_payload is not null) as has_content
-    from wipp_moderation_flags f
-    left join wipp_profiles r on r.id = f.reporter_id
-    left join wipp_profiles t on t.id = f.target_id
-    where ${status} = 'all' or f.status = ${status}
-    order by f.created_at desc limit 200
+    select * from (
+      select f.id, f.target_type, f.target_id, f.target_id as target_profile, f.reason, f.status, f.created_at,
+             r.username as reporter, t.username as target_username,
+             (f.sealed_payload is not null) as has_content, false as removable
+      from wipp_moderation_flags f
+      left join wipp_profiles r on r.id = f.reporter_id
+      left join wipp_profiles t on t.id = f.target_id
+      where ${status} = 'all' or f.status = ${status}
+      union all
+      select c.id, c.content_type, c.content_id, c.target_profile_id, c.reason, c.status, c.created_at,
+             r.username, t.username,
+             false, c.content_type in ('story', 'listing', 'business_card')
+      from wipp_content_reports c
+      left join wipp_profiles r on r.id = c.reporter_id
+      left join wipp_profiles t on t.id = c.target_profile_id
+      where ${status} = 'all' or c.status = ${status}
+    ) x
+    order by x.created_at desc limit 200
   `;
   return rows.map((r) => ({
     id: r.id,
     targetType: r.target_type,
     targetId: r.target_id,
+    targetProfileId: r.target_profile,
     targetUsername: r.target_username,
     reporter: r.reporter,
     reason: r.reason,
     status: r.status,
     hasContent: r.has_content,
-    createdAt: Date.parse(r.created_at),
+    removable: r.removable,
+    createdAt: Date.parse(String(r.created_at)),
   }));
 }
 
+/** dismissed / resolved, or « removed »: hide the reported story, listing or shop, then mark resolved. */
 export async function adminResolveReport(meId: string, reportId: string, action: string) {
   await assertStaff(meId);
-  if (action !== "dismissed" && action !== "resolved") throw new WippHttpError(400, "invalid", "Action invalide.");
+  if (action !== "dismissed" && action !== "resolved" && action !== "removed") throw new WippHttpError(400, "invalid", "Action invalide.");
   const sql = await getSql();
+  const content = await sql<{ content_type: string; content_id: string }>`
+    select content_type, content_id from wipp_content_reports where id = ${reportId} limit 1
+  `;
+  if (content[0]) {
+    const { content_type: type, content_id: cid } = content[0];
+    if (action === "removed") {
+      if (type === "story") await sql`update wipp_stories set deleted_at = coalesce(deleted_at, now()) where id = ${cid}`;
+      else if (type === "listing") await sql`update wipp_listings set status = 'removed', updated_at = now() where id = ${cid}`;
+      else if (type === "business_card") await sql`update wipp_business_cards set is_published = false where id = ${cid} or public_id = ${cid}`;
+      else throw new WippHttpError(400, "invalid", "Ce contenu ne peut pas être retiré d’ici. Suspends le compte si besoin.");
+    }
+    const status = action === "removed" ? "resolved" : action;
+    // Same content reported several times: close every open report on it at once.
+    await sql`
+      update wipp_content_reports set status = ${status}, resolved_at = now(), resolved_by = ${meId}
+      where id = ${reportId} or (content_type = ${type} and content_id = ${cid} and status = 'open')
+    `;
+    await audit(meId, `report_${action}`, reportId);
+    return { status };
+  }
+  if (action === "removed") throw new WippHttpError(400, "invalid", "Action invalide.");
   const rows = await sql<{ id: string }>`
     update wipp_moderation_flags set status = ${action} where id = ${reportId} returning id
   `;
