@@ -43,7 +43,8 @@ import { mentionIdsInText } from "../lib/lot7/api";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { WippSticker } from "../components/WippSticker";
 import { GlassHeader, Header, IconBtn, Press, ScreenRoot } from "../components/ui";
-import { composerSticker, wippSrc } from "../lib/assets";
+import { wippSrc } from "../lib/assets";
+import { ComposerMascot } from "../components/ComposerMascot";
 import { useDeviceLayout } from "../lib/device-layout";
 import { formatClock, formatLastSeen } from "../lib/format";
 import { addLocalGif, gifProviderConfigured, GIF_INTEGRATION_PENDING, loadGifs, searchGifs, type LocalGif } from "../lib/gifs";
@@ -206,7 +207,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const insets = useSafeAreaInsets();
   const { compact, icon, headerIcon, tablet } = useDeviceLayout();
   const composerIcon = tablet ? 48 : icon;
-  const composerArt = Math.round(composerIcon * 0.78);
+  // The little WIPP guy is a bit taller than the other icons and stands on the bar.
+  const mascotSize = tablet ? 50 : compact ? 40 : 42;
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
@@ -1030,10 +1032,12 @@ function ConversationInner({ chatId }: { chatId: string }) {
                       setEmojiBar((v) => !v);
                     }
                   }}
-                  style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginRight: 4, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
+                  accessibilityLabel={compact ? "Stickers" : undefined}
+                  hitSlop={6}
+                  style={{ width: compact ? mascotSize : composerIcon, height: composerIcon, flexShrink: 0, marginRight: 4, marginBottom: 4, alignItems: "center", justifyContent: compact ? "flex-end" : "center" }}
                 >
                   {compact ? (
-                    <Image source={composerSticker} style={{ width: composerArt, height: composerArt, opacity: stickerBar ? 1 : 0.92 }} contentFit="contain" />
+                    <ComposerMascot size={mascotSize} active={stickerBar} />
                   ) : (
                     <Smile size={tablet ? 22 : 20} color={emojiBar ? colors.accent : colors.muted} />
                   )}
@@ -1047,9 +1051,10 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     setEmojiBar(false);
                     setStickerBar((v) => !v);
                   }}
-                  style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
+                  hitSlop={6}
+                  style={{ width: mascotSize, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "flex-end" }}
                 >
-                  <Image source={composerSticker} style={{ width: composerArt, height: composerArt, opacity: stickerBar ? 1 : 0.92 }} contentFit="contain" />
+                  <ComposerMascot size={mascotSize} active={stickerBar} />
                 </Press>
               ) : null}
               <Press
