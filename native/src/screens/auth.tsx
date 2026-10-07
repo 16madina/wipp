@@ -2,7 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, View, type KeyboardEvent } from "react-native";
+import { ActivityIndicator, Alert, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View, type KeyboardEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight, Camera, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
 import { signinOtp, signupPhone, usernameAvailable } from "../lib/auth-api";
@@ -1050,43 +1050,36 @@ export function ProfileReferenceScreen() {
             : checkedUsername === username && availability === "error"
               ? { text: "Vérification impossible", color: colors.danger }
               : null;
-  const field = { height: 46, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(20,20,24,0.82)", paddingHorizontal: 12, justifyContent: "center" as const };
+  // The background is drawn "cover": find where the mascot's feet land on this screen,
+  // so the form starts right under them (image 941×1670, feet at ~38.5 % of its height).
+  const win = useWindowDimensions();
+  const imgH = Math.max((win.width / 941) * 1670, win.height);
+  const feetY = (win.height - imgH) / 2 + imgH * 0.385;
+  const field = { height: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,216,77,0.28)", backgroundColor: "rgba(0,0,0,0.38)", paddingHorizontal: 12, justifyContent: "center" as const };
   const input = { flex: 1, color: colors.fg, fontSize: 15, ...noWebOutline };
-  const label = { color: "rgba(255,255,255,0.78)", fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 6 };
+  const label = { color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 5 };
 
   return (
     <Artwork source={authProfileBg} fit="cover">
       {(reveal) => <>
-      {/* The photo stays visible on top; the bottom fades to black under the form. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)", "rgba(0,0,0,0.94)"]}
-        locations={[0.22, 0.4, 0.55]}
-        style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
-      />
       <View style={{ position: "absolute", top: insets.top + 6, left: 0 }}>
         <Pressable accessibilityLabel="Retour" onPress={pop} style={{ marginLeft: 8, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Pressable>
       </View>
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) }}>
-        <View style={{ flexDirection: "row", gap: 6, marginBottom: 12 }}>
-          {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={{ width: 34, height: 4, borderRadius: 2, backgroundColor: i < 3 ? colors.accent : "rgba(255,255,255,0.25)" }} />
-          ))}
-        </View>
-        <Text style={{ color: colors.fg, fontSize: 28, fontFamily: "Inter_700Bold" }}>
+      {/* No card: the form sits in the empty space of the picture, under the mascot. */}
+      <View style={{ position: "absolute", left: 0, right: 0, top: feetY + 10, bottom: Math.max(insets.bottom, 14), paddingHorizontal: 22 }}>
+        <Text style={{ color: colors.fg, fontSize: 22, fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>
           Complète ton <Text style={{ color: colors.accent }}>profil</Text>
         </Text>
-        <Text style={{ marginTop: 4, marginBottom: 14, color: "rgba(255,255,255,0.72)", fontSize: 14 }}>Ces informations seront visibles par tes contacts sur WIPP.</Text>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(20,20,24,0.82)" }}>
-            {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={26} color={colors.accent} />}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10, marginBottom: 10 }}>
+          <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.38)" }}>
+            {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={22} color={colors.accent} />}
           </Pressable>
           <Pressable accessibilityLabel="Choisir une photo" onPress={() => void choosePhoto()}>
             <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{photoUri ? "Changer la photo" : "Ajouter une photo"}</Text>
-            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 }}>Facultatif</Text>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1 }}>Facultatif · visible par tes contacts</Text>
           </Pressable>
         </View>
 
@@ -1105,7 +1098,7 @@ export function ProfileReferenceScreen() {
           </View>
         </View>
 
-        <Text style={[label, { marginTop: 12 }]}>Ton WIPP</Text>
+        <Text style={[label, { marginTop: 10 }]}>Ton WIPP · c’est ainsi qu’on te trouvera</Text>
         <View ref={usernameBlockRef} style={[field, { flexDirection: "row", alignItems: "center" }]}>
           <Text style={{ color: colors.accent, fontSize: 15, marginRight: 2 }}>@</Text>
           <TextInput
@@ -1125,23 +1118,21 @@ export function ProfileReferenceScreen() {
           />
           {status ? <Text style={{ marginLeft: 8, fontSize: 12, fontFamily: "Inter_600SemiBold", color: status.color }}>{status.text}</Text> : null}
         </View>
-        <Text style={{ marginTop: 4, color: "rgba(255,255,255,0.55)", fontSize: 12 }}>C’est ainsi que les autres te trouveront sur WIPP.</Text>
 
-        <Text style={[label, { marginTop: 12 }]}>Pays</Text>
-        <View style={[field, { flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10 }]}>
-          <Text style={{ fontSize: 20 }}>{flagEmoji(countryLabel.id)}</Text>
+        <View style={[field, { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10 }]}>
+          <Text style={{ fontSize: 18 }}>{flagEmoji(countryLabel.id)}</Text>
           <Text style={{ color: colors.fg, fontSize: 15 }}>
             {countryLabel.fr} ({countryLabel.dial})
           </Text>
         </View>
 
-        {error ? <Text style={{ marginTop: 10, color: colors.danger, fontSize: 13 }}>{error}</Text> : null}
+        {error ? <Text style={{ marginTop: 8, color: colors.danger, fontSize: 13 }}>{error}</Text> : null}
 
         <Pressable
           accessibilityLabel="Continuer"
           disabled={busy}
           onPress={() => void finish()}
-          style={{ marginTop: 16, height: 54, borderRadius: 27, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? 0.7 : 1 }}
+          style={{ marginTop: "auto", height: 52, borderRadius: 26, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? 0.7 : 1 }}
         >
           {busy ? <ActivityIndicator color={colors.accentFg} /> : <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Continuer</Text>}
           {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
