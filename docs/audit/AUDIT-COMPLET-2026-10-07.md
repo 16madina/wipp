@@ -90,3 +90,20 @@ Les mots « Bientôt » restants dans les traductions ne sont plus affichés nul
 6. Corriger la politique de confidentialité (chiffrement) + âge 18+ partout.
 
 **Ensuite (🟠🟡) :** interrupteurs inutiles, tuile Pharmacies, phrases « bientôt », photos de profil en mémoire.
+
+---
+
+## Mise à jour du 7 octobre (soir) — corrigé
+
+- ✅ Story signalée : disparaît tout de suite + « Veux-tu aussi bloquer cette personne ? »
+- ✅ Stories masquées : gardées après redémarrage
+- ✅ Blocages : rechargés à chaque ouverture et gardés dans la mémoire chiffrée ; le serveur ne renvoie plus les stories des personnes bloquées (dans les deux sens) ni des comptes suspendus (migration 0050)
+- ✅ Admin → Signalements : tous les types (stories, profils, annonces, boutiques, groupes, messages), en français, avec **Retirer le contenu**, **Traité**, **Classer**, **Suspendre le compte** (migration 0051)
+- ✅ Boutique : bouton « … » → **Signaler la boutique** (il manquait) ; bouton mort « Partager sur WIPP » retiré
+- ✅ GIF caché tant qu'aucun service de GIF n'est branché
+- ✅ « Appareils liés » retiré ; « Texte plus grand » et « Réduire les animations » retirés ; « Retours haptiques » fonctionne vraiment
+- ✅ Politique de confidentialité : plus de contradiction sur le chiffrement, nouvelle section « Signaler et bloquer », 18+
+- ✅ Site wippapp.com/privacy et /terms : **même texte que l'app** (l'ancienne page disait 13 ans, « SMS à venir », mots de passe…)
+- ✅ Contact du site : lazoneclient@gmail.com — **support@wippapp.com n'avait pas de boîte mail** (aucun serveur mail pour wippapp.com)
+- ⏸ Gardé exprès : « Gagne des récompenses » (récompense prévue : code pour épingler sa boutique) — **à implémenter avant la soumission à Apple**
+- ⏸ Plus tard : Pharmacies, phrases « bientôt » d'Explorer, photos de profil en mémoire
