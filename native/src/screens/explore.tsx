@@ -33,7 +33,8 @@ type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
 const HUB_BACKGROUNDS = {
   listings: require("../../assets/wipp/media/apt.jpg"),
-  utilities: require("../../assets/wipp/media/services-hub.jpg"),
+  // Services = pharmacies for now: a drawn green pharmacy cross until a WIPP photo exists.
+  utilities: null,
   shops: require("../../assets/wipp/media/shop-chen-hero.jpg"),
   lifestyle: require("../../assets/wipp/media/soccer.jpg"),
 } as const;
@@ -243,7 +244,13 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
       <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
         {hubs.map((h) => (
           <Press key={h.title} onPress={h.go} style={{ width: "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
-            <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
+            {HUB_BACKGROUNDS[h.kind] ? (
+              <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
+            ) : (
+              <View pointerEvents="none" style={{ position: "absolute", right: -10, top: -6, bottom: -6, justifyContent: "center", opacity: 0.55 }}>
+                <Cross size={96} color="#1fbf6a" fill="#1fbf6a" strokeWidth={1} />
+              </View>
+            )}
             <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil }} />
             <View style={{ zIndex: 1 }}>
               <h.icon size={20} color={colors.accent} />
