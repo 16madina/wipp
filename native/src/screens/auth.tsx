@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { ActivityIndicator, Alert, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View, type KeyboardEvent } from "react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight, Camera, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
 import { signinOtp, signupPhone, usernameAvailable } from "../lib/auth-api";
@@ -402,6 +403,20 @@ export function SplashScreen() {
   return <View style={{ flex: 1, backgroundColor: colors.introBg }} />;
 }
 
+/** Grok animations (text cut off: the app writes the title). Slides without one keep the picture. */
+const ONB_VIDEO: Partial<Record<(typeof ONB)[number]["kind"], number>> = {
+  privacy: require("../../assets/onboarding/privacy.mp4"),
+};
+
+function OnbVideo({ source }: { source: number }) {
+  const player = useVideoPlayer(source, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+  return <VideoView player={player} style={{ width: "100%", height: "100%" }} contentFit="contain" nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} />;
+}
+
 export function OnboardingScreen() {
   const t = useT();
   const replace = useWippStore((s) => s.replace);
@@ -412,18 +427,20 @@ export function OnboardingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#070a0f" }}>
-      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, overflow: "hidden" }}>
-        {hero ? (
-          <Image source={hero} style={{ position: "absolute", width: "124%", height: "124%", top: "-12%", left: "-12%" }} contentFit="contain" />
-        ) : null}
-      </View>
       <SafeTop />
       <View style={{ alignItems: "flex-end", paddingRight: 8 }}>
         <Press onPress={() => replace({ name: "welcome" })} style={{ minHeight: 44, paddingHorizontal: 12, justifyContent: "center" }}>
           <Text style={{ color: "rgba(255,255,255,0.78)", fontSize: 14, fontFamily: "Inter_500Medium" }}>{t("skip")}</Text>
         </Press>
       </View>
-      <View style={{ flex: 1 }} />
+      {/* The whole picture, never cropped: it fills the space between « Passer » and the text. */}
+      <View style={{ flex: 1, justifyContent: "center" }}>
+        {ONB_VIDEO[slide.kind] ? (
+          <OnbVideo key={slide.kind} source={ONB_VIDEO[slide.kind] as number} />
+        ) : hero ? (
+          <Image key={slide.kind} source={hero} style={{ width: "100%", height: "100%" }} contentFit="contain" transition={180} />
+        ) : null}
+      </View>
       <View style={{ paddingHorizontal: 22, paddingBottom: 22 }}>
         <Text style={{ textAlign: "center", fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.paper, lineHeight: 26 }}>
           {t(slide.title)} <Text style={{ color: colors.accent }}>{t(slide.accent)}</Text>
