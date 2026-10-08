@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, ScrollView, Share, Text, TextInput, View } fr
 import { BadgeCheck, Check, Gift, Lock, Pin, Share2, Users } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { WippBadge } from "../components/WippBadge";
-import { Btn, Header, Press, ScreenRoot } from "../components/ui";
+import { Btn, GlassHeader, Header, Press, ScreenRoot } from "../components/ui";
 import { shareWippPublic } from "../lib/share-public";
 import { useWippStore } from "../lib/store";
 import { APP_HOST } from "../lib/utils";
@@ -116,8 +116,10 @@ export function RewardsScreen() {
   const progress = data ? Math.min(1, data.active / goal) : 0;
 
   return (
-    <ScreenRoot padBottom>
-      <Header title="Gagne des récompenses" onBack={pop} />
+    <ScreenRoot>
+      <GlassHeader>
+        <Header title="Gagne des récompenses" onBack={pop} />
+      </GlassHeader>
       {!data ? (
         <View style={{ padding: 24, alignItems: "center", gap: 12 }}>
           {error ? (
@@ -138,7 +140,7 @@ export function RewardsScreen() {
               <WippBadge badge={data.badge} size={22} />
             </View>
             <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 14, lineHeight: 20 }}>
-              Un ami compte quand il entre ton code à l’inscription et envoie son premier message.
+              Un ami compte quand il entre ton code à l’inscription et que vous êtes en contact sur WIPP (connectés, ou un message chacun).
             </Text>
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
               <Text style={{ color: colors.accent, fontSize: 34, fontFamily: "Inter_600SemiBold" }}>{data.active}</Text>
@@ -244,14 +246,14 @@ export function RewardsScreen() {
                     <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{f.displayName}</Text>
                     <Text style={{ color: colors.muted, fontSize: 12 }}>@{f.username}</Text>
                   </View>
-                  <Text style={{ color: f.active ? colors.accent : colors.muted, fontSize: 12 }}>{f.active ? "Actif" : "En attente du 1er message"}</Text>
+                  <Text style={{ color: f.active ? colors.accent : colors.muted, fontSize: 12 }}>{f.active ? "Actif" : "Pas encore en contact"}</Text>
                 </View>
               ))}
             </View>
           ) : null}
 
           <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>
-            Les récompenses sont gratuites et ne s’échangent pas contre de l’argent. Les comptes faux, suspendus ou en double ne comptent pas.
+            Les récompenses sont gratuites et ne s’échangent pas contre de l’argent. Seuls les amis en contact avec toi comptent (20 par mois au maximum). Les comptes faux, suspendus ou en double ne comptent pas.
           </Text>
         </ScrollView>
       )}

@@ -529,6 +529,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         const body = await readBody<{ code?: string }>(request);
         return json(await rewards.redeemPinCode(me.id, String(body.code ?? "")));
       }
+      if (method === "GET" && b === "top") return json(await rewards.topReferrers(me.id));
       if (method === "POST" && b === "certify") {
         const body = await readBody<{ profileId?: string; on?: boolean }>(request);
         return json(await rewards.setCertified(me.id, String(body.profileId ?? ""), Boolean(body.on)));

@@ -52,17 +52,68 @@ async function grantRewards(profileId: string) {
   }
 }
 
-/** Called after each sent message: the first one makes the invitation count. Never throws. */
+/** Max friends that start counting per referrer in 30 days (the others wait and count later). */
+const MONTHLY_CAP = 20;
+
+/**
+ * The invitation proves a real link: connected on WIPP (request, QR, Touch), or a 1:1 chat where
+ * BOTH wrote at least once. Entering a stranger's @pseudo therefore earns them nothing.
+ */
+async function inContact(a: string, b: string) {
+  const { isConnected } = await import("@/lib/messaging/connection");
+  if (await isConnected(a, b).catch(() => false)) return true;
+  const sql = await getSql();
+  const rows = await sql<{ ok: boolean }>`
+    select exists (
+      select 1 from wipp_chat_members ma
+      join wipp_chat_members mb on mb.chat_id = ma.chat_id and mb.profile_id = ${b}
+      where ma.profile_id = ${a}
+        and (select count(*) from wipp_chat_members m where m.chat_id = ma.chat_id) = 2
+        and exists (select 1 from wipp_messages x where x.chat_id = ma.chat_id and x.sender_id = ${a})
+        and exists (select 1 from wipp_messages y where y.chat_id = ma.chat_id and y.sender_id = ${b})
+    ) as ok
+  `;
+  return Boolean(rows[0]?.ok);
+}
+
+async function tryQualify(refereeId: string, referrerId: string) {
+  const sql = await getSql();
+  const recent = await sql<{ c: number }>`
+    select count(*)::int as c from wipp_profiles
+    where referred_by = ${referrerId} and referral_qualified_at > now() - interval '30 days'
+  `;
+  if (Number(recent[0]?.c ?? 0) >= MONTHLY_CAP) return false;
+  if (!(await inContact(refereeId, referrerId))) return false;
+  const rows = await sql<{ id: string }>`
+    update wipp_profiles set referral_qualified_at = now()
+    where id = ${refereeId} and referred_by = ${referrerId} and referral_qualified_at is null
+    returning id
+  `;
+  if (!rows[0]) return false;
+  await grantRewards(referrerId);
+  return true;
+}
+
+/** Re-checks my friends still waiting (they may have connected since). */
+async function recheckPending(referrerId: string) {
+  const sql = await getSql();
+  const pending = await sql<{ id: string }>`
+    select id from wipp_profiles
+    where referred_by = ${referrerId} and referral_qualified_at is null and suspended_at is null
+    order by created_at limit 30
+  `;
+  for (const p of pending) await tryQualify(p.id, referrerId);
+}
+
+/** Called after each sent message, by either side of an invitation. Never throws. */
 export async function qualifyReferral(senderId: string) {
   try {
     const sql = await getSql();
-    const rows = await sql<{ referred_by: string | null }>`
-      update wipp_profiles set referral_qualified_at = now()
-      where id = ${senderId} and referred_by is not null and referral_qualified_at is null
-      returning referred_by
+    const me = await sql<{ referred_by: string | null; referral_qualified_at: string | null }>`
+      select referred_by, referral_qualified_at::text from wipp_profiles where id = ${senderId} limit 1
     `;
-    const referrer = rows[0]?.referred_by;
-    if (referrer) await grantRewards(referrer);
+    if (me[0]?.referred_by && !me[0].referral_qualified_at) await tryQualify(senderId, me[0].referred_by);
+    await recheckPending(senderId);
   } catch (err) {
     console.warn("[wipp-api] referral qualify failed", err instanceof Error ? err.message : "unknown");
   }
@@ -90,13 +141,13 @@ export async function setMyReferrer(meId: string, raw: string) {
     throw new WippHttpError(400, "self", "Ce code ne peut pas être utilisé.");
   }
   await sql`update wipp_profiles set referred_by = ${referrer.id} where id = ${meId} and referred_by is null`;
-  // Someone who already wrote before entering the code counts right away.
-  const sent = await sql<{ c: number }>`select count(*)::int as c from wipp_messages where sender_id = ${meId} limit 1`;
-  if (Number(sent[0]?.c ?? 0) > 0) await qualifyReferral(meId);
+  // Already in contact with the inviter? It counts right away.
+  await tryQualify(meId, referrer.id).catch(() => false);
   return { ok: true };
 }
 
 export async function getMyRewards(meId: string) {
+  await recheckPending(meId).catch(() => undefined);
   const sql = await getSql();
   const me = await sql<{ username: string; badge: string | null; referred_by: string | null; created_at: string }>`
     select username, badge, referred_by, created_at::text from wipp_profiles where id = ${meId} limit 1
@@ -149,6 +200,24 @@ export async function redeemPinCode(meId: string, raw: string) {
     returning pinned_until::text
   `;
   return { ok: true, name: card.name, days, pinnedUntil: pinned[0]?.pinned_until ?? null };
+}
+
+/** Admin only: biggest referrers, to spot farms (many friends, few in contact). */
+export async function topReferrers(adminId: string) {
+  const { assertStaff } = await import("@/lib/messaging/admin");
+  await assertStaff(adminId, true);
+  const sql = await getSql();
+  const rows = await sql<{ id: string; username: string; display_name: string; badge: string | null; invited: number; active: number; month: number }>`
+    select p.id, p.username, p.display_name, p.badge,
+      count(f.id)::int as invited,
+      count(f.referral_qualified_at)::int as active,
+      count(*) filter (where f.referral_qualified_at > now() - interval '30 days')::int as month
+    from wipp_profiles p join wipp_profiles f on f.referred_by = p.id
+    group by p.id order by active desc, invited desc limit 50
+  `;
+  return {
+    referrers: rows.map((r) => ({ id: r.id, username: r.username, displayName: r.display_name, badge: r.badge, invited: r.invited, active: r.active, month: r.month })),
+  };
 }
 
 /** Admin only: gold badge on / off. Off falls back to blue when the person earned it. */

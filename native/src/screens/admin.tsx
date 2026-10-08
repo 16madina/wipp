@@ -1,6 +1,6 @@
 import { WippBadge } from "../components/WippBadge";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, View } from "react-native";
 import { Avatar } from "../components/Avatar";
 import { Sheet } from "../components/card-editor-parts";
 import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField } from "../components/ui";
@@ -46,7 +46,7 @@ const REPORT_TYPE: Record<string, string> = {
 };
 const REPORT_STATUS: Record<string, string> = { open: "ouvert", resolved: "traité", dismissed: "classé" };
 type Template = { id: string; label: string; title: string; body: string };
-type Tab = "stats" | "users" | "messages" | "reports" | "suspended" | "push" | "audit";
+type Tab = "stats" | "referrers" | "users" | "messages" | "reports" | "suspended" | "push" | "audit";
 
 const api = <T,>(path: string, body?: unknown, method?: string) =>
   wippApi<T>(`staff/${path}`, body === undefined ? { method: method ?? "GET" } : { method: method ?? "POST", body: JSON.stringify(body) });
@@ -84,6 +84,7 @@ export function AdminScreen() {
       ? [
           ["stats", "📊 Statistiques"],
           ["users", "👥 Utilisateurs"],
+          ["referrers", "🎁 Parrains"],
           ["messages", "💬 Messages"],
           ["reports", "🚩 Signalements"],
           ["suspended", "⛔ Suspendus"],
@@ -111,6 +112,7 @@ export function AdminScreen() {
           </ScrollView>
           {tab === "stats" ? <StatsTab /> : null}
           {tab === "users" ? <UsersTab role={role} /> : null}
+          {tab === "referrers" ? <ReferrersTab /> : null}
           {tab === "messages" ? <MessagesTab /> : null}
           {tab === "reports" ? <ReportsTab /> : null}
           {tab === "suspended" ? <SuspendedTab /> : null}
@@ -234,6 +236,43 @@ function MessagesTab() {
           </Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+type Referrer = { id: string; username: string; displayName: string; badge: "blue" | "gold" | null; invited: number; active: number; month: number };
+
+/** Biggest referrers: many invited but few in contact = probably fake accounts. */
+function ReferrersTab() {
+  const [rows, setRows] = useState<Referrer[] | null>(null);
+  useEffect(() => {
+    void wippApi<{ referrers: Referrer[] }>("rewards/top")
+      .then((r) => setRows(r.referrers))
+      .catch((err) => {
+        setRows([]);
+        fail(err);
+      });
+  }, []);
+  if (!rows) return <ActivityIndicator color={colors.accent} />;
+  if (!rows.length) return <Empty title="Aucun parrain" body="Personne n’a encore été invité avec un code." />;
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>Invités = ont entré le code · Actifs = en contact avec le parrain · 30 j = devenus actifs ce mois-ci (20 max).</Text>
+      {rows.map((r) => {
+        const suspect = r.invited >= 5 && r.active / Math.max(1, r.invited) < 0.3;
+        return (
+          <View key={r.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, borderColor: suspect ? colors.danger : colors.hair, backgroundColor: colors.surface, padding: 12 }}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{r.displayName}</Text>
+                <WippBadge badge={r.badge} size={14} />
+              </View>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>@{r.username}{suspect ? " · ⚠️ à vérifier" : ""}</Text>
+            </View>
+            <Text style={{ color: colors.fg, fontSize: 12, textAlign: "right" }}>{r.invited} invités{"\n"}{r.active} actifs · {r.month} / 30 j</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
