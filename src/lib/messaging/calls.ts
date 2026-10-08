@@ -365,9 +365,16 @@ export async function createCallInvite(input: {
         and ((caller_id = ${input.callerId} and callee_id = ${calleeId})
           or (caller_id = ${calleeId} and callee_id = ${input.callerId}))
     `;
+    // A call still "accepted" after 4 hours is a lost hang-up (one from 24 September made someone
+    // « occupé » for everyone): close it instead of blocking every new call.
+    await sqlBusy`
+      update wipp_call_invites set status = 'ended', ended_at = now()
+      where status = 'accepted' and ended_at is null and created_at < now() - interval '4 hours'
+        and (caller_id = ${calleeId} or callee_id = ${calleeId})
+    `;
     const busy = await sqlBusy<{ id: string }>`
       select id from wipp_call_invites
-      where status = 'accepted' and ended_at is null
+      where status = 'accepted' and ended_at is null and created_at >= now() - interval '4 hours'
         and (caller_id = ${calleeId} or callee_id = ${calleeId})
       limit 1
     `;

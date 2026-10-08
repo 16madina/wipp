@@ -56,7 +56,8 @@ export function CallsScreen() {
             userId: c.group && c.chatId ? `srv:${c.chatId}` : `srvuser:${c.peerId}`,
             kind: c.kind,
             direction: c.direction,
-            missed: c.missed,
+            // Like WhatsApp: an incoming call I refused also counts as « manqué ».
+            missed: Boolean(c.missed || (c.direction === "in" && c.declined)),
             at: asEpochMs(c.at) ?? Date.now(),
             duration: Number.isFinite(Number(c.duration)) ? Number(c.duration) : undefined,
             group: c.group,

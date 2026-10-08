@@ -385,6 +385,12 @@ export function CallOverlay() {
   useEffect(() => {
     if (!session || session.phase !== "connected") return;
     void import("@livekit/react-native").then(async ({ AudioSession }) => {
+      // iPhone outputs are named "default" (earpiece) and "force_speaker" (loudspeaker);
+      // looking for "earpiece" never matched, so switching back did nothing.
+      if (Platform.OS === "ios") {
+        await AudioSession.selectAudioOutput(session.speaker ? "force_speaker" : "default");
+        return;
+      }
       const outputs = await AudioSession.getAudioOutputs();
       const want = session.speaker ? "speaker" : "earpiece";
       const match = outputs.find((item) => item.toLowerCase().includes(want));

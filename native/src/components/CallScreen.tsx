@@ -443,6 +443,14 @@ export function CallScreen({
         </View>
       ) : null}
 
+      {/* My camera is off while the other person's video shows: say it clearly (it is NOT on). */}
+      {videoLive && remoteVid && !localVid && !mosaic ? (
+        <View style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.35)", backgroundColor: "rgba(0,0,0,0.75)", alignItems: "center", justifyContent: "center", gap: 6, padding: 8 }}>
+          <VideoOff size={22} color={GOLD} />
+          <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>Ta caméra est éteinte</Text>
+        </View>
+      ) : null}
+
       {/* Local camera, floating bottom-right on live video */}
       {mini && !mosaic ? (
         <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.5)", backgroundColor: "#000", shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 10 }}>
