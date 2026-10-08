@@ -411,74 +411,90 @@ const ONB_VIDEO: Partial<Record<(typeof ONB)[number]["kind"], number>> = {
   together: require("../../assets/onboarding/together.mp4"),
 };
 
+/** Videos that already draw « Retour / Suivant » at the bottom. */
+/** Videos that already draw « Retour / Suivant »: where the buttons are, as a fraction of the video height. */
+const ONB_DRAWN_BUTTONS: Partial<Record<(typeof ONB)[number]["kind"], { top: number; bottom: number }>> = {
+  tap: { top: 0.86, bottom: 0.97 },
+  globe: { top: 0.85, bottom: 0.97 },
+  together: { top: 0.82, bottom: 0.94 },
+};
+/** Width / height of each encoded video (assets/onboarding). */
+const ONB_RATIO: Record<(typeof ONB)[number]["kind"], number> = { tap: 720 / 1452, globe: 720 / 1264, privacy: 720 / 1280, together: 720 / 1452 };
+
 function OnbVideo({ source }: { source: number }) {
   const player = useVideoPlayer(source, (p) => {
     p.loop = true;
     p.muted = true;
     p.play();
   });
-  return <VideoView player={player} style={{ width: "100%", height: "100%" }} contentFit="contain" nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} />;
+  return <VideoView player={player} style={{ width: "100%", height: "100%" }} contentFit="fill" nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} />;
 }
 
 export function OnboardingScreen() {
   const t = useT();
   const replace = useWippStore((s) => s.replace);
+  const insets = useSafeAreaInsets();
   const [page, setPage] = useState(0);
   const slide = ONB[page];
   const last = page >= ONB.length - 1;
-  const hero = wippSrc(`/onboarding/hero-${slide.kind}.webp`) ?? wippSrc(`/onboarding/hero-${slide.kind}.jpg`);
+  const video = ONB_VIDEO[slide.kind];
+  // Grok's videos already draw the title, dots and buttons: the video fills the screen as made,
+  // and invisible zones over its drawn buttons work. Slides without drawn buttons get real ones.
+  const drawn = ONB_DRAWN_BUTTONS[slide.kind];
+  const next = () => {
+    haptic("select");
+    if (last) replace({ name: "welcome" });
+    else setPage((p) => p + 1);
+  };
+  const back = () => setPage((p) => Math.max(0, p - 1));
+  // The whole video, never cropped: as wide as the screen, centered (thin black bands if needed).
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  const ratio = ONB_RATIO[slide.kind];
+  const vw = box.h ? Math.min(box.w, box.h * ratio) : 0;
+  const vh = vw / ratio;
+  const vtop = Math.max(0, (box.h - vh) / 2);
+  const vleft = (box.w - vw) / 2;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#070a0f" }}>
-      <SafeTop />
-      <View style={{ alignItems: "flex-end", paddingRight: 8 }}>
-        <Press onPress={() => replace({ name: "welcome" })} style={{ minHeight: 44, paddingHorizontal: 12, justifyContent: "center" }}>
+    <View style={{ flex: 1, backgroundColor: "#000" }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      {video && vw ? (
+        <View style={{ position: "absolute", top: vtop, left: vleft, width: vw, height: vh }}>
+          <OnbVideo key={slide.kind} source={video} />
+        </View>
+      ) : null}
+      <View pointerEvents="none" style={{ position: "absolute", top: insets.top + 6, left: 0, right: 0, alignItems: "center" }}>
+        <Image source={logoGold} style={{ width: 92, height: 34 }} contentFit="contain" />
+      </View>
+      <Press accessibilityLabel={t("skip")} onPress={() => replace({ name: "welcome" })} style={{ position: "absolute", top: insets.top, right: 4, minHeight: 44, paddingHorizontal: 12, justifyContent: "center" }}>
+        {slide.kind === "tap" || slide.kind === "together" ? null : (
           <Text style={{ color: "rgba(255,255,255,0.78)", fontSize: 14, fontFamily: "Inter_500Medium" }}>{t("skip")}</Text>
-        </Press>
-      </View>
-      {/* The whole picture, never cropped: it fills the space between « Passer » and the text. */}
-      <View style={{ flex: 1, justifyContent: "center" }}>
-        {ONB_VIDEO[slide.kind] ? (
-          <OnbVideo key={slide.kind} source={ONB_VIDEO[slide.kind] as number} />
-        ) : hero ? (
-          <Image key={slide.kind} source={hero} style={{ width: "100%", height: "100%" }} contentFit="contain" transition={180} />
-        ) : null}
-      </View>
-      <View style={{ paddingHorizontal: 22, paddingBottom: 22 }}>
-        <Text style={{ textAlign: "center", fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.paper, lineHeight: 26 }}>
-          {t(slide.title)} <Text style={{ color: colors.accent }}>{t(slide.accent)}</Text>
-        </Text>
-        <Text style={{ textAlign: "center", marginTop: 6, fontSize: 12, lineHeight: 17, color: "rgba(255,255,255,0.55)" }}>
-          {t(slide.body)}
-        </Text>
-        <View style={{ flexDirection: "row", justifyContent: "center", gap: 2, marginTop: 8 }}>
-          {ONB.map((_, i) => (
-            <Press key={i} onPress={() => setPage(i)} style={{ width: 22, height: 36, alignItems: "center", justifyContent: "center" }}>
-              <View style={{ height: 7, width: i === page ? 22 : 7, borderRadius: 99, backgroundColor: i === page ? colors.accent : "rgba(255,255,255,0.22)" }} />
+        )}
+      </Press>
+      {drawn ? (
+        <View style={{ position: "absolute", left: vleft, width: vw, top: vtop + vh * drawn.top, height: vh * (drawn.bottom - drawn.top), flexDirection: "row" }}>
+          <Press accessibilityLabel={t("back")} disabled={page === 0} onPress={back} style={{ flex: 1 }} />
+          <Press accessibilityLabel={last ? t("start") : t("next")} onPress={next} style={{ flex: 1.2 }} />
+        </View>
+      ) : (
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom, 12) + 10 }}>
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 2, marginBottom: 8 }}>
+            {ONB.map((_, i) => (
+              <Press key={i} onPress={() => setPage(i)} style={{ width: 22, height: 30, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ height: 7, width: i === page ? 22 : 7, borderRadius: 99, backgroundColor: i === page ? colors.accent : "rgba(255,255,255,0.22)" }} />
+              </Press>
+            ))}
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Press onPress={back} style={{ flex: 1, height: 48, borderRadius: 999, backgroundColor: "#121722", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{t("back")}</Text>
             </Press>
-          ))}
+            <Press onPress={next} style={{ flex: 1.2, height: 48, borderRadius: 999, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}>
+              <Text style={{ color: colors.accentFg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{last ? t("start") : t("next")}</Text>
+              <ArrowRight size={16} color={colors.accentFg} />
+            </Press>
+          </View>
         </View>
-        <View style={{ flexDirection: "row", gap: 12, marginTop: 10 }}>
-          <Press
-            disabled={page === 0}
-            onPress={() => setPage((p) => Math.max(0, p - 1))}
-            style={{ flex: 1, height: 48, borderRadius: 999, backgroundColor: "#121722", alignItems: "center", justifyContent: "center", opacity: page === 0 ? 0.38 : 1 }}
-          >
-            <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{t("back")}</Text>
-          </Press>
-          <Press
-            onPress={() => {
-              haptic("select");
-              if (last) replace({ name: "welcome" });
-              else setPage((p) => p + 1);
-            }}
-            style={{ flex: 1.2, height: 48, borderRadius: 999, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 }}
-          >
-            <Text style={{ color: colors.accentFg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{last ? t("start") : t("next")}</Text>
-            <ArrowRight size={16} color={colors.accentFg} />
-          </Press>
-        </View>
-      </View>
+      )}
     </View>
   );
 }
