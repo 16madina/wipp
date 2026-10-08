@@ -2,7 +2,7 @@ import { PharmacyResults } from "./pharmacies";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
-import { Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
+import { Brush, CakeSlice, Coffee, Flower2, Scissors, Shirt, Utensils, Wrench, Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
 import { Avatar } from "../components/Avatar";
 import { listingCatLabel } from "../lib/listing-cats";
@@ -161,7 +161,29 @@ export function ExploreScreen() {
   );
 }
 
+/**
+ * Public business pages, fresh from the server. Replaces every cached « business: » page (a renamed
+ * page kept its old name on the Explorer home), but keeps the pages of open business chats.
+ */
+async function refreshBusinessShops() {
+  const cards = await listPublicBusinessCards();
+  const mapped = (await Promise.all(cards.map((card) => withSignedCardMedia(card)))).map((c) => cardToShop(c));
+  useWippStore.setState((s) => {
+    const fresh = new Set(mapped.map((x) => x.id));
+    const inChats = new Set(s.chats.map((c) => c.shopId).filter(Boolean));
+    return {
+      shops: [
+        ...s.shops.filter((x) => !x.id.startsWith("business:") || (!fresh.has(x.id) && inChats.has(x.id))),
+        ...mapped,
+      ],
+    };
+  });
+}
+
 function ExploreHome({ go }: { go: (h: Hub) => void }) {
+  useEffect(() => {
+    void refreshBusinessShops().catch(() => undefined);
+  }, []);
   const t = useT();
   const lang = useWippStore((s) => s.language);
   const listings = useWippStore((s) => s.listings);
@@ -585,6 +607,20 @@ function ShopRow({ shop }: { shop: Shop }) {
   );
 }
 
+const CATEGORY_TILES: { id: ShopCategory | "mode"; label: string; Icon: typeof Store }[] = [
+  { id: "nails", label: "Onglerie", Icon: Brush },
+  { id: "hair", label: "Coiffure", Icon: Scissors },
+  { id: "beauty", label: "Beauté", Icon: Flower2 },
+  { id: "restaurant", label: "Restaurant", Icon: Utensils },
+  { id: "mode", label: "Mode", Icon: Shirt },
+  { id: "bakery", label: "Pâtisserie", Icon: CakeSlice },
+  { id: "cafe", label: "Café", Icon: Coffee },
+  { id: "services", label: "Services", Icon: Wrench },
+];
+
+/** WIPP's own picture per category (assets/categories/…). Missing ones show the gold icon. */
+const CATEGORY_ART: Partial<Record<ShopCategory | "mode", number>> = {};
+
 function ShopsPane() {
   const t = useT();
   const push = useWippStore((s) => s.push);
@@ -599,11 +635,7 @@ function ShopsPane() {
   useEffect(() => {
     void (async () => {
       try {
-        const cards = await listPublicBusinessCards();
-        const mapped = (await Promise.all(cards.map((card) => withSignedCardMedia(card)))).map((c) => cardToShop(c));
-        useWippStore.setState((s) => ({
-          shops: [...s.shops.filter((x) => !x.id.startsWith("business:")), ...mapped],
-        }));
+        await refreshBusinessShops();
         setLoadError("");
       } catch (err) {
         setLoadError(errorText(err, "Impossible de charger les entreprises."));
@@ -617,17 +649,10 @@ function ShopsPane() {
     if (cat === "mode") return /mode|fashion|vêtement|vetement|chaussure|bijou|montre|accessoire/i.test(`${s.name} ${s.tags?.join(" ") ?? ""} ${s.bio}`);
     return s.category === cat;
   });
-  const shortcuts: { id: ShopCategory | "mode"; label: string }[] = [
-    { id: "nails", label: "Onglerie" },
-    { id: "restaurant", label: "Restaurant" },
-    { id: "hair", label: "Coiffure" },
-    { id: "mode", label: "Mode" },
-    { id: "beauty", label: "Beauté" },
-  ];
+  // Category tiles use WIPP's own visuals (CATEGORY_ART), never a business's photo.
+  const shortcuts = CATEGORY_TILES;
   function coverFor(id: ShopCategory | "mode") {
-    const match = shops.find((s) => (id === "mode" ? /mode|fashion|vêtement|vetement|chaussure|bijou|montre|accessoire/i.test(`${s.name} ${s.tags?.join(" ") ?? ""}`) : s.category === id) && s.image);
-    if (!match?.image) return null;
-    return match.image.startsWith("http") ? { uri: match.image } : wippSrc(match.image);
+    return CATEGORY_ART[id] ?? null;
   }
   return (
     <View>
@@ -639,8 +664,8 @@ function ShopsPane() {
               {src ? (
                 <Image source={src} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: cat === item.id ? 2 : 0, borderColor: colors.accent }} contentFit="cover" />
               ) : (
-                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", borderWidth: cat === item.id ? 2 : 0, borderColor: colors.accent }}>
-                  <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{item.label.slice(0, 1)}</Text>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", borderWidth: cat === item.id ? 2 : 1, borderColor: cat === item.id ? colors.accent : colors.hair }}>
+                  <item.Icon size={26} color={colors.accent} />
                 </View>
               )}
               <Text numberOfLines={1} style={{ marginTop: 6, color: colors.fg, fontSize: 12 }}>{item.label}</Text>
@@ -672,8 +697,14 @@ function ShopsPane() {
           const src = coverFor(item.id);
           return (
             <Press key={`pop-${item.id}`} onPress={() => setCat(item.id)} style={{ width: 150, height: 96, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, justifyContent: "flex-end" }}>
-              {src ? <Image source={src} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
-              <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 0, backgroundColor: "rgba(0,0,0,0.35)" }} />
+              {src ? (
+                <Image source={src} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" />
+              ) : (
+                <View style={{ position: "absolute", top: 12, right: 12, opacity: 0.9 }}>
+                  <item.Icon size={30} color={colors.accent} />
+                </View>
+              )}
+              <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 0, backgroundColor: src ? "rgba(0,0,0,0.35)" : "transparent" }} />
               <Text style={{ padding: 12, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{item.label}</Text>
             </Press>
           );
@@ -681,7 +712,7 @@ function ShopsPane() {
       </ScrollView>
       {loaded && !loadError && shown.length === 0 ? <Empty title="Aucune entreprise pour le moment" /> : null}
       <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
-        <Btn label="Créer ma carte professionnelle" onPress={() => push({ name: "business-card" })} />
+        <Btn label="Créer mon entreprise" onPress={() => push({ name: "business-card" })} />
       </View>
     </View>
   );
