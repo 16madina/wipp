@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
-import { Camera, Check, ChevronRight, Clock, Delete, Eye, LayoutGrid, MoreHorizontal, Pencil, Search, Smile, Users, X } from "lucide-react-native";
+import { Camera, Check, ChevronRight, Clock, Delete, Eye, Heart, LayoutGrid, MoreHorizontal, Pencil, Search, Smile, Users, X } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
 import { WippSticker } from "../components/WippSticker";
 import { QrCard } from "../components/QrCard";
@@ -18,7 +18,7 @@ import { popProtect, pushProtect } from "../lib/screen-protection";
 import { hideStoryLocal, isStoryHidden } from "../lib/story-hide";
 import { orderedOtherStoryUsers } from "../lib/story-status";
 import { REPORT_REASONS, submitContentReport } from "../lib/safety";
-import { QUICK_WIPPMOJI_IDS, isStoryWippmoji, storyWippmojis } from "../lib/story-reply";
+import { StickerTray } from "../components/StickerTray";
 import { stickerById } from "../lib/stickers";
 import { useT, useWippStore } from "../lib/store";
 import { colors, fgA, palettes, whiteA } from "../theme";
@@ -68,7 +68,10 @@ export function StoriesScreen({ userId }: { userId: string }) {
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [composing, setComposing] = useState(false);
-  const [tray, setTray] = useState<"quick" | "all" | null>(null);
+  const [tray, setTray] = useState<"all" | null>(null);
+  // Short « Envoyé » note: the reply / like / Wippmoji left, without leaving the story.
+  const [sentNote, setSentNote] = useState<string | null>(null);
+  const [liked, setLiked] = useState<Set<string>>(() => new Set());
   const [viewsOpen, setViewsOpen] = useState(false);
   const [viewers, setViewers] = useState<{ displayName: string; username: string; viewedAt: string }[]>([]);
   const [burst, setBurst] = useState<string | null>(null);
@@ -165,6 +168,10 @@ export function StoriesScreen({ userId }: { userId: string }) {
       cancel = true;
     };
   }, [story?.id, story?.mediaPath]);
+  // New story: the bar starts empty (it stayed full from the previous video until the next one played).
+  useEffect(() => {
+    setRatio(0);
+  }, [story?.id]);
   useEffect(() => {
     if (!groups.length) closeViewer();
   }, [groups.length]);
@@ -260,6 +267,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
       useWippStore.getState().sendMessage(chatId, { type: "text", text, storyRef: storyCite(story, "reply") });
       setReply("");
       dismissComposer();
+      flashSent("Réponse envoyée");
     } catch (err) {
       Alert.alert("WIPP", replyFailure(err));
     } finally {
@@ -267,8 +275,39 @@ export function StoriesScreen({ userId }: { userId: string }) {
     }
   }
 
+  function flashSent(text: string) {
+    setSentNote(text);
+    setTimeout(() => setSentNote((current) => (current === text ? null : current)), 1600);
+  }
+
+  async function sendLike() {
+    if (!story || mine || sending || liked.has(story.id)) return;
+    const id = story.id;
+    setLiked((current) => new Set(current).add(id));
+    setBurst("like");
+    setTimeout(() => setBurst((current) => (current === "like" ? null : current)), 700);
+    setSending(true);
+    try {
+      const { ensureStoryChat, storyCite } = await import("../lib/story-reply");
+      const chatId = await ensureStoryChat(story.userId);
+      // A normal message: the author gets the usual notification and sees « A aimé votre story ».
+      useWippStore.getState().sendMessage(chatId, { type: "text", text: "❤️", storyRef: storyCite(story, "like") });
+      flashSent("Story aimée");
+    } catch (err) {
+      setLiked((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setBurst(null);
+      Alert.alert("WIPP", replyFailure(err));
+    } finally {
+      setSending(false);
+    }
+  }
+
   async function sendMoji(id: string) {
-    if (!story || mine || sending || !isStoryWippmoji(id)) return;
+    if (!story || mine || sending) return;
     const sticker = stickerById(id);
     if (!sticker) return;
     setBurst(id);
@@ -284,6 +323,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
         storyRef: storyCite(story, "reaction"),
       });
       setTray(null);
+      flashSent("Envoyé");
     } catch (err) {
       setBurst(null);
       Alert.alert("WIPP", replyFailure(err));
@@ -438,24 +478,10 @@ export function StoriesScreen({ userId }: { userId: string }) {
       <Press accessibilityLabel="Story précédente" onPress={() => onSide(-1)} style={{ position: "absolute", top: 120, bottom: 120, left: 0, width: "50%", zIndex: 2 }} />
       {burst ? (
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: "38%", alignItems: "center", zIndex: 6 }}>
-          <WippSticker id={burst} size={120} />
+          {burst === "like" ? <Heart size={110} color="#ff3b5c" fill="#ff3b5c" /> : <WippSticker id={burst} size={120} />}
         </View>
       ) : null}
       <View style={{ position: "absolute", left: 12, right: 12, bottom: kb ? kb + 10 : 28, zIndex: 5, gap: 8 }}>
-        {tray && !mine ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-            {(tray === "all" ? storyWippmojis() : QUICK_WIPPMOJI_IDS.map((id) => stickerById(id)).filter((item) => item != null)).map((sticker) => (
-              <Press key={sticker.id} accessibilityLabel={sticker.labelFr} onPress={() => void sendMoji(sticker.id)} style={{ width: 52, height: 52, alignItems: "center", justifyContent: "center" }}>
-                <WippSticker id={sticker.id} size={44} still />
-              </Press>
-            ))}
-            {tray === "quick" ? (
-              <Press accessibilityLabel="Plus de Wippmojis" onPress={() => setTray("all")} style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.16)" }}>
-                <Text style={{ color: "#fff", fontSize: 12 }}>Plus</Text>
-              </Press>
-            ) : null}
-          </ScrollView>
-        ) : null}
         {mine && story.id.startsWith("sty_") ? (
           <Press accessibilityLabel="Vues" onPress={() => setViewsOpen(true)} style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8 }}>
             <Eye size={18} color="#fff" />
@@ -475,12 +501,34 @@ export function StoriesScreen({ userId }: { userId: string }) {
               onSubmitEditing={() => void sendReply()}
               style={{ flex: 1, height: 44, borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)", color: "#fff", paddingHorizontal: 16 }}
             />
-            <Press accessibilityLabel="Wippmoji" onPress={() => { Keyboard.dismiss(); setComposing(false); setTray((current) => (current ? null : "quick")); }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+            <Press accessibilityLabel="Wippmoji" onPress={() => { Keyboard.dismiss(); setComposing(false); setTray((current) => (current ? null : "all")); }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
               <Smile size={22} color={colors.accent} />
+            </Press>
+            <Press accessibilityLabel="Aimer la story" onPress={() => void sendLike()} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+              <Heart size={22} color={liked.has(story.id) ? "#ff3b5c" : "#fff"} fill={liked.has(story.id) ? "#ff3b5c" : "transparent"} />
             </Press>
           </View>
         ) : null}
       </View>
+      {sentNote ? (
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: "46%", alignItems: "center", zIndex: 7 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.72)" }}>
+            <Check size={18} color={colors.accent} />
+            <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{sentNote}</Text>
+          </View>
+        </View>
+      ) : null}
+      {tray && !mine ? (
+        <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 8, justifyContent: "flex-end" }}>
+          <Press accessibilityLabel="Fermer les Wippmojis" onPress={() => setTray(null)} style={{ flex: 1 }} />
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24, overflow: "hidden" }}>
+            <StickerTray
+              onPick={(sticker) => void sendMoji(sticker.id)}
+              onSurprise={() => Alert.alert("WIPP", "Les surprises s’envoient depuis la conversation.")}
+            />
+          </View>
+        </View>
+      ) : null}
       {viewsOpen && mine ? (
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 0, zIndex: 8, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <Press onPress={() => setViewsOpen(false)} style={{ flex: 1 }} />

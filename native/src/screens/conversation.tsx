@@ -252,7 +252,11 @@ function StoryCiteCard({
   const live = stories.find((story) => story.id === cite.id && isStoryLive(story));
   const caption = !live
     ? "Story expirée"
-    : cite.mode === "reaction"
+    : cite.mode === "like"
+      ? mine
+        ? "Tu as aimé la story"
+        : "A aimé votre story"
+      : cite.mode === "reaction"
       ? mine
         ? "Réaction à la story"
         : "Réaction à votre story"

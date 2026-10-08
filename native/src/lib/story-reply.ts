@@ -14,7 +14,7 @@ export function isStoryWippmoji(id: string) {
   return Boolean(sticker && sticker.pack === "moji" && !sticker.moment && !sticker.playMs);
 }
 
-export function storyCite(story: StoryItem, mode: "reply" | "reaction") {
+export function storyCite(story: StoryItem, mode: "reply" | "reaction" | "like") {
   const preview =
     story.type === "text"
       ? (story.text ?? "").replace(/\s+/g, " ").trim().slice(0, 80)

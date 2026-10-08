@@ -37,7 +37,7 @@ export type ShopPlain = {
 export type StoryCite = {
   id: string;
   kind: "text" | "image" | "video";
-  mode: "reply" | "reaction";
+  mode: "reply" | "reaction" | "like";
   preview: string;
   bg?: string;
 };
