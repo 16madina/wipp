@@ -148,6 +148,7 @@ export function EventCard({
   onSave,
   interested,
   distance,
+  live,
 }: {
   title: string;
   subtitle?: string;
@@ -162,6 +163,8 @@ export function EventCard({
   onSave?: () => void;
   interested?: { count: number; avatars: string[] };
   distance?: string;
+  /** WIPP online event: « EN DIRECT » (red) or « À venir » / « Terminé ». */
+  live?: string | null;
 }) {
   return (
     <Press onPress={onPress} style={{ height: 200, marginBottom: 14, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 1, borderColor: accentA(0.25) }}>
@@ -174,9 +177,16 @@ export function EventCard({
         </View>
       ) : null}
       <View style={{ position: "absolute", top: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.accent }}>
-          <Text style={{ color: colors.accentFg, fontSize: 13, fontFamily: "Inter_700Bold" }}>{priceLabel}</Text>
-        </View>
+        {live ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: live === "EN DIRECT" ? "#e5383b" : "rgba(0,0,0,0.6)", borderWidth: live === "EN DIRECT" ? 0 : 1, borderColor: accentA(0.6) }}>
+            {live === "EN DIRECT" ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#fff" }} /> : null}
+            <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" }}>{live}</Text>
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.accent }}>
+            <Text style={{ color: colors.accentFg, fontSize: 13, fontFamily: "Inter_700Bold" }}>{priceLabel}</Text>
+          </View>
+        )}
         {onSave ? (
           <Press accessibilityLabel="Enregistrer" onPress={onSave} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
             <Heart size={18} color={saved ? colors.accent : colors.fg} fill={saved ? colors.accent : "transparent"} />
@@ -207,7 +217,7 @@ export function EventCard({
           ) : null}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 }}>
             <MapPin size={14} color={colors.accent} />
-            <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 12 }}>{online ? "En ligne" : city || "Lieu à préciser"}</Text>
+            <Text numberOfLines={1} style={{ color: live ? colors.accent : colors.fg, fontSize: 12, fontFamily: live ? "Inter_600SemiBold" : undefined }}>{live ? "En ligne sur WIPP" : online ? "En ligne" : city || "Lieu à préciser"}</Text>
           </View>
           {distance ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

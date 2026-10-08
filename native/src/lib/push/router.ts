@@ -8,6 +8,8 @@ export function screenFromPushData(data: Record<string, unknown>): Screen | null
   const type = String(data.type || "");
   if (type === "group" || type === "story") return null;
   if (type === "request") return { name: "requests" };
+  // WIPP online event (invitation, « c'est en direct ») → the event sheet.
+  if (type === "live" && typeof data.publicId === "string" && data.publicId) return { name: "lifestyle", itemId: data.publicId };
   if (type === "touch") return { name: "touch-incoming" };
   if (type === "missed-call") return { name: "calls" };
   if (type === "call" || type === "incoming_call") {

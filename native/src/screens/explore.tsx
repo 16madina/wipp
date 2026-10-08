@@ -1,7 +1,7 @@
 import { PharmacyResults } from "./pharmacies";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
-import { Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { Brush, CakeSlice, Coffee, Flower2, Scissors, Shirt, Utensils, Wrench, Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
 import { Avatar } from "../components/Avatar";
@@ -13,6 +13,8 @@ import { useDeviceLayout } from "../lib/device-layout";
 import { formatMeters, metersBetween } from "../lib/format";
 import { SHOP_CAT_KEYS } from "../lib/i18n";
 import { useT, useWippStore } from "../lib/store";
+import { liveBadge } from "../lib/event-live";
+import { EventLiveActions } from "../components/EventLiveActions";
 import { cardToShop, listPublicBusinessCards, withSignedCardMedia } from "../lib/business-card";
 import { REPORT_REASONS, submitContentReport } from "../lib/safety";
 import type { Listing, Shop, ShopCategory } from "../lib/types";
@@ -741,6 +743,7 @@ function ShopsPane() {
 }
 
 const EVENT_FILTERS = ["Tous", "Musique", "Soirée", "Affaires", "Sport", "Culture", "Food", "Communauté"];
+const EVENT_WHERE = [["all", "Tous"], ["place", "En présentiel"], ["online", "En ligne"]] as const;
 
 function LifestylePane() {
   const lifestyle = useWippStore((s) => s.lifestyle);
@@ -750,6 +753,7 @@ function LifestylePane() {
   const [loadError, setLoadError] = useState("");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Tous");
+  const [where, setWhere] = useState<(typeof EVENT_WHERE)[number][0]>("all");
   const [myPos, setMyPos] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     void import("../lib/geo").then(({ myPositionOnce }) => myPositionOnce()).then((p) => p && setMyPos(p));
@@ -758,7 +762,9 @@ function LifestylePane() {
     const needle = fold(q.trim());
     const near = fold(myCity);
     return lifestyle
-      .filter(isUpcomingEvent)
+      // A WIPP live stays listed while it is on air, even past its start time.
+      .filter((e) => (e.live ? e.live.state === "live" || (e.live.state === "scheduled" && isUpcomingEvent(e)) : isUpcomingEvent(e)))
+      .filter((e) => where === "all" || (where === "online" ? e.isOnline || Boolean(e.live) : !e.isOnline && !e.live))
       .filter((e) => cat === "Tous" || fold(e.category ?? "") === fold(cat))
       .filter((e) => !needle || fold(`${e.title} ${e.city} ${e.place} ${e.category ?? ""} ${e.details ?? ""} ${e.note}`).includes(needle))
       // Nearest first when both have a position, else my city first, then soonest first.
@@ -773,7 +779,7 @@ function LifestylePane() {
         if (nx !== ny) return nx - ny;
         return (Date.parse(x.startsAt ?? "") || Infinity) - (Date.parse(y.startsAt ?? "") || Infinity);
       });
-  }, [lifestyle, q, cat, myCity, myPos]);
+  }, [lifestyle, q, cat, where, myCity, myPos]);
   useEffect(() => {
     let cancel = false;
     void (async () => {
@@ -820,6 +826,13 @@ function LifestylePane() {
           </Press>
         ))}
       </ScrollView>
+      <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
+        {EVENT_WHERE.map(([id, label]) => (
+          <Press key={id} onPress={() => setWhere(id)} style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: where === id ? accentA(0.18) : "transparent", borderWidth: 1, borderColor: where === id ? colors.accent : whiteA(0.12) }}>
+            <Text style={{ color: where === id ? colors.accent : colors.muted, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{label}</Text>
+          </Press>
+        ))}
+      </View>
       <View style={{ marginTop: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
         <MapPin size={18} color={colors.accent} />
         <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{q || cat !== "Tous" ? "Résultats" : myCity ? `Événements près de toi` : "À venir"}</Text>
@@ -846,6 +859,7 @@ function LifestylePane() {
             ends={end && !Number.isNaN(end.getTime()) ? end : null}
             city={e.city}
             online={e.isOnline}
+            live={e.live ? liveBadge(e.live) : null}
             priceLabel={eventAccessText(e).toUpperCase()}
             interested={{ count: e.interestedCount ?? 0, avatars: e.interestedAvatars ?? [] }}
             distance={myPos && e.lat && !e.isOnline ? kmLabel(kmBetween(myPos, { lat: e.lat, lng: e.lng })) : undefined}
@@ -1339,7 +1353,16 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
   const serverProfileId = useWippStore((s) => s.serverProfileId);
   const saved = useWippStore((s) => s.saves.some((entry) => entry.kind === "event" && entry.id === itemId));
   const src = wippSrc(item?.image);
-  if (!item) return <Missing onBack={pop} />;
+  // Opened from a notification or an invitation link: load the events first.
+  const [loading, setLoading] = useState(!item);
+  useEffect(() => {
+    if (item) return;
+    void import("../lib/lot7/api")
+      .then(async ({ fetchEvents }) => useWippStore.setState({ lifestyle: await fetchEvents(useWippStore.getState().serverProfileId) }))
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, [itemId]);
+  if (!item) return loading ? <ScreenRoot><ActivityIndicator style={{ marginTop: 120 }} color={colors.accent} /></ScreenRoot> : <Missing onBack={pop} />;
   const mine = item.hostId === "me" || (serverProfileId != null && item.hostId === `srvuser:${serverProfileId}`);
   return (
     <ScreenRoot>
@@ -1350,8 +1373,12 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
         {src ? <Image source={src} style={{ height: 200, width: "100%" }} contentFit="cover" /> : null}
         <View style={{ padding: 16 }}>
           <Text style={{ color: colors.muted }}>{[item.category, item.when, item.endsAt && !Number.isNaN(Date.parse(item.endsAt)) ? `→ ${new Date(item.endsAt).toLocaleString()}` : ""].filter(Boolean).join(" · ")}</Text>
-          <Text style={{ marginTop: 8, color: colors.fg }}>{item.isOnline ? ["En ligne", item.onlineUrl].filter(Boolean).join(" · ") : [item.place, item.address, item.city, item.country].filter(Boolean).join(" · ")}</Text>
-          <Text style={{ marginTop: 8, color: colors.accent }}>{eventAccessText(item)}</Text>
+          {item.live ? null : (
+            <>
+              <Text style={{ marginTop: 8, color: colors.fg }}>{item.isOnline ? ["En ligne", item.onlineUrl].filter(Boolean).join(" · ") : [item.place, item.address, item.city, item.country].filter(Boolean).join(" · ")}</Text>
+              <Text style={{ marginTop: 8, color: colors.accent }}>{eventAccessText(item)}</Text>
+            </>
+          )}
           {item.hostName ? <Text style={{ marginTop: 8, color: colors.muted }}>Organisé par {item.hostName}</Text> : null}
           <Text style={{ marginTop: 12, color: colors.fg }}>{item.details || item.note}</Text>
           {item.contact ? <Text style={{ marginTop: 8, color: colors.muted }}>{item.contact}</Text> : null}
@@ -1360,7 +1387,9 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
               {[item.adultOnly ? "🔞 Réservé aux 18 ans et plus" : "", item.capacity ? `${item.capacity} places` : ""].filter(Boolean).join(" · ")}
             </Text>
           ) : null}
-          {mine ? (
+          {item.live ? (
+            <EventLiveActions eventId={item.id} startsAt={item.startsAt} />
+          ) : mine ? (
             <Text style={{ marginTop: 16, color: colors.fg }}>
               {item.interestedCount ? `${item.interestedCount} personne${item.interestedCount > 1 ? "s" : ""} intéressée${item.interestedCount > 1 ? "s" : ""}` : "Personne n’est encore intéressé."}
             </Text>

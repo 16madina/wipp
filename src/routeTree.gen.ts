@@ -18,6 +18,7 @@ import { Route as SiteRouteImport } from './routes/site'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as CTokenRouteImport } from './routes/c.$token'
+import { Route as EEventIdRouteImport } from './routes/e.$eventId'
 import { Route as GTokenRouteImport } from './routes/g.$token'
 import { Route as TCodeRouteImport } from './routes/t.$code'
 import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
@@ -67,6 +68,11 @@ const CTokenRoute = CTokenRouteImport.update({
   path: '/c/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EEventIdRoute = EEventIdRouteImport.update({
+  id: '/e/$eventId',
+  path: '/e/$eventId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GTokenRoute = GTokenRouteImport.update({
   id: '/g/$token',
   path: '/g/$token',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/c/$token': typeof CTokenRoute
+  '/e/$eventId': typeof EEventIdRoute
   '/g/$token': typeof GTokenRoute
   '/t/$code': typeof TCodeRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/c/$token': typeof CTokenRoute
+  '/e/$eventId': typeof EEventIdRoute
   '/g/$token': typeof GTokenRoute
   '/t/$code': typeof TCodeRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/c/$token': typeof CTokenRoute
+  '/e/$eventId': typeof EEventIdRoute
   '/g/$token': typeof GTokenRoute
   '/t/$code': typeof TCodeRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/c/$token'
+    | '/e/$eventId'
     | '/g/$token'
     | '/t/$code'
     | '/api/wipp/$'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/c/$token'
+    | '/e/$eventId'
     | '/g/$token'
     | '/t/$code'
     | '/api/wipp/$'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/c/$token'
+    | '/e/$eventId'
     | '/g/$token'
     | '/t/$code'
     | '/api/wipp/$'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   CTokenRoute: typeof CTokenRoute
+  EEventIdRoute: typeof EEventIdRoute
   GTokenRoute: typeof GTokenRoute
   TCodeRoute: typeof TCodeRoute
   ApiWippSplatRoute: typeof ApiWippSplatRoute
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/e/$eventId': {
+      id: '/e/$eventId'
+      path: '/e/$eventId'
+      fullPath: '/e/$eventId'
+      preLoaderRoute: typeof EEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/g/$token': {
       id: '/g/$token'
       path: '/g/$token'
@@ -285,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   CTokenRoute: CTokenRoute,
+  EEventIdRoute: EEventIdRoute,
   GTokenRoute: GTokenRoute,
   TCodeRoute: TCodeRoute,
   ApiWippSplatRoute: ApiWippSplatRoute,

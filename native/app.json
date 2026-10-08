@@ -202,6 +202,11 @@
               "scheme": "https",
               "host": "wippapp.com",
               "pathPrefix": "/c/"
+            },
+            {
+              "scheme": "https",
+              "host": "wippapp.com",
+              "pathPrefix": "/e/"
             }
           ],
           "category": [

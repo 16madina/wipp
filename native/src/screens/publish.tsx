@@ -535,6 +535,10 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
       ? { uri: existing.image || existing.coverPath || "", path: existing.coverPath?.startsWith("http") ? undefined : existing.coverPath, mime: "image/jpeg" }
       : null,
   );
+  // « En ligne sur WIPP » : conference / masterclass held in the app (free in this first version).
+  const [wippLive, setWippLive] = useState(Boolean(existing?.live));
+  const [visibility, setVisibility] = useState<"public" | "private">(existing?.live?.visibility ?? "public");
+  const [durationMin, setDurationMin] = useState(existing?.live?.durationMin ?? 60);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -561,7 +565,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
       setError("Choisis la date et l’heure de début.");
       return;
     }
-    if (!online && !city.trim()) {
+    if (!wippLive && !online && !city.trim()) {
       setError("Indique la ville pour un événement en personne.");
       return;
     }
@@ -569,7 +573,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
       setError("La fin ne peut pas être avant le début.");
       return;
     }
-    if (!free && !amount.trim()) {
+    if (!wippLive && !free && !amount.trim()) {
       setError("Indique le prix de l’événement payant.");
       return;
     }
@@ -603,26 +607,31 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
         title: title.trim(),
         description: summary.trim(),
         city: city.trim(),
-        place: online ? "En ligne" : venue.trim(),
+        place: wippLive ? "En ligne sur WIPP" : online ? "En ligne" : venue.trim(),
         starts: starts.toISOString(),
         photo,
         contact: access.trim(),
         ends: ends ? ends.toISOString() : "",
         category: category.trim(),
         country: country.trim(),
-        address: online ? "" : address.trim(),
-        online,
-        url: online ? link.trim() : "",
-        free,
-        price: free ? "" : amount.trim(),
-        currency: free ? "" : currency,
+        address: wippLive || online ? "" : address.trim(),
+        online: wippLive || online,
+        url: !wippLive && online ? link.trim() : "",
+        free: wippLive || free,
+        price: wippLive || free ? "" : amount.trim(),
+        currency: wippLive || free ? "" : currency,
       });
       const savedId = id || eventId || "";
       if (savedId) {
         const { saveEventExtras } = await import("../lib/lot7/api");
         const { geocodeCity } = await import("../lib/geo");
-        const where = online ? null : coords ?? (city.trim() ? await geocodeCity(city.trim(), eventCountry.id) : null);
+        const where = online || wippLive ? null : coords ?? (city.trim() ? await geocodeCity(city.trim(), eventCountry.id) : null);
         await saveEventExtras(savedId, { lat: where?.lat ?? null, lng: where?.lng ?? null, capacity: limitOn && limit ? Number(limit) : null, adult: adultOnly });
+        if (wippLive) {
+          setStatus("Salle en direct…");
+          const { saveLive } = await import("../lib/event-live");
+          await saveLive(savedId, { visibility, mode: "conference", durationMin });
+        }
       }
       useWippStore.setState({ lifestyle: await fetchEvents(owner) });
       useWippStore.getState().replace({ name: "lifestyle", itemId: savedId });
@@ -668,6 +677,26 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               </Text>
               <Text style={{ marginTop: 8, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>Partage ton événement sur WIPP et rassemble ta communauté.</Text>
             </View>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+            {([
+              [false, "Événement physique", "Avec un lieu et une adresse"],
+              [true, "En ligne sur WIPP", "Conférence, masterclass, atelier en direct"],
+            ] as const).map(([val, label, sub]) => {
+              const on = wippLive === val;
+              return (
+                <Press
+                  key={label}
+                  disabled={Boolean(eventId && existing?.live) && !val}
+                  onPress={() => setWippLive(val)}
+                  style={{ flex: 1, padding: 12, borderRadius: 16, borderWidth: 1.5, borderColor: on ? colors.accent : whiteA(0.12), backgroundColor: on ? accentA(0.10) : colors.card }}
+                >
+                  <Text style={{ color: on ? colors.accent : colors.fg, fontFamily: "Inter_700Bold", fontSize: 14 }}>{label}</Text>
+                  <Text style={{ marginTop: 4, color: colors.muted, fontSize: 11, lineHeight: 15 }}>{sub}</Text>
+                </Press>
+              );
+            })}
           </View>
 
           <View style={[row, { alignItems: "center" }]}>
@@ -727,6 +756,34 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             </View>
           </View>
 
+          {wippLive ? (
+            <View style={row}>
+              <View style={iconBox}><Users size={20} color={colors.accent} /></View>
+              <View style={{ flex: 1, gap: 10 }}>
+                <Text style={rowTitle}>Direct sur WIPP</Text>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {([["public", "Public"], ["private", "Privé (sur invitation)"]] as const).map(([id, label]) => (
+                    <Press key={id} onPress={() => setVisibility(id)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: visibility === id ? colors.accent : whiteA(0.06) }}>
+                      <Text style={{ fontSize: 12, color: visibility === id ? colors.accentFg : colors.fg }}>{label}</Text>
+                    </Press>
+                  ))}
+                </View>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>Durée prévue</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                  {[30, 60, 90, 120, 180].map((m) => (
+                    <Press key={m} onPress={() => setDurationMin(m)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: durationMin === m ? colors.accent : whiteA(0.06) }}>
+                      <Text style={{ fontSize: 12, color: durationMin === m ? colors.accentFg : colors.fg }}>{m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h 30` : `${m / 60} h`}</Text>
+                    </Press>
+                  ))}
+                </View>
+                <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 15 }}>
+                  Gratuit · jusqu’à 100 spectateurs · aucun enregistrement. {visibility === "private" ? "Tu inviteras tes contacts depuis la fiche de l’événement." : "Visible par tous dans Événements."}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {wippLive ? null : (
           <View style={row}>
             <View style={iconBox}><MapPin size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
@@ -762,7 +819,9 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               )}
             </View>
           </View>
+          )}
 
+          {wippLive ? null : (
           <View style={[row, { alignItems: "center" }]}>
             <View style={iconBox}><Ticket size={20} color={colors.accent} /></View>
             <Text style={[rowTitle, { flex: 1 }]}>Type</Text>
@@ -775,6 +834,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               </Press>
             ))}
           </View>
+          )}
 
           <View style={row}>
             <View style={iconBox}><LayoutGrid size={20} color={colors.accent} /></View>
@@ -790,7 +850,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             </View>
           </View>
 
-          {free ? null : (
+          {free || wippLive ? null : (
             <View style={row}>
               <View style={iconBox}><CircleDollarSign size={20} color={colors.accent} /></View>
               <View style={{ flex: 1, gap: 8 }}>

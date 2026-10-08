@@ -1,6 +1,6 @@
 /** Push data must stay routing-only. Never put secrets or E2EE material here. */
 
-export const PUSH_TYPES = ["message", "request", "touch", "call"] as const;
+export const PUSH_TYPES = ["message", "request", "touch", "call", "live"] as const;
 export type PushType = (typeof PUSH_TYPES)[number];
 
 export const ALLOWED_DATA_KEYS = [

@@ -11,6 +11,28 @@ export function callLinkToken(raw: string) {
 }
 
 export async function openWippLink(raw: string, mode: "push" | "replace" = "push") {
+  // Invitation to a WIPP online event: https://wippapp.com/e/{eventId}?k=…
+  const { parseLiveLink } = await import("./event-live");
+  const liveLink = parseLiveLink(raw);
+  if (liveLink) {
+    const st = useWippStore.getState();
+    if (!st.onboarded) {
+      const { setPendingNav } = await import("./push/nav-intent");
+      setPendingNav({ kind: "url", url: raw });
+      return { ok: true as const, kind: "pending" as const };
+    }
+    try {
+      const { joinLiveLink } = await import("./event-live");
+      if (liveLink.k) await joinLiveLink(liveLink.eventId, liveLink.k);
+      const { fetchEvents } = await import("./lot7/api");
+      useWippStore.setState({ lifestyle: await fetchEvents(st.serverProfileId) });
+    } catch (err) {
+      const { errorText } = await import("./error-fr");
+      return { ok: false as const, error: errorText(err, "Invitation invalide.") };
+    }
+    (mode === "replace" ? st.replace : st.push)({ name: "lifestyle", itemId: liveLink.eventId });
+    return { ok: true as const, kind: "internal" as const };
+  }
   const callToken = callLinkToken(raw);
   if (callToken) {
     const st = useWippStore.getState();

@@ -1,3 +1,4 @@
+import { EventLiveRoomScreen } from "./event-live-room";
 import { RewardsScreen } from "./rewards";
 import { PharmaciesScreen } from "./pharmacies";
 import { useShareIntentContext } from "expo-share-intent";
@@ -267,6 +268,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <CreateShopScreen />;
     case "lifestyle":
       return <LifestyleScreen itemId={screen.itemId} />;
+    case "event-live":
+      return <EventLiveRoomScreen eventId={screen.eventId} />;
     case "create-lifestyle":
       return <CreateLifestyleScreen eventId={screen.eventId} />;
     case "create-listing":

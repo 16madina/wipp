@@ -517,6 +517,49 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (a === "lives" && b) {
+      const me = await resolveSession(bearer(request));
+      const live = await import("./event-live");
+      const eventId = decodeURIComponent(b);
+      if (method === "GET" && !c) return json(await live.getEventLive(me.id, eventId));
+      if (method === "POST" && !c) {
+        const body = await readBody<{ visibility?: string; mode?: string; durationMin?: number; maxViewers?: number }>(request);
+        return json(await live.saveEventLive(me.id, eventId, body));
+      }
+      if (method === "POST" && c === "register") return json(await live.registerEventLive(me.id, eventId, true));
+      if (method === "POST" && c === "unregister") return json(await live.registerEventLive(me.id, eventId, false));
+      if (method === "POST" && c === "invite") {
+        const body = await readBody<{ usernames?: string[] }>(request);
+        return json(await live.inviteToEventLive(me.id, eventId, Array.isArray(body.usernames) ? body.usernames : []));
+      }
+      if (method === "POST" && c === "link") return json(await live.newInviteLink(me.id, eventId));
+      if (method === "POST" && c === "link-revoke") return json(await live.revokeInviteLink(me.id, eventId));
+      if (method === "POST" && c === "join-link") {
+        const body = await readBody<{ k?: string }>(request);
+        return json(await live.acceptInviteLink(me.id, eventId, String(body.k ?? "")));
+      }
+      if (method === "POST" && c === "start") return json(await live.startEventLive(me.id, eventId));
+      if (method === "POST" && c === "end") return json(await live.endEventLive(me.id, eventId, false));
+      if (method === "POST" && c === "cancel") return json(await live.endEventLive(me.id, eventId, true));
+      if (method === "POST" && c === "token") return json(await live.eventLiveToken(me.id, eventId, me.displayName || me.username));
+      if (method === "POST" && c === "settings") {
+        const body = await readBody<{ commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean }>(request);
+        return json(await live.setEventLiveSettings(me.id, eventId, body));
+      }
+      if (method === "POST" && c === "ban") {
+        const body = await readBody<{ identity?: string }>(request);
+        return json(await live.banFromEventLive(me.id, eventId, String(body.identity ?? "")));
+      }
+      if (method === "POST" && c === "comment") {
+        const body = await readBody<{ text?: string }>(request);
+        return json(await live.postLiveComment(me.id, me.displayName || me.username, eventId, String(body.text ?? "")));
+      }
+      if (method === "POST" && c === "delete-comment") {
+        const body = await readBody<{ id?: string }>(request);
+        return json(await live.deleteLiveComment(me.id, eventId, String(body.id ?? "")));
+      }
+    }
+
     if (a === "rewards") {
       const me = await resolveSession(bearer(request));
       const rewards = await import("./rewards");

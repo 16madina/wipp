@@ -167,6 +167,7 @@ export type ScreenName =
   | "create-shop"
   | "lifestyle"
   | "create-lifestyle"
+  | "event-live"
   | "create-listing"
   | "e2e-info"
   | "archives"
@@ -246,6 +247,7 @@ export type Screen =
   | { name: "create-shop" }
   | { name: "lifestyle"; itemId: string }
   | { name: "create-lifestyle"; eventId?: string }
+  | { name: "event-live"; eventId: string }
   | { name: "create-listing"; listingId?: string }
   | { name: "e2e-info"; chatId: string }
   | { name: "archives" }
@@ -623,7 +625,18 @@ export type Shop = {
   quote?: string;
 };
 
+/** WIPP online event (conference / masterclass held in the app), attached to the event. */
+export type EventLive = {
+  visibility: "public" | "private";
+  mode: "conference" | "interactive";
+  state: "scheduled" | "live" | "ended" | "cancelled";
+  durationMin: number;
+  registered: number;
+  myStatus: "invited" | "registered" | "banned" | null;
+};
+
 export type LifestyleItem = {
+  live?: EventLive;
   id: string;
   kind: LifestyleKind;
   title: string;

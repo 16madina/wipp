@@ -1,0 +1,662 @@
+/**
+ * Salle WIPP en direct (conférence / masterclass), rattachée à un événement.
+ * - Vidéo de l'organisateur en plein écran ; les spectateurs regardent sans publier caméra ni micro.
+ * - Commentaires superposés à la vidéo (style live), réactions flottantes, applaudissements collectifs.
+ * - Commentaires et réactions = messages de données LiveKit : rien n'est enregistré, pas de replay.
+ * - Toute action de modération passe par le serveur WIPP (permissions LiveKit, exclusion).
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Animated, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from "livekit-client";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Eye, EyeOff, Flag, Heart, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Press } from "../components/ui";
+import { errorText } from "../lib/error-fr";
+import { useWippStore } from "../lib/store";
+import { palettes } from "../theme";
+import type { LiveToken } from "../lib/event-live";
+
+const colors = palettes.dark;
+const logoGold = require("../../assets/auth/wipp-logo-gold.png");
+
+// The native WebRTC renderer cannot be imported by React Native Web.
+const RTCView = Platform.OS === "web" ? View : (require("@livekit/react-native-webrtc") as typeof import("@livekit/react-native-webrtc")).RTCView;
+function streamURL(track: { mediaStream?: unknown } | null | undefined) {
+  const stream = track?.mediaStream as { toURL?: () => string } | undefined;
+  return stream?.toURL?.() ?? null;
+}
+
+/** Standard reactions for now; WIPP animations will replace them (same codes). */
+export const LIVE_REACTIONS = [
+  { code: "clap", emoji: "👏", label: "Applaudir" },
+  { code: "love", emoji: "❤️", label: "J’adore" },
+  { code: "like", emoji: "👍", label: "J’aime" },
+  { code: "dislike", emoji: "👎", label: "Je n’aime pas" },
+  { code: "laugh", emoji: "😂", label: "Rire" },
+  { code: "wow", emoji: "😮", label: "Surprise" },
+  { code: "fire", emoji: "🔥", label: "Excellent" },
+] as const;
+const EMOJI = Object.fromEntries(LIVE_REACTIONS.map((r) => [r.code, r.emoji])) as Record<string, string>;
+
+type Comment = { id: string; name: string; text: string; pid?: string; identity: string };
+type Floater = { id: number; emoji: string; x: number; anim: Animated.Value };
+type Person = { identity: string; name: string; role: string; pid?: string };
+
+const COMMENT_MAX = 200;
+const COMMENT_GAP_MS = 2000; // anti-spam (the server enforces it too)
+const REACTION_GAP_MS = 350;
+
+function roleOf(p: Participant) {
+  try {
+    return (JSON.parse(p.metadata || "{}") as { role?: string; pid?: string }) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
+  const pop = useWippStore((s) => s.pop);
+  const insets = useSafeAreaInsets();
+  const roomRef = useRef<Room | null>(null);
+  const [info, setInfo] = useState<LiveToken | null>(null);
+  const [phase, setPhase] = useState<"connecting" | "connected" | "reconnecting" | "ended" | "failed">("connecting");
+  const [failNote, setFailNote] = useState("");
+  const [stageUrl, setStageUrl] = useState<string | null>(null);
+  const [stageMirror, setStageMirror] = useState(false);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [floaters, setFloaters] = useState<Floater[]>([]);
+  const [clapWave, setClapWave] = useState(0);
+  const [draft, setDraft] = useState("");
+  const [showComments, setShowComments] = useState(true);
+  const [settings, setSettings] = useState({ commentsOn: true, reactionsOn: true, questionsOn: true });
+  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions">("none");
+  const [camOn, setCamOn] = useState(false);
+  const [micOn, setMicOn] = useState(false);
+  const lastComment = useRef(0);
+  const lastReaction = useRef(0);
+  const claps = useRef<number[]>([]);
+  const floaterId = useRef(0);
+  const isOrganizer = info?.role === "organizer";
+  const publisher = info?.role === "organizer" || info?.role === "speaker";
+
+  // ——— connect ———
+  useEffect(() => {
+    let cancelled = false;
+    const room = new Room({ adaptiveStream: true, dynacast: true });
+    roomRef.current = room;
+
+    const refresh = () => {
+      if (cancelled) return;
+      const all = [room.localParticipant as Participant, ...room.remoteParticipants.values()];
+      setPeople(
+        all.map((p) => {
+          const meta = roleOf(p);
+          return { identity: p.identity, name: p.name || "WIPP", role: meta.role ?? "viewer", pid: meta.pid };
+        }),
+      );
+      // Stage: the organizer's camera (or any speaker publishing a camera).
+      const owner = all.find((p) => roleOf(p).role === "organizer") ?? all.find((p) => p.getTrackPublication(Track.Source.Camera)?.track);
+      const cam = owner?.getTrackPublication(Track.Source.Camera);
+      setStageUrl(cam?.track && !cam.isMuted ? streamURL(cam.track) : null);
+      setStageMirror(owner === room.localParticipant);
+    };
+    for (const ev of [
+      RoomEvent.Connected,
+      RoomEvent.ParticipantConnected,
+      RoomEvent.ParticipantDisconnected,
+      RoomEvent.TrackSubscribed,
+      RoomEvent.TrackUnsubscribed,
+      RoomEvent.TrackMuted,
+      RoomEvent.TrackUnmuted,
+      RoomEvent.LocalTrackPublished,
+      RoomEvent.LocalTrackUnpublished,
+      RoomEvent.ParticipantMetadataChanged,
+    ]) {
+      room.on(ev, refresh);
+    }
+    room.on(RoomEvent.Reconnecting, () => !cancelled && setPhase("reconnecting"));
+    room.on(RoomEvent.Reconnected, () => !cancelled && setPhase("connected"));
+    room.on(RoomEvent.Disconnected, () => {
+      if (!cancelled) setPhase("ended");
+    });
+    room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+      if (topic && topic !== "wipp-live") return;
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload)) as Record<string, unknown>;
+        onData(msg, participant as RemoteParticipant | undefined);
+      } catch {
+        /* ignore malformed data */
+      }
+    });
+
+    void (async () => {
+      try {
+        const { liveToken } = await import("../lib/event-live");
+        const tok = await liveToken(eventId);
+        if (cancelled) return;
+        setInfo(tok);
+        setSettings({ commentsOn: tok.settings.commentsOn, reactionsOn: tok.settings.reactionsOn, questionsOn: tok.settings.questionsOn });
+        const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
+        await AudioSession.configureAudio({
+          android: { audioTypeOptions: AndroidAudioTypePresets.media, preferredOutputList: ["speaker", "bluetooth", "headset"] },
+          ios: { defaultOutput: "speaker" },
+        });
+        await AudioSession.startAudioSession();
+        await room.connect(tok.url, tok.token);
+        if (cancelled) return;
+        setPhase("connected");
+        refresh();
+        if (tok.role === "organizer" || tok.role === "speaker") askToPublish(room);
+      } catch (err) {
+        if (!cancelled) {
+          setFailNote(errorText(err, "Impossible de rejoindre le direct."));
+          setPhase("failed");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      void room.disconnect();
+      void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
+    };
+  }, [eventId]);
+
+  /** Camera and microphone only after an explicit yes. */
+  function askToPublish(room: Room) {
+    Alert.alert("Passer à l’antenne", "Activer ta caméra et ton micro pour le direct ?", [
+      { text: "Plus tard", style: "cancel" },
+      {
+        text: "Activer",
+        onPress: () => {
+          void (async () => {
+            try {
+              await room.localParticipant.setCameraEnabled(true);
+              await room.localParticipant.setMicrophoneEnabled(true);
+              setCamOn(true);
+              setMicOn(true);
+            } catch {
+              Alert.alert("Direct", "Autorise la caméra et le micro pour WIPP dans les réglages du téléphone.");
+            }
+          })();
+        },
+      },
+    ]);
+  }
+
+  function onData(msg: Record<string, unknown>, from?: RemoteParticipant) {
+    const t = msg.t;
+    // Comments only count when they come from the server (already checked there).
+    if (t === "c" && msg.from === "server" && typeof msg.text === "string") {
+      addComment({
+        id: String(msg.id ?? Math.random()),
+        name: String(msg.name ?? "WIPP"),
+        text: msg.text.slice(0, COMMENT_MAX),
+        pid: typeof msg.pid === "string" ? msg.pid : undefined,
+        identity: String(msg.identity ?? ""),
+      });
+    } else if (t === "r" && typeof msg.e === "string" && EMOJI[msg.e]) {
+      showReaction(msg.e);
+    } else if (t === "delete" && msg.from === "server") {
+      setComments((cur) => cur.filter((c) => c.id !== msg.id));
+    } else if (t === "settings" && msg.from === "server") {
+      setSettings({ commentsOn: Boolean(msg.commentsOn), reactionsOn: Boolean(msg.reactionsOn), questionsOn: Boolean(msg.questionsOn) });
+    }
+  }
+
+  function addComment(c: Comment) {
+    // Keep the last 30: older ones scroll away (nothing is stored).
+    setComments((cur) => [...cur.slice(-29), c]);
+  }
+
+  function showReaction(code: string) {
+    const anim = new Animated.Value(0);
+    const id = ++floaterId.current;
+    setFloaters((cur) => [...cur.slice(-14), { id, emoji: EMOJI[code], x: Math.random() * 30, anim }]);
+    Animated.timing(anim, { toValue: 1, duration: 2200, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+      setFloaters((cur) => cur.filter((f) => f.id !== id));
+    });
+    if (code === "clap") {
+      const now = Date.now();
+      claps.current = [...claps.current.filter((x) => now - x < 3000), now];
+      // Many claps at once: one light collective wave.
+      if (claps.current.length >= 5) {
+        claps.current = [];
+        setClapWave((n) => n + 1);
+      }
+    }
+  }
+
+  async function send(payload: Record<string, unknown>) {
+    const room = roomRef.current;
+    if (!room || phase !== "connected") return false;
+    try {
+      await room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(payload)), { reliable: true, topic: "wipp-live" });
+      return true;
+    } catch {
+      Alert.alert("Direct", "Envoi impossible pour le moment.");
+      return false;
+    }
+  }
+
+  async function sendComment() {
+    const text = draft.trim().slice(0, COMMENT_MAX);
+    if (!text || phase !== "connected") return;
+    if (!settings.commentsOn && !isOrganizer) {
+      Alert.alert("Direct", "L’organisateur a désactivé les commentaires.");
+      return;
+    }
+    if (Date.now() - lastComment.current < COMMENT_GAP_MS) return;
+    lastComment.current = Date.now();
+    setDraft("");
+    try {
+      // The server checks it (filter, anti-spam, on/off) and sends it to everyone, me included.
+      const { postLiveComment } = await import("../lib/event-live");
+      await postLiveComment(eventId, text);
+    } catch (err) {
+      setDraft(text);
+      Alert.alert("Direct", errorText(err, "Commentaire non envoyé."));
+    }
+  }
+
+  async function react(code: string) {
+    if (!settings.reactionsOn && !isOrganizer) return;
+    if (Date.now() - lastReaction.current < REACTION_GAP_MS) return;
+    lastReaction.current = Date.now();
+    showReaction(code);
+    await send({ t: "r", e: code });
+  }
+
+  function commentMenu(c: Comment) {
+    const actions: { text: string; style?: "destructive" | "cancel"; onPress?: () => void }[] = [];
+    if (isOrganizer) {
+      actions.push({
+        text: "Supprimer le commentaire",
+        style: "destructive",
+        onPress: () => {
+          setComments((cur) => cur.filter((x) => x.id !== c.id));
+          void import("../lib/event-live").then(({ deleteLiveComment }) => deleteLiveComment(eventId, c.id)).catch(() => undefined);
+        },
+      });
+      if (c.identity !== roomRef.current?.localParticipant.identity) actions.push({ text: "Exclure cette personne", style: "destructive", onPress: () => exclude(c.identity, c.name) });
+    }
+    if (c.pid) actions.push({ text: "Signaler", onPress: () => report(c.pid!, c.id) });
+    actions.push({ text: "Annuler", style: "cancel" });
+    Alert.alert(c.name, c.text, actions);
+  }
+
+  function report(pid: string, contentId: string) {
+    void import("../lib/safety").then(({ REPORT_REASONS, submitContentReport }) => {
+      Alert.alert("Signaler", undefined, [
+        ...REPORT_REASONS.map((reason) => ({
+          text: reason,
+          onPress: () => {
+            void submitContentReport({ contentType: "profile", contentId: `live:${eventId}:${contentId}`, targetProfileId: pid, reason }).then(
+              () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner."),
+              (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+            );
+          },
+        })),
+        { text: "Annuler", style: "cancel" as const },
+      ]);
+    });
+  }
+
+  function exclude(identity: string, name: string) {
+    Alert.alert("Exclure", `Exclure ${name} de ce direct ? Cette personne ne pourra plus revenir.`, [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Exclure",
+        style: "destructive",
+        onPress: () => {
+          void import("../lib/event-live")
+            .then(({ banFromLive }) => banFromLive(eventId, identity))
+            .then(() => setComments((cur) => cur.filter((x) => x.identity !== identity)))
+            .catch((err) => Alert.alert("Direct", errorText(err, "Exclusion impossible.")));
+        },
+      },
+    ]);
+  }
+
+  async function toggleSetting(key: "commentsOn" | "reactionsOn") {
+    const next = { ...settings, [key]: !settings[key] };
+    setSettings(next);
+    try {
+      const { setLiveSettings } = await import("../lib/event-live");
+      await setLiveSettings(eventId, { [key]: next[key] });
+    } catch (err) {
+      setSettings(settings);
+      Alert.alert("Direct", errorText(err, "Réglage impossible."));
+    }
+  }
+
+  function endForAll() {
+    Alert.alert("Terminer le direct", "Terminer la conférence pour tout le monde ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Terminer",
+        style: "destructive",
+        onPress: () => {
+          void import("../lib/event-live")
+            .then(({ endLive }) => endLive(eventId))
+            .then(() => {
+              void roomRef.current?.disconnect();
+              pop();
+            })
+            .catch((err) => Alert.alert("Direct", errorText(err, "Impossible de terminer.")));
+        },
+      },
+    ]);
+  }
+
+  function leave() {
+    if (isOrganizer && phase === "connected") {
+      Alert.alert("Quitter", "Le direct continue sans toi tant que tu ne le termines pas.", [
+        { text: "Rester", style: "cancel" },
+        { text: "Quitter sans terminer", onPress: () => pop() },
+        { text: "Terminer pour tous", style: "destructive", onPress: endForAll },
+      ]);
+      return;
+    }
+    pop();
+  }
+
+  const viewers = Math.max(0, people.filter((p) => p.role === "viewer").length);
+  const title = useWippStore((s) => s.lifestyle.find((e) => e.id === eventId)?.title ?? "Direct");
+  const ordered = useMemo(() => [...people].sort((a, b) => (a.role === "organizer" ? -1 : b.role === "organizer" ? 1 : a.name.localeCompare(b.name))), [people]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      {/* Stage */}
+      {stageUrl ? (
+        <RTCView streamURL={stageUrl} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} objectFit="cover" mirror={stageMirror} zOrder={0} />
+      ) : (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15, lineHeight: 21 }}>
+            {phase === "connecting"
+              ? "Connexion au direct…"
+              : phase === "failed"
+                ? failNote
+                : phase === "ended"
+                  ? "Le direct est terminé."
+                  : publisher && !camOn
+                    ? "Ta caméra est éteinte. Active-la pour passer à l’antenne."
+                    : "L’organisateur va bientôt apparaître."}
+          </Text>
+          {publisher && !camOn && phase === "connected" ? (
+            <Press onPress={() => roomRef.current && askToPublish(roomRef.current)} style={{ marginTop: 16, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.accent }}>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Activer caméra et micro</Text>
+            </Press>
+          ) : null}
+        </View>
+      )}
+
+      {/* Top bar */}
+      <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.65)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 110 }} />
+      <View style={{ position: "absolute", top: insets.top + 6, left: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Image source={logoGold} style={{ width: 62, height: 24 }} contentFit="contain" />
+        {phase === "connected" || phase === "reconnecting" ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: "#e5383b" }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" }} />
+            <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>EN DIRECT</Text>
+          </View>
+        ) : null}
+        <Press accessibilityLabel="Participants" onPress={() => setSheet("people")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.45)" }}>
+          <Eye size={13} color="#fff" />
+          <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{viewers}</Text>
+        </Press>
+        <View style={{ flex: 1 }} />
+        <Press accessibilityLabel="Options" onPress={() => setSheet("options")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <MoreHorizontal size={22} color="#fff" />
+        </Press>
+        <Press accessibilityLabel="Quitter le direct" onPress={leave} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <X size={22} color="#fff" />
+        </Press>
+      </View>
+      <Text numberOfLines={1} style={{ position: "absolute", top: insets.top + 46, left: 14, right: 60, color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 6 }}>
+        {title}
+      </Text>
+      {phase === "reconnecting" ? (
+        <View style={{ position: "absolute", top: insets.top + 72, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.6)" }}>
+          <RefreshCw size={13} color="#fff" />
+          <Text style={{ color: "#fff", fontSize: 12 }}>Reconnexion…</Text>
+        </View>
+      ) : null}
+
+      {/* Floating reactions (right side, never block touches) */}
+      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: 320 }}>
+        {floaters.map((f) => (
+          <Animated.Text
+            key={f.id}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: f.x,
+              fontSize: 30,
+              opacity: f.anim.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 1, 0] }),
+              transform: [{ translateY: f.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -300] }) }, { scale: f.anim.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0.6, 1.1, 0.9] }) }],
+            }}
+          >
+            {f.emoji}
+          </Animated.Text>
+        ))}
+      </View>
+      <ClapWave wave={clapWave} />
+
+      {/* Bottom: comments over the video, then the bar */}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
+        <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />
+        {showComments ? (
+          <View style={{ maxHeight: 230, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
+            <FlatList
+              data={comments}
+              keyExtractor={(c) => c.id}
+              inverted={false}
+              onContentSizeChange={(_, __) => undefined}
+              renderItem={({ item }) => (
+                <Pressable onLongPress={() => commentMenu(item)} style={{ paddingVertical: 4 }}>
+                  <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.name}</Text>
+                  <Text style={{ color: "#fff", fontSize: 14, lineHeight: 19, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.text}</Text>
+                </Pressable>
+              )}
+              ref={(list) => {
+                if (list && comments.length) setTimeout(() => list.scrollToEnd({ animated: true }), 30);
+              }}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        ) : null}
+        <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) }}>
+          {settings.commentsOn || isOrganizer ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 44, borderRadius: 22, paddingLeft: 16, paddingRight: 6, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" }}>
+              <TextInput
+                value={draft}
+                onChangeText={(v) => setDraft(v.slice(0, COMMENT_MAX))}
+                placeholder="Écrire un commentaire…"
+                placeholderTextColor="rgba(255,255,255,0.55)"
+                returnKeyType="send"
+                onSubmitEditing={() => void sendComment()}
+                style={{ flex: 1, color: "#fff", fontSize: 14 }}
+              />
+              <Press accessibilityLabel="Envoyer" onPress={() => void sendComment()} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+                <Send size={18} color={colors.accent} />
+              </Press>
+            </View>
+          ) : (
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", paddingVertical: 10 }}>Les commentaires sont désactivés.</Text>
+          )}
+          <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-around" }}>
+            <BarButton label="Réagir" onPress={() => setSheet(sheet === "reactions" ? "none" : "reactions")} disabled={!settings.reactionsOn && !isOrganizer}>
+              <Heart size={20} color="#ff4d6d" fill="#ff4d6d" />
+            </BarButton>
+            {publisher ? (
+              <>
+                <BarButton label={micOn ? "Micro" : "Micro coupé"} onPress={() => {
+                  const room = roomRef.current;
+                  if (!room) return;
+                  void room.localParticipant.setMicrophoneEnabled(!micOn).then(() => setMicOn(!micOn));
+                }}>
+                  {micOn ? <Mic size={20} color="#fff" /> : <MicOff size={20} color="#ff6b6b" />}
+                </BarButton>
+                <BarButton label={camOn ? "Caméra" : "Caméra off"} onPress={() => {
+                  const room = roomRef.current;
+                  if (!room) return;
+                  void room.localParticipant.setCameraEnabled(!camOn).then(() => setCamOn(!camOn));
+                }}>
+                  {camOn ? <Video size={20} color="#fff" /> : <VideoOff size={20} color="#ff6b6b" />}
+                </BarButton>
+                <BarButton label="Retourner" onPress={() => {
+                  const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as unknown as { mediaStreamTrack?: { _switchCamera?: () => void } } | undefined;
+                  track?.mediaStreamTrack?._switchCamera?.();
+                }}>
+                  <SwitchCamera size={20} color="#fff" />
+                </BarButton>
+              </>
+            ) : null}
+            <BarButton label="Participants" onPress={() => setSheet("people")}>
+              <Users size={20} color="#fff" />
+            </BarButton>
+            <BarButton label={showComments ? "Masquer" : "Afficher"} onPress={() => setShowComments((v) => !v)}>
+              {showComments ? <EyeOff size={20} color="#fff" /> : <Eye size={20} color="#fff" />}
+            </BarButton>
+          </View>
+        </View>
+        {sheet === "reactions" ? (
+          <View style={{ position: "absolute", left: 12, right: 12, bottom: Math.max(insets.bottom, 10) + 120, flexDirection: "row", justifyContent: "space-around", paddingVertical: 10, borderRadius: 28, backgroundColor: "rgba(10,12,20,0.92)", borderWidth: 1, borderColor: "rgba(212,160,23,0.4)" }}>
+            {LIVE_REACTIONS.map((r) => (
+              <Press key={r.code} accessibilityLabel={r.label} onPress={() => void react(r.code)} style={{ width: 42, height: 42, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 28 }}>{r.emoji}</Text>
+              </Press>
+            ))}
+          </View>
+        ) : null}
+      </KeyboardAvoidingView>
+
+      {/* Participants */}
+      {sheet === "people" ? (
+        <Sheet onClose={() => setSheet("none")} title={`Participants (${people.length})`}>
+          <FlatList
+            data={ordered}
+            keyExtractor={(p) => p.identity}
+            initialNumToRender={20}
+            renderItem={({ item }) => (
+              <Pressable
+                onLongPress={() => {
+                  if (item.identity === roomRef.current?.localParticipant.identity) return;
+                  const actions: { text: string; style?: "destructive" | "cancel"; onPress?: () => void }[] = [];
+                  if (isOrganizer) actions.push({ text: "Exclure", style: "destructive", onPress: () => exclude(item.identity, item.name) });
+                  if (item.pid) actions.push({ text: "Signaler", onPress: () => report(item.pid!, item.identity) });
+                  actions.push({ text: "Annuler", style: "cancel" });
+                  Alert.alert(item.name, undefined, actions);
+                }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}
+              >
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "#1b2133", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: item.role === "organizer" ? colors.accent : "transparent" }}>
+                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>{(item.name || "?").slice(0, 1).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{item.name}</Text>
+                  <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>{item.role === "organizer" ? "Organisateur" : item.role === "speaker" ? "Intervenant" : "Spectateur"}</Text>
+                </View>
+                {item.identity !== roomRef.current?.localParticipant.identity && (isOrganizer || item.pid) ? <Flag size={16} color="rgba(255,255,255,0.4)" /> : null}
+              </Pressable>
+            )}
+          />
+          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 8 }}>Appui long sur une personne pour {isOrganizer ? "l’exclure ou la signaler" : "la signaler"}.</Text>
+        </Sheet>
+      ) : null}
+
+      {/* Options */}
+      {sheet === "options" ? (
+        <Sheet onClose={() => setSheet("none")} title={isOrganizer ? "Options organisateur" : "Options"}>
+          <ScrollView>
+            {isOrganizer ? (
+              <>
+                <OptionRow label="Commentaires" value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
+                <OptionRow label="Réactions" value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
+                <Press onPress={endForAll} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Terminer la conférence pour tous</Text>
+                </Press>
+              </>
+            ) : (
+              <>
+                <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
+                <Press onPress={() => pop()} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Quitter le direct</Text>
+                </Press>
+              </>
+            )}
+          </ScrollView>
+        </Sheet>
+      ) : null}
+    </View>
+  );
+}
+
+function BarButton({ label, onPress, children, disabled }: { label: string; onPress: () => void; children: React.ReactNode; disabled?: boolean }) {
+  return (
+    <Press accessibilityLabel={label} disabled={disabled} onPress={() => { Keyboard.dismiss(); onPress(); }} style={{ alignItems: "center", gap: 4, minWidth: 54, opacity: disabled ? 0.4 : 1 }}>
+      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" }}>{children}</View>
+      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 10 }}>{label}</Text>
+    </Press>
+  );
+}
+
+function OptionRow({ label, value, onPress }: { label: string; value: boolean; onPress: () => void }) {
+  return (
+    <Press onPress={onPress} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+      <Text style={{ flex: 1, color: "#fff", fontSize: 15 }}>{label}</Text>
+      <View style={{ width: 46, height: 28, borderRadius: 14, padding: 3, backgroundColor: value ? colors.accent : "rgba(255,255,255,0.2)", alignItems: value ? "flex-end" : "flex-start" }}>
+        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff" }} />
+      </View>
+    </Press>
+  );
+}
+
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
+      <Press accessibilityLabel="Fermer" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }} />
+      <View style={{ maxHeight: "70%", paddingHorizontal: 18, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 16), borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: "#0b0f1a", borderTopWidth: 1, borderColor: "rgba(212,160,23,0.35)" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+          <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>{title}</Text>
+          <Press accessibilityLabel="Fermer" onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+            <X size={20} color="#fff" />
+          </Press>
+        </View>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+/** Many people clapping together: a short, light wave of claps across the bottom. */
+function ClapWave({ wave }: { wave: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!wave) return;
+    anim.setValue(0);
+    Animated.timing(anim, { toValue: 1, duration: 1600, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [wave]);
+  if (!wave) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: "40%",
+        alignItems: "center",
+        opacity: anim.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 1, 1, 0] }),
+        transform: [{ scale: anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.7, 1.1, 1] }) }],
+      }}
+    >
+      <Text style={{ fontSize: 44 }}>👏👏👏</Text>
+      <Text style={{ marginTop: 4, color: "#fff", fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 6 }}>Applaudissements !</Text>
+    </Animated.View>
+  );
+}

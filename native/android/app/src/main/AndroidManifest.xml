@@ -90,6 +90,7 @@
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/g/"/>
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/b/"/>
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/c/"/>
+        <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/e/"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
