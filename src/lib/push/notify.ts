@@ -274,8 +274,21 @@ export async function notifyChatMessage(input: {
     }
     if (biz) {
       const ownerIsPeer = biz.ownerId === peer.profile_id;
+      // The owner sees the customer (name + photo); the customer sees the business (name + logo).
+      let bizPic: typeof pic | undefined = ownerIsPeer ? { ...pic, name: `${senderName.slice(0, 40)} · ${biz.name.slice(0, 20)}` } : undefined;
+      if (!ownerIsPeer) {
+        let logo = "";
+        try {
+          const rows = await sql<{ logo_url: string | null }>`select logo_url from wipp_business_cards where public_id = ${biz.publicId} limit 1`;
+          logo = rows[0]?.logo_url ?? "";
+        } catch {
+          logo = "";
+        }
+        bizPic = { url: "", p: logo && !/^https?:/i.test(logo) ? `card/${logo}`.slice(0, 200) : "", name: biz.name.slice(0, 64) || "WIPP", id: `biz:${biz.publicId}` };
+      }
       await sendProfilePush({
         profileId: peer.profile_id,
+        pic: bizPic,
         title: biz.name.slice(0, 64) || "WIPP",
         body: ownerIsPeer ? "Nouveau message professionnel" : "Nouveau message",
         channelId: "messages",

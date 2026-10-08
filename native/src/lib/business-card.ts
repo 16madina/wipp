@@ -205,7 +205,13 @@ export async function getBusinessCardOfOwner(profileId: string) {
 }
 
 export async function signBusinessImage(path: string) {
-  return signStorageObject("wipp-business-cards", path);
+  const url = await signStorageObject("wipp-business-cards", path);
+  // The business logo also shows on its iOS notifications (same « card/ » key as the server's push).
+  if (/\/logo-/.test(path)) {
+    const { keepPhotoForNotifications } = await import("./notif-photos");
+    keepPhotoForNotifications(`card/${path}`, url);
+  }
+  return url;
 }
 
 async function resolveCardImage(url: string | null, path: string | null) {
