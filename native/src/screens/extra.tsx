@@ -36,7 +36,8 @@ function replyFailure(err: unknown) {
   return "Message impossible.";
 }
 
-export function StoriesScreen({ userId }: { userId: string }) {
+/** `storyId`: opened from a chat (reply / like). Shows that one story, then closes, like WhatsApp. */
+export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: string }) {
   // Lecteur de stories : toujours sombre (texte sur photo / vidéo).
   const colors = palettes.dark;
   const pop = useWippStore((s) => s.pop);
@@ -62,7 +63,8 @@ export function StoriesScreen({ userId }: { userId: string }) {
       .filter((group) => group.items.length > 0);
   }, [allStories, serverConnected, blockedIds]);
   const startAt = Math.max(0, groups.findIndex((group) => group.id === userId));
-  const [cursor, setCursor] = useState({ u: startAt, i: 0 });
+  const startItem = storyId ? Math.max(0, groups[startAt]?.items.findIndex((item) => item.id === storyId) ?? 0) : 0;
+  const [cursor, setCursor] = useState({ u: startAt, i: startItem });
   const [ratio, setRatio] = useState(0);
   // Image stories wait for their picture before the 5 s timer starts.
   const [loadedId, setLoadedId] = useState<string | null>(null);
@@ -100,6 +102,10 @@ export function StoriesScreen({ userId }: { userId: string }) {
   }
 
   function move(dir: 1 | -1) {
+    if (storyId) {
+      if (dir > 0) closeViewer();
+      return;
+    }
     const currentGroup = groups[cursor.u];
     if (!currentGroup) return;
     const nextItem = cursor.i + dir;

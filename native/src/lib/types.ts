@@ -220,7 +220,7 @@ export type Screen =
   | { name: "blocked" }
   | { name: "delete-account" }
   | { name: "legal"; doc: "privacy" | "terms" | "age" }
-  | { name: "stories"; userId: string }
+  | { name: "stories"; userId: string; storyId?: string }
   | { name: "global-search" }
   | { name: "new-group" }
   | { name: "my-groups" }

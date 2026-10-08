@@ -220,7 +220,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "legal":
       return <LegalScreen doc={screen.doc} />;
     case "stories":
-      return <StoriesScreen userId={screen.userId} />;
+      return <StoriesScreen userId={screen.userId} storyId={screen.storyId} />;
     case "global-search":
       return <GlobalSearchScreen />;
     case "new-group":

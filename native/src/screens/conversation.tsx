@@ -247,7 +247,7 @@ function StoryCiteCard({
 }: {
   cite: NonNullable<Message["storyRef"]>;
   mine: boolean;
-  stories: { id: string; type: string; text?: string; bg?: string; imageUrl?: string; expiresAt?: number; createdAt: number; ttlMs?: number }[];
+  stories: { id: string; userId: string; type: string; text?: string; bg?: string; imageUrl?: string; expiresAt?: number; createdAt: number; ttlMs?: number }[];
 }) {
   const live = stories.find((story) => story.id === cite.id && isStoryLive(story));
   const caption = !live
@@ -263,8 +263,11 @@ function StoryCiteCard({
       : mine
         ? "Réponse à la story"
         : "Réponse à votre story";
+  const open = () => {
+    if (live) useWippStore.getState().push({ name: "stories", userId: live.userId, storyId: live.id });
+  };
   return (
-    <View style={{ marginBottom: 6, width: 132, borderRadius: 10, overflow: "hidden", backgroundColor: "rgba(0,0,0,0.16)" }}>
+    <Press accessibilityLabel={live ? "Voir la story" : caption} disabled={!live} onPress={open} style={{ marginBottom: 6, width: 132, borderRadius: 10, overflow: "hidden", backgroundColor: "rgba(0,0,0,0.16)" }}>
       {live?.type === "image" && live.imageUrl ? (
         <Image source={{ uri: live.imageUrl }} style={{ width: 132, height: 74 }} contentFit="cover" />
       ) : live?.type === "text" ? (
@@ -277,7 +280,7 @@ function StoryCiteCard({
         </View>
       ) : null}
       <Text style={{ fontSize: 11, color: colors.muted, paddingHorizontal: 8, paddingVertical: 4 }}>{caption}</Text>
-    </View>
+    </Press>
   );
 }
 
