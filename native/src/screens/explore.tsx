@@ -619,7 +619,16 @@ const CATEGORY_TILES: { id: ShopCategory | "mode"; label: string; Icon: typeof S
 ];
 
 /** WIPP's own picture per category (assets/categories/…). Missing ones show the gold icon. */
-const CATEGORY_ART: Partial<Record<ShopCategory | "mode", number>> = {};
+const CATEGORY_ART: Partial<Record<ShopCategory | "mode", number>> = {
+  nails: require("../../assets/categories/nails.jpg"),
+  hair: require("../../assets/categories/hair.jpg"),
+  beauty: require("../../assets/categories/beauty.jpg"),
+  restaurant: require("../../assets/categories/restaurant.jpg"),
+  mode: require("../../assets/categories/mode.jpg"),
+  bakery: require("../../assets/categories/bakery.jpg"),
+  cafe: require("../../assets/categories/cafe.jpg"),
+  services: require("../../assets/categories/services.jpg"),
+};
 
 function ShopsPane() {
   const t = useT();
