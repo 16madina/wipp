@@ -32,7 +32,14 @@
         "NSLocationWhenInUseUsageDescription": "WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.",
         "NSContactsUsageDescription": "WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.",
         "NSMotionUsageDescription": "WIPP utilise le mouvement de votre téléphone uniquement lorsque vous utilisez WIPP Touch, afin de détecter le rapprochement avec un autre appareil.",
-        "NSNearbyInteractionUsageDescription": "WIPP Touch mesure la distance avec l’autre téléphone, uniquement pendant WIPP Touch, pour confirmer que vous êtes côte à côte."
+        "NSNearbyInteractionUsageDescription": "WIPP Touch mesure la distance avec l’autre téléphone, uniquement pendant WIPP Touch, pour confirmer que vous êtes côte à côte.",
+        "NSUserActivityTypes": [
+          "$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route",
+          "INSendMessageIntent"
+        ]
+      },
+      "entitlements": {
+        "com.apple.developer.usernotifications.communication": true
       },
       "icon": {
         "light": "./assets/brand/icon-1024.png",

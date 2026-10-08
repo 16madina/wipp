@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Intents
 import Security
 import UserNotifications
 
@@ -20,11 +21,21 @@ class NotificationService: UNNotificationServiceExtension {
     if let preview = WippPreview.make(from: content.userInfo) {
       content.body = preview
     }
-    // « Reçu » (two grey dots) even when the app is closed, then show the notification.
-    WippDelivery.ack(content.userInfo) { [weak self] in
+    // « Reçu » (two grey dots) even when the app is closed, then show the notification
+    // with the sender's / group's photo and the small WIPP logo (iOS communication notification).
+    let group = DispatchGroup()
+    var finalContent: UNNotificationContent = content
+    group.enter()
+    WippDelivery.ack(content.userInfo) { group.leave() }
+    group.enter()
+    WippPhoto.decorate(content) { decorated in
+      finalContent = decorated
+      group.leave()
+    }
+    group.notify(queue: .main) { [weak self] in
       guard let self = self, let handler = self.contentHandler else { return }
       self.contentHandler = nil
-      handler(content)
+      handler(finalContent)
     }
   }
 
@@ -32,6 +43,61 @@ class NotificationService: UNNotificationServiceExtension {
     if let handler = contentHandler, let content = bestAttempt {
       contentHandler = nil
       handler(content)
+    }
+  }
+}
+
+/// Photo on the notification, like WhatsApp: an INSendMessageIntent with the sender (and group).
+/// Any failure (no photo, slow network, iOS refusing) keeps the plain notification.
+enum WippPhoto {
+  static func decorate(_ content: UNMutableNotificationContent, done: @escaping (UNNotificationContent) -> Void) {
+    guard
+      let pic = content.userInfo["wpic"] as? [String: Any],
+      let senderId = pic["id"] as? String,
+      let name = pic["name"] as? String
+    else { return done(content) }
+    let groupName = pic["group"] as? String
+    let urlString = (pic["url"] as? String) ?? ""
+    guard let url = URL(string: urlString), url.scheme == "https" else {
+      return done(apply(content, senderId: senderId, name: name, groupName: groupName, imageData: nil))
+    }
+    var request = URLRequest(url: url, timeoutInterval: 8)
+    request.httpMethod = "GET"
+    URLSession.shared.dataTask(with: request) { data, response, _ in
+      let ok = (response as? HTTPURLResponse)?.statusCode == 200
+      let image = ok && (data?.count ?? 0) > 0 && (data?.count ?? 0) < 3_000_000 ? data : nil
+      done(apply(content, senderId: senderId, name: name, groupName: groupName, imageData: image))
+    }.resume()
+  }
+
+  static func apply(_ content: UNMutableNotificationContent, senderId: String, name: String, groupName: String?, imageData: Data?) -> UNNotificationContent {
+    let image = imageData.map { INImage(imageData: $0) }
+    let handle = INPersonHandle(value: senderId, type: .unknown)
+    let sender = INPerson(personHandle: handle, nameComponents: nil, displayName: name, image: groupName == nil ? image : nil, contactIdentifier: nil, customIdentifier: senderId)
+    let me = INPerson(personHandle: INPersonHandle(value: "me", type: .unknown), nameComponents: nil, displayName: nil, image: nil, contactIdentifier: nil, customIdentifier: nil, isMe: true)
+    let chatId = (content.userInfo["chatId"] as? String) ?? senderId
+    let intent = INSendMessageIntent(
+      recipients: groupName == nil ? [me] : [me, sender],
+      outgoingMessageType: .outgoingMessageText,
+      content: content.body,
+      speakableGroupName: groupName.map { INSpeakableString(spokenPhrase: $0) },
+      conversationIdentifier: chatId,
+      serviceName: nil,
+      sender: sender,
+      attachments: nil
+    )
+    if groupName != nil {
+      intent.setImage(image, forParameterNamed: \.speakableGroupName)
+      // In a group the title is the group; the body says who wrote.
+      if !content.body.hasPrefix(name) && !content.body.hasPrefix("@") { content.body = "\(name) : \(content.body)" }
+    }
+    let interaction = INInteraction(intent: intent, response: nil)
+    interaction.direction = .incoming
+    interaction.donate(completion: nil)
+    do {
+      return try content.updating(from: intent)
+    } catch {
+      return content
     }
   }
 }

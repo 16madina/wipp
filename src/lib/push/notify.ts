@@ -47,6 +47,7 @@ export async function sendProfilePush(input: {
   channelId: "messages" | "requests" | "calls";
   /** E2E envelope decrypted on the phone (iOS extension / Android background task). */
   wenc?: Record<string, unknown>;
+  pic?: { url: string; name: string; id: string; group?: string };
 }) {
   if (!(await claimEvent(input.data.eventId))) return { sent: 0, deduped: true as const };
   const data = sanitizePushData(input.data as unknown as Record<string, unknown>);
@@ -75,7 +76,7 @@ export async function sendProfilePush(input: {
       }).then((r) => ({ sent: r.sent, invalid: r.invalidTokens })),
     );
   }
-  if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId, wenc: input.wenc }));
+  if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId, wenc: input.wenc, pic: input.pic }));
   if (fcm.length) jobs.push(sendFcmAlert(fcm, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId }));
   if (fcmE2e.length) jobs.push(sendFcmAlert(fcmE2e, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId, wenc: input.wenc }));
   const results = await Promise.allSettled(jobs);
@@ -164,6 +165,32 @@ async function previewEnvelope(chatId: string, messageId: string): Promise<Recor
   }
 }
 
+/** Signed photo URL for the lock screen (profiles: public bucket, groups: private bucket). Null = no photo. */
+async function signedPhoto(path: string | null | undefined) {
+  if (!path) return null;
+  if (/^https:\/\//i.test(path)) return path.length <= 1200 ? path : null;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key || !/^(business|profiles|groups)\//.test(path)) return null;
+  const { SUPABASE_URL } = await import("@/lib/supabase/config");
+  const bucket = path.startsWith("groups/") ? "wipp-private-media" : "wipp-public-media";
+  const encoded = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encoded}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, apikey: key, "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: 600 }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { signedURL?: string; signedUrl?: string };
+    const signed = data.signedUrl || data.signedURL || "";
+    if (!signed) return null;
+    const url = signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
+    return url.length <= 1200 ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function notifyChatMessage(input: {
   senderId: string;
   chatId: string;
@@ -177,19 +204,29 @@ export async function notifyChatMessage(input: {
   const peers = await sql<{ profile_id: string }>`
     select profile_id from wipp_chat_members where chat_id = ${input.chatId} and profile_id <> ${input.senderId}
   `;
-  const me = await sql<{ display_name: string; username: string }>`
-    select display_name, username from wipp_profiles where id = ${input.senderId} limit 1
+  const me = await sql<{ display_name: string; username: string; avatar_url: string | null }>`
+    select display_name, username, avatar_url from wipp_profiles where id = ${input.senderId} limit 1
   `;
   const biz = await loadBusinessMeta(input.chatId);
   let groupName: string | null = null;
+  let groupAvatar: string | null = null;
   try {
-    const groups = await sql<{ name: string }>`
-      select name from wipp_groups where chat_id = ${input.chatId} limit 1
+    const groups = await sql<{ name: string; avatar_url: string | null }>`
+      select name, avatar_url from wipp_groups where chat_id = ${input.chatId} limit 1
     `;
     groupName = groups[0]?.name ?? null;
+    groupAvatar = groups[0]?.avatar_url ?? null;
   } catch {
     groupName = null;
   }
+  // Photo on the notification, like WhatsApp: the group's photo in a group, else the sender's.
+  const senderName = me[0]?.display_name || (me[0]?.username ? `@${me[0].username}` : "WIPP");
+  const photoUrl = await signedPhoto(groupName ? groupAvatar ?? me[0]?.avatar_url : me[0]?.avatar_url);
+  const pic = groupName
+    ? { url: photoUrl ?? "", name: senderName.slice(0, 64), id: input.senderId, group: groupName.slice(0, 64) || "Groupe" }
+    : photoUrl
+      ? { url: photoUrl, name: senderName.slice(0, 64), id: input.senderId }
+      : undefined;
   for (const peer of peers) {
     if (isPresent(input.chatId, peer.profile_id)) continue;
     const flags = await peerFlags(input.chatId, peer.profile_id);
@@ -220,6 +257,7 @@ export async function notifyChatMessage(input: {
         title: groupName.slice(0, 64) || "Groupe",
         body: `${who} : Nouveau message`,
         channelId: "messages",
+        pic,
         data: {
           type: "message",
           eventId: input.messageId,
@@ -253,6 +291,7 @@ export async function notifyChatMessage(input: {
       body: "Nouveau message",
       channelId: "messages",
       wenc: await previewEnvelope(input.chatId, input.messageId),
+      pic,
       data: {
         type: "message",
         eventId: input.messageId,
