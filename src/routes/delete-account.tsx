@@ -6,7 +6,7 @@ export const Route = createFileRoute("/delete-account")({
   component: DeleteAccountPage,
   head: () => ({
     meta: [
-      { title: "Supprimer mon compte — Wipp" },
+      { title: "Supprimer mon compte — WIPP" },
       {
         name: "description",
         content:
@@ -59,8 +59,8 @@ function DeleteAccountPage() {
     <SiteShell pill="Suppression de compte">
       <article className="site-prose">
         <p className="connect-kicker">Google Play · App Store</p>
-        <h1>Supprimer mon compte Wipp</h1>
-        <p className="site-meta">Dernière mise à jour : 23 septembre 2026</p>
+        <h1>Supprimer mon compte WIPP</h1>
+        <p className="site-meta">Dernière mise à jour : 7 octobre 2026</p>
 
         <p>
           Cette page permet de demander la <strong>suppression définitive</strong> de votre compte
@@ -68,23 +68,26 @@ function DeleteAccountPage() {
         </p>
 
         <h2>Comment supprimer votre compte</h2>
+        <h3>1. Dans l’application (le plus simple)</h3>
         <ol>
+          <li>Ouvrez WIPP et allez dans l’onglet <strong>Moi</strong>.</li>
           <li>
-            Saisissez votre <strong>@username</strong> et votre mot de passe dans le formulaire
-            ci-dessous.
+            Touchez <strong>Sécurité</strong>, puis <strong>Supprimer mon compte</strong>.
           </li>
-          <li>Confirmez la suppression. L’action est <strong>irréversible</strong>.</li>
-          <li>
-            Si vous ne pouvez pas vous connecter, écrivez à{" "}
-            <a href="mailto:lazoneclient@gmail.com">lazoneclient@gmail.com</a> depuis une adresse liée au
-            compte ; nous traitons la demande sous <strong>7 jours</strong>.
-          </li>
-          <li>
-            Un compte créé par téléphone n’a pas de mot de passe WIPP. Utilisez la suppression dans
-            l’application (Compte → Supprimer mon compte) ou le courriel ci-dessus. Ce formulaire
-            reste réservé aux comptes qui ont un mot de passe.
-          </li>
+          <li>Confirmez. La suppression est immédiate et <strong>irréversible</strong>.</li>
         </ol>
+        <h3>2. Par courriel</h3>
+        <p>
+          Si vous n’avez plus accès à l’application, écrivez à{" "}
+          <a href="mailto:lazoneclient@gmail.com">lazoneclient@gmail.com</a> en indiquant votre
+          @username et le numéro de téléphone du compte. Après vérification, nous supprimons le compte
+          sous <strong>7 jours</strong>.
+        </p>
+        <h3>3. Anciens comptes avec mot de passe</h3>
+        <p>
+          Les comptes WIPP sont créés avec un numéro de téléphone et n’ont pas de mot de passe. Le
+          formulaire en bas de page sert uniquement aux anciens comptes qui en ont un.
+        </p>
 
         <h2>Données effacées immédiatement</h2>
         <ul>
@@ -119,7 +122,7 @@ function DeleteAccountPage() {
           listées ci-dessus. Via e-mail support : sous <strong>7 jours</strong>.
         </p>
 
-        <h2>Formulaire de suppression</h2>
+        <h2>Formulaire (anciens comptes avec mot de passe)</h2>
         {done ? (
           <div className="site-store-box">
             <h2>Compte supprimé</h2>

@@ -23,8 +23,8 @@ const SCENES = [
     imageFallback: "/onboarding/hero-tap.jpg?v=2",
     title: "Connectez-vous en",
     accent: "un instant.",
-    body: "Approchez vos téléphones, échangez vos codes Wipp et commencez à discuter immédiatement — sans numéro de téléphone.",
-    pills: ["Rapide", "Simple", "Sans numéro"],
+    body: "Approchez vos téléphones, échangez vos codes Wipp et commencez à discuter immédiatement — sans échanger vos numéros.",
+    pills: ["Rapide", "Simple", "Numéro privé"],
   },
   {
     id: "globe",

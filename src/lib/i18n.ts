@@ -22,7 +22,7 @@ const fr = {
   onb1Title: "Connectez-vous en",
   onb1Accent: "un instant.",
   onb1Body:
-    "Approchez vos téléphones, échangez vos codes Wipp et commencez à discuter immédiatement — sans numéro de téléphone.",
+    "Approchez vos téléphones, échangez vos codes Wipp et commencez à discuter immédiatement — sans échanger vos numéros.",
   onb2Title: "Votre numéro reste",
   onb2Accent: "votre affaire.",
   onb2Body:
@@ -40,7 +40,7 @@ const fr = {
   onbTapRight: "Tap & Connect",
   onbFast: "Rapide",
   onbSimple: "Simple",
-  onbNoNumber: "Sans numéro",
+  onbNoNumber: "Numéro privé",
   onbConnected: "Connecté",
   onbWherever: "Peu importe où tu es…",
   onbWorldChat: "Le monde à portée de chat",
@@ -1020,7 +1020,7 @@ const en: Record<keyof typeof fr, string> = {
   onb1Title: "Connect in",
   onb1Accent: "an instant.",
   onb1Body:
-    "Bring your phones together, exchange Wipp codes and start chatting right away — no phone number needed.",
+    "Bring your phones together, exchange Wipp codes and start chatting right away — without swapping phone numbers.",
   onb2Title: "Your number stays",
   onb2Accent: "your business.",
   onb2Body: "Connect with your Wipp, your QR code, or your @username. You decide what you share.",
@@ -1036,7 +1036,7 @@ const en: Record<keyof typeof fr, string> = {
   onbTapRight: "Tap & Connect",
   onbFast: "Fast",
   onbSimple: "Simple",
-  onbNoNumber: "No number",
+  onbNoNumber: "Number stays private",
   onbConnected: "Connected",
   onbWherever: "Wherever you are…",
   onbWorldChat: "The world within chat",
