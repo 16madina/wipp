@@ -1084,7 +1084,7 @@ export function ProfileReferenceScreen() {
   // Animated mascot (transparent WebP, ~5 s loop) standing where the picture's floor is.
   const imgW = (imgH * 941) / 1670;
   const mascotSize = imgH * 0.24;
-  const mascotLeft = (win.width - imgW) / 2 + imgW * 0.62 - mascotSize * 0.475;
+  const mascotLeft = (win.width - imgW) / 2 + imgW * 0.62 - mascotSize * 0.507;
   const mascotIn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(mascotIn, { toValue: 1, friction: 6, tension: 60, delay: 150, useNativeDriver: true }).start();
@@ -1101,7 +1101,7 @@ export function ProfileReferenceScreen() {
         style={{
           position: "absolute",
           left: mascotLeft,
-          top: feetY - mascotSize + 4,
+          top: feetY - mascotSize * 0.98 + 2,
           width: mascotSize,
           height: mascotSize,
           opacity: mascotIn,
