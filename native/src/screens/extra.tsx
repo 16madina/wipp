@@ -78,6 +78,16 @@ export function StoriesScreen({ userId }: { userId: string }) {
   const story = group?.items[cursor.i];
   const user = group?.id === "me" ? me : group ? users[group.id] : undefined;
   const hold = composing || tray !== null || viewsOpen;
+  // The reply bar is absolutely positioned: KeyboardAvoidingView does not move it, so lift it by hand.
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", (e) => setKb(e.endCoordinates.height));
+    const hide = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setKb(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const mine = group?.id === "me";
 
   function closeViewer() {
@@ -130,9 +140,13 @@ export function StoriesScreen({ userId }: { userId: string }) {
       }));
     });
   }, [story?.id, story?.viewed]);
+  // Sign the story's media ONCE per story. Before, each new signed URL re-ran this effect, which signed
+  // again, forever: the video restarted every few seconds and the progress bar jumped back.
+  const signedOnce = useRef(new Set<string>());
   useEffect(() => {
-    if (!story?.mediaPath) return;
+    if (!story?.mediaPath || signedOnce.current.has(story.id)) return;
     const id = story.id;
+    signedOnce.current.add(id);
     let cancel = false;
     void import("../lib/lot7/api").then(async ({ hydrateStoryMedia }) => {
       const current = useWippStore.getState().stories.find((item) => item.id === id);
@@ -150,7 +164,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
     return () => {
       cancel = true;
     };
-  }, [story?.id, story?.mediaPath, story?.imageUrl, story?.videoUrl]);
+  }, [story?.id, story?.mediaPath]);
   useEffect(() => {
     if (!groups.length) closeViewer();
   }, [groups.length]);
@@ -282,9 +296,9 @@ export function StoriesScreen({ userId }: { userId: string }) {
   const src = story.imageUrl?.startsWith("http") ? { uri: story.imageUrl } : wippSrc(story.imageUrl);
   const viewCount = viewers.length || story.viewCount || 0;
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.navy }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.navy }} enabled={false}>
       {story.type === "video" && story.videoUrl ? (
-        <StoryPlayback key={story.id} uri={story.videoUrl} paused={hold} onEnd={() => { if (!hold) move(1); }} onProgress={setRatio} />
+        <StoryPlayback key={story.id} uri={story.videoUrl as string} paused={hold} onEnd={() => { if (!hold) move(1); }} onProgress={setRatio} />
       ) : null}
       {story.type !== "video" && src ? (
         <Image
@@ -427,7 +441,7 @@ export function StoriesScreen({ userId }: { userId: string }) {
           <WippSticker id={burst} size={120} />
         </View>
       ) : null}
-      <View style={{ position: "absolute", left: 12, right: 12, bottom: 28, zIndex: 5, gap: 8 }}>
+      <View style={{ position: "absolute", left: 12, right: 12, bottom: kb ? kb + 10 : 28, zIndex: 5, gap: 8 }}>
         {tray && !mine ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
             {(tray === "all" ? storyWippmojis() : QUICK_WIPPMOJI_IDS.map((id) => stickerById(id)).filter((item) => item != null)).map((sticker) => (
