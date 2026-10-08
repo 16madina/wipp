@@ -38,6 +38,8 @@ export type BusinessCardView = {
   weekHours?: WeekHours | null;
   /** Blue badge, granted by WIPP. */
   verified?: boolean;
+  /** Pinned with a reward code: shown first in Explorer. */
+  pinned?: boolean;
   /** « Nos services »: name + photo (max 12). */
   services?: { name: string; photoPath: string | null; photoUrl: string | null }[];
   /** Gallery as path + signed URL pairs, in order (url "" if it could not be signed): for the editor. */
@@ -128,7 +130,7 @@ export function cardToShop(
   card: Pick<
     BusinessCardView,
     "publicId" | "name" | "category" | "description" | "city" | "country" | "address" | "hours" | "businessPhone" | "coverUrl" | "logoUrl" | "ownerProfileId"
-  > & { lat?: number | null; lng?: number | null },
+  > & { lat?: number | null; lng?: number | null; pinned?: boolean },
   ownerId?: string,
 ) {
   const cat = card.category.toLowerCase();
@@ -165,6 +167,7 @@ export function cardToShop(
     qrToken: card.publicId,
     tags: [card.category],
     category,
+    pinned: Boolean(card.pinned),
   };
 }
 

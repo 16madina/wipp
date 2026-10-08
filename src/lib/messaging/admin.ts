@@ -30,7 +30,7 @@ export async function assertStaff(meId: string, adminOnly = false): Promise<Staf
   return role;
 }
 
-async function audit(actorId: string, action: string, targetId: string | null, details: Record<string, unknown> = {}) {
+export async function audit(actorId: string, action: string, targetId: string | null, details: Record<string, unknown> = {}) {
   const sql = await getSql();
   await sql`
     insert into wipp_admin_audit (id, actor_id, action, target_id, details)
@@ -81,8 +81,9 @@ export async function adminUsers(meId: string, q = "", limit = 100) {
     created_at: string;
     suspended_at: string | null;
     suspended_reason: string | null;
+    badge: string | null;
   }>`
-    select id, username, display_name, avatar_url, phone_e164, role, created_at::text, suspended_at::text, suspended_reason
+    select id, username, display_name, avatar_url, phone_e164, role, created_at::text, suspended_at::text, suspended_reason, badge
     from wipp_profiles
     where ${needle} = '' or lower(username) like ${like} or lower(display_name) like ${like}
     order by created_at desc
@@ -99,6 +100,7 @@ export async function adminUsers(meId: string, q = "", limit = 100) {
     createdAt: Date.parse(r.created_at),
     suspendedAt: r.suspended_at ? Date.parse(r.suspended_at) : null,
     suspendedReason: r.suspended_reason,
+    badge: r.badge === "gold" || r.badge === "blue" ? r.badge : null,
   }));
 }
 

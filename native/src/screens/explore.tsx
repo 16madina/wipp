@@ -657,7 +657,7 @@ function ShopsPane() {
     if (cat === "all") return true;
     if (cat === "mode") return /mode|fashion|vêtement|vetement|chaussure|bijou|montre|accessoire/i.test(`${s.name} ${s.tags?.join(" ") ?? ""} ${s.bio}`);
     return s.category === cat;
-  });
+  }).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
   // Category tiles use WIPP's own visuals (CATEGORY_ART), never a business's photo.
   const shortcuts = CATEGORY_TILES;
   function coverFor(id: ShopCategory | "mode") {
@@ -694,6 +694,12 @@ function ShopsPane() {
           return (
             <Press key={s.id} onPress={() => push(s.id.startsWith("business:") ? { name: "business-card-view", publicId: s.handle } : { name: "shop", shopId: s.id })} style={{ width: 168 }}>
               {src ? <Image source={src} style={{ width: 168, height: 112, borderRadius: 16 }} contentFit="cover" /> : <View style={{ width: 168, height: 112, borderRadius: 16, backgroundColor: colors.navy }} />}
+              {s.pinned ? (
+                <View style={{ position: "absolute", top: 8, left: 8, flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.65)", paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Pin size={11} color={colors.accent} />
+                  <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>Épinglé</Text>
+                </View>
+              ) : null}
               <Text numberOfLines={1} style={{ marginTop: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{s.name}</Text>
               <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>{shopPlace(s, t)}</Text>
             </Press>

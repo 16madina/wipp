@@ -1,3 +1,4 @@
+import { RewardsScreen } from "./rewards";
 import { PharmaciesScreen } from "./pharmacies";
 import { useShareIntentContext } from "expo-share-intent";
 import { isTabScreen, useWippStore } from "../lib/store";
@@ -213,6 +214,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <AccessibilityScreen />;
     case "help":
       return <HelpScreen />;
+    case "rewards":
+      return <RewardsScreen />;
     case "blocked":
       return <BlockedScreen />;
     case "delete-account":

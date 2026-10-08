@@ -1,3 +1,4 @@
+import { WippBadge } from "../components/WippBadge";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, View } from "react-native";
 import { Avatar } from "../components/Avatar";
@@ -18,6 +19,7 @@ type AdminUser = {
   createdAt: number;
   suspendedAt: number | null;
   suspendedReason: string | null;
+  badge?: "blue" | "gold" | null;
 };
 type Report = {
   id: string;
@@ -272,6 +274,7 @@ function UsersTab({ role }: { role: Role }) {
               {u.phone ? ` · ${u.phone}` : ""} · inscrit le {new Date(u.createdAt).toLocaleDateString("fr-FR")}
             </Text>
           </View>
+          <WippBadge badge={u.badge} size={14} />
           {u.suspendedAt ? <Badge text="Suspendu" tone="danger" /> : u.role !== "user" ? <Badge text={u.role === "admin" ? "Admin" : "Modérateur"} tone="accent" /> : null}
         </Press>
       ))}
@@ -283,6 +286,28 @@ function UsersTab({ role }: { role: Role }) {
               {picked.displayName} · {picked.role === "admin" ? "Administrateur" : picked.role === "moderator" ? "Modérateur" : "Utilisateur"}
               {picked.suspendedAt ? ` · suspendu le ${when(picked.suspendedAt)}${picked.suspendedReason ? ` (${picked.suspendedReason})` : ""}` : ""}
             </Text>
+            {role === "admin" ? (
+              picked.badge === "gold" ? (
+                <Btn
+                  label="Retirer la certification (badge doré)"
+                  variant="secondary"
+                  onPress={() =>
+                    void wippApi("rewards/certify", { method: "POST", body: JSON.stringify({ profileId: picked.id, on: false }) })
+                      .then(() => { setPicked(null); Alert.alert("Admin", "Certification retirée."); load(); })
+                      .catch(fail)
+                  }
+                />
+              ) : (
+                <Btn
+                  label="✅ Certifier (badge doré)"
+                  onPress={() =>
+                    void wippApi("rewards/certify", { method: "POST", body: JSON.stringify({ profileId: picked.id, on: true }) })
+                      .then(() => { setPicked(null); Alert.alert("Admin", `@${picked.username} est maintenant certifié(e).`); load(); })
+                      .catch(fail)
+                  }
+                />
+              )
+            ) : null}
             {role === "admin" && picked.role !== "admin" ? (
               picked.role === "moderator" ? (
                 <Btn label="Retirer le rôle de modérateur" variant="secondary" onPress={() => act(`users/${picked.id}/role`, { role: "user" }, "Rôle de modérateur retiré.")} />

@@ -517,6 +517,24 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (a === "rewards") {
+      const me = await resolveSession(bearer(request));
+      const rewards = await import("./rewards");
+      if (method === "GET" && !b) return json(await rewards.getMyRewards(me.id));
+      if (method === "POST" && b === "referrer") {
+        const body = await readBody<{ code?: string }>(request);
+        return json(await rewards.setMyReferrer(me.id, String(body.code ?? "")));
+      }
+      if (method === "POST" && b === "redeem") {
+        const body = await readBody<{ code?: string }>(request);
+        return json(await rewards.redeemPinCode(me.id, String(body.code ?? "")));
+      }
+      if (method === "POST" && b === "certify") {
+        const body = await readBody<{ profileId?: string; on?: boolean }>(request);
+        return json(await rewards.setCertified(me.id, String(body.profileId ?? ""), Boolean(body.on)));
+      }
+    }
+
     if (method === "POST" && a === "profile" && b === "username" && !c) {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ username?: string }>(request);
@@ -856,6 +874,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         replyTo: body.replyTo,
         vault: body.vault,
       });
+      void import("./rewards").then(({ qualifyReferral }) => qualifyReferral(me.id));
       return json({ message }, 201);
     }
 

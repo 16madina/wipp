@@ -246,6 +246,7 @@ type CardRow = {
   tags?: string[] | null;
   week_hours?: unknown;
   is_verified?: boolean | null;
+  pinned?: boolean | null;
   services?: unknown;
 };
 
@@ -402,6 +403,7 @@ function mapCard(row: CardRow) {
     tags: (row.tags ?? []).slice(0, 3),
     weekHours: cleanWeekHours(row.week_hours),
     verified: Boolean(row.is_verified),
+    pinned: Boolean(row.pinned),
     services: cleanServices(row.services).map((x) => ({ name: x.name, photoPath: x.photo, photoUrl: null as string | null })),
     coverUrl: http(row.cover_url),
     logoUrl: http(row.logo_url),
@@ -559,7 +561,7 @@ export async function listPublicBusinessCards(q = "") {
   const sql = await getSql();
   const rows = await sql<CardRow>`
     select id, public_id, owner_profile_id, name, category, description, country, city,
-           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services
+           address, show_address, hours, business_phone, website, cover_url, logo_url, photo_urls, is_published, lat, lng, instagram, tiktok, facebook, tags, week_hours, is_verified, services, (pinned_until > now()) as pinned
     from wipp_business_cards
     where is_published = true
       and (
@@ -569,7 +571,8 @@ export async function listPublicBusinessCards(q = "") {
         or lower(city) like ${"%" + needle + "%"}
         or lower(description) like ${"%" + needle + "%"}
       )
-    order by updated_at desc
+    -- Pinned businesses (reward codes) come first.
+    order by (pinned_until > now()) desc nulls last, updated_at desc
     limit 60
   `;
   return Promise.all(rows.map((row) => withServerMedia(publicCard(row))));

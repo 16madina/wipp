@@ -23,6 +23,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, Eye, Lock, MoreHorizontal, Pause, Phone, Play, Plus, Send, Smile, Store, Video, X } from "lucide-react-native";
+import { WippBadge } from "../components/WippBadge";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { GroupSafetyBanner } from "../components/GroupSafety";
 import { GroupCallBanner } from "../components/GroupCallBanner";
@@ -973,6 +974,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: compact ? 15 : 16, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
                       {title}
                     </Text>
+                    {!shop && chat?.type !== "group" ? <WippBadge badge={peer?.badge} size={15} /> : null}
                     {shop ? (
                       <View style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 6, paddingVertical: 1 }}>
                         <Text style={{ fontSize: 10, color: colors.accent, fontFamily: "Inter_500Medium" }}>Professionnel</Text>

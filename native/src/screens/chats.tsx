@@ -31,6 +31,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react-native";
+import { WippBadge } from "../components/WippBadge";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { reportGroupFlow } from "../components/GroupSafety";
 import { toggleChatLock, useLockPinAsk } from "../components/ChatLock";
@@ -490,7 +491,7 @@ function ChatRow({
               <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: colors.accent }}>Professionnel</Text>
             </View>
           ) : null}
-          {peer && verifiedIds.includes(peer.id) ? <ShieldCheck size={14} color={colors.accent} /> : null}
+          {peer && !shop ? <WippBadge badge={peer.badge} size={14} /> : null}
           {chat.pinned ? <Pin size={13} color={colors.muted} /> : null}
           {locked ? <Lock size={13} color={colors.accent} /> : null}
           {ephemeral ? <Clock size={14} color={colors.accent} /> : null}
@@ -1111,7 +1112,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               <View style={{ flex: 1, paddingTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{title}</Text>
-                  {!group ? <BadgeCheck size={16} color={colors.accent} /> : null}
+                  {!group ? <WippBadge badge={peer?.badge} size={18} /> : null}
                 </View>
                 {group ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>

@@ -60,6 +60,7 @@ function peerToUser(peer: WippChatSummary["peer"]): User {
     // Being in a chat does NOT make someone a contact: the server's connection list decides.
     connected: false,
     city: "",
+    badge: peer.badge ?? null,
   };
 }
 

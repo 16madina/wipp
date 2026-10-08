@@ -942,6 +942,8 @@ export function ProfileReferenceScreen() {
   const [lastName, setLast] = useState("");
   const [username, setUser] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  // Optional: the @pseudo of the friend who invited me (Gagne des récompenses).
+  const [invitedBy, setInvitedBy] = useState("");
   const [availability, setAvailability] = useState<"available" | "taken" | "checking" | "error" | null>(null);
   const [checkedUsername, setCheckedUsername] = useState("");
   const [error, setError] = useState("");
@@ -1048,6 +1050,12 @@ export function ProfileReferenceScreen() {
       clearPending();
       useWippStore.setState((s) => ({ pendingSignup: { country: s.pendingSignup.country } }));
       enterLinkedProfile(result.profile, phone);
+      const inviter = invitedBy.trim().replace(/^@/, "");
+      if (inviter) {
+        void import("../lib/proximity/wipp-session")
+          .then(({ wippApi }) => wippApi("rewards/referrer", { method: "POST", body: JSON.stringify({ code: inviter }) }))
+          .catch(() => undefined);
+      }
       if (photoUri) {
         useWippStore.getState().changeAvatar(photoUri);
         void import("../lib/profile-photo").then(({ saveProfilePhotoFromUri }) =>
@@ -1169,6 +1177,21 @@ export function ProfileReferenceScreen() {
             style={input}
           />
           {status ? <Text style={{ marginLeft: 8, fontSize: 12, fontFamily: "Inter_600SemiBold", color: status.color }}>{status.text}</Text> : null}
+        </View>
+
+        <View style={[field, { marginTop: 12, flexDirection: "row", alignItems: "center" }]}>
+          <Text style={{ color: colors.accent, fontSize: 15, marginRight: 2 }}>@</Text>
+          <TextInput
+            value={invitedBy}
+            onChangeText={(v) => setInvitedBy(v.toLowerCase().replace(/[^a-z0-9_.]/g, ""))}
+            placeholder="Code d’invitation (facultatif)"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={32}
+            inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined}
+            style={input}
+          />
         </View>
 
         <View style={[field, { marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10 }]}>

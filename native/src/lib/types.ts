@@ -217,6 +217,7 @@ export type Screen =
   | { name: "language" }
   | { name: "accessibility" }
   | { name: "help" }
+  | { name: "rewards" }
   | { name: "blocked" }
   | { name: "delete-account" }
   | { name: "legal"; doc: "privacy" | "terms" | "age" }
@@ -266,6 +267,8 @@ export type User = {
   lastSeen?: number;
   connected: boolean;
   city: string;
+  /** blue = Ambassadeur (3 amis invités), gold = certifié par WIPP. */
+  badge?: "blue" | "gold" | null;
 };
 
 export type MeProfile = User & {
@@ -595,6 +598,8 @@ export type Pharmacy = {
 };
 
 export type Shop = {
+  /** Pinned with a reward code (Gagne des récompenses): first in Explorer. */
+  pinned?: boolean;
   id: string;
   name: string;
   category: ShopCategory;

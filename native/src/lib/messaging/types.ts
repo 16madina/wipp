@@ -11,6 +11,8 @@ export type WippProfile = {
   role?: "user" | "admin";
   phoneE164?: string | null;
   isAdmin?: boolean;
+  /** blue = Ambassadeur (3 amis invités), gold = certifié par WIPP. */
+  badge?: "blue" | "gold" | null;
 };
 
 export type WippAdminStats = {

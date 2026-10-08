@@ -140,6 +140,7 @@ type ProfileRow = {
   e2e_public_jwk?: JsonWebKey | null;
   role?: string;
   phone_e164?: string | null;
+  badge?: string | null;
 };
 
 function mapProfile(row: ProfileRow): WippProfile {
@@ -155,6 +156,7 @@ function mapProfile(row: ProfileRow): WippProfile {
     role,
     phoneE164: row.phone_e164 ?? null,
     isAdmin: role === "admin",
+    badge: row.badge === "gold" || row.badge === "blue" ? row.badge : null,
   };
 }
 
@@ -271,7 +273,7 @@ export async function loginProfile(input: {
 
   if (phone && /^\+[1-9]\d{7,14}$/.test(phone)) {
     const rows = await sql<ProfileRow>`
-      select id, username, display_name, avatar_url, bio, created_at::text, password_hash,
+      select id, username, display_name, avatar_url, bio, badge, created_at::text, password_hash,
              e2e_public_jwk, role, phone_e164
       from wipp_profiles where phone_e164 = ${phone} limit 1
     `;
@@ -280,7 +282,7 @@ export async function loginProfile(input: {
     const username = normalizeUsername(input.username ?? "");
     if (!username) throw new WippHttpError(400, "bad_credentials", "Téléphone ou @username requis.");
     const rows = await sql<ProfileRow>`
-      select id, username, display_name, avatar_url, bio, created_at::text, password_hash,
+      select id, username, display_name, avatar_url, bio, badge, created_at::text, password_hash,
              e2e_public_jwk, role, phone_e164
       from wipp_profiles where lower(username) = ${username} limit 1
     `;
@@ -657,14 +659,14 @@ export async function loginWithFirebaseIdToken(idToken: string): Promise<WippSes
   }
   const sql = await getSql();
   const byUid = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text
+    select id, username, display_name, avatar_url, bio, badge, created_at::text
     from wipp_profiles where firebase_uid = ${claims.uid} limit 1
   `;
   if (byUid[0]) {
     return createSession(byUid[0].id);
   }
   const byPhone = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text
+    select id, username, display_name, avatar_url, bio, badge, created_at::text
     from wipp_profiles where phone_e164 = ${claims.phone} limit 1
   `;
   if (byPhone[0]) {
@@ -1077,7 +1079,7 @@ export async function deleteAccount(input: {
   const username = normalizeUsername(input.username);
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text, password_hash
+    select id, username, display_name, avatar_url, bio, badge, created_at::text, password_hash
     from wipp_profiles where lower(username) = ${username} limit 1
   `;
   const row = rows[0];
@@ -1117,7 +1119,7 @@ export async function deleteOwnAccount(profileId: string, confirm: string): Prom
 async function getProfileById(id: string): Promise<WippProfile | null> {
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text,
+    select id, username, display_name, avatar_url, bio, badge, created_at::text,
            e2e_public_jwk, role, phone_e164
     from wipp_profiles where id = ${id} limit 1
   `;
@@ -1130,7 +1132,7 @@ export async function searchProfiles(q: string, meId: string): Promise<WippProfi
   if (needle.length < 1) return [];
   const sql = await getSql();
   const rows = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text, e2e_public_jwk
+    select id, username, display_name, avatar_url, bio, badge, created_at::text, e2e_public_jwk
     from wipp_profiles
     where id <> ${meId}
       and (lower(username) like ${`%${needle}%`} or lower(display_name) like ${`%${needle}%`})
@@ -1145,7 +1147,7 @@ export async function getOrCreateDm(meId: string, peerUsername: string): Promise
   const username = normalizeUsername(peerUsername);
   const sql = await getSql();
   const peers = await sql<ProfileRow>`
-    select id, username, display_name, avatar_url, bio, created_at::text, e2e_public_jwk
+    select id, username, display_name, avatar_url, bio, badge, created_at::text, e2e_public_jwk
     from wipp_profiles where lower(username) = ${username} limit 1
   `;
   const peer = peers[0];
@@ -1195,7 +1197,7 @@ export async function listChats(meId: string): Promise<WippChatSummary[]> {
   const out: WippChatSummary[] = [];
   for (const m of memberships) {
     const peers = await sql<ProfileRow>`
-      select p.id, p.username, p.display_name, p.avatar_url, p.bio, p.created_at::text, p.e2e_public_jwk
+      select p.id, p.username, p.display_name, p.avatar_url, p.bio, p.badge, p.created_at::text, p.e2e_public_jwk
       from wipp_chat_members cm
       join wipp_profiles p on p.id = cm.profile_id
       where cm.chat_id = ${m.chat_id} and cm.profile_id <> ${meId}

@@ -37,6 +37,7 @@ import {
 } from "lucide-react-native";
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
+import { WippBadge } from "../components/WippBadge";
 import { BusinessCardExperience, CoverCameraHint, EmptyBusinessCard } from "../components/business-face";
 import { WippWordmark } from "../components/Logo";
 import { Btn, Chip, EdgeBack, Field, GlassHeader, Header, PendingNote, Press, Row, ScreenRoot, SearchField, Section, Toggle } from "../components/ui";
@@ -105,6 +106,9 @@ export function MeScreen() {
   const myEvents = lifestyle.filter((e) => e.hostId === "me").length;
   const myListings = listings.filter((l) => l.sellerId === "me").length;
   const country = me.country === "CA" ? "Canada" : me.country;
+  useEffect(() => {
+    void import("./rewards").then(({ refreshMyBadge }) => refreshMyBadge());
+  }, []);
   async function shareProfile() {
     const link = `https://${APP_HOST}/@${me.username}`;
     await shareWippPublic(`@${me.username} ${link}`);
@@ -148,7 +152,7 @@ export function MeScreen() {
               <View style={{ flex: 1, paddingTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Text numberOfLines={1} style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
-                  <BadgeCheck size={16} color={colors.accent} />
+                  <WippBadge badge={me.badge} size={18} />
                 </View>
                 <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{me.username}</Text>
                 <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
@@ -270,7 +274,7 @@ export function MeScreen() {
                   <ChevronRight size={16} color={colors.muted} />
                 </View>
               }
-              onPress={() => void shareProfile()}
+              onPress={() => push({ name: "rewards" })}
             />
             <Row icon={<Sparkles size={16} color={colors.fg} />} label="À propos" value={aboutOpen ? undefined : t("appVersion")} onPress={() => setAboutOpen((v) => !v)} />
             {aboutOpen ? (
