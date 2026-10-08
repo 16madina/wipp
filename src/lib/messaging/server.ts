@@ -81,6 +81,28 @@ export async function isUsernameAvailable(raw: string): Promise<boolean> {
   return !rows[0]?.id && !rows[0]?.offensive;
 }
 
+/** Change my @username if the new one is free. The old one becomes free for others. */
+export async function changeMyUsername(meId: string, raw: string) {
+  const username = normalizeUsername(raw);
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    throw new WippHttpError(400, "invalid_username", "Le @pseudo doit faire 3 à 20 caractères (lettres, chiffres, _).");
+  }
+  if (isReservedUsername(username)) throw new WippHttpError(409, "username_taken", `@${username} n’est pas disponible.`);
+  const sql = await getSql();
+  const current = await sql<{ username: string }>`select username from wipp_profiles where id = ${meId} limit 1`;
+  if (!current[0]) throw new WippHttpError(404, "not_found", "Profil introuvable.");
+  if (current[0].username.toLowerCase() === username) return { username: current[0].username };
+  const taken = await sql`select 1 from wipp_profiles where lower(username) = ${username} and id <> ${meId} limit 1`;
+  if (taken.length) throw new WippHttpError(409, "username_taken", `@${username} est déjà pris.`);
+  try {
+    await sql`update wipp_profiles set username = ${username} where id = ${meId}`;
+  } catch (err) {
+    if ((err as { code?: string }).code === "23505") throw new WippHttpError(409, "username_taken", `@${username} est déjà pris.`);
+    throw err;
+  }
+  return { username };
+}
+
 export async function isBlocked(a: string, b: string) {
   if (!a || !b || a === b) return false;
   const sql = await getSql();

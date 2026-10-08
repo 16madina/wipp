@@ -517,6 +517,13 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (method === "POST" && a === "profile" && b === "username" && !c) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ username?: string }>(request);
+      const { changeMyUsername } = await import("./server");
+      return json(await changeMyUsername(me.id, String(body.username ?? "")));
+    }
+
     if (a === "profile" && b === "gender" && !c) {
       const me = await resolveSession(bearer(request));
       const nz = await import("@/lib/messaging/nearby-zones");

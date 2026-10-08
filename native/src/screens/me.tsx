@@ -353,6 +353,8 @@ export function AccountScreen() {
   const pop = useWippStore((s) => s.pop);
   const updateMe = useWippStore((s) => s.updateMe);
   const [displayName, setDisplayName] = useState(me.displayName);
+  const [username, setUsername] = useState(me.username);
+  const [userState, setUserState] = useState<"same" | "checking" | "free" | "taken" | "invalid" | "error">("same");
   const [bio, setBio] = useState(me.bio);
   const [city, setCity] = useState(me.city);
   // Optional, declared by the person only. Used only for the ring of an Invisible request (À proximité).
@@ -364,6 +366,30 @@ export function AccountScreen() {
       .then((r) => setGender(r.gender ?? "unspecified"))
       .catch(() => undefined);
   }, []);
+  const wantedUser = username.trim().toLowerCase();
+  useEffect(() => {
+    if (wantedUser === (me.username ?? "").toLowerCase()) {
+      setUserState("same");
+      return;
+    }
+    if (!/^[a-z0-9_]{3,20}$/.test(wantedUser)) {
+      setUserState("invalid");
+      return;
+    }
+    let off = false;
+    setUserState("checking");
+    const timer = setTimeout(() => {
+      void import("../lib/auth-api")
+        .then(({ usernameAvailable }) => usernameAvailable(wantedUser))
+        .then((free) => !off && setUserState(free ? "free" : "taken"))
+        .catch(() => !off && setUserState("error"));
+    }, 450);
+    return () => {
+      off = true;
+      clearTimeout(timer);
+    };
+  }, [wantedUser, me.username]);
+
   async function save() {
     const name = displayName.replace(/\s+/g, " ").trim().slice(0, 60);
     const about = bio.trim().slice(0, 140);
@@ -371,7 +397,39 @@ export function AccountScreen() {
       Alert.alert(t("editProfile"), "Ton nom ne peut pas être vide.");
       return;
     }
+    const changingUser = wantedUser !== (me.username ?? "").toLowerCase();
+    if (changingUser && userState !== "free") {
+      Alert.alert(t("editProfile"), userState === "taken" ? `@${wantedUser} est déjà pris. Choisis un autre pseudo.` : userState === "invalid" ? "Le @pseudo doit faire 3 à 20 caractères : lettres, chiffres ou _." : "Vérification du @pseudo en cours. Réessaie dans un instant.");
+      return;
+    }
     setSaving(true);
+    if (changingUser) {
+      try {
+        const { wippApi } = await import("../lib/proximity/wipp-session");
+        const r = await wippApi<{ username: string }>("profile/username", { method: "POST", body: JSON.stringify({ username: wantedUser }) });
+        const fresh = r.username || wantedUser;
+        useWippStore.setState((st) => {
+          const key = st.serverProfileId ? `srvuser:${st.serverProfileId}` : "";
+          return {
+            serverUsername: fresh,
+            me: { ...st.me, username: fresh },
+            ...(key && st.users[key] ? { users: { ...st.users, [key]: { ...st.users[key], username: fresh } } } : {}),
+          };
+        });
+        void (async () => {
+          const { currentFirebaseUser } = await import("../lib/firebase-phone");
+          const { readLinkedSession, writeLinkedSession } = await import("../lib/firebase-linked-session");
+          const uid = currentFirebaseUser()?.uid;
+          if (!uid) return;
+          const cached = await readLinkedSession(uid);
+          if (cached) await writeLinkedSession(uid, { ...cached, username: fresh });
+        })().catch(() => undefined);
+      } catch (err) {
+        setSaving(false);
+        Alert.alert(t("editProfile"), errorText(err, "Ton @pseudo n’a pas pu être changé. Réessaie."));
+        return;
+      }
+    }
     // Name and bio are saved on the server first: before, they only changed on this phone and the
     // next sync brought the old name back.
     const id = useWippStore.getState().serverProfileId;
@@ -412,11 +470,36 @@ export function AccountScreen() {
           <Text style={{ marginTop: 8, color: colors.accent }}>{t("changePhoto")}</Text>
         </View>
         <Field label={t("displayName")} value={displayName} onChangeText={setDisplayName} />
-        <View>
-          <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>{t("username")}</Text>
-          <Text style={{ color: colors.fg, fontSize: 15 }}>@{me.username}</Text>
-          <Text style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>Ton @pseudo ne peut pas être modifié.</Text>
-        </View>
+        <Field
+          label={t("username")}
+          value={username}
+          autoCapitalize="none"
+          onChangeText={(v) => setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))}
+        />
+        {userState !== "same" ? (
+          <Text
+            style={{
+              marginTop: -6,
+              fontSize: 12,
+              color: userState === "free" ? colors.success : userState === "checking" ? colors.muted : colors.danger,
+            }}
+          >
+            {userState === "free"
+              ? "✓ Disponible"
+              : userState === "checking"
+                ? "Vérification…"
+                : userState === "taken"
+                  ? "Déjà utilisé"
+                  : userState === "invalid"
+                    ? "3 à 20 caractères : lettres, chiffres ou _"
+                    : "Vérification impossible"}
+          </Text>
+        ) : null}
+        {userState === "free" ? (
+          <Text style={{ marginTop: -6, fontSize: 12, color: colors.muted }}>
+            Ton ancien @pseudo sera libéré. Tes anciens liens et QR codes de profil ne marcheront plus.
+          </Text>
+        ) : null}
         <Field label={t("bio")} value={bio} onChangeText={(v) => setBio(v.slice(0, 140))} />
         <Field label="Ville" value={city} onChangeText={setCity} />
         <View>
