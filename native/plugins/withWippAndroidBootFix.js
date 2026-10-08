@@ -36,6 +36,24 @@ function withWippAndroidBootFix(config) {
         "android.intent.action.MY_PACKAGE_REPLACED",
       ]),
     ];
+    // notifee and WorkManager also listen for BOOT_COMPLETED. Notifee alarms target their receiver
+    // explicitly, so it keeps working without the boot filter.
+    replaced.push(
+      { $: { "android:name": "app.notifee.core.RebootBroadcastReceiver", "tools:node": "remove" } },
+      { $: { "android:name": "app.notifee.core.NotificationAlarmReceiver", "android:exported": "false", "tools:node": "replace" } },
+      {
+        $: {
+          "android:name": "androidx.work.impl.background.systemalarm.RescheduleReceiver",
+          "android:directBootAware": "false",
+          "android:enabled": "false",
+          "android:exported": "false",
+          "tools:node": "replace",
+        },
+        "intent-filter": [
+          { action: ["android.intent.action.TIME_SET", "android.intent.action.TIMEZONE_CHANGED"].map((a) => ({ $: { "android:name": a } })) },
+        ],
+      }
+    );
     const names = new Set(replaced.map((r) => r.$["android:name"]));
     app.receiver = [...(app.receiver ?? []).filter((r) => !names.has(r.$?.["android:name"])), ...replaced];
 

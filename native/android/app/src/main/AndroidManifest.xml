@@ -89,6 +89,7 @@
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/t/"/>
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/g/"/>
         <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/b/"/>
+        <data android:scheme="https" android:host="wippapp.com" android:pathPrefix="/c/"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
@@ -103,6 +104,14 @@
       <intent-filter android:priority="-1">
         <action android:name="expo.modules.notifications.NOTIFICATION_EVENT"/>
         <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:name="app.notifee.core.RebootBroadcastReceiver" tools:node="remove"/>
+    <receiver android:name="app.notifee.core.NotificationAlarmReceiver" android:exported="false" tools:node="replace"/>
+    <receiver android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver" android:directBootAware="false" android:enabled="false" android:exported="false" tools:node="replace">
+      <intent-filter>
+        <action android:name="android.intent.action.TIME_SET"/>
+        <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
       </intent-filter>
     </receiver>
   </application>
