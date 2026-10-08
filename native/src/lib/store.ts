@@ -72,7 +72,7 @@ export function isChatSealed(chat: Chat, now = Date.now()) {
 
 function previewOf(message: Message, lang: Lang = "fr") {
   if (message.viewOnce) return lang === "fr" ? "Vue unique" : "View once";
-  if (message.encFailed) return lang === "fr" ? "Message chiffré" : "Encrypted message";
+  if (message.encFailed) return lang === "fr" ? "🔒 Message chiffré" : "🔒 Encrypted message";
   if (message.type === "scratch") return lang === "fr" ? "Surprise ✨" : "Surprise ✨";
   if (message.type === "voice") return `Vocal · ${message.duration ?? 0}s`;
   if (message.album && message.album.length > 1) return lang === "fr" ? `${message.album.length} médias` : `${message.album.length} media`;
@@ -85,6 +85,27 @@ function previewOf(message: Message, lang: Lang = "fr") {
   if (message.type === "poll") return `📊 ${message.poll?.question ?? (lang === "fr" ? "Sondage" : "Poll")}`;
   if (message.type === "shop") return message.text ? `🏪 ${message.text}` : "Carte professionnelle";
   return message.text ?? "";
+}
+
+/** Account whose E2E identity is loaded in the store (keys are per account on this phone). */
+let identityOwner: string | null = null;
+
+function sameJwk(a: JsonWebKey | null | undefined, b: JsonWebKey | null | undefined) {
+  return Boolean(a && b && a.x === b.x && a.y === b.y);
+}
+
+/** The public key the server has for this account: null = none, undefined = could not check. */
+async function publishedKeyOf(profileId: string): Promise<JsonWebKey | null | undefined> {
+  try {
+    const { supabase } = await import("./supabase");
+    const { data, error } = await supabase.from("wipp_public_profiles").select("e2e_public_jwk").eq("id", profileId).maybeSingle();
+    if (error) return undefined;
+    const raw = (data as { e2e_public_jwk?: unknown } | null)?.e2e_public_jwk;
+    if (!raw) return null;
+    return (typeof raw === "string" ? JSON.parse(raw) : raw) as JsonWebKey;
+  } catch {
+    return undefined;
+  }
 }
 
 let inboxSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -962,15 +983,30 @@ export const useWippStore = create<Store>((set, get) => ({
       },
     })),
   ensureCrypto: async () => {
-    let identity = get().identity ?? (await loadIdentity());
-    if (!identity) {
-      identity = await generateBundle();
-      await saveIdentity(identity);
+    const pid = get().serverProfileId ?? null;
+    let identity = identityOwner === pid ? get().identity : null;
+    if (!identity && pid) {
+      const { loadAccountIdentity } = await import("./messaging/identity");
+      identity = await loadAccountIdentity(pid);
+      if (!identity) {
+        // First time with per-account keys: keep the phone's key only if it is this account's key
+        // on the server (or the account has none yet). Never hand one account's key to another.
+        const legacy = await loadIdentity();
+        if (legacy) {
+          const published = await publishedKeyOf(pid);
+          if (published === undefined || published === null || sameJwk(published, legacy.publicJwk)) identity = legacy;
+        }
+      }
     }
+    if (!identity && !pid) identity = await loadIdentity();
+    if (!identity) identity = await generateBundle();
+    await saveIdentity(identity, pid);
+    identityOwner = pid;
     const myFingerprint = await fingerprintOf(identity.publicJwk);
     set({ identity, cryptoReady: true });
     void import("./messaging/identity").then((m) => m.shareIdentityWithNotifications(identity));
     void myFingerprint;
+    if (!pid) return;
     try {
       const { publishIdentityPublicKey } = await import("./messaging/sync");
       await publishIdentityPublicKey(identity);
@@ -1043,6 +1079,7 @@ export const useWippStore = create<Store>((set, get) => ({
         });
         scheduleInboxSave(get);
         void import("./profile-motto").then(({ loadMyMotto }) => loadMyMotto());
+        void get().ensureCrypto();
         void get().syncBusinessContexts();
         void get().refreshConnections();
         void get().refreshIncomingRequests();

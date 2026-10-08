@@ -885,7 +885,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.type !== "shop" && m.text ? (
                 <Text style={{ color: mine ? mb.fg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} linkColor={onMe ? mb.accent : undefined} />}</Text>
               ) : null}
-              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted) }}>Message chiffré</Text> : null}
+              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted), fontStyle: "italic" }}>🔒 Message chiffré pour un autre appareil</Text> : null}
               {m.type === "event" && m.groupEvent ? (
                 <EventBubble chatId={chatId} m={m} users={users} onMe={onMe} fg={mine ? mb.fg : colors.fg} muted={onMe ? mb.muted : colors.muted} accent={onMe ? mb.accent : colors.accent} />
               ) : null}

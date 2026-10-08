@@ -14,11 +14,31 @@ export async function loadIdentity(): Promise<KeyBundle | null> {
   }
 }
 
-export async function saveIdentity(bundle: KeyBundle) {
+export async function saveIdentity(bundle: KeyBundle, profileId?: string | null) {
   try {
+    // KEY = identity of the account currently open on this phone (read by the push previews).
     await SecureStore.setItemAsync(KEY, JSON.stringify(bundle));
+    if (profileId) await SecureStore.setItemAsync(accountKey(profileId), JSON.stringify(bundle));
   } catch {
     /* web / unavailable */
+  }
+}
+
+/**
+ * One E2E identity PER ACCOUNT on this phone. Before, a single key was shared by every account
+ * signed in on the device: opening another account published that key for it and replaced the
+ * account's own key, so its earlier messages could no longer be read (« Message chiffré »).
+ */
+function accountKey(profileId: string) {
+  return `${KEY}.${profileId.replace(/[^A-Za-z0-9._-]/g, "_")}`;
+}
+
+export async function loadAccountIdentity(profileId: string): Promise<KeyBundle | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(accountKey(profileId));
+    return raw ? (JSON.parse(raw) as KeyBundle) : null;
+  } catch {
+    return null;
   }
 }
 
