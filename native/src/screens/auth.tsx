@@ -147,6 +147,29 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
   );
 }
 
+/**
+ * Back arrow of the sign-in screens: white on a dark disc (readable on every artwork and theme),
+ * drawn above everything. « J’ai déjà un compte » REPLACES the welcome screen, so there is nothing
+ * to pop: go back to the welcome screen instead (before, the arrow did nothing).
+ */
+function AuthBack() {
+  const insets = useSafeAreaInsets();
+  return (
+    <Pressable
+      accessibilityLabel="Retour"
+      hitSlop={12}
+      onPress={() => {
+        const { stack, pop, replace } = useWippStore.getState();
+        if (stack.length > 1) pop();
+        else replace({ name: "welcome" });
+      }}
+      style={{ position: "absolute", top: insets.top + 6, left: 12, zIndex: 50, elevation: 50, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center" }}
+    >
+      <ChevronLeft size={24} color="#fff" strokeWidth={2.5} />
+    </Pressable>
+  );
+}
+
 function Abs({
   t,
   l,
@@ -511,11 +534,7 @@ export function PhoneEntryScreen() {
       <Abs t={63.5} l={3} h={34.5} w={94}>
         <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </Abs>
-      <Abs t={6} l={4} h={6} w={12}>
-        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ChevronLeft size={24} color={colors.fg} />
-        </Pressable>
-      </Abs>
+      <AuthBack />
       <Abs t={65} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
@@ -631,11 +650,7 @@ export function LoginScreen() {
           style={{ flex: 1 }}
         />
       </Abs>
-      <Abs t={6} l={4} h={6} w={12}>
-        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ChevronLeft size={24} color={colors.fg} />
-        </Pressable>
-      </Abs>
+      <AuthBack />
       <Abs t={11} l={6} w={84}>
         <Image source={logoGold} style={{ width: 120, height: 52 }} contentFit="contain" contentPosition="left" />
         <Text style={{ marginTop: 6, color: colors.accent, fontSize: 10, letterSpacing: 2, fontFamily: "Inter_600SemiBold" }}>DISCUTE · PARTAGE · DÉCOUVRE</Text>
@@ -839,11 +854,7 @@ export function SmsReferenceScreen() {
           style={{ flex: 1 }}
         />
       </Abs>
-      <Abs t={6} l={4} h={6} w={12}>
-        <Pressable accessibilityLabel="Retour" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ChevronLeft size={24} color={colors.fg} />
-        </Pressable>
-      </Abs>
+      <AuthBack />
       <Abs t={4.5} l={32} h={7} w={36}>
         <Image source={logoGold} style={{ width: "100%", height: "100%" }} contentFit="contain" />
       </Abs>
