@@ -74,7 +74,6 @@ import {
   verifyPin,
 } from "../lib/private-vault";
 import { shareWippPublic } from "../lib/share-public";
-import { TAKEN_USERNAMES } from "../lib/seed";
 import { APP_HOST } from "../lib/utils";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
 import { colors, layout, accentA, fgA } from "../theme";
@@ -354,7 +353,6 @@ export function AccountScreen() {
   const pop = useWippStore((s) => s.pop);
   const updateMe = useWippStore((s) => s.updateMe);
   const [displayName, setDisplayName] = useState(me.displayName);
-  const [username, setUsername] = useState(me.username);
   const [bio, setBio] = useState(me.bio);
   const [city, setCity] = useState(me.city);
   // Optional, declared by the person only. Used only for the ring of an Invisible request (À proximité).
@@ -367,8 +365,33 @@ export function AccountScreen() {
       .catch(() => undefined);
   }, []);
   async function save() {
+    const name = displayName.replace(/\s+/g, " ").trim().slice(0, 60);
+    const about = bio.trim().slice(0, 140);
+    if (!name) {
+      Alert.alert(t("editProfile"), "Ton nom ne peut pas être vide.");
+      return;
+    }
     setSaving(true);
-    updateMe({ displayName, username, bio, city, gender });
+    // Name and bio are saved on the server first: before, they only changed on this phone and the
+    // next sync brought the old name back.
+    const id = useWippStore.getState().serverProfileId;
+    if (id) {
+      const { supabase } = await import("../lib/supabase");
+      const { data, error } = await supabase.from("wipp_profiles").update({ display_name: name, bio: about }).eq("id", id).select("id");
+      if (error || !data?.length) {
+        setSaving(false);
+        Alert.alert(t("editProfile"), errorText(error?.message ? new Error(error.message) : null, "Ton profil n’a pas pu être enregistré. Réessaie."));
+        return;
+      }
+    }
+    const [firstName, ...rest] = name.split(" ");
+    updateMe({ displayName: name, firstName: firstName ?? "", lastName: rest.join(" "), bio: about, city, gender });
+    if (id) {
+      useWippStore.setState((st) => {
+        const key = `srvuser:${id}`;
+        return st.users[key] ? { users: { ...st.users, [key]: { ...st.users[key], displayName: name, bio: about } } } : {};
+      });
+    }
     try {
       const { wippApi } = await import("../lib/proximity/wipp-session");
       await wippApi("profile/gender", { method: "POST", body: JSON.stringify({ gender: gender === "unspecified" ? null : gender }) });
@@ -378,7 +401,6 @@ export function AccountScreen() {
     setSaving(false);
     pop();
   }
-  const taken = TAKEN_USERNAMES.has(username.toLowerCase()) && username.toLowerCase() !== me.username;
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -390,8 +412,11 @@ export function AccountScreen() {
           <Text style={{ marginTop: 8, color: colors.accent }}>{t("changePhoto")}</Text>
         </View>
         <Field label={t("displayName")} value={displayName} onChangeText={setDisplayName} />
-        <Field label={t("username")} value={username} onChangeText={(v) => setUsername(v.replace(/[^a-zA-Z0-9._]/g, "").slice(0, 20))} />
-        {taken ? <Text style={{ color: colors.danger, fontSize: 12 }}>{t("usernameTaken")}</Text> : null}
+        <View>
+          <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>{t("username")}</Text>
+          <Text style={{ color: colors.fg, fontSize: 15 }}>@{me.username}</Text>
+          <Text style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>Ton @pseudo ne peut pas être modifié.</Text>
+        </View>
         <Field label={t("bio")} value={bio} onChangeText={(v) => setBio(v.slice(0, 140))} />
         <Field label="Ville" value={city} onChangeText={setCity} />
         <View>
@@ -1332,10 +1357,11 @@ export function BusinessCardEditorScreen() {
             website: r.card.website,
             coverPath: r.card.coverPath,
             logoPath: r.card.logoPath,
-            photoPaths: card.photoPaths ?? [],
+            // Paths and URLs kept side by side, so removing a photo removes the right file.
+            photoPaths: card.photoSlots ? card.photoSlots.map((x) => x.path) : (card.photoPaths ?? []),
             coverUrl: card.coverUrl,
             logoUrl: card.logoUrl,
-            photoUrls: card.photoUrls ?? [],
+            photoUrls: card.photoSlots ? card.photoSlots.map((x) => x.url) : (card.photoUrls ?? []),
             instagram: r.card.instagram ?? null,
             tiktok: r.card.tiktok ?? null,
             facebook: r.card.facebook ?? null,
@@ -1729,8 +1755,24 @@ export function BusinessCardEditorScreen() {
         ) : null}
         <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de la boutique</Text>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
-          {draft.photoUrls.map((url) => (
-            <Image key={url} source={{ uri: url }} style={{ width: 96, height: 80, borderRadius: 12 }} contentFit="cover" />
+          {draft.photoUrls.map((url, i) => (
+            <View key={`${draft.photoPaths[i] ?? url}-${i}`} style={{ width: 96, height: 80, borderRadius: 12, overflow: "hidden", backgroundColor: colors.navy }}>
+              {url ? <Image source={{ uri: url }} style={{ width: 96, height: 80 }} contentFit="cover" /> : null}
+              <Press
+                accessibilityLabel="Retirer cette photo"
+                hitSlop={6}
+                onPress={() =>
+                  setDraft((d) => ({
+                    ...d,
+                    photoPaths: d.photoPaths.filter((_p, k) => k !== i),
+                    photoUrls: d.photoUrls.filter((_u, k) => k !== i),
+                  }))
+                }
+                style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={14} color="#fff" />
+              </Press>
+            </View>
           ))}
           {draft.photoUrls.length < 8 ? (
             <Press onPress={() => void pick("photo")} style={{ width: 80, height: 80, borderRadius: 12, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>

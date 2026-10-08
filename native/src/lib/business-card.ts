@@ -40,6 +40,8 @@ export type BusinessCardView = {
   verified?: boolean;
   /** « Nos services »: name + photo (max 12). */
   services?: { name: string; photoPath: string | null; photoUrl: string | null }[];
+  /** Gallery as path + signed URL pairs, in order (url "" if it could not be signed): for the editor. */
+  photoSlots?: { path: string; url: string }[];
 };
 
 export const WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -247,6 +249,7 @@ export async function withSignedCardMedia(card: BusinessCardView): Promise<Busin
   return {
     ...card,
     services,
+    photoSlots: (card.photoPaths ?? []).map((path, i) => ({ path, url: photoUrls[i] ?? "" })),
     coverUrl: cover.url,
     logoUrl: logo.url,
     photoUrls: photoUrls.filter(Boolean),
