@@ -220,6 +220,16 @@ Tout est sur `main`. Le code ci-dessous est commun ; rien de spécifique à Andr
 - Nouveau : **clé « reçu »** (`POST /api/wipp/me/delivery-key`, puis `POST /api/wipp/receipts/delivered {key, chatId, messageId}`), table `wipp_delivery_keys` (migration 0052). La clé ne peut QUE marquer « reçu ». Sur iPhone, l'extension de notification l'appelle à chaque notification de message, app fermée.
 - **À faire sur Android** : dans la tâche de fond qui reçoit les notifications de message (`lib/push/android-message.ts`), appeler `receipts/delivered` avec la même clé (la récupérer comme `ensureDeliveryKeyForNotifications`, sans la partie trousseau iOS), pour avoir les deux points gris app fermée.
 
+## Photo sur les notifications — fait côté iPhone le 2026-10-08, À FAIRE sur Android
+
+Sur iPhone, la notification de message montre la photo de la personne / du groupe / le logo de l'entreprise (comme WhatsApp).
+- Le push contient maintenant `wpic` (APNs) = `{ p: chemin de la photo dans le stockage, name, id, group? }`. Pour une entreprise : le client reçoit `p = "card/<logo_url>"` + nom de l'entreprise ; la propriétaire reçoit le client (« Nom · Entreprise »).
+- Le serveur n'a PAS de clé pour signer les photos : c'est l'app qui garde une copie des photos qu'elle affiche (`native/src/lib/notif-photos.ts`, appelé par `components/Avatar.tsx` et `signBusinessImage`). Nom du fichier : `notifPhotoName(chemin)`.
+- **À faire sur Android** :
+  1. Côté serveur (`src/lib/push/native.ts`, `sendFcmAlert`), ajouter `wpic` (JSON, comme `wenc`) dans les données FCM pour `fcm-e2e`.
+  2. Dans `notif-photos.ts`, sur Android, enregistrer la copie dans `Paths.document/wpic/` (pas d'App Group).
+  3. Dans la tâche de fond Android (`lib/push/android-message.ts`), afficher la notification avec la photo (style « conversation » : MessagingStyle + Person avec icône, via notifee ou le module natif déjà utilisé). Si la copie n'existe pas → notification normale.
+
 ## Rapport à donner à l'utilisatrice
 
 1. Commit récupéré (`git log --oneline -1`)
