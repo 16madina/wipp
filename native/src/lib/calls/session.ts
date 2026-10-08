@@ -217,6 +217,12 @@ export async function openCall(input: {
     }
     const created = await inviteCall(input.userId, input.kind);
     const id = created.invite.id;
+    // Hung up while the call was still being created: cancel it now, or the other phone rings for a minute.
+    const now = useCallSession.getState().session;
+    if (!now || now.phase === "ended" || now.phase === "declined" || now.phase === "failed") {
+      await hangupCall(id).catch(() => undefined);
+      return;
+    }
     if (created.invite.status === "busy") {
       useCallSession.getState().patch({ callId: id, phase: "busy", note: "Correspondant occupé." });
       return;
