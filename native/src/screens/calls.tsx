@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { Mic, MicOff, Phone, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Video, VideoOff } from "lucide-react-native";
 import { Avatar, GroupAvatar } from "../components/Avatar";
 import { Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField, Btn } from "../components/ui";
@@ -213,7 +213,6 @@ export function CallLinkScreen() {
       setCopied(false);
       refresh();
     } catch (err) {
-      const { Alert } = await import("react-native");
       Alert.alert("Lien d’appel", err instanceof Error ? err.message : "Impossible de créer le lien.");
     } finally {
       setBusy(false);
@@ -290,8 +289,7 @@ export function CallLinkScreen() {
                 </View>
                 <Press
                   onPress={async () => {
-                    const { Alert } = await import("react-native");
-                    Alert.alert("Annuler le lien", "Le lien ne fonctionnera plus et l’appel en cours sera terminé.", [
+                                  Alert.alert("Annuler le lien", "Le lien ne fonctionnera plus et l’appel en cours sera terminé.", [
                       { text: "Garder", style: "cancel" },
                       {
                         text: "Annuler le lien",

@@ -712,7 +712,7 @@ export function GlobalSearchScreen() {
     (u) =>
       Boolean(u) &&
       needle.length >= 1 &&
-      (!serverConnected || u.id.startsWith("srvuser:")) &&
+      (!serverConnected || Boolean(u?.id?.startsWith("srvuser:"))) &&
       `${u.displayName} ${u.username}`.toLowerCase().includes(needle.replace(/^@/, "")),
   );
   const people = [

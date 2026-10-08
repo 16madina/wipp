@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { Alert, AppState } from "react-native";
 import { create } from "zustand";
 import type {
   CallLog,
@@ -1230,7 +1230,6 @@ export const useWippStore = create<Store>((set, get) => ({
       const top = get().stack.at(-1);
       // « Lu » only if the conversation is really on screen: phone locked or app in the background
       // means the message arrived (two grey dots), not that it was read.
-      const { AppState } = await import("react-native");
       const open = AppState.currentState === "active" && top?.name === "conversation" && (top as { chatId?: string }).chatId === localId;
       if (open && event.kind === "message") {
         const me = (await import("./messaging/client")).getStoredProfile()?.id;
@@ -1692,7 +1691,6 @@ export const useWippStore = create<Store>((set, get) => ({
           await updateGroupInfo(id, { description: description || null, avatar }, { quiet: true });
         } catch (err) {
           console.warn("[wipp] group photo/description failed", err);
-          const { Alert } = await import("react-native");
           Alert.alert("Groupe", "Le groupe est créé, mais la photo ou la description n’a pas pu être enregistrée. Tu peux la remettre dans Infos du groupe.");
         }
       }
@@ -1707,7 +1705,6 @@ export const useWippStore = create<Store>((set, get) => ({
       }));
     })().catch(async (err) => {
       console.warn("[wipp] group create failed", err);
-      const { Alert } = await import("react-native");
       Alert.alert("Groupe", errorText(err, "Création impossible"));
     });
   },
