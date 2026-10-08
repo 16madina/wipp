@@ -6,6 +6,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { Audio } from "expo-av";
 import {
+  AppState,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -369,12 +370,20 @@ function ConversationInner({ chatId }: { chatId: string }) {
         void useWippStore.getState().applyLiveEvent(event);
       }, serverId);
     });
+    // « I am reading this chat » only while the app is really on screen. Before, the heartbeat kept
+    // going with the phone locked: the server thought the chat was being read and sent no push.
     const beat = setInterval(() => {
+      if (AppState.currentState !== "active") return;
       void import("../lib/messaging/client").then((api) => api.postFocus(serverId, true));
     }, 12_000);
+    const appSub = AppState.addEventListener("change", (state) => {
+      void import("../lib/messaging/client").then((api) => api.postFocus(serverId, state === "active"));
+      if (state === "active") markRead(chatId);
+    });
     return () => {
       stop();
       clearInterval(beat);
+      appSub.remove();
       void import("../lib/messaging/client").then((api) => {
         void api.postFocus(serverId, false);
         void api.postTyping(serverId, false);

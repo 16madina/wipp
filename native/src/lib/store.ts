@@ -1080,6 +1080,7 @@ export const useWippStore = create<Store>((set, get) => ({
         scheduleInboxSave(get);
         void import("./profile-motto").then(({ loadMyMotto }) => loadMyMotto());
         void get().ensureCrypto();
+        void import("./messaging/identity").then((m) => m.ensureDeliveryKeyForNotifications(profile.id));
         void get().syncBusinessContexts();
         void get().refreshConnections();
         void get().refreshIncomingRequests();
@@ -1227,7 +1228,10 @@ export const useWippStore = create<Store>((set, get) => ({
         if (Object.keys(dec).length) set(() => dec);
       }
       const top = get().stack.at(-1);
-      const open = top?.name === "conversation" && (top as { chatId?: string }).chatId === localId;
+      // « Lu » only if the conversation is really on screen: phone locked or app in the background
+      // means the message arrived (two grey dots), not that it was read.
+      const { AppState } = await import("react-native");
+      const open = AppState.currentState === "active" && top?.name === "conversation" && (top as { chatId?: string }).chatId === localId;
       if (open && event.kind === "message") {
         const me = (await import("./messaging/client")).getStoredProfile()?.id;
         const incoming = (synced && "messages" in synced ? synced.messages : [])

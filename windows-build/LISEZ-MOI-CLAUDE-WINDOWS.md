@@ -213,6 +213,13 @@ Tout est sur `main`. Le code ci-dessous est commun ; rien de spécifique à Andr
 2. **« Optimisation du code DEX inférieure au seuil » (brouillage 1 %) — à faire avant février 2027, PAS urgent.**
    Cause : `android.enableMinifyInReleaseBuilds` est à false (R8 désactivé). Solution : l'activer (`expo-build-properties` → `android.enableMinifyInReleaseBuilds: true` + `enableShrinkResourcesInReleaseBuilds: true`), puis **tester à fond** une version de release (appels LiveKit, CallKeep, Firebase, notifications, chiffrement, partage), en ajoutant des règles `-keep` dans `proguard-rules.pro` si une bibliothèque casse. Ne pas l'activer sans ces tests.
 
+## « Reçu » (deux points gris) et notifications — fait côté iPhone le 2026-10-08
+
+- La conversation n'envoie plus « je regarde cette conversation » (focus) quand l'app n'est pas au premier plan : avant, téléphone verrouillé = serveur croyait la conversation lue = **pas de notification**. (`screens/conversation.tsx`, AppState.)
+- « Lu » seulement si l'app est active (`store.ts` applyLiveEvent) ; sinon « reçu ».
+- Nouveau : **clé « reçu »** (`POST /api/wipp/me/delivery-key`, puis `POST /api/wipp/receipts/delivered {key, chatId, messageId}`), table `wipp_delivery_keys` (migration 0052). La clé ne peut QUE marquer « reçu ». Sur iPhone, l'extension de notification l'appelle à chaque notification de message, app fermée.
+- **À faire sur Android** : dans la tâche de fond qui reçoit les notifications de message (`lib/push/android-message.ts`), appeler `receipts/delivered` avec la même clé (la récupérer comme `ensureDeliveryKeyForNotifications`, sans la partie trousseau iOS), pour avoir les deux points gris app fermée.
+
 ## Rapport à donner à l'utilisatrice
 
 1. Commit récupéré (`git log --oneline -1`)

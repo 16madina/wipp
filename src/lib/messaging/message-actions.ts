@@ -2,7 +2,7 @@
  * Server mutations for synced DM messages.
  * Authorization is always the session profile. No plaintext is logged.
  */
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { EDIT_WINDOW_MS } from "@/lib/messaging/plain";
 import { assertChatUnblocked, ensureMessagingReady, WippHttpError } from "@/lib/messaging/server";
@@ -346,3 +346,34 @@ export async function validateReply(chatId: string, replyTo: string) {
   if (!rows.length) throw new WippHttpError(400, "bad_reply", "Le message cité n'est pas dans cette conversation.");
 }
 
+
+
+// ---------- « Reçu » from the iPhone notification extension (app closed) ----------
+
+/** A key that can ONLY mark messages as delivered for this account. Only its hash is stored. */
+export async function issueDeliveryKey(meId: string) {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const key = `dk_${randomBytes(24).toString("hex")}`;
+  const hash = createHash("sha256").update(key).digest("hex");
+  await sql`insert into wipp_delivery_keys (key_hash, profile_id) values (${hash}, ${meId})`;
+  // Keep a few keys per account (one per phone); drop the oldest.
+  await sql`
+    delete from wipp_delivery_keys where profile_id = ${meId} and key_hash not in (
+      select key_hash from wipp_delivery_keys where profile_id = ${meId} order by created_at desc limit 5
+    )
+  `;
+  return { key };
+}
+
+export async function deliveredByKey(key: string, chatId: string, messageId: string) {
+  if (!/^dk_[0-9a-f]{48}$/.test(key) || !chatId || !messageId) throw new WippHttpError(400, "invalid", "Requête invalide.");
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const hash = createHash("sha256").update(key).digest("hex");
+  const rows = await sql<{ profile_id: string }>`
+    update wipp_delivery_keys set last_used_at = now() where key_hash = ${hash} returning profile_id
+  `;
+  if (!rows[0]) throw new WippHttpError(401, "unauthorized", "Clé inconnue.");
+  return markReceipt(rows[0].profile_id, chatId, [messageId], "delivered");
+}

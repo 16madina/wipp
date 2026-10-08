@@ -87,6 +87,30 @@ export async function shareIdentityWithNotifications(bundle: KeyBundle) {
   }
 }
 
+const NSE_DELIVERY = "wipp-nse-delivery";
+
+/**
+ * Lets the iOS notification extension say « reçu » (two grey dots) while the app is closed.
+ * The key can only mark messages as delivered for this account. One key per account on this phone.
+ */
+export async function ensureDeliveryKeyForNotifications(profileId: string) {
+  if (Platform.OS !== "ios" || !profileId) return;
+  const localKey = `wipp-delivery-key.${profileId.replace(/[^A-Za-z0-9._-]/g, "_")}`;
+  try {
+    let key = await SecureStore.getItemAsync(localKey);
+    if (!key) {
+      const { wippApi } = await import("../proximity/wipp-session");
+      const r = await wippApi<{ key: string }>("me/delivery-key", { method: "POST", body: "{}" });
+      key = r.key;
+      if (!key) return;
+      await SecureStore.setItemAsync(localKey, key);
+    }
+    await SecureStore.setItemAsync(NSE_DELIVERY, key, NSE_OPTS);
+  } catch {
+    /* without it, « reçu » simply waits until the app opens */
+  }
+}
+
 export async function clearNotificationIdentity() {
   if (Platform.OS !== "ios") return;
   try {

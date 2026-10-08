@@ -20,13 +20,41 @@ class NotificationService: UNNotificationServiceExtension {
     if let preview = WippPreview.make(from: content.userInfo) {
       content.body = preview
     }
-    contentHandler(content)
+    // « Reçu » (two grey dots) even when the app is closed, then show the notification.
+    WippDelivery.ack(content.userInfo) { [weak self] in
+      guard let self = self, let handler = self.contentHandler else { return }
+      self.contentHandler = nil
+      handler(content)
+    }
   }
 
   override func serviceExtensionTimeWillExpire() {
     if let handler = contentHandler, let content = bestAttempt {
+      contentHandler = nil
       handler(content)
     }
+  }
+}
+
+/// Tells the server « this message reached the phone » with a key that can only do that.
+enum WippDelivery {
+  static let deliveryKey = "wipp-nse-delivery"
+  static let endpoint = URL(string: "https://wippapp.com/api/wipp/receipts/delivered")!
+
+  static func ack(_ userInfo: [AnyHashable: Any], done: @escaping () -> Void) {
+    guard
+      (userInfo["type"] as? String) == "message",
+      let chatId = userInfo["chatId"] as? String,
+      let messageId = userInfo["eventId"] as? String,
+      let key = WippPreview.keychainString(deliveryKey)
+    else { done(); return }
+    var req = URLRequest(url: endpoint, timeoutInterval: 6)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "content-type")
+    req.httpBody = try? JSONSerialization.data(withJSONObject: ["key": key, "chatId": chatId, "messageId": messageId])
+    URLSession.shared.dataTask(with: req) { _, _, _ in
+      DispatchQueue.main.async { done() }
+    }.resume()
   }
 }
 

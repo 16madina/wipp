@@ -382,6 +382,8 @@ export async function onSessionReady() {
     /* ignore */
   }
   syncAppBadge();
+  const pid = useWippStore.getState().serverProfileId;
+  if (pid) void import("../messaging/identity").then((m) => m.ensureDeliveryKeyForNotifications(pid));
 }
 
 export function bootstrapPush() {

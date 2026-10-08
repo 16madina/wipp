@@ -878,6 +878,19 @@ export async function handleWippApi(request: Request): Promise<Response> {
       }
     }
 
+    if (method === "POST" && a === "me" && b === "delivery-key" && !c) {
+      const me = await resolveSession(bearer(request));
+      const { issueDeliveryKey } = await import("./message-actions");
+      return json(await issueDeliveryKey(me.id));
+    }
+
+    // Called by the iPhone notification extension with the delivery key only (no session).
+    if (method === "POST" && a === "receipts" && b === "delivered" && !c) {
+      const body = await readBody<{ key?: string; chatId?: string; messageId?: string }>(request);
+      const { deliveredByKey } = await import("./message-actions");
+      return json(await deliveredByKey(String(body.key ?? ""), String(body.chatId ?? ""), String(body.messageId ?? "")));
+    }
+
     if (method === "POST" && a === "chats" && b && c === "receipts") {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ messageIds?: string[]; kind?: "delivered" | "read" }>(request);
