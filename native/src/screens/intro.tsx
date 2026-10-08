@@ -55,17 +55,17 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
     <Pressable
       accessibilityLabel="Wipp"
       onPress={unlockSound}
-      style={{ flex: 1, backgroundColor: colors.introBg, justifyContent: "flex-end", alignItems: "center" }}
+      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: colors.introBg, justifyContent: "flex-end", alignItems: "center" }}
     >
       <Image
         source={bootPoster}
-        style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
-        contentFit="cover"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+        contentFit="contain"
       />
       <VideoView
         player={player}
-        style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
-        contentFit="cover"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+        contentFit="contain"
         nativeControls={false}
         pointerEvents="none"
       />
