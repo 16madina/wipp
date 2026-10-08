@@ -33,8 +33,8 @@ type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
 const HUB_BACKGROUNDS = {
   listings: require("../../assets/wipp/media/apt.jpg"),
-  // Services = pharmacies for now: a drawn green pharmacy cross until a WIPP photo exists.
-  utilities: null,
+  // Services = pharmacies for now.
+  utilities: require("../../assets/wipp/media/pharmacies-hub.jpg"),
   shops: require("../../assets/wipp/media/shop-chen-hero.jpg"),
   lifestyle: require("../../assets/wipp/media/soccer.jpg"),
 } as const;
