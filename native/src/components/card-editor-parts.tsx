@@ -273,7 +273,7 @@ export function DialPhoneField({ country, value, onChange }: { country: Country;
             onChange(digits.trim() ? `${country.dial} ${digits.trim()}` : null);
           }}
           keyboardType="phone-pad"
-          placeholder="Numéro de la boutique"
+          placeholder="Numéro de l’entreprise"
           placeholderTextColor={colors.muted}
           style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0, ...noOutline }}
         />

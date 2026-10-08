@@ -1716,7 +1716,7 @@ export function BusinessCardEditorScreen() {
           </Press>
         ) : null}
         <View style={{ marginTop: 16, gap: 12 }}>
-          <Field label="Nom de la boutique *" value={draft.name} onChangeText={(v) => set("name", v)} />
+          <Field label="Nom de l’entreprise *" value={draft.name} onChangeText={(v) => set("name", v)} />
           <SelectField label="Catégorie *" value={draft.category} placeholder="Choisis ta catégorie" onPress={() => setCategoryOpen(true)} />
           <Field
             label="Description"
@@ -1836,7 +1836,7 @@ export function BusinessCardEditorScreen() {
             </View>
           </View>
         ) : null}
-        <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de la boutique</Text>
+        <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de l’entreprise</Text>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
           {draft.photoUrls.map((url, i) => (
             <View key={`${draft.photoPaths[i] ?? url}-${i}`} style={{ width: 96, height: 80, borderRadius: 12, overflow: "hidden", backgroundColor: colors.navy }}>

@@ -33,7 +33,7 @@ function SupportPage() {
         </p>
         <h3>Signaler un contenu ou bloquer quelqu’un</h3>
         <p>
-          Dans une conversation, une Story, un profil, un groupe, une annonce ou une Boutique, touche
+          Dans une conversation, une Story, un profil, un groupe, une annonce ou une entreprise, touche
           « … » puis « Signaler » ou « Bloquer ». Un contenu signalé disparaît aussitôt pour toi ;
           l’équipe WIPP examine chaque signalement et peut retirer le contenu ou suspendre le compte.
         </p>

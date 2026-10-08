@@ -128,13 +128,13 @@ export function ExploreScreen() {
       </GlassHeader>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 4 }}>
-          <SearchField placeholder={hub === "shops" ? "Rechercher une boutique ..." : t("exploreAsk")} value={q} onChangeText={setQ} />
+          <SearchField placeholder={hub === "shops" ? "Rechercher une entreprise ..." : t("exploreAsk")} value={q} onChangeText={setQ} />
         </View>
         {!searching && tabbed ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 12 }}>
             {([
               ["home", "Tous"],
-              ["shops", "Boutiques"],
+              ["shops", "Entreprises"],
               ["lifestyle", "Événements"],
               ["utilities", "Services"],
             ] as const).map(([id, label]) => (
@@ -511,7 +511,7 @@ function ShopSearch({ q }: { q: string }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
         {([
           ["all", "Tout"],
-          ["shops", "Boutiques"],
+          ["shops", "Entreprises"],
           ["users", "Utilisateurs"],
           ["groups", "Groupes"],
         ] as const).map(([id, label]) => (
@@ -606,7 +606,7 @@ function ShopsPane() {
         }));
         setLoadError("");
       } catch (err) {
-        setLoadError(errorText(err, "Impossible de charger les boutiques."));
+        setLoadError(errorText(err, "Impossible de charger les entreprises."));
       } finally {
         setLoaded(true);
       }
@@ -649,7 +649,7 @@ function ShopsPane() {
         })}
       </ScrollView>
       <View style={{ paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Boutiques à proximité</Text>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Entreprises à proximité</Text>
         <Press onPress={() => setCat("all")}><Text style={{ color: colors.accent }}>Voir tout ›</Text></Press>
       </View>
       {!loaded ? <Empty title="Chargement…" /> : null}
@@ -679,7 +679,7 @@ function ShopsPane() {
           );
         })}
       </ScrollView>
-      {loaded && !loadError && shown.length === 0 ? <Empty title="Aucune boutique pour le moment" /> : null}
+      {loaded && !loadError && shown.length === 0 ? <Empty title="Aucune entreprise pour le moment" /> : null}
       <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
         <Btn label="Créer ma carte professionnelle" onPress={() => push({ name: "business-card" })} />
       </View>
@@ -1474,7 +1474,7 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
                 });
                 useWippStore.setState({ listings: await fetchListings(me) });
               } else {
-                setError("Les boutiques passent par la carte professionnelle.");
+                setError("Les entreprises passent par la carte professionnelle.");
                 return;
               }
               onBack();
@@ -1489,7 +1489,7 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
 
 export function CreateShopScreen() {
   const pop = useWippStore((s) => s.pop);
-  return <CreateForm title="Créer une boutique" onBack={pop} />;
+  return <CreateForm title="Créer une entreprise" onBack={pop} />;
 }
 
 function Missing({ onBack }: { onBack: () => void }) {

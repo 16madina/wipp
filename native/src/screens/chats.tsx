@@ -1192,7 +1192,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               {card?.logoUrl ? <Image source={{ uri: card.logoUrl }} style={{ width: 44, height: 44 }} contentFit="cover" /> : <Store size={20} color={colors.accent} />}
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 12, color: colors.muted }}>{card ? `Carte de visite de ${firstName}` : `Boutique de ${firstName}`}</Text>
+              <Text style={{ fontSize: 12, color: colors.muted }}>{card ? `Carte de visite de ${firstName}` : `Entreprise de ${firstName}`}</Text>
               <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{card?.name ?? localShop?.name}</Text>
               {card?.category || localShop?.category ? (
                 <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{card?.category ?? String(localShop?.category ?? "")}</Text>

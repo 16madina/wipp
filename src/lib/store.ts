@@ -96,7 +96,7 @@ function previewOf(message: Message, lang: Lang = "fr") {
   if (message.type === "video") return lang === "fr" ? "Vidéo" : "Video";
   if (message.type === "sticker") return stickerLabel(message.stickerId, lang);
   if (message.type === "listing") return message.text ?? "Annonce";
-  if (message.type === "shop") return message.text ?? "Boutique";
+  if (message.type === "shop") return message.text ?? "Entreprise";
   return message.text ?? "";
 }
 

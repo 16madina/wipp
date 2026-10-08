@@ -210,7 +210,7 @@ async function seedDemoUsers() {
 
   const demos = [
     { username: "deena", displayName: "Deena Diallo", bio: "Fondatrice WIPP" },
-    { username: "lea", displayName: "Léa Martin", bio: "Boutique démo" },
+    { username: "lea", displayName: "Léa Martin", bio: "Entreprise démo" },
     { username: "samira", displayName: "Samira K.", bio: "Montréal" },
   ];
   for (const d of demos) {

@@ -719,7 +719,7 @@ export async function openBusinessChat(meId: string, publicId: string) {
   if (!card) throw new WippHttpError(404, "not_found", "Carte introuvable.");
   if (!card.owner_profile_id) throw new WippHttpError(404, "not_found", "Carte introuvable.");
   if (card.owner_profile_id === meId) {
-    throw new WippHttpError(400, "self_chat", "Tu ne peux pas écrire à ta propre boutique.");
+    throw new WippHttpError(400, "self_chat", "Tu ne peux pas écrire à ta propre entreprise.");
   }
   const existing = await sql<{ id: string }>`
     select c.id
@@ -821,7 +821,7 @@ export async function businessCardSocial(meId: string | null, publicId: string) 
 
 export async function followBusinessCard(meId: string, publicId: string, on: boolean) {
   const card = await cardByPublicId(publicId);
-  if (card.owner_profile_id === meId) throw new WippHttpError(400, "own_card", "Tu ne peux pas t’abonner à ta propre boutique.");
+  if (card.owner_profile_id === meId) throw new WippHttpError(400, "own_card", "Tu ne peux pas t’abonner à ta propre entreprise.");
   const sql = await getSql();
   if (on) {
     await sql`insert into wipp_business_follows (card_id, profile_id) values (${card.id}, ${meId}) on conflict do nothing`;

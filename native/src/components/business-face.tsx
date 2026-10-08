@@ -221,15 +221,15 @@ export function BusinessCardExperience({
     Alert.alert(card.name, undefined, [
       { text: "Partager", onPress: () => void Share.share({ message: `${card.name}\n${link}` }) },
       {
-        text: "Signaler la boutique",
+        text: "Signaler l’entreprise",
         style: "destructive",
         onPress: () =>
-          Alert.alert("Signaler la boutique", undefined, [
+          Alert.alert("Signaler l’entreprise", undefined, [
             ...REPORT_REASONS.map((reason) => ({
               text: reason,
               onPress: () =>
                 void submitContentReport({ contentType: "business_card", contentId: card.id, targetProfileId: card.ownerProfileId, reason }).then(
-                  () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va examiner cette boutique."),
+                  () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va examiner cette entreprise."),
                   (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
                 ),
             })),
@@ -349,7 +349,7 @@ export function BusinessCardExperience({
           <View style={{ flex: 1, paddingTop: LOGO / 2 + 10, minWidth: 0 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text numberOfLines={2} style={{ flexShrink: 1, color: colors.fg, fontSize: 24, fontFamily: "Inter_700Bold" }}>{card.name}</Text>
-              {card.verified ? <BadgeCheck size={22} color="#ffffff" fill="#1d9bf0" accessibilityLabel="Boutique vérifiée par WIPP" /> : null}
+              {card.verified ? <BadgeCheck size={22} color="#ffffff" fill="#1d9bf0" accessibilityLabel="Entreprise vérifiée par WIPP" /> : null}
             </View>
             {card.category ? <Text style={{ marginTop: 2, color: colors.muted, fontSize: 14 }}>{card.category}</Text> : null}
           </View>
@@ -487,7 +487,7 @@ export function BusinessCardExperience({
 
         {photos.length ? (
           <View style={{ marginTop: 18 }}>
-            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>Photos de la boutique</Text>
+            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>Photos de l’entreprise</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
               {photos.map((url) => (
                 <Image key={url} source={{ uri: url }} style={{ width: 150, height: 120, borderRadius: 16 }} contentFit="cover" />
@@ -501,7 +501,7 @@ export function BusinessCardExperience({
           <View style={{ marginHorizontal: 16, marginTop: 18, borderRadius: 20, backgroundColor: colors.surface2, padding: 14, flexDirection: "row", gap: 14, alignItems: "center" }}>
             <QrCard value={qr} size={120} pad={6} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>{owner ? "Scannez pour\ndécouvrir ma carte\nsur WIPP" : "Scannez pour\ndécouvrir cette\nboutique sur WIPP"}</Text>
+              <Text style={{ color: colors.fg, fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>{owner ? "Scannez pour\ndécouvrir ma carte\nsur WIPP" : "Scannez pour\ndécouvrir cette\nentreprise sur WIPP"}</Text>
               <Press onPress={() => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", "Le téléchargement a échoué."))} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Download size={16} color={colors.accent} />
                 <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Télécharger le QR</Text>
@@ -533,13 +533,13 @@ export function BusinessCardExperience({
               <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>QR · Lien</Text>
             </View>
           </Press>
-          <Press onPress={() => void toggleSaved()} accessibilityLabel={saved ? "Retirer de mes boutiques" : "Enregistrer dans mes boutiques"} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: saved ? colors.accent : colors.hair }}>
+          <Press onPress={() => void toggleSaved()} accessibilityLabel={saved ? "Retirer de mes entreprises" : "Enregistrer dans mes entreprises"} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: saved ? colors.accent : colors.hair }}>
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: saved ? colors.accent : colors.navy, alignItems: "center", justifyContent: "center" }}>
               <Bookmark size={20} color={saved ? colors.accentFg : colors.fg} fill={saved ? colors.accentFg : "transparent"} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{saved ? "Enregistrée" : "Enregistrer"}</Text>
-              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>Mes boutiques</Text>
+              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>Mes entreprises</Text>
             </View>
           </Press>
           </View>

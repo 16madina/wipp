@@ -39,7 +39,7 @@ const REPORT_TYPE: Record<string, string> = {
   story: "Story",
   profile: "Profil",
   listing: "Annonce",
-  business_card: "Boutique",
+  business_card: "Entreprise",
   group: "Groupe",
 };
 const REPORT_STATUS: Record<string, string> = { open: "ouvert", resolved: "traité", dismissed: "classé" };

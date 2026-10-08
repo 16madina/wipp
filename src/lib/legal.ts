@@ -36,7 +36,7 @@ const privacyFr: LegalDocument = {
         "Sécurité : identifiants techniques, jetons de session, appareils, journaux de connexion et mesures anti-fraude.",
         "Communications : messages, pièces jointes, stickers, réactions, appels audio/vidéo et métadonnées d’acheminement (heure, durée, appels manqués). Lorsque le chiffrement de bout en bout s’applique, le contenu n’est lisible que par les participants autorisés.",
         "Social : Stories (photos et vidéos d’au plus une minute, y compris une musique superposée), groupes, demandes de connexion, QR, liens d’invitation.",
-        "Explorer : annonces, cartes Boutiques, événements, avis, photos et informations volontairement publiées.",
+        "Explorer : annonces, cartes Entreprises, événements, avis, photos et informations volontairement publiées.",
         "Localisation, contacts et carnet d’adresses uniquement si vous activez la fonction concernée.",
         "Stockage local : certains réglages, clés de chiffrement et brouillons peuvent rester sur votre appareil.",
         "Signalements et assistance : le contenu que vous nous transmettez pour un litige, un abus ou le support.",
@@ -53,7 +53,7 @@ const privacyFr: LegalDocument = {
       title: "4. Chiffrement de bout en bout — et ses limites",
       paragraphs: [
         "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages. Les photos, vidéos et vocaux sont chiffrés de la même façon. Les groupes sont chiffrés de bout en bout avec une clé partagée uniquement entre leurs membres actuels ; les messages de groupe envoyés avant l’activation de ce chiffrement restent stockés tels quels.",
-        "Ne sont pas chiffrés de bout en bout, car ils sont faits pour être vus par d’autres : profils publics, Stories, annonces, Boutiques, événements, listes de membres, ainsi que les métadonnées techniques (par exemple qui écrit à qui et quand). Le chiffrement ne protège pas non plus un contenu que vous copiez, transférez ou capturez.",
+        "Ne sont pas chiffrés de bout en bout, car ils sont faits pour être vus par d’autres : profils publics, Stories, annonces, Entreprises, événements, listes de membres, ainsi que les métadonnées techniques (par exemple qui écrit à qui et quand). Le chiffrement ne protège pas non plus un contenu que vous copiez, transférez ou capturez.",
         "Une capture d’écran, un enregistrement d’écran, un mini-lecteur système (PiP) ou un appareil compromis peut révéler un contenu autrement chiffré. Les messages éphémères disparaissent de WIPP selon le délai choisi; ils ne empêchent pas un destinataire de les photographier.",
         "Si vous signalez un message, les éléments nécessaires à l’examen peuvent être transmis à WIPP.",
       ],
@@ -89,7 +89,7 @@ const privacyFr: LegalDocument = {
     {
       title: "9. Informations publiques",
       paragraphs: [
-        "Ce que vous publiez (photo, bio, @username, Story, annonce, Boutique, événement) peut être vu selon vos réglages, y compris par des personnes hors de vos contacts. Ne publiez pas ce que vous voulez garder secret.",
+        "Ce que vous publiez (photo, bio, @username, Story, annonce, Entreprise, événement) peut être vu selon vos réglages, y compris par des personnes hors de vos contacts. Ne publiez pas ce que vous voulez garder secret.",
       ],
     },
     {
@@ -128,7 +128,7 @@ const privacyFr: LegalDocument = {
       paragraphs: [
         "Mesures raisonnables : contrôle d’accès, chiffrement, sessions, détection d’abus. Aucun service n’est infaillible. En cas d’incident, WIPP évalue, réduit les risques et notifie selon la loi (Loi 25 / PIPEDA).",
         "WIPP n’effectue pas de profilage publicitaire ni de décision automatisée produisant des effets juridiques à votre égard, hors filtres anti-spam et anti-abus.",
-        "Signaler et bloquer : vous pouvez signaler une Story, un profil, un message, un groupe, une annonce ou une Boutique, et bloquer une personne. Un contenu signalé disparaît aussitôt pour vous ; l’équipe WIPP examine les signalements et peut retirer le contenu ou suspendre le compte. Les textes publics (noms, bios, Boutiques, groupes, annonces) passent par un filtre automatique de mots injurieux. Un signalement de message n’envoie que l’identifiant du message et la raison, jamais son contenu chiffré.",
+        "Signaler et bloquer : vous pouvez signaler une Story, un profil, un message, un groupe, une annonce ou une Entreprise, et bloquer une personne. Un contenu signalé disparaît aussitôt pour vous ; l’équipe WIPP examine les signalements et peut retirer le contenu ou suspendre le compte. Les textes publics (noms, bios, Entreprises, groupes, annonces) passent par un filtre automatique de mots injurieux. Un signalement de message n’envoie que l’identifiant du message et la raison, jamais son contenu chiffré.",
         "Les mises à jour importantes de cette politique seront indiquées dans l’application. Version " +
           LEGAL_VERSION +
           ".",
@@ -146,7 +146,7 @@ const termsFr: LegalDocument = {
     {
       title: "1. Le service",
       paragraphs: [
-        "WIPP est une plateforme de messagerie, d’appels, de groupes, de Stories, de stickers et de découverte (annonces, Boutiques, Services, événements). Des fonctions peuvent être ajoutées ou retirées.",
+        "WIPP est une plateforme de messagerie, d’appels, de groupes, de Stories, de stickers et de découverte (annonces, Entreprises, Services, événements). Des fonctions peuvent être ajoutées ou retirées.",
       ],
     },
     {
@@ -158,7 +158,7 @@ const termsFr: LegalDocument = {
     {
       title: "3. Compte et interdictions",
       paragraphs: [
-        "Interdit : usurper une identité (personne, boutique, organisation); vendre un compte; contourner la sécurité; extraire, scraper ou automatiser WIPP; harceler, menacer, doxxer; spam; fraude; malware; contenu sexuel impliquant un mineur; discours haineux; arme, drogue, bien volé ou contrefait; non-consensual intimate imagery; enregistrement d’un appel sans consentement légal.",
+        "Interdit : usurper une identité (personne, entreprise, organisation); vendre un compte; contourner la sécurité; extraire, scraper ou automatiser WIPP; harceler, menacer, doxxer; spam; fraude; malware; contenu sexuel impliquant un mineur; discours haineux; arme, drogue, bien volé ou contrefait; non-consensual intimate imagery; enregistrement d’un appel sans consentement légal.",
       ],
     },
     {
@@ -189,11 +189,11 @@ const termsFr: LegalDocument = {
       ],
     },
     {
-      title: "8. Annonces, Boutiques, événements — WIPP n’est pas partie",
+      title: "8. Annonces, Entreprises, événements — WIPP n’est pas partie",
       paragraphs: [
         "Sauf mention contraire, WIPP est un outil de mise en relation. Nous ne sommes ni vendeur, ni acheteur, ni mandataire, ni séquestre, ni organisateur, ni assureur. Pas de paiement, d’escrow ni de garantie d’état des biens dans WIPP à ce jour.",
         "Vous vérifiez avant de rencontrer quelqu’un, de payer ou de vous déplacer. Les professionnels sont responsables de leurs permis, taxes, mentions légales et offres.",
-        "Une fiche Boutique n’est pas une certification WIPP. Usurper une entreprise est interdit.",
+        "Une fiche Entreprise n’est pas une certification WIPP. Usurper une entreprise est interdit.",
         "Pharmacies, horaires et infos locales peuvent être inexactes. En urgence, composez les services officiels — jamais WIPP.",
       ],
     },
