@@ -23,6 +23,7 @@ import {
   authLogin,
   authPhone,
   authProfileBg,
+  authMascotAnim,
   authSms,
   authWelcome,
   brandOfficial,
@@ -1080,6 +1081,14 @@ export function ProfileReferenceScreen() {
   const boxH = win.height - insets.top;
   const imgH = Math.max((win.width / 941) * 1670, boxH);
   const feetY = insets.top + (boxH - imgH) / 2 + imgH * 0.385;
+  // Animated mascot (transparent WebP, ~5 s loop) standing where the picture's floor is.
+  const imgW = (imgH * 941) / 1670;
+  const mascotSize = imgH * 0.24;
+  const mascotLeft = (win.width - imgW) / 2 + imgW * 0.62 - mascotSize * 0.475;
+  const mascotIn = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(mascotIn, { toValue: 1, friction: 6, tension: 60, delay: 150, useNativeDriver: true }).start();
+  }, [mascotIn]);
   const field = { height: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,216,77,0.28)", backgroundColor: "rgba(0,0,0,0.38)", paddingHorizontal: 12, justifyContent: "center" as const };
   const input = { flex: 1, color: colors.fg, fontSize: 15, ...noWebOutline };
   const label = { color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 5 };
@@ -1087,6 +1096,23 @@ export function ProfileReferenceScreen() {
   return (
     <Artwork source={authProfileBg} fit="cover" imageTop={insets.top}>
       {(reveal) => <>
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          left: mascotLeft,
+          top: feetY - mascotSize + 4,
+          width: mascotSize,
+          height: mascotSize,
+          opacity: mascotIn,
+          transform: [
+            { translateY: mascotIn.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) },
+            { scale: mascotIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) },
+          ],
+        }}
+      >
+        <Image source={authMascotAnim} style={{ width: "100%", height: "100%" }} contentFit="contain" autoplay />
+      </Animated.View>
       {/* Thin arrow in the corner, clear of the WIPP sign (no dark disc over the picture). */}
       <View style={{ position: "absolute", top: insets.top, left: 0 }}>
         <Pressable accessibilityLabel="Retour" hitSlop={10} onPress={pop} style={{ marginLeft: 4, marginTop: 2, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,216,77,0.45)" }}>
