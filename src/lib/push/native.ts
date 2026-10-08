@@ -142,7 +142,7 @@ export async function sendApnsAlert(
     /** E2E envelope for the iOS Notification Service Extension: ciphertext only, Apple cannot read it. */
     wenc?: Record<string, unknown>;
     /** Sender / group photo (short-lived signed URL) for the iOS communication notification. */
-    pic?: { url: string; name: string; id: string; group?: string };
+    pic?: { url: string; p?: string; name: string; id: string; group?: string };
   },
 ) {
   const jwt = await apnsAuth();

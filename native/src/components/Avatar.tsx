@@ -6,6 +6,7 @@ import { wippSrc } from "../lib/assets";
 import type { MeProfile, User } from "../lib/types";
 import { Users } from "lucide-react-native";
 import { colors, whiteA } from "../theme";
+import { keepPhotoForNotifications } from "../lib/notif-photos";
 
 const signedAvatar = new Map<string, string>();
 
@@ -18,6 +19,7 @@ function useAvatarSource(path?: string) {
     if (!storage || !path) return;
     const cached = signedAvatar.get(path);
     if (cached) {
+      keepPhotoForNotifications(path, cached);
       setUri(cached);
       setUnresolved(false);
       return;
@@ -29,6 +31,7 @@ function useAvatarSource(path?: string) {
       .then(({ signPublicMedia, signPrivateMedia }) => (path.startsWith("groups/") ? signPrivateMedia(path) : signPublicMedia(path)))
       .then((url) => {
         signedAvatar.set(path, url);
+        keepPhotoForNotifications(path, url);
         if (live) setUri(url);
       })
       .catch(() => {

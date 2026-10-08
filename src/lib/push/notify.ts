@@ -47,7 +47,7 @@ export async function sendProfilePush(input: {
   channelId: "messages" | "requests" | "calls";
   /** E2E envelope decrypted on the phone (iOS extension / Android background task). */
   wenc?: Record<string, unknown>;
-  pic?: { url: string; name: string; id: string; group?: string };
+  pic?: { url: string; p?: string; name: string; id: string; group?: string };
 }) {
   if (!(await claimEvent(input.data.eventId))) return { sent: 0, deduped: true as const };
   const data = sanitizePushData(input.data as unknown as Record<string, unknown>);
@@ -221,12 +221,17 @@ export async function notifyChatMessage(input: {
   }
   // Photo on the notification, like WhatsApp: the group's photo in a group, else the sender's.
   const senderName = me[0]?.display_name || (me[0]?.username ? `@${me[0].username}` : "WIPP");
-  const photoUrl = await signedPhoto(groupName ? groupAvatar ?? me[0]?.avatar_url : me[0]?.avatar_url);
-  const pic = groupName
-    ? { url: photoUrl ?? "", name: senderName.slice(0, 64), id: input.senderId, group: groupName.slice(0, 64) || "Groupe" }
-    : photoUrl
-      ? { url: photoUrl, name: senderName.slice(0, 64), id: input.senderId }
-      : undefined;
+  // The phone keeps its own copy of photos it already showed (App Group): the push only names the
+  // storage path `p`. `url` is a fallback when the server can sign (service key set).
+  const photoPath = (groupName ? groupAvatar ?? me[0]?.avatar_url : me[0]?.avatar_url) ?? "";
+  const photoUrl = await signedPhoto(photoPath);
+  const pic = {
+    url: photoUrl ?? "",
+    p: /^(business|profiles|groups)\//.test(photoPath) ? photoPath.slice(0, 200) : "",
+    name: senderName.slice(0, 64),
+    id: input.senderId,
+    ...(groupName ? { group: groupName.slice(0, 64) || "Groupe" } : {}),
+  };
   for (const peer of peers) {
     if (isPresent(input.chatId, peer.profile_id)) continue;
     const flags = await peerFlags(input.chatId, peer.profile_id);

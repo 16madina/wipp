@@ -35,6 +35,13 @@ function infoPlist() {
   <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>NSExtension</key>
   <dict>
+    <key>NSExtensionAttributes</key>
+    <dict>
+      <key>IntentsSupported</key>
+      <array>
+        <string>INSendMessageIntent</string>
+      </array>
+    </dict>
     <key>NSExtensionPointIdentifier</key>
     <string>com.apple.usernotifications.service</string>
     <key>NSExtensionPrincipalClass</key>

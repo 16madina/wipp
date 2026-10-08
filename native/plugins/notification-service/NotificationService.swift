@@ -55,8 +55,16 @@ enum WippPhoto {
       let pic = content.userInfo["wpic"] as? [String: Any],
       let senderId = pic["id"] as? String,
       let name = pic["name"] as? String
-    else { return done(content) }
+    else {
+      note("no wpic")
+      return done(content)
+    }
     let groupName = pic["group"] as? String
+    // 1. The copy the app saved when it showed this photo (no network, works offline).
+    if let path = pic["p"] as? String, !path.isEmpty, let local = localPhoto(path) {
+      note("local photo \(local.count)")
+      return done(apply(content, senderId: senderId, name: name, groupName: groupName, imageData: local))
+    }
     let urlString = (pic["url"] as? String) ?? ""
     guard let url = URL(string: urlString), url.scheme == "https" else {
       return done(apply(content, senderId: senderId, name: name, groupName: groupName, imageData: nil))
@@ -64,7 +72,9 @@ enum WippPhoto {
     var request = URLRequest(url: url, timeoutInterval: 8)
     request.httpMethod = "GET"
     URLSession.shared.dataTask(with: request) { data, response, _ in
-      let ok = (response as? HTTPURLResponse)?.statusCode == 200
+      let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+      note("photo http \(status) bytes \(data?.count ?? 0)")
+      let ok = status == 200
       let image = ok && (data?.count ?? 0) > 0 && (data?.count ?? 0) < 3_000_000 ? data : nil
       done(apply(content, senderId: senderId, name: name, groupName: groupName, imageData: image))
     }.resume()
@@ -95,10 +105,34 @@ enum WippPhoto {
     interaction.direction = .incoming
     interaction.donate(completion: nil)
     do {
-      return try content.updating(from: intent)
+      let updated = try content.updating(from: intent)
+      note("updated ok image=\(image != nil)")
+      return updated
     } catch {
+      note("updating failed \(error.localizedDescription)")
       return content
     }
+  }
+
+  /// Same name as notifPhotoName() in src/lib/notif-photos.ts.
+  static func localPhoto(_ path: String) -> Data? {
+    guard let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.wipp.app") else { return nil }
+    let safe = String(path.map { $0.isASCII && ($0.isLetter || $0.isNumber) ? $0 : "_" }.suffix(120))
+    let file = dir.appendingPathComponent("wpic").appendingPathComponent("\(safe).img")
+    guard let data = try? Data(contentsOf: file), data.count > 0, data.count < 3_000_000 else {
+      note("no local photo for \(safe)")
+      return nil
+    }
+    return data
+  }
+
+  /// Last steps, readable from the Mac (App Group container) to debug a missing photo.
+  static func note(_ line: String) {
+    guard let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.wipp.app") else { return }
+    let file = dir.appendingPathComponent("nse-photo.log")
+    let old = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+    let text = String((old + "\(Date()) \(line)\n").suffix(4000))
+    try? text.write(to: file, atomically: true, encoding: .utf8)
   }
 }
 
