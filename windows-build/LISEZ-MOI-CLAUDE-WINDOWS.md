@@ -230,6 +230,19 @@ Sur iPhone, la notification de message montre la photo de la personne / du group
   2. Dans `notif-photos.ts`, sur Android, enregistrer la copie dans `Paths.document/wpic/` (pas d'App Group).
   3. Dans la tâche de fond Android (`lib/push/android-message.ts`), afficher la notification avec la photo (style « conversation » : MessagingStyle + Person avec icône, via notifee ou le module natif déjà utilisé). Si la copie n'existe pas → notification normale.
 
+## Mise à jour du 2026-10-08 (soir) — tout est sur main, versionCode 7
+
+Déjà fait dans le code partagé (rien à coder, juste construire et tester sur le Samsung) :
+- **Version** : `versionCode 7` (app.json + `android/app/build.gradle`), versionName 1.0.0. L'écran Profil › À propos affiche maintenant la vraie version (« Version 1.0.0 (7) ») via `expo-application`.
+- **Gagne des récompenses** (Profil › Gagne des récompenses) : parrainage par @pseudo, badges bleu (3 amis) / doré (certifié par l'admin), codes d'épinglage d'entreprise, champ « Code d'invitation » à l'inscription, onglet Admin « Parrains ». Côté serveur déjà en ligne (migration 0053).
+- **Badges** : plus de faux badge sur tous les profils ; `components/WippBadge.tsx`.
+- **Stories** : bouton J'aime (cœur), panneau Wippmoji complet, confirmation « Réponse envoyée », barre de progression qui repart à zéro, aperçu de story cliquable dans les conversations.
+- **Onboarding** : 4 vidéos Grok en boucle (`assets/onboarding/*.mp4`, expo-video), boutons dessinés rendus actifs, logo en haut. ⚠️ Vérifier sur Android que les vidéos jouent bien en boucle et sans son, et que les zones « Retour / Suivant » tombent sur les boutons dessinés.
+- **Flèche retour** des écrans de connexion : visible et fonctionnelle.
+- **Explorer** : images des 8 catégories, image pharmacies sur la carte Services, entreprises épinglées en premier.
+
+Toujours à faire côté Android (voir sections plus haut) : deux points gris « reçu » app fermée, photo sur les notifications (MessagingStyle), correction BOOT_COMPLETED déjà dans le code.
+
 ## Rapport à donner à l'utilisatrice
 
 1. Commit récupéré (`git log --oneline -1`)

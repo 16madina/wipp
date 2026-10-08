@@ -1,4 +1,8 @@
+import * as Application from "expo-application";
 import type { Lang, ShopCategory } from "./types";
+
+/** Real installed version, e.g. « Version 1.0.0 (4) » (App Store version + build number). */
+const APP_VERSION = `Version ${Application.nativeApplicationVersion ?? "1.0.0"}${Application.nativeBuildVersion ? ` (${Application.nativeBuildVersion})` : ""}`;
 
 const fr = {
   appName: "Wipp",
@@ -774,7 +778,7 @@ const fr = {
   devicesHelp: "Aide et informations",
   goodVibes: "Good Vibes Only",
   footerTagline: "Plus proches, partout.",
-  appVersion: "Version 1.0.0",
+  appVersion: APP_VERSION,
   inviteReward: "Gagne des récompenses",
   statContacts: "Contacts",
   statGroups: "Groupes",
@@ -1776,7 +1780,7 @@ const en: Record<keyof typeof fr, string> = {
   devicesHelp: "Help & info",
   goodVibes: "Good Vibes Only",
   footerTagline: "Closer, everywhere.",
-  appVersion: "Version 1.0.0",
+  appVersion: APP_VERSION,
   inviteReward: "Earn rewards",
   statContacts: "Contacts",
   statGroups: "Groups",
