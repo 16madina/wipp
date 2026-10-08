@@ -33,7 +33,7 @@ type Hub = "home" | "listings" | "utilities" | "shops" | "lifestyle";
 
 const HUB_BACKGROUNDS = {
   listings: require("../../assets/wipp/media/apt.jpg"),
-  utilities: require("../../assets/wipp/media/chair.jpg"),
+  utilities: require("../../assets/wipp/media/services-hub.jpg"),
   shops: require("../../assets/wipp/media/shop-chen-hero.jpg"),
   lifestyle: require("../../assets/wipp/media/soccer.jpg"),
 } as const;
