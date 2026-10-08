@@ -1010,15 +1010,157 @@ export function DevicesScreen() {
   );
 }
 
+const HELP_FAQ: { q: string; a: string }[] = [
+  {
+    q: "Comment ajouter quelqu’un sur WIPP ?",
+    a: "Trois façons : scanne son QR code WIPP, cherche son @pseudo, ou utilise WIPP Touch en rapprochant vos deux téléphones. Ton numéro de téléphone n’est jamais partagé.",
+  },
+  {
+    q: "Je ne reçois pas le code SMS",
+    a: "Vérifie le pays (l’indicatif) et ton numéro, attends 45 secondes puis touche « Renvoyer le code ». Si rien n’arrive, écris-nous depuis l’onglet Support en indiquant ton pays et ton opérateur.",
+  },
+  {
+    q: "J’ai oublié mon code de verrouillage",
+    a: "Va dans Moi › Paramètres › Confidentialité › Code de verrouillage, puis touche « Code oublié ? ». WIPP te demande Face ID ou le code de ton iPhone pour confirmer que c’est toi, puis tu crées un nouveau code. Même chose pour WIPP Privé.",
+  },
+  {
+    q: "Comment verrouiller une conversation ?",
+    a: "Crée d’abord ton code dans Moi › Paramètres › Confidentialité › Code de verrouillage. Ensuite, fais un appui long sur la conversation dans Chats (ou ⋯ dans la conversation) et choisis Verrouiller. Son contenu et ses notifications sont masqués.",
+  },
+  {
+    q: "J’ai changé de téléphone : où sont mes anciens messages ?",
+    a: "Tes messages sont chiffrés de bout en bout avec une clé qui reste sur ton téléphone. Sur un nouveau téléphone, tes contacts, groupes et ton profil sont là, mais les anciens messages s’affichent « chiffrés pour un autre appareil ». Les nouveaux messages se lisent normalement.",
+  },
+  {
+    q: "Comment changer mon nom ou mon @pseudo ?",
+    a: "Moi › Modifier mon profil. Ton @pseudo peut changer s’il est disponible ; l’ancien est alors libéré et tes anciens liens ou QR code de profil ne marchent plus.",
+  },
+  {
+    q: "Comment créer la page de mon entreprise ?",
+    a: "Moi › Ma carte de visite. Ajoute le nom, la catégorie, la ville, une couverture, un logo, tes photos, horaires, services et réseaux sociaux. Ta page reçoit son propre QR code, différent de ton QR personnel, et les clients t’écrivent dans une conversation « Professionnel » séparée.",
+  },
+  {
+    q: "Comment signaler ou bloquer quelqu’un ?",
+    a: "Dans une conversation, une story, un profil, un groupe, une annonce ou une page d’entreprise, touche ⋯ puis « Signaler » ou « Bloquer ». Un contenu signalé disparaît aussitôt pour toi, et l’équipe WIPP examine chaque signalement.",
+  },
+  {
+    q: "Qui peut voir mes stories ?",
+    a: "Tes contacts, ou seulement tes proches si tu choisis « Proches » au moment de publier. Une story disparaît automatiquement après la durée choisie.",
+  },
+  {
+    q: "Mes messages sont-ils privés ?",
+    a: "Oui. Messages, photos, vidéos, notes vocales et groupes sont chiffrés de bout en bout : même WIPP ne peut pas les lire. Une capture d’écran faite par l’autre personne reste possible.",
+  },
+  {
+    q: "Comment supprimer mon compte ?",
+    a: "Moi › Sécurité › Supprimer mon compte. La suppression est immédiate et définitive.",
+  },
+];
+
+const SUPPORT_TOPICS = [
+  "L’application ne marche pas (bug)",
+  "Fraude ou arnaque",
+  "Harcèlement ou contenu choquant",
+  "Compte, connexion ou code SMS",
+  "Page entreprise",
+  "Confidentialité et données",
+  "Suggestion",
+  "Autre",
+] as const;
+
 export function HelpScreen() {
-  const t = useT();
   const pop = useWippStore((s) => s.pop);
+  const me = useWippStore((s) => s.me);
+  const [tab, setTab] = useState<"help" | "support">("help");
+  const [open, setOpen] = useState<number | null>(null);
+  const [topic, setTopic] = useState<(typeof SUPPORT_TOPICS)[number] | null>(null);
+  const [text, setText] = useState("");
+
+  function chooseTopic() {
+    Alert.alert("Motif", "Pourquoi nous écris-tu ?", [
+      ...SUPPORT_TOPICS.map((x) => ({ text: x, onPress: () => setTopic(x) })),
+      { text: "Annuler", style: "cancel" as const },
+    ]);
+  }
+
+  async function send() {
+    if (!topic) {
+      chooseTopic();
+      return;
+    }
+    if (text.trim().length < 10) {
+      Alert.alert("Support", "Décris ton problème en quelques mots (10 caractères minimum).");
+      return;
+    }
+    const subject = `[WIPP] ${topic}`;
+    const body = [
+      text.trim(),
+      "",
+      "—",
+      `Compte : @${me.username || "?"}`,
+      `Appareil : ${Platform.OS === "ios" ? "iPhone" : Platform.OS === "android" ? "Android" : Platform.OS} ${String(Platform.Version ?? "")}`,
+      "App : WIPP 1.0.0",
+    ].join("\n");
+    const url = `mailto:${LEGAL_CONTACT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert("Support", `Aucune app e-mail n’est configurée sur ce téléphone. Écris-nous à ${LEGAL_CONTACT} avec le sujet « ${subject} ».`);
+    }
+  }
+
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={t("help")} onBack={pop} />
+        <Header title="Aide et support" onBack={pop} />
       </GlassHeader>
-      <Text style={{ padding: 16, color: colors.muted, lineHeight: 20 }}>Contact : {LEGAL_CONTACT}</Text>
+      <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 8 }}>
+        <Chip label="Aide" active={tab === "help"} onPress={() => setTab("help")} />
+        <Chip label="Support" active={tab === "support"} onPress={() => setTab("support")} />
+      </View>
+      {tab === "help" ? (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 8 }}>Questions fréquentes</Text>
+          {HELP_FAQ.map((item, i) => (
+            <Press
+              key={item.q}
+              onPress={() => setOpen((cur) => (cur === i ? null : i))}
+              style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.hair }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Text style={{ flex: 1, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{item.q}</Text>
+                <Text style={{ color: colors.accent, fontSize: 18 }}>{open === i ? "−" : "+"}</Text>
+              </View>
+              {open === i ? <Text style={{ marginTop: 8, color: colors.muted, fontSize: 14, lineHeight: 20 }}>{item.a}</Text> : null}
+            </Press>
+          ))}
+          <Press onPress={() => setTab("support")} style={{ marginTop: 20 }}>
+            <Text style={{ color: colors.accent, fontSize: 14 }}>Tu n’as pas trouvé ta réponse ? Contacte le support ›</Text>
+          </Press>
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+          <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+            Écris à l’équipe WIPP. Nous répondons en général sous 48 heures, à l’adresse depuis laquelle tu envoies l’e-mail.
+          </Text>
+          <View>
+            <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>Motif</Text>
+            <Press
+              onPress={chooseTopic}
+              style={{ minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.hair, backgroundColor: colors.surface, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+            >
+              <Text style={{ color: topic ? colors.fg : colors.muted, fontSize: 15 }}>{topic ?? "Choisis un motif"}</Text>
+              <Text style={{ color: colors.muted, fontSize: 14 }}>▾</Text>
+            </Press>
+          </View>
+          <Field label="Décris le problème" value={text} onChangeText={(v) => setText(v.slice(0, 2000))} multiline placeholder="Que s’est-il passé ? Sur quel écran ? Depuis quand ?" />
+          <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17 }}>
+            Ton @pseudo, le modèle de téléphone et la version de WIPP sont ajoutés automatiquement pour nous aider. N’envoie jamais ton code SMS ni ton code de verrouillage.
+          </Text>
+          <Btn label="Envoyer au support" onPress={() => void send()} />
+          <Text style={{ color: colors.muted, fontSize: 12 }}>Adresse du support : {LEGAL_CONTACT}</Text>
+        </ScrollView>
+      )}
     </ScreenRoot>
   );
 }

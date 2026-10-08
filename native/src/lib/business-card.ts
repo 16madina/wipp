@@ -258,6 +258,14 @@ export async function withSignedCardMedia(card: BusinessCardView): Promise<Busin
   };
 }
 
+async function toUploadJpeg(uri: string, maxWidth: number) {
+  const { manipulateAsync, SaveFormat } = await import("expo-image-manipulator");
+  const first = await manipulateAsync(uri, [], { compress: 0.82, format: SaveFormat.JPEG });
+  if (first.width <= maxWidth) return first.uri;
+  const small = await manipulateAsync(first.uri, [{ resize: { width: maxWidth } }], { compress: 0.82, format: SaveFormat.JPEG });
+  return small.uri;
+}
+
 /** Streams the file. The card row is updated only after this upload succeeds. */
 export async function uploadBusinessImageFile(
   profileId: string,
@@ -267,6 +275,13 @@ export async function uploadBusinessImageFile(
   onProgress?: (sent: number, total: number) => void,
 ) {
   if (!mime.startsWith("image/")) throw new Error("Choisis une image");
+  if (Platform.OS !== "web") {
+    // The bucket accepts JPEG/PNG/WebP up to 8 MB. iPhone photos are often HEIC or a 48 MP JPEG:
+    // they were refused (400, « Envoi de l’image impossible »). Always send a resized JPEG.
+    const prepared = await toUploadJpeg(uri, role === "logo" ? 800 : role === "cover" ? 1800 : 1600);
+    uri = prepared;
+    mime = "image/jpeg";
+  }
   const token = await firebaseIdToken();
   if (!token) throw new Error("Session requise");
   const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
