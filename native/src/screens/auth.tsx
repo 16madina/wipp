@@ -405,7 +405,10 @@ export function SplashScreen() {
 
 /** Grok animations (text cut off: the app writes the title). Slides without one keep the picture. */
 const ONB_VIDEO: Partial<Record<(typeof ONB)[number]["kind"], number>> = {
+  tap: require("../../assets/onboarding/tap.mp4"),
+  globe: require("../../assets/onboarding/globe.mp4"),
   privacy: require("../../assets/onboarding/privacy.mp4"),
+  together: require("../../assets/onboarding/together.mp4"),
 };
 
 function OnbVideo({ source }: { source: number }) {
