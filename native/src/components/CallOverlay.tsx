@@ -397,8 +397,9 @@ export function CallOverlay() {
   const terminal = ["ended", "declined", "missed", "busy", "failed"].includes(session.phase);
 
   if (session.pip && !terminal) {
-    const w = session.kind === "video" ? 132 : 220;
-    const h = session.kind === "video" && remoteUrl ? 176 : 64;
+    const showRemote = Boolean(remoteUrl && !remoteMuted);
+    const w = showRemote ? 132 : 220;
+    const h = showRemote ? 176 : 64;
     // Keep the mini player on screen: start top-right, clamp to the window while dragging.
     const x = pipPos.x.interpolate({ inputRange: [-(win.width - w - 24), 0], outputRange: [-(win.width - w - 24), 0], extrapolate: "clamp" });
     const y = pipPos.y.interpolate({ inputRange: [0, win.height - h - 120], outputRange: [0, win.height - h - 120], extrapolate: "clamp" });
@@ -408,7 +409,7 @@ export function CallOverlay() {
         style={{ position: "absolute", top: 56, right: 12, zIndex: 100, elevation: 100, width: w, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, transform: [{ translateX: x }, { translateY: y }] }}
       >
         <Press onPress={() => patch({ pip: false })}>
-          {session.kind === "video" && remoteUrl && !remoteMuted ? (
+          {showRemote && remoteUrl ? (
             <RTCView streamURL={remoteUrl} style={{ width: 132, height: 176 }} objectFit="cover" zOrder={1} />
           ) : (
             <View style={{ padding: 12 }}>

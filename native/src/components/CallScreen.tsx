@@ -323,11 +323,12 @@ export function CallScreen({
   const localVid = localUrl && video && !session.camOff ? localUrl : null;
   // Group call in progress: mosaic of everyone instead of the 1-to-1 layout.
   const mosaic = Boolean(session.group && (connected || session.phase === "reconnecting") && groupTiles && groupTiles.length > 0);
-  // The remote camera is only shown once the call is accepted and connected.
-  const videoLive = !mosaic && video && connected && !!remoteVid;
+  // Each camera is independent: the other person's video shows as soon as it arrives (even if
+  // mine is off), and my own preview shows as soon as my camera is on (even if theirs is off).
+  const videoLive = !mosaic && connected && (!!remoteVid || !!localVid);
   const flip = swapped && !!remoteVid && !!localVid;
-  const main = videoLive ? (flip ? localVid : remoteVid) : null;
-  const mini = videoLive ? (flip ? remoteVid : localVid) : null;
+  const main = videoLive ? (remoteVid ? (flip ? localVid : remoteVid) : localVid) : null;
+  const mini = videoLive && remoteVid ? (flip ? remoteVid : localVid) : null;
   const status = connected ? formatDuration(sec) : (session.note && terminal ? session.note : c.states[session.phase]);
 
   // On live video, controls fade away after a few seconds; a tap brings them back.
@@ -370,7 +371,7 @@ export function CallScreen({
     <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: BG_BOTTOM }}>
       {main ? (
         <Pressable onPress={showControls} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
-          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={flip} zOrder={0} />
+          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={main === localVid} zOrder={0} />
         </Pressable>
       ) : (
         <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
@@ -445,7 +446,7 @@ export function CallScreen({
       {/* Local camera, floating bottom-right on live video */}
       {mini && !mosaic ? (
         <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.5)", backgroundColor: "#000", shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 10 }}>
-          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={!flip} zOrder={1} />
+          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={mini === localVid} zOrder={1} />
         </Press>
       ) : null}
 
@@ -478,9 +479,15 @@ export function CallScreen({
               <RoundAction label={c.mic} a11y={session.muted ? c.a11y.unmute : c.a11y.mute} active={session.muted} translucent={videoLive} onPress={() => patch({ muted: !session.muted })}>
                 {session.muted ? <MicOff size={22} color={GOLD} /> : <Mic size={22} color="#fff" />}
               </RoundAction>
-              {video ? (
-                <RoundAction label={c.camera} a11y={session.camOff ? c.a11y.camOn : c.a11y.camOff} active={session.camOff} translucent={videoLive} onPress={() => patch({ camOff: !session.camOff })}>
-                  {session.camOff ? <VideoOff size={22} color={GOLD} /> : <Video size={22} color="#fff" />}
+              {video || (connected && !session.group) ? (
+                <RoundAction
+                  label={c.camera}
+                  a11y={!video || session.camOff ? c.a11y.camOn : c.a11y.camOff}
+                  active={!video || session.camOff}
+                  translucent={videoLive}
+                  onPress={() => (video ? patch({ camOff: !session.camOff }) : void upgradeToVideo())}
+                >
+                  {!video || session.camOff ? <VideoOff size={22} color={GOLD} /> : <Video size={22} color="#fff" />}
                 </RoundAction>
               ) : null}
               <RoundAction label={c.speaker} a11y={session.speaker ? c.a11y.speakerOff : c.a11y.speakerOn} active={session.speaker} translucent={videoLive} onPress={() => patch({ speaker: !session.speaker })}>
