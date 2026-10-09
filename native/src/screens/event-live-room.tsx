@@ -128,6 +128,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           const meta = roleOf(p);
           return {
             identity: p.identity,
+            pid: meta.pid,
+            local: p === room.localParticipant,
             name: p.name || "WIPP",
             avatar: meta.av,
             url: cam?.track && !cam.isMuted ? streamURL(cam.track) : null,
@@ -489,6 +491,29 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]);
   }
 
+  /** Organizer: the « ⋯ » on a speaker's video. Rights are taken back by the server (never turned on remotely). */
+  function speakerMenu(t: StageTile) {
+    const pid = t.pid ?? st.stage?.speakers.find((x) => x.identity === t.identity)?.pid;
+    if (!pid) return;
+    const info = st.stage?.speakers.find((x) => x.pid === pid);
+    const featured = st.stage?.featured === t.identity;
+    Alert.alert(t.name, "Intervenant sur scène", [
+      { text: featured ? "Revenir à la grille" : "Mettre en avant", onPress: () => void stage({ action: "feature", identity: featured ? null : t.identity }) },
+      { text: info?.micRevoked ? "Rendre le micro" : "Couper le micro", onPress: () => void stage({ action: "media", pid, micRevoked: !info?.micRevoked }) },
+      { text: info?.camRevoked ? "Rendre la caméra" : "Couper la caméra", onPress: () => void stage({ action: "media", pid, camRevoked: !info?.camRevoked }) },
+      {
+        text: "Retirer de la scène",
+        style: "destructive",
+        onPress: () =>
+          Alert.alert("Retirer de la scène", `${t.name} redeviendra spectateur. Son micro et sa caméra seront coupés.`, [
+            { text: "Annuler", style: "cancel" },
+            { text: "Retirer", style: "destructive", onPress: () => void stage({ action: "leave", pid }) },
+          ]),
+      },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
+
   function flipCamera() {
     const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as unknown as { mediaStreamTrack?: { _switchCamera?: () => void } } | undefined;
     track?.mediaStreamTrack?._switchCamera?.();
@@ -581,7 +606,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {tiles.some((t) => t.url) || tiles.length > 1 ? (
-        <StageGrid tiles={tiles} featured={st.stage?.featured ?? null} topInset={insets.top} />
+        <StageGrid tiles={tiles} featured={st.stage?.featured ?? null} topInset={insets.top} onMenu={isOrganizer ? speakerMenu : undefined} />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15, lineHeight: 21 }}>

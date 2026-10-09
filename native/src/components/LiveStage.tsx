@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Hand, Maximize2, Mic, MicOff, Minimize2, UserMinus, Video, VideoOff, X } from "lucide-react-native";
+import { Hand, Maximize2, Mic, MicOff, Minimize2, MoreHorizontal, UserMinus, Video, VideoOff, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { errorText } from "../lib/error-fr";
@@ -14,7 +14,7 @@ import type { LiveStage, StagePerson } from "../lib/event-live";
 const GOLD = "#d4a017";
 const RTCView = Platform.OS === "web" ? View : (require("@livekit/react-native-webrtc") as typeof import("@livekit/react-native-webrtc")).RTCView;
 
-export type StageTile = { identity: string; name: string; avatar?: string; url: string | null; mirror: boolean; micOn: boolean; speaking: boolean; organizer: boolean };
+export type StageTile = { identity: string; pid?: string; name: string; avatar?: string; url: string | null; mirror: boolean; micOn: boolean; speaking: boolean; organizer: boolean; local?: boolean };
 
 export function useLiveStage(eventId: string) {
   const [stage, setStage] = useState<LiveStage | null>(null);
@@ -44,17 +44,18 @@ export function useLiveStage(eventId: string) {
 }
 
 /** 1 = full screen · 2 = split · 3 = one wide + two · 4 = 2 × 2 · featured = big + thumbnails. */
-export function StageGrid({ tiles, featured, topInset }: { tiles: StageTile[]; featured: string | null; topInset: number }) {
+/** onMenu: organizer only — the « ⋯ » on each speaker's video. */
+export function StageGrid({ tiles, featured, topInset, onMenu }: { tiles: StageTile[]; featured: string | null; topInset: number; onMenu?: (t: StageTile) => void }) {
   if (!tiles.length) return null;
   const big = featured ? tiles.find((t) => t.identity === featured) : undefined;
   if (big && tiles.length > 1) {
     const minis = tiles.filter((t) => t !== big);
     return (
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-        <Tile t={big} style={{ flex: 1 }} />
+        <Tile t={big} style={{ flex: 1 }} onMenu={onMenu} topInset={topInset} />
         <View style={{ position: "absolute", top: topInset + 100, right: 10, gap: 8 }}>
           {minis.map((t) => (
-            <Tile key={t.identity} t={t} style={{ width: 92, height: 124, borderRadius: 12, overflow: "hidden" }} small />
+            <Tile key={t.identity} t={t} style={{ width: 92, height: 124, borderRadius: 12, overflow: "hidden" }} small onMenu={onMenu} />
           ))}
         </View>
       </View>
@@ -67,7 +68,7 @@ export function StageGrid({ tiles, featured, topInset }: { tiles: StageTile[]; f
       {rows.map((row, i) => (
         <View key={i} style={{ flex: 1, flexDirection: "row", gap: 2 }}>
           {row.map((t) => (
-            <Tile key={t.identity} t={t} style={{ flex: 1 }} label={n > 1} />
+            <Tile key={t.identity} t={t} style={{ flex: 1 }} label={n > 1} onMenu={onMenu} topInset={i === 0 ? topInset : 0} />
           ))}
         </View>
       ))}
@@ -75,7 +76,9 @@ export function StageGrid({ tiles, featured, topInset }: { tiles: StageTile[]; f
   );
 }
 
-function Tile({ t, style, small, label = true }: { t: StageTile; style: object; small?: boolean; label?: boolean }) {
+function Tile({ t, style, small, label = true, onMenu, topInset = 0 }: { t: StageTile; style: object; small?: boolean; label?: boolean; onMenu?: (t: StageTile) => void; topInset?: number }) {
+  // The organizer's own video has no menu (he controls himself with the bar).
+  const menu = onMenu && !t.organizer && !t.local;
   return (
     <View style={[{ backgroundColor: "#0b0f1a", borderWidth: t.speaking ? 2 : 0, borderColor: GOLD }, style]}>
       {t.url ? (
@@ -87,13 +90,24 @@ function Tile({ t, style, small, label = true }: { t: StageTile; style: object; 
         </View>
       )}
       {label ? (
-        <View style={{ position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.55)", maxWidth: "90%" }}>
-          {t.micOn ? <Mic size={11} color="#fff" /> : <MicOff size={11} color="#ff6b6b" />}
-          <Text numberOfLines={1} style={{ color: "#fff", fontSize: small ? 10 : 12, fontFamily: "Inter_600SemiBold" }}>
+        <View style={{ position: "absolute", left: 8, bottom: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 3, paddingRight: 9, paddingVertical: 3, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", maxWidth: "88%" }}>
+          {!small ? <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={22} /> : null}
+          {t.micOn ? <Mic size={12} color="#fff" /> : <MicOff size={12} color="#ff6b6b" />}
+          <Text numberOfLines={1} style={{ color: "#fff", fontSize: small ? 10 : 13, fontFamily: "Inter_600SemiBold" }}>
             {t.name}
-            {t.organizer && !small ? " · organisateur" : ""}
+            {!small ? (t.organizer ? " · organisateur" : " · intervenant") : ""}
           </Text>
         </View>
+      ) : null}
+      {menu ? (
+        <Press
+          accessibilityLabel={`Options pour ${t.name}`}
+          onPress={() => onMenu!(t)}
+          hitSlop={8}
+          style={{ position: "absolute", right: 8, top: small ? 6 : topInset ? topInset + 54 : 8, // below the live top bar on the upper video width: small ? 28 : 34, height: small ? 28 : 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
+        >
+          <MoreHorizontal size={small ? 14 : 18} color="#fff" />
+        </Press>
       ) : null}
     </View>
   );
@@ -160,6 +174,19 @@ export function StageSheet({
             <X size={20} color="#fff" />
           </Press>
         </View>
+        {stage?.speakers.length ? (
+          <Press
+            onPress={() =>
+              Alert.alert("Revenir au mode Conférence", "Tous les intervenants redescendront parmi les spectateurs. Leur micro et leur caméra seront coupés.", [
+                { text: "Annuler", style: "cancel" },
+                { text: "Revenir au mode Conférence", style: "destructive", onPress: () => void act({ action: "mode", mode: "conference" }) },
+              ])
+            }
+            style={{ marginTop: 12, height: 46, borderRadius: 14, backgroundColor: "rgba(229,56,59,0.15)", borderWidth: 1, borderColor: "#e5383b", alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ color: "#ff6b6b", fontFamily: "Inter_700Bold" }}>Revenir au mode Conférence</Text>
+          </Press>
+        ) : null}
         <ScrollView>
           <Section title={`Demandes de parole (${stage?.hands.length ?? 0})`}>
             {!stage?.hands.length ? <Empty text="Aucune main levée." /> : null}
@@ -212,11 +239,7 @@ export function StageSheet({
           <Press onPress={onInviteSomeone} disabled={!stage?.freeSeats} style={{ marginTop: 14, height: 44, borderRadius: 14, borderWidth: 1, borderColor: GOLD, alignItems: "center", justifyContent: "center", opacity: stage?.freeSeats ? 1 : 0.4 }}>
             <Text style={{ color: GOLD, fontFamily: "Inter_600SemiBold" }}>{stage?.freeSeats ? "Inviter un participant" : "La scène est complète"}</Text>
           </Press>
-          {stage?.mode === "interactive" ? (
-            <Press onPress={() => void act({ action: "mode", mode: "conference" })} style={{ marginTop: 10, alignSelf: "center", padding: 8 }}>
-              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>Revenir au mode Conférence (tout le monde redescend)</Text>
-            </Press>
-          ) : null}
+
         </ScrollView>
       </View>
     </View>
