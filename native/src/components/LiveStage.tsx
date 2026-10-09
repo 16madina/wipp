@@ -104,7 +104,7 @@ function Tile({ t, style, small, label = true, onMenu, topInset = 0 }: { t: Stag
           accessibilityLabel={`Options pour ${t.name}`}
           onPress={() => onMenu!(t)}
           hitSlop={8}
-          style={{ position: "absolute", right: 8, top: small ? 6 : topInset ? topInset + 54 : 8, // below the live top bar on the upper video width: small ? 28 : 34, height: small ? 28 : 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
+          style={{ position: "absolute", right: 8, top: small ? 6 : topInset ? topInset + 54 : 8, width: small ? 28 : 34, height: small ? 28 : 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
         >
           <MoreHorizontal size={small ? 14 : 18} color="#fff" />
         </Press>
