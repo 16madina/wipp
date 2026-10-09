@@ -13,6 +13,7 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Eye, EyeOff, Flag, Heart, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
+import { Avatar } from "../components/Avatar";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
@@ -42,7 +43,7 @@ const EMOJI = Object.fromEntries(LIVE_REACTIONS.map((r) => [r.code, r.emoji])) a
 
 type Comment = { id: string; name: string; text: string; pid?: string; identity: string };
 type Floater = { id: number; emoji: string; x: number; anim: Animated.Value };
-type Person = { identity: string; name: string; role: string; pid?: string };
+type Person = { identity: string; name: string; role: string; pid?: string; av?: string };
 
 const COMMENT_MAX = 200;
 const COMMENT_GAP_MS = 2000; // anti-spam (the server enforces it too)
@@ -50,7 +51,7 @@ const REACTION_GAP_MS = 350;
 
 function roleOf(p: Participant) {
   try {
-    return (JSON.parse(p.metadata || "{}") as { role?: string; pid?: string }) ?? {};
+    return (JSON.parse(p.metadata || "{}") as { role?: string; pid?: string; av?: string }) ?? {};
   } catch {
     return {};
   }
@@ -76,6 +77,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [camOn, setCamOn] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const lastComment = useRef(0);
+  const camWanted = useRef(false);
+  const micWanted = useRef(false);
   const lastReaction = useRef(0);
   const claps = useRef<number[]>([]);
   const floaterId = useRef(0);
@@ -94,7 +97,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       setPeople(
         all.map((p) => {
           const meta = roleOf(p);
-          return { identity: p.identity, name: p.name || "WIPP", role: meta.role ?? "viewer", pid: meta.pid };
+          return { identity: p.identity, name: p.name || "WIPP", role: meta.role ?? "viewer", pid: meta.pid, av: meta.av };
         }),
       );
       // Stage: the organizer's camera (or any speaker publishing a camera).
@@ -119,8 +122,40 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     }
     room.on(RoomEvent.Reconnecting, () => !cancelled && setPhase("reconnecting"));
     room.on(RoomEvent.Reconnected, () => !cancelled && setPhase("connected"));
-    room.on(RoomEvent.Disconnected, () => {
-      if (!cancelled) setPhase("ended");
+    // Connection fully lost (not just a short cut LiveKit resumes by itself): ask the server whether the
+    // live is still on and come back with a fresh token. Only a real end shows « terminé ».
+    room.on(RoomEvent.Disconnected, (reason) => {
+      if (cancelled) return;
+      void (async () => {
+        const { getLive, liveToken } = await import("../lib/event-live");
+        for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
+          try {
+            const info = await getLive(eventId);
+            if (info.state !== "live" || info.myStatus === "banned") break;
+            setPhase("reconnecting");
+            const tok = await liveToken(eventId);
+            await room.connect(tok.url, tok.token);
+            if (cancelled) return;
+            setPhase("connected");
+            refresh();
+            const pubs = tok.role === "organizer" || tok.role === "speaker";
+            if (pubs && camWanted.current) await room.localParticipant.setCameraEnabled(true).catch(() => undefined);
+            if (pubs && micWanted.current) await room.localParticipant.setMicrophoneEnabled(true).catch(() => undefined);
+            return;
+          } catch (err) {
+            // Excluded or no longer allowed: stop trying.
+            if ((err as { status?: number }).status === 403) {
+              setFailNote("L’organisateur t’a retiré(e) de ce direct.");
+              setPhase("failed");
+              return;
+            }
+            setPhase("reconnecting");
+            await new Promise((ok) => setTimeout(ok, 3000 + attempt * 2000));
+          }
+        }
+        if (!cancelled) setPhase("ended");
+        void reason;
+      })();
     });
     room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
       if (topic && topic !== "wipp-live") return;
@@ -177,6 +212,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               await room.localParticipant.setMicrophoneEnabled(true);
               setCamOn(true);
               setMicOn(true);
+              camWanted.current = true;
+              micWanted.current = true;
             } catch {
               Alert.alert("Direct", "Autorise la caméra et le micro pour WIPP dans les réglages du téléphone.");
             }
@@ -496,14 +533,20 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 <BarButton label={micOn ? "Micro" : "Micro coupé"} onPress={() => {
                   const room = roomRef.current;
                   if (!room) return;
-                  void room.localParticipant.setMicrophoneEnabled(!micOn).then(() => setMicOn(!micOn));
+                  void room.localParticipant.setMicrophoneEnabled(!micOn).then(() => {
+                    micWanted.current = !micOn;
+                    setMicOn(!micOn);
+                  });
                 }}>
                   {micOn ? <Mic size={20} color="#fff" /> : <MicOff size={20} color="#ff6b6b" />}
                 </BarButton>
                 <BarButton label={camOn ? "Caméra" : "Caméra off"} onPress={() => {
                   const room = roomRef.current;
                   if (!room) return;
-                  void room.localParticipant.setCameraEnabled(!camOn).then(() => setCamOn(!camOn));
+                  void room.localParticipant.setCameraEnabled(!camOn).then(() => {
+                    camWanted.current = !camOn;
+                    setCamOn(!camOn);
+                  });
                 }}>
                   {camOn ? <Video size={20} color="#fff" /> : <VideoOff size={20} color="#ff6b6b" />}
                 </BarButton>
@@ -553,8 +596,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 }}
                 style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}
               >
-                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "#1b2133", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: item.role === "organizer" ? colors.accent : "transparent" }}>
-                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>{(item.name || "?").slice(0, 1).toUpperCase()}</Text>
+                <View style={{ borderRadius: 20, borderWidth: 1.5, borderColor: item.role === "organizer" ? colors.accent : "transparent" }}>
+                  <Avatar user={{ displayName: item.name, avatar: item.av }} size={38} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{item.name}</Text>

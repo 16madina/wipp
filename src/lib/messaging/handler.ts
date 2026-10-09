@@ -541,7 +541,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
       if (method === "POST" && c === "start") return json(await live.startEventLive(me.id, eventId));
       if (method === "POST" && c === "end") return json(await live.endEventLive(me.id, eventId, false));
       if (method === "POST" && c === "cancel") return json(await live.endEventLive(me.id, eventId, true));
-      if (method === "POST" && c === "token") return json(await live.eventLiveToken(me.id, eventId, me.displayName || me.username));
+      if (method === "POST" && c === "token") return json(await live.eventLiveToken(me.id, eventId, me.displayName || me.username, me.avatarUrl));
       if (method === "POST" && c === "settings") {
         const body = await readBody<{ commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean }>(request);
         return json(await live.setEventLiveSettings(me.id, eventId, body));

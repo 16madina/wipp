@@ -253,7 +253,7 @@ export async function endEventLive(meId: string, eventId: string, cancel = false
 }
 
 /** Short-lived token for the live room. The role decides what LiveKit lets the person do. */
-export async function eventLiveToken(meId: string, eventId: string, displayName: string) {
+export async function eventLiveToken(meId: string, eventId: string, displayName: string, avatar?: string | null) {
   const live = await loadLive(eventId);
   await assertCanSee(live, meId);
   const isOwner = live.owner_id === meId;
@@ -277,7 +277,7 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
     name: displayName.slice(0, 60) || "WIPP",
     ttl: "15m",
     // pid: lets others report this person (WIPP profile id, never a phone number).
-    metadata: JSON.stringify({ role: isOwner ? "organizer" : speaker ? "speaker" : "viewer", pid: meId }),
+    metadata: JSON.stringify({ role: isOwner ? "organizer" : speaker ? "speaker" : "viewer", pid: meId, av: avatar && avatar.length < 300 ? avatar : undefined }),
   });
   at.addGrant({
     roomJoin: true,
