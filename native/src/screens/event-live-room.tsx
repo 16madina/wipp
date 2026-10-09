@@ -11,11 +11,12 @@ import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, MonitorUp, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
+import { ScreenPicker, ScreenStage, SharingBanner, type ScreenShare } from "../components/LiveScreenShare";
 import { StageGrid, StageInviteCard, StageSheet, stageHeight, useLiveStage, type StageLayout, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
@@ -69,6 +70,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [failNote, setFailNote] = useState("");
   // Étape C: everyone on stage (organizer + speakers), laid out by StageGrid.
   const [tiles, setTiles] = useState<StageTile[]>([]);
+  // Étape D: the shared screen (one at a time), if any.
+  const [screen, setScreen] = useState<ScreenShare | null>(null);
+  const pickerRef = useRef<{ open: () => Promise<void> } | null>(null);
+  const wasSharing = useRef(false);
   const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
   const st = useLiveStage(eventId);
   const handToast = useRef<Set<string>>(new Set());
@@ -144,6 +149,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           };
         }),
       );
+      // Screen share: a separate track; whoever publishes one is shown big (only the host can).
+      const sharer = all.find((p) => p.getTrackPublication(Track.Source.ScreenShare)?.track);
+      const sp = sharer?.getTrackPublication(Track.Source.ScreenShare);
+      setScreen(sharer && sp?.track && !sp.isMuted ? { url: streamURL(sp.track), identity: sharer.identity, local: sharer === room.localParticipant } : null);
       // My own role follows what the server wrote in my LiveKit metadata (taken down → viewer at once).
       const mine = roleOf(room.localParticipant).role;
       if (mine === "organizer" || mine === "speaker" || mine === "viewer") setMyRole(mine);
@@ -250,6 +259,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     })();
     return () => {
       cancelled = true;
+      void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
       void room.disconnect();
       if (Platform.OS !== "web") void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
     };
@@ -562,6 +572,55 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]);
   }
 
+  /** Host: explain, then the iOS system sheet (« Démarrer la diffusion »), then publish the screen. */
+  function startScreenShare() {
+    if (Platform.OS !== "ios") {
+      Alert.alert("Partage d’écran", "Le partage d’écran arrive bientôt sur Android. Il fonctionne sur iPhone.");
+      return;
+    }
+    Alert.alert(
+      "Partager ton écran",
+      "Tout ce qui s’affiche sur ton écran sera visible par les spectateurs : présentation, site, app… et aussi tes notifications. Pense à activer « Ne pas déranger ». Rien n’est enregistré.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Continuer",
+          onPress: () => {
+            void (async () => {
+              const room = roomRef.current;
+              if (!room) return;
+              try {
+                await pickerRef.current?.open();
+                // WIPP opens its side; the extension connects once the user taps « Démarrer la diffusion ».
+                await room.localParticipant.setScreenShareEnabled(true);
+                wasSharing.current = true;
+              } catch (err) {
+                Alert.alert("Partage d’écran", errorText(err, "Le partage d’écran n’a pas pu démarrer. Tu peux réessayer, le direct continue."));
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
+  async function stopScreenShare() {
+    wasSharing.current = false;
+    await roomRef.current?.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+  }
+
+  // Sharing stopped by iOS (red bar, control centre, interruption): tell the host, the live goes on.
+  useEffect(() => {
+    if (!isOrganizer) return;
+    const mine = screen?.local ?? false;
+    if (!mine && wasSharing.current) {
+      wasSharing.current = false;
+      setToast("Partage d’écran arrêté");
+      setTimeout(() => setToast(null), 2500);
+    }
+    if (mine) wasSharing.current = true;
+  }, [screen?.local, isOrganizer]);
+
   function flipCamera() {
     const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as unknown as { mediaStreamTrack?: { _switchCamera?: () => void } } | undefined;
     track?.mediaStreamTrack?._switchCamera?.();
@@ -643,10 +702,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   // « Invités intégrés »: the host is full screen (like alone), guests float on top, comments float too.
   // « Invités intégrés »: the host is full screen (whole phone), guests float top right, comments float over the video.
   const fullHost = tiles.length >= 3 && layoutPick === "inset" && !featuredOn;
-  const multi = tiles.length > 1 && !fullHost;
+  const sharing = Boolean(screen);
+  const multi = (tiles.length > 1 && !fullHost) || sharing;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
   const spotlightH = qa.data?.spotlight ? 150 : 0;
-  const stageH = fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
+  const stageH = sharing ? Math.round(stageHeight(win.height, controlsH) * 1.12) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
   const box = multi ? { bottom: stageH } : null;
   const commentsMax = box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
   const layout: StageLayout = layoutPick;
@@ -668,7 +728,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
-      {tiles.some((t) => t.url) || tiles.length > 1 ? (
+      {screen ? (
+        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} />
+      ) : tiles.some((t) => t.url) || tiles.length > 1 ? (
         <StageGrid
           tiles={tiles}
           featured={st.stage?.featured ?? null}
@@ -770,6 +832,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         ))}
       </View>
       <ClapWave wave={clapWave} />
+      <ScreenPicker ref={pickerRef} />
+      {screen?.local ? <SharingBanner top={insets.top + 46} onStop={() => void stopScreenShare()} /> : null}
       {hostGone && !isOrganizer ? (
         <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: 24, right: 24, alignItems: "center" }}>
           <View style={{ paddingHorizontal: 18, paddingVertical: 14, borderRadius: 18, backgroundColor: "rgba(6,10,24,0.9)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)" }}>
@@ -1006,6 +1070,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <ScrollView>
             {isOrganizer ? (
               <>
+                <Press
+                  onPress={() => {
+                    setSheet("none");
+                    if (screen?.local) void stopScreenShare();
+                    else startScreenShare();
+                  }}
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}
+                >
+                  <MonitorUp size={18} color="#d4a017" />
+                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>{screen?.local ? "Arrêter le partage d’écran" : "Partager l’écran"}</Text>
+                </Press>
                 <Press onPress={() => setSheet("stage")} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                   <Hand size={18} color="#d4a017" />
                   <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>Scène et demandes de parole</Text>
