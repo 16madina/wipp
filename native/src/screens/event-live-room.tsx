@@ -16,7 +16,7 @@ import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
-import { ScreenPicker, ScreenStage, SharingBanner, type ScreenShare } from "../components/LiveScreenShare";
+import { ScreenFullscreen, ScreenPicker, ScreenStage, SharingBanner, type ScreenShare } from "../components/LiveScreenShare";
 import { StageGrid, StageInviteCard, StageSheet, stageHeight, useLiveStage, type StageLayout, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
@@ -74,6 +74,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [screen, setScreen] = useState<ScreenShare | null>(null);
   const pickerRef = useRef<{ open: () => Promise<void> } | null>(null);
   const wasSharing = useRef(false);
+  const [screenFull, setScreenFull] = useState(false);
   const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
   const st = useLiveStage(eventId);
   const handToast = useRef<Set<string>>(new Set());
@@ -152,7 +153,13 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       // Screen share: a separate track; whoever publishes one is shown big (only the host can).
       const sharer = all.find((p) => p.getTrackPublication(Track.Source.ScreenShare)?.track);
       const sp = sharer?.getTrackPublication(Track.Source.ScreenShare);
-      setScreen(sharer && sp?.track && !sp.isMuted ? { url: streamURL(sp.track), identity: sharer.identity, local: sharer === room.localParticipant } : null);
+      // Real size of the received track (to check the text is sharp, not an enlarged small image).
+      const dims = (sp as unknown as { dimensions?: { width: number; height: number } } | undefined)?.dimensions;
+      setScreen(
+        sharer && sp?.track && !sp.isMuted
+          ? { url: streamURL(sp.track), identity: sharer.identity, local: sharer === room.localParticipant, width: dims?.width, height: dims?.height }
+          : null,
+      );
       // My own role follows what the server wrote in my LiveKit metadata (taken down → viewer at once).
       const mine = roleOf(room.localParticipant).role;
       if (mine === "organizer" || mine === "speaker" || mine === "viewer") setMyRole(mine);
@@ -609,6 +616,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     await roomRef.current?.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
   }
 
+  // The sharing ended: leave the viewer's full-screen view by itself.
+  useEffect(() => {
+    if (!screen) setScreenFull(false);
+  }, [screen]);
+
   // Sharing stopped by iOS (red bar, control centre, interruption): tell the host, the live goes on.
   useEffect(() => {
     if (!isOrganizer) return;
@@ -706,7 +718,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const multi = (tiles.length > 1 && !fullHost) || sharing;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
   const spotlightH = qa.data?.spotlight ? 150 : 0;
-  const stageH = sharing ? Math.round(stageHeight(win.height, controlsH) * 1.12) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
+  // Sharing: the screen takes ~70 % of the phone (comments, questions and reactions stay below).
+  const stageH = sharing ? Math.round(Math.min(win.height * 0.7, win.height - controlsH - 110)) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
   const box = multi ? { bottom: stageH } : null;
   const commentsMax = box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
   const layout: StageLayout = layoutPick;
@@ -729,7 +742,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {screen ? (
-        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} />
+        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} onFullscreen={() => setScreenFull(true)} />
       ) : tiles.some((t) => t.url) || tiles.length > 1 ? (
         <StageGrid
           tiles={tiles}
@@ -833,6 +846,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       </View>
       <ClapWave wave={clapWave} />
       <ScreenPicker ref={pickerRef} />
+      {screen && screenFull && !screen.local ? <ScreenFullscreen screen={screen} onClose={() => setScreenFull(false)} /> : null}
       {screen?.local ? <SharingBanner top={insets.top + 46} onStop={() => void stopScreenShare()} /> : null}
       {hostGone && !isOrganizer ? (
         <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: 24, right: 24, alignItems: "center" }}>

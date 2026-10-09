@@ -5,8 +5,9 @@
  * Viewers: the shared screen is the main area, the host's camera (and the other speakers) as thumbnails.
  */
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { findNodeHandle, NativeModules, Platform, Text, View } from "react-native";
-import { MonitorUp, X } from "lucide-react-native";
+import { findNodeHandle, NativeModules, Platform, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Maximize2, MonitorUp, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import type { StageTile } from "./LiveStage";
@@ -16,7 +17,7 @@ const native = Platform.OS === "web" ? null : (require("@livekit/react-native-we
 const RTCView = native ? native.RTCView : View;
 const PickerView = native ? native.ScreenCapturePickerView : null;
 
-export type ScreenShare = { url: string | null; identity: string; local: boolean };
+export type ScreenShare = { url: string | null; identity: string; local: boolean; width?: number; height?: number };
 
 /** Hidden iOS system picker; `open()` shows « Démarrer la diffusion ». */
 export const ScreenPicker = forwardRef<{ open: () => Promise<void> }>(function ScreenPicker(_props, ref) {
@@ -35,15 +36,62 @@ export const ScreenPicker = forwardRef<{ open: () => Promise<void> }>(function S
   return <Picker ref={pickerRef} style={{ position: "absolute", width: 1, height: 1, opacity: 0, left: -10, top: -10 }} />;
 });
 
-/** The shared screen as the main area of the stage, the people on stage as small thumbnails. */
-export function ScreenStage({ screen, tiles, width, stageH, topSafe }: { screen: ScreenShare; tiles: StageTile[]; width: number; stageH: number; topSafe: number }) {
-  // Host first, then the other speakers.
+/** The received video, zoomable with two fingers (iOS), never stretched. */
+function ZoomableScreen({ url, style }: { url: string; style: object }) {
+  return (
+    <ScrollView
+      style={style}
+      contentContainerStyle={{ flexGrow: 1 }}
+      maximumZoomScale={4}
+      minimumZoomScale={1}
+      bouncesZoom
+      centerContent
+      showsHorizontalScrollIndicator={false}
+      showsVerticalScrollIndicator={false}
+    >
+      <RTCView streamURL={url} style={{ flex: 1 }} objectFit="contain" zOrder={0} />
+    </ScrollView>
+  );
+}
+
+function Quality({ screen }: { screen: ScreenShare }) {
+  if (!screen.width || !screen.height) return null;
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", left: 8, bottom: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.55)" }}>
+      <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 10 }}>
+        {screen.width} × {screen.height}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * The shared screen uses the WHOLE stage (full width, from under the top bar to the bottom of the stage);
+ * the people on stage float as a small column on the side (over the empty margins of a portrait screen).
+ */
+export function ScreenStage({
+  screen,
+  tiles,
+  width,
+  stageH,
+  topSafe,
+  onFullscreen,
+}: {
+  screen: ScreenShare;
+  tiles: StageTile[];
+  width: number;
+  stageH: number;
+  topSafe: number;
+  onFullscreen?: () => void;
+}) {
   const people = [...tiles].sort((a, b) => Number(b.organizer) - Number(a.organizer)).slice(0, 5);
-  const thumbW = 72;
-  const thumbH = 96;
+  const top = topSafe + 46;
+  const areaH = stageH - top;
+  const thumbW = 58;
+  const thumbH = 78;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, width, height: stageH, backgroundColor: "#000" }}>
-      <View style={{ position: "absolute", top: topSafe + 50, left: 0, right: 0, bottom: thumbH + 16 }}>
+      <View style={{ position: "absolute", top, left: 0, width, height: areaH }}>
         {screen.local ? (
           // The host does not watch his own screen (it would mirror itself endlessly).
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -54,32 +102,71 @@ export function ScreenStage({ screen, tiles, width, stageH, topSafe }: { screen:
             </Text>
           </View>
         ) : screen.url ? (
-          <RTCView streamURL={screen.url} style={{ flex: 1 }} objectFit="contain" zOrder={0} />
+          <>
+            <ZoomableScreen url={screen.url} style={{ flex: 1 }} />
+            <Quality screen={screen} />
+            {onFullscreen ? (
+              <Press
+                accessibilityLabel="Plein écran"
+                onPress={onFullscreen}
+                hitSlop={8}
+                style={{ position: "absolute", top: 8, left: 8, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.6)" }}
+              >
+                <Maximize2 size={14} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Plein écran</Text>
+              </Press>
+            ) : null}
+          </>
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: "rgba(255,255,255,0.6)" }}>Chargement du partage…</Text>
           </View>
         )}
-      </View>
-      <View style={{ position: "absolute", left: 10, right: 10, bottom: 8, height: thumbH, flexDirection: "row", gap: 6, justifyContent: "flex-end" }}>
-        {people.map((t) => (
-          <View key={t.identity} style={{ width: thumbW, height: thumbH, borderRadius: 12, overflow: "hidden", backgroundColor: "#111727", borderWidth: t.speaking ? 2 : 1, borderColor: t.speaking ? GOLD : "rgba(212,160,23,0.45)" }}>
-            {t.url ? (
-              <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={1} />
-            ) : (
-              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={34} />
+        {/* People on stage: small floating column on the right, over the side margins. */}
+        <View pointerEvents="none" style={{ position: "absolute", right: 6, bottom: 8, gap: 6 }}>
+          {people.map((t) => (
+            <View key={t.identity} style={{ width: thumbW, height: thumbH, borderRadius: 10, overflow: "hidden", backgroundColor: "#111727", borderWidth: t.speaking ? 2 : 1, borderColor: t.speaking ? GOLD : "rgba(212,160,23,0.45)" }}>
+              {t.url ? (
+                <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={1} />
+              ) : (
+                <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                  <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={28} />
+                </View>
+              )}
+              <View style={{ position: "absolute", left: 2, right: 2, bottom: 2, paddingHorizontal: 3, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.6)" }}>
+                <Text numberOfLines={1} style={{ color: "#fff", fontSize: 8, fontFamily: "Inter_600SemiBold" }}>
+                  {t.organizer ? "HOST" : t.name}
+                </Text>
               </View>
-            )}
-            <View style={{ position: "absolute", left: 3, right: 3, bottom: 3, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.6)" }}>
-              <Text numberOfLines={1} style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>
-                {t.name}
-                {t.organizer ? " · HOST" : ""}
-              </Text>
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
+    </View>
+  );
+}
+
+/** Viewer « Plein écran »: the shared screen on the whole phone, zoomable; one tap to go back. */
+export function ScreenFullscreen({ screen, onClose }: { screen: ScreenShare; onClose: () => void }) {
+  const win = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  if (!screen.url) return null;
+  return (
+    <View style={{ position: "absolute", top: 0, left: 0, width: win.width, height: win.height, backgroundColor: "#000", zIndex: 50 }}>
+      <ZoomableScreen url={screen.url} style={{ flex: 1 }} />
+      <Quality screen={screen} />
+      <Press
+        accessibilityLabel="Revenir à la conférence"
+        onPress={onClose}
+        hitSlop={10}
+        style={{ position: "absolute", top: insets.top + 8, right: 12, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)" }}
+      >
+        <X size={16} color="#fff" />
+        <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Revenir à la conférence</Text>
+      </Press>
+      <Text pointerEvents="none" style={{ position: "absolute", bottom: insets.bottom + 10, alignSelf: "center", color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
+        Pince avec deux doigts pour zoomer
+      </Text>
     </View>
   );
 }
