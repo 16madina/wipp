@@ -28,6 +28,8 @@ type LiveRow = {
   questions_on: boolean;
   started_at: string | null;
   ended_at: string | null;
+  qa_mode: boolean;
+  spotlight_id: string | null;
 };
 
 const ROOM_PREFIX = "wipp-live-";
@@ -55,7 +57,7 @@ async function loadLive(eventId: string): Promise<LiveRow> {
   const rows = await sql<LiveRow>`
     select l.event_id, e.owner_id, e.title, e.starts_at::text, e.status, l.visibility, l.mode, l.state,
            l.duration_min, l.max_viewers, l.max_speakers, l.comments_on, l.reactions_on, l.questions_on,
-           l.started_at::text, l.ended_at::text
+           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id
     from wipp_event_lives l join wipp_events e on e.id = l.event_id
     where l.event_id = ${eventId} limit 1
   `;
@@ -232,6 +234,11 @@ export async function startEventLive(meId: string, eventId: string) {
   const sql = await getSql();
   if (live.state !== "live") {
     await sql`update wipp_event_lives set state = 'live', started_at = now(), ended_at = null, updated_at = now() where event_id = ${eventId}`;
+    // Limited keeping: questions of lives ended more than 30 days ago are removed.
+    await sql`
+      delete from wipp_event_live_questions q using wipp_event_lives l
+      where q.event_id = l.event_id and l.state in ('ended', 'cancelled') and l.ended_at < now() - interval '30 days'
+    `.catch(() => undefined);
     // Registered people get ONE notification when it starts (no notification spam).
     const people = await sql<{ profile_id: string }>`
       select profile_id from wipp_event_live_members where event_id = ${eventId} and status = 'registered' limit 500
@@ -246,7 +253,8 @@ export async function endEventLive(meId: string, eventId: string, cancel = false
   assertOwner(live, meId);
   const sql = await getSql();
   await sql`
-    update wipp_event_lives set state = ${cancel && live.state === "scheduled" ? "cancelled" : "ended"}, ended_at = now(), updated_at = now()
+    update wipp_event_lives set state = ${cancel && live.state === "scheduled" ? "cancelled" : "ended"}, ended_at = now(),
+      spotlight_id = null, qa_mode = false, updated_at = now()
     where event_id = ${eventId}
   `;
   const rs = roomService();
@@ -298,7 +306,7 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
     identity: identityOf(meId),
     role: isOwner ? "organizer" : speaker ? "speaker" : "viewer",
     ownerIdentity: identityOf(live.owner_id),
-    settings: { commentsOn: live.comments_on, reactionsOn: live.reactions_on, questionsOn: live.questions_on, mode: live.mode },
+    settings: { commentsOn: live.comments_on, reactionsOn: live.reactions_on, questionsOn: live.questions_on, qaMode: live.qa_mode, mode: live.mode },
   };
 }
 
@@ -306,7 +314,7 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
 export async function setEventLiveSettings(
   meId: string,
   eventId: string,
-  input: { commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean },
+  input: { commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean; qaMode?: boolean },
 ) {
   const live = await loadLive(eventId);
   assertOwner(live, meId);
@@ -314,12 +322,158 @@ export async function setEventLiveSettings(
   const commentsOn = typeof input.commentsOn === "boolean" ? input.commentsOn : live.comments_on;
   const reactionsOn = typeof input.reactionsOn === "boolean" ? input.reactionsOn : live.reactions_on;
   const questionsOn = typeof input.questionsOn === "boolean" ? input.questionsOn : live.questions_on;
+  const qaMode = typeof input.qaMode === "boolean" ? input.qaMode : live.qa_mode;
   await sql`
-    update wipp_event_lives set comments_on = ${commentsOn}, reactions_on = ${reactionsOn}, questions_on = ${questionsOn}, updated_at = now()
+    update wipp_event_lives set comments_on = ${commentsOn}, reactions_on = ${reactionsOn}, questions_on = ${questionsOn},
+      qa_mode = ${qaMode}, updated_at = now()
     where event_id = ${eventId}
   `;
-  await broadcast(eventId, { t: "settings", commentsOn, reactionsOn, questionsOn });
-  return { commentsOn, reactionsOn, questionsOn };
+  await broadcast(eventId, { t: "settings", commentsOn, reactionsOn, questionsOn, qaMode });
+  return { commentsOn, reactionsOn, questionsOn, qaMode };
+}
+
+// ——— Étape B : questions-réponses ———
+
+type QuestionRow = {
+  id: string;
+  author_id: string;
+  body: string;
+  status: string;
+  votes: number;
+  created_at: string;
+  display_name: string;
+  username: string;
+  avatar_url: string | null;
+  my_vote: boolean;
+};
+
+const QUESTION_MAX = 300;
+const QUESTION_GAP_MS = 15_000;
+const QUESTION_PENDING_MAX = 5;
+const lastQuestion = new Map<string, number>();
+
+function mapQuestion(q: QuestionRow) {
+  return {
+    id: q.id,
+    authorId: q.author_id,
+    text: q.body,
+    status: q.status as "pending" | "shown" | "done" | "ignored",
+    votes: Number(q.votes) || 0,
+    createdAt: Date.parse(q.created_at),
+    name: q.display_name,
+    username: q.username,
+    avatar: q.avatar_url,
+    myVote: Boolean(q.my_vote),
+  };
+}
+
+/** Questions of a live. Viewers never see deleted or hidden ones; the organizer sees hidden ones too. */
+export async function listLiveQuestions(meId: string, eventId: string) {
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  const isOwner = live.owner_id === meId;
+  const sql = await getSql();
+  const rows = await sql<QuestionRow>`
+    select q.id, q.author_id, q.body, q.status, q.votes, q.created_at::text,
+           p.display_name, p.username, p.avatar_url,
+           exists (select 1 from wipp_event_live_votes v where v.question_id = q.id and v.profile_id = ${meId}) as my_vote
+    from wipp_event_live_questions q join wipp_profiles p on p.id = q.author_id
+    where q.event_id = ${eventId} and q.status <> 'deleted' and (${isOwner} or q.status <> 'ignored')
+    order by q.created_at desc
+    limit 300
+  `;
+  const questions = rows.map(mapQuestion);
+  const spot = live.spotlight_id ? questions.find((q) => q.id === live.spotlight_id && q.status === "shown") ?? null : null;
+  return {
+    questions,
+    spotlight: spot,
+    questionsOn: live.questions_on,
+    qaMode: live.qa_mode,
+    state: live.state,
+    isOwner,
+  };
+}
+
+/** A viewer asks a question: access, open, anti-spam, length and offensive words are checked here. */
+export async function askLiveQuestion(meId: string, eventId: string, raw: string) {
+  const text = String(raw ?? "").replace(/\s+/g, " ").trim();
+  if (text.length < 3) throw new WippHttpError(400, "too_short", "Ta question est trop courte.");
+  if (text.length > QUESTION_MAX) throw new WippHttpError(400, "too_long", `${QUESTION_MAX} caractères maximum.`);
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  if (live.state !== "live") throw new WippHttpError(409, "not_live", "Le direct n’est pas en cours.");
+  if (!live.questions_on && live.owner_id !== meId) throw new WippHttpError(403, "questions_off", "Les questions sont fermées pour le moment.");
+  const key = `${eventId}:${meId}`;
+  const now = Date.now();
+  if (now - (lastQuestion.get(key) ?? 0) < QUESTION_GAP_MS) throw new WippHttpError(429, "slow_down", "Attends quelques secondes avant de poser une autre question.");
+  const sql = await getSql();
+  const pending = await sql<{ c: number }>`
+    select count(*)::int as c from wipp_event_live_questions where event_id = ${eventId} and author_id = ${meId} and status = 'pending'
+  `;
+  if (Number(pending[0]?.c ?? 0) >= QUESTION_PENDING_MAX) throw new WippHttpError(429, "too_many", "Tu as déjà 5 questions en attente.");
+  const bad = await sql<{ bad: boolean }>`select public.wipp_text_is_offensive(${text}) as bad`;
+  if (bad[0]?.bad) throw new WippHttpError(400, "offensive_text", "Ta question contient un mot interdit.");
+  lastQuestion.set(key, now);
+  if (lastQuestion.size > 5000) lastQuestion.clear();
+  const id = `q_${randomBytes(9).toString("hex")}`;
+  await sql`insert into wipp_event_live_questions (id, event_id, author_id, body) values (${id}, ${eventId}, ${meId}, ${text})`;
+  await broadcast(eventId, { t: "q" });
+  return { id };
+}
+
+/** One vote per person per question (primary key); voting again removes nothing twice. */
+export async function voteLiveQuestion(meId: string, eventId: string, questionId: string, on: boolean) {
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  if (live.state !== "live") throw new WippHttpError(409, "not_live", "Le direct n’est pas en cours.");
+  const sql = await getSql();
+  const q = await sql<{ status: string }>`
+    select status from wipp_event_live_questions where id = ${questionId} and event_id = ${eventId} limit 1
+  `;
+  if (!q[0] || q[0].status === "deleted" || q[0].status === "ignored") throw new WippHttpError(404, "not_found", "Question introuvable.");
+  if (on) {
+    await sql`insert into wipp_event_live_votes (question_id, profile_id) values (${questionId}, ${meId}) on conflict do nothing`;
+  } else {
+    await sql`delete from wipp_event_live_votes where question_id = ${questionId} and profile_id = ${meId}`;
+  }
+  const n = await sql<{ votes: number }>`
+    update wipp_event_live_questions
+    set votes = (select count(*) from wipp_event_live_votes v where v.question_id = ${questionId}), updated_at = now()
+    where id = ${questionId} returning votes
+  `;
+  await broadcast(eventId, { t: "q" });
+  return { votes: Number(n[0]?.votes ?? 0), myVote: on };
+}
+
+/**
+ * Organizer: show on screen (only one at a time), hide from screen, done, ignored, deleted.
+ * The spotlight is kept by the server so everyone, even after a reconnection, sees the same card.
+ */
+export async function moderateLiveQuestion(meId: string, eventId: string, questionId: string, action: string) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const sql = await getSql();
+  const q = await sql<QuestionRow>`
+    select q.id, q.author_id, q.body, q.status, q.votes, q.created_at::text, p.display_name, p.username, p.avatar_url, false as my_vote
+    from wipp_event_live_questions q join wipp_profiles p on p.id = q.author_id
+    where q.id = ${questionId} and q.event_id = ${eventId} limit 1
+  `;
+  const row = q[0];
+  if (!row || row.status === "deleted") throw new WippHttpError(404, "not_found", "Question introuvable.");
+  const next = action === "show" ? "shown" : action === "unshow" ? "pending" : action === "done" ? "done" : action === "ignore" ? "ignored" : action === "delete" ? "deleted" : action === "restore" ? "pending" : null;
+  if (!next) throw new WippHttpError(400, "invalid", "Action inconnue.");
+  if (next === "shown") {
+    // The previous card goes back to « en attente » (unless already treated).
+    await sql`update wipp_event_live_questions set status = 'pending', updated_at = now() where event_id = ${eventId} and status = 'shown' and id <> ${questionId}`;
+    await sql`update wipp_event_lives set spotlight_id = ${questionId}, updated_at = now() where event_id = ${eventId}`;
+  } else if (live.spotlight_id === questionId) {
+    await sql`update wipp_event_lives set spotlight_id = null, updated_at = now() where event_id = ${eventId}`;
+  }
+  await sql`update wipp_event_live_questions set status = ${next}, updated_at = now() where id = ${questionId}`;
+  const spot = next === "shown" ? { ...mapQuestion({ ...row, status: "shown" }) } : live.spotlight_id === questionId ? null : undefined;
+  if (spot !== undefined) await broadcast(eventId, { t: "spot", q: spot });
+  await broadcast(eventId, { t: "q" });
+  return { ok: true, status: next };
 }
 
 /** Exclude someone: out of the room now, and no new token for this event. */

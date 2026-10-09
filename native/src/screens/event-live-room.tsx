@@ -11,9 +11,10 @@ import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Eye, EyeOff, Flag, Heart, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Eye, EyeOff, Flag, Heart, HelpCircle, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
+import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
@@ -72,8 +73,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [clapWave, setClapWave] = useState(0);
   const [draft, setDraft] = useState("");
   const [showComments, setShowComments] = useState(true);
-  const [settings, setSettings] = useState({ commentsOn: true, reactionsOn: true, questionsOn: true });
-  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions">("none");
+  const [settings, setSettings] = useState({ commentsOn: true, reactionsOn: true, questionsOn: true, qaMode: false });
+  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions" | "questions">("none");
+  const [askFocus, setAskFocus] = useState(false);
+  // Étape B: questions kept by the server; « q » / « spot » signals refresh them for everyone.
+  const qa = useLiveQuestions(eventId);
   const [camOn, setCamOn] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const lastComment = useRef(0);
@@ -138,6 +142,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             if (cancelled) return;
             setPhase("connected");
             refresh();
+            // Back after a cut: the questions and the card on screen come back as the server keeps them.
+            void qa.reload();
             const pubs = tok.role === "organizer" || tok.role === "speaker";
             if (pubs && camWanted.current) await room.localParticipant.setCameraEnabled(true).catch(() => undefined);
             if (pubs && micWanted.current) await room.localParticipant.setMicrophoneEnabled(true).catch(() => undefined);
@@ -173,7 +179,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         const tok = await liveToken(eventId);
         if (cancelled) return;
         setInfo(tok);
-        setSettings({ commentsOn: tok.settings.commentsOn, reactionsOn: tok.settings.reactionsOn, questionsOn: tok.settings.questionsOn });
+        setSettings({ commentsOn: tok.settings.commentsOn, reactionsOn: tok.settings.reactionsOn, questionsOn: tok.settings.questionsOn, qaMode: Boolean(tok.settings.qaMode) });
         const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
         await AudioSession.configureAudio({
           android: { audioTypeOptions: AndroidAudioTypePresets.media, preferredOutputList: ["speaker", "bluetooth", "headset"] },
@@ -184,6 +190,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         if (cancelled) return;
         setPhase("connected");
         refresh();
+        void qa.reload();
         if (tok.role === "organizer" || tok.role === "speaker") askToPublish(room);
       } catch (err) {
         if (!cancelled) {
@@ -239,7 +246,14 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     } else if (t === "delete" && msg.from === "server") {
       setComments((cur) => cur.filter((c) => c.id !== msg.id));
     } else if (t === "settings" && msg.from === "server") {
-      setSettings({ commentsOn: Boolean(msg.commentsOn), reactionsOn: Boolean(msg.reactionsOn), questionsOn: Boolean(msg.questionsOn) });
+      setSettings({ commentsOn: Boolean(msg.commentsOn), reactionsOn: Boolean(msg.reactionsOn), questionsOn: Boolean(msg.questionsOn), qaMode: Boolean(msg.qaMode) });
+      qa.soon();
+    } else if (t === "spot" && msg.from === "server") {
+      const q = (msg.q ?? null) as import("../lib/event-live").LiveQuestion | null;
+      qa.setData((cur) => (cur ? { ...cur, spotlight: q } : cur));
+      qa.soon();
+    } else if (t === "q" && msg.from === "server") {
+      qa.soon();
     }
   }
 
@@ -357,7 +371,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]);
   }
 
-  async function toggleSetting(key: "commentsOn" | "reactionsOn") {
+  async function toggleSetting(key: "commentsOn" | "reactionsOn" | "questionsOn" | "qaMode") {
     const next = { ...settings, [key]: !settings[key] };
     setSettings(next);
     try {
@@ -366,6 +380,33 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     } catch (err) {
       setSettings(settings);
       Alert.alert("Direct", errorText(err, "Réglage impossible."));
+    }
+  }
+
+  async function spotAction(action: "done" | "unshow") {
+    const q = qa.data?.spotlight;
+    if (!q) return;
+    try {
+      const { moderateLiveQuestion } = await import("../lib/event-live");
+      await moderateLiveQuestion(eventId, q.id, action);
+      void qa.reload();
+    } catch (err) {
+      Alert.alert("Question", errorText(err, "Action impossible."));
+    }
+  }
+
+  /** « Suivante »: the current one is marked treated, then the most supported waiting question goes on screen. */
+  async function spotNext() {
+    const cur = qa.data?.spotlight;
+    const next = (qa.data?.questions ?? []).filter((q) => q.status === "pending" && q.id !== cur?.id).sort((a, b) => b.votes - a.votes || a.createdAt - b.createdAt)[0];
+    try {
+      const { moderateLiveQuestion } = await import("../lib/event-live");
+      if (cur) await moderateLiveQuestion(eventId, cur.id, "done");
+      if (next) await moderateLiveQuestion(eventId, next.id, "show");
+      else Alert.alert("Questions", "Il n’y a plus de question en attente.");
+      void qa.reload();
+    } catch (err) {
+      Alert.alert("Question", errorText(err, "Action impossible."));
     }
   }
 
@@ -440,6 +481,12 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>EN DIRECT</Text>
           </View>
         ) : null}
+        {settings.qaMode ? (
+          <Press accessibilityLabel="Questions-réponses" onPress={() => setSheet("questions")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(212,160,23,0.9)" }}>
+            <HelpCircle size={12} color="#0b1220" />
+            <Text style={{ color: "#0b1220", fontSize: 10, fontFamily: "Inter_700Bold" }}>Q&R</Text>
+          </Press>
+        ) : null}
         <Press accessibilityLabel="Participants" onPress={() => setSheet("people")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.45)" }}>
           <Eye size={13} color="#fff" />
           <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{viewers}</Text>
@@ -460,6 +507,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <RefreshCw size={13} color="#fff" />
           <Text style={{ color: "#fff", fontSize: 12 }}>Reconnexion…</Text>
         </View>
+      ) : null}
+
+      {qa.data?.spotlight ? (
+        <SpotlightCard
+          q={qa.data.spotlight}
+          top={insets.top + 74}
+          organizer={isOrganizer}
+          onDone={() => void spotAction("done")}
+          onHide={() => void spotAction("unshow")}
+          onNext={() => void spotNext()}
+        />
       ) : null}
 
       {/* Floating reactions (right side, never block touches) */}
@@ -486,7 +544,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
         <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />
         {showComments ? (
-          <View style={{ maxHeight: 230, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
+          <View style={{ maxHeight: qa.data?.spotlight ? 150 : 230, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
             <FlatList
               data={comments}
               keyExtractor={(c) => c.id}
@@ -506,6 +564,18 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           </View>
         ) : null}
         <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) }}>
+          {settings.qaMode && !isOrganizer && settings.questionsOn ? (
+            <Press
+              onPress={() => {
+                setAskFocus(true);
+                setSheet("questions");
+              }}
+              style={{ alignSelf: "flex-start", marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 32, borderRadius: 16, backgroundColor: "rgba(212,160,23,0.92)" }}
+            >
+              <HelpCircle size={15} color="#0b1220" />
+              <Text style={{ color: "#0b1220", fontSize: 13, fontFamily: "Inter_700Bold" }}>Poser une question</Text>
+            </Press>
+          ) : null}
           {settings.commentsOn || isOrganizer ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 44, borderRadius: 22, paddingLeft: 16, paddingRight: 6, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" }}>
               <TextInput
@@ -558,6 +628,18 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 </BarButton>
               </>
             ) : null}
+            <BarButton
+              label="Questions"
+              badge={(qa.data?.questions ?? []).filter((q) => q.status === "pending").length}
+              highlight={settings.qaMode}
+              onPress={() => {
+                setAskFocus(false);
+                setSheet("questions");
+                void qa.reload();
+              }}
+            >
+              <HelpCircle size={20} color={settings.qaMode ? "#d4a017" : "#fff"} />
+            </BarButton>
             <BarButton label="Participants" onPress={() => setSheet("people")}>
               <Users size={20} color="#fff" />
             </BarButton>
@@ -576,6 +658,18 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           </View>
         ) : null}
       </KeyboardAvoidingView>
+
+      {sheet === "questions" ? (
+        <QuestionsSheet
+          eventId={eventId}
+          data={qa.data}
+          organizer={isOrganizer}
+          focusAsk={askFocus}
+          onClose={() => setSheet("none")}
+          onChanged={() => void qa.reload()}
+          onReport={(q) => report(q.authorId, q.id)}
+        />
+      ) : null}
 
       {/* Participants */}
       {sheet === "people" ? (
@@ -619,6 +713,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               <>
                 <OptionRow label="Commentaires" value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
                 <OptionRow label="Réactions" value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
+                <OptionRow label="Questions ouvertes" value={settings.questionsOn} onPress={() => void toggleSetting("questionsOn")} />
+                <OptionRow label="Lancer les questions-réponses" value={settings.qaMode} onPress={() => void toggleSetting("qaMode")} />
                 <Press onPress={endForAll} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Terminer la conférence pour tous</Text>
                 </Press>
@@ -638,10 +734,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   );
 }
 
-function BarButton({ label, onPress, children, disabled }: { label: string; onPress: () => void; children: React.ReactNode; disabled?: boolean }) {
+function BarButton({ label, onPress, children, disabled, badge, highlight }: { label: string; onPress: () => void; children: React.ReactNode; disabled?: boolean; badge?: number; highlight?: boolean }) {
   return (
-    <Press accessibilityLabel={label} disabled={disabled} onPress={() => { Keyboard.dismiss(); onPress(); }} style={{ alignItems: "center", gap: 4, minWidth: 54, opacity: disabled ? 0.4 : 1 }}>
-      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" }}>{children}</View>
+    <Press accessibilityLabel={label} disabled={disabled} onPress={() => { Keyboard.dismiss(); onPress(); }} style={{ alignItems: "center", gap: 4, minWidth: 48, opacity: disabled ? 0.4 : 1 }}>
+      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: highlight ? "rgba(212,160,23,0.22)" : "rgba(255,255,255,0.12)", borderWidth: highlight ? 1 : 0, borderColor: "#d4a017", alignItems: "center", justifyContent: "center" }}>
+        {children}
+        {badge ? (
+          <View style={{ position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" }}>{badge > 99 ? "99+" : badge}</Text>
+          </View>
+        ) : null}
+      </View>
       <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 10 }}>{label}</Text>
     </Press>
   );

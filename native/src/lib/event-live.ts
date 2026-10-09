@@ -24,7 +24,7 @@ export type LiveToken = {
   identity: string;
   role: "organizer" | "speaker" | "viewer";
   ownerIdentity: string;
-  settings: { commentsOn: boolean; reactionsOn: boolean; questionsOn: boolean; mode: string };
+  settings: { commentsOn: boolean; reactionsOn: boolean; questionsOn: boolean; qaMode: boolean; mode: string };
 };
 
 async function api<T>(path: string, body?: unknown) {
@@ -45,9 +45,28 @@ export const startLive = (eventId: string) => api<LiveInfo>(at(eventId, "start")
 export const endLive = (eventId: string) => api<LiveInfo>(at(eventId, "end"), {});
 export const cancelLive = (eventId: string) => api<LiveInfo>(at(eventId, "cancel"), {});
 export const liveToken = (eventId: string) => api<LiveToken>(at(eventId, "token"), {});
-export const setLiveSettings = (eventId: string, input: { commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean }) =>
-  api<{ commentsOn: boolean; reactionsOn: boolean; questionsOn: boolean }>(at(eventId, "settings"), input);
+export const setLiveSettings = (eventId: string, input: { commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean; qaMode?: boolean }) =>
+  api<{ commentsOn: boolean; reactionsOn: boolean; questionsOn: boolean; qaMode: boolean }>(at(eventId, "settings"), input);
 export const banFromLive = (eventId: string, identity: string) => api<{ ok: boolean }>(at(eventId, "ban"), { identity });
+export type LiveQuestion = {
+  id: string;
+  authorId: string;
+  text: string;
+  status: "pending" | "shown" | "done" | "ignored";
+  votes: number;
+  createdAt: number;
+  name: string;
+  username: string;
+  avatar: string | null;
+  myVote: boolean;
+};
+export type LiveQuestions = { questions: LiveQuestion[]; spotlight: LiveQuestion | null; questionsOn: boolean; qaMode: boolean; state: string; isOwner: boolean };
+export const listLiveQuestions = (eventId: string) => api<LiveQuestions>(at(eventId, "questions"));
+export const askLiveQuestion = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "questions"), { text });
+export const voteLiveQuestion = (eventId: string, questionId: string, on: boolean) =>
+  api<{ votes: number; myVote: boolean }>(at(eventId, `questions/${encodeURIComponent(questionId)}/vote`), { on });
+export const moderateLiveQuestion = (eventId: string, questionId: string, action: "show" | "unshow" | "done" | "ignore" | "delete" | "restore") =>
+  api<{ ok: boolean; status: string }>(at(eventId, `questions/${encodeURIComponent(questionId)}/moderate`), { action });
 export const postLiveComment = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "comment"), { text });
 export const deleteLiveComment = (eventId: string, id: string) => api<{ ok: boolean }>(at(eventId, "delete-comment"), { id });
 

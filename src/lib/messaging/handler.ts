@@ -543,12 +543,25 @@ export async function handleWippApi(request: Request): Promise<Response> {
       if (method === "POST" && c === "cancel") return json(await live.endEventLive(me.id, eventId, true));
       if (method === "POST" && c === "token") return json(await live.eventLiveToken(me.id, eventId, me.displayName || me.username, me.avatarUrl));
       if (method === "POST" && c === "settings") {
-        const body = await readBody<{ commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean }>(request);
+        const body = await readBody<{ commentsOn?: boolean; reactionsOn?: boolean; questionsOn?: boolean; qaMode?: boolean }>(request);
         return json(await live.setEventLiveSettings(me.id, eventId, body));
       }
       if (method === "POST" && c === "ban") {
         const body = await readBody<{ identity?: string }>(request);
         return json(await live.banFromEventLive(me.id, eventId, String(body.identity ?? "")));
+      }
+      if (method === "GET" && c === "questions") return json(await live.listLiveQuestions(me.id, eventId));
+      if (method === "POST" && c === "questions" && !d) {
+        const body = await readBody<{ text?: string }>(request);
+        return json(await live.askLiveQuestion(me.id, eventId, String(body.text ?? "")));
+      }
+      if (method === "POST" && c === "questions" && d && e === "vote") {
+        const body = await readBody<{ on?: boolean }>(request);
+        return json(await live.voteLiveQuestion(me.id, eventId, decodeURIComponent(d), body.on !== false));
+      }
+      if (method === "POST" && c === "questions" && d && e === "moderate") {
+        const body = await readBody<{ action?: string }>(request);
+        return json(await live.moderateLiveQuestion(me.id, eventId, decodeURIComponent(d), String(body.action ?? "")));
       }
       if (method === "POST" && c === "comment") {
         const body = await readBody<{ text?: string }>(request);
