@@ -517,10 +517,6 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
-    if (method === "POST" && a === "cron" && b === "share-notify") {
-      const { runShareNotify } = await import("./event-live");
-      return json(await runShareNotify(request.headers.get("x-wipp-cron") ?? ""));
-    }
     if (method === "POST" && a === "cron" && b === "live-reminders") {
       const { runLiveReminders } = await import("./event-live");
       return json(await runLiveReminders(request.headers.get("x-wipp-cron") ?? ""));
@@ -573,7 +569,6 @@ export async function handleWippApi(request: Request): Promise<Response> {
           case "feature": return json(await live.setFeatured(me.id, eventId, body.identity ?? null));
           case "mode": return json(await live.setLiveMode(me.id, eventId, String(body.mode ?? "")));
           case "sharing": return json(await live.setSharing(me.id, eventId, Boolean((body as { on?: boolean }).on)));
-          case "share-notify": return json(await live.setShareNotify(me.id, eventId, Boolean((body as { on?: boolean }).on)));
           case "layout": return json(await live.setStageLayout(me.id, eventId, String((body as { layout?: string }).layout ?? "")));
           default: throw new WippHttpError(400, "invalid", "Action inconnue.");
         }

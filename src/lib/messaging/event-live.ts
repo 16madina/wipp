@@ -492,7 +492,6 @@ export async function liveStage(meId: string, eventId: string) {
     maxSpeakers: live.max_speakers,
     featured: live.featured_identity,
     layout: live.stage_layout ?? "shared",
-    shareNotify: live.share_notify ?? true,
     ownerIdentity: identityOf(live.owner_id),
     speakers: rows.filter((r) => r.role === "speaker").sort((a, b) => Date.parse(a.stage_since ?? "") - Date.parse(b.stage_since ?? "")).map(person),
     hands: isOwner
@@ -535,7 +534,6 @@ export async function setHand(meId: string, eventId: string, up: boolean) {
     await sql`update wipp_event_live_members set hand_raised_at = null, updated_at = now() where event_id = ${eventId} and profile_id = ${meId}`;
   }
   await broadcast(eventId, { t: "stage", hand: up ? identityOf(meId) : undefined });
-  if (up) void flushShareNotify(eventId).catch(() => undefined);
   return liveStage(meId, eventId);
 }
 
@@ -830,7 +828,6 @@ export async function askLiveQuestion(meId: string, eventId: string, raw: string
   const id = `q_${randomBytes(9).toString("hex")}`;
   await sql`insert into wipp_event_live_questions (id, event_id, author_id, body) values (${id}, ${eventId}, ${meId}, ${text})`;
   await broadcast(eventId, { t: "q" });
-  void flushShareNotify(eventId).catch(() => undefined);
   return { id };
 }
 
@@ -948,111 +945,24 @@ async function broadcast(eventId: string, payload: Record<string, unknown>) {
   await rs.sendData(roomOf(eventId), data, DataPacket_Kind.RELIABLE, { topic: "wipp-live" }).catch(() => undefined);
 }
 
-// ——— WIPP 1.1 : prévenir le host pendant son partage d'écran ———
+// ——— WIPP 1.1 : partage d'écran ———
+// No push while the host shares his screen (viewers could see the banner in the shared screen): hands and
+// questions are only recorded, and the host finds them in WIPP when he comes back.
 
-const SHARE_NOTIFY_GAP_MS = 30_000;
-
-/** Host: sharing started / stopped (the server then knows when to alert him). */
+/**
+ * Host: sharing started / stopped. Every viewer is told at once, so a share track that LiveKit did not
+ * remove cleanly (stopped from iOS, bad network) never leaves a black screen behind.
+ */
 export async function setSharing(meId: string, eventId: string, on: boolean) {
   const live = await loadLive(eventId);
   assertOwner(live, meId);
   const sql = await getSql();
   await sql`
-    update wipp_event_lives set sharing_since = ${on ? new Date().toISOString() : null}, share_notified_at = null, updated_at = now()
+    update wipp_event_lives set sharing_since = ${on ? new Date().toISOString() : null}, updated_at = now()
     where event_id = ${eventId}
   `;
+  await broadcast(eventId, { t: "sharing", on });
   return { ok: true };
-}
-
-export async function setShareNotify(meId: string, eventId: string, on: boolean) {
-  const live = await loadLive(eventId);
-  assertOwner(live, meId);
-  const sql = await getSql();
-  await sql`update wipp_event_lives set share_notify = ${on}, updated_at = now() where event_id = ${eventId}`;
-  return { ok: true, shareNotify: on };
-}
-
-/**
- * While the host shares his screen (he may be in Safari / Keynote, WIPP suspended), a server PUSH tells him
- * about new raised hands and new questions — grouped, at most one every 30 s, never the question text
- * (the banner can be seen in the shared screen). No push for comments or reactions.
- * Sent right away on a hand / question when the 30-s slot is free; otherwise Supabase pg_cron (every 30 s)
- * sends what was held back. Nothing is queued: « pending » = events newer than the last alert, so there is
- * nothing to clean up when the sharing or the live ends.
- */
-async function flushShareNotify(eventId: string): Promise<"sent" | "none" | "skipped" | "failed"> {
-  const sql = await getSql();
-  const rows = await sql<{ owner_id: string; sharing_since: string | null; share_notify: boolean; share_notified_at: string | null; state: string }>`
-    select e.owner_id, l.sharing_since::text, l.share_notify, l.share_notified_at::text, l.state
-    from wipp_event_lives l join wipp_events e on e.id = l.event_id where l.event_id = ${eventId} limit 1
-  `;
-  const l = rows[0];
-  // Sharing over, live over, or the host switched alerts off: nothing to send.
-  if (!l || l.state !== "live" || !l.sharing_since || !l.share_notify) return "skipped";
-  if (l.share_notified_at && Date.now() - Date.parse(l.share_notified_at) < SHARE_NOTIFY_GAP_MS) return "skipped";
-  const since = l.share_notified_at ?? l.sharing_since;
-  const n = await sql<{ hands: number; questions: number }>`
-    select
-      (select count(*)::int from wipp_event_live_members where event_id = ${eventId} and hand_raised_at > ${since}::timestamptz and role <> 'speaker') as hands,
-      (select count(*)::int from wipp_event_live_questions where event_id = ${eventId} and created_at > ${since}::timestamptz and status <> 'deleted') as questions
-  `;
-  const hands = Number(n[0]?.hands ?? 0);
-  const questions = Number(n[0]?.questions ?? 0);
-  if (!hands && !questions) return "none";
-  // Claim the 30-s slot atomically: only the run that still sees the previous value wins (two overlapping
-  // runs, or a hand and the cron at the same moment, send ONE alert).
-  const claimed = await sql<{ at: string }>`
-    update wipp_event_lives set share_notified_at = now()
-    where event_id = ${eventId}
-      and state = 'live' and sharing_since is not null and share_notify
-      and share_notified_at is not distinct from ${l.share_notified_at}::timestamptz
-      and (share_notified_at is null or share_notified_at < now() - interval '30 seconds')
-    returning share_notified_at::text as at
-  `;
-  const at = claimed[0]?.at;
-  if (!at) return "skipped";
-  const parts = [
-    hands ? `✋ ${hands} demande${hands > 1 ? "s" : ""} de parole` : "",
-    questions ? `❓ ${questions} nouvelle${questions > 1 ? "s" : ""} question${questions > 1 ? "s" : ""}` : "",
-  ].filter(Boolean);
-  let delivered = false;
-  try {
-    const { sendProfilePush } = await import("@/lib/push/notify");
-    const res = (await sendProfilePush({
-      profileId: l.owner_id,
-      title: "WIPP Conférence",
-      body: parts.join(" · "),
-      channelId: "messages",
-      data: { type: "live", eventId: `share:${eventId}:${Date.parse(at).toString(36)}`, publicId: eventId },
-    })) as { sent?: number; deduped?: boolean };
-    delivered = Boolean(res?.deduped) || Number(res?.sent ?? 0) > 0;
-  } catch {
-    delivered = false;
-  }
-  if (!delivered) {
-    // Sending failed (no reachable device, Apple error…): give the slot back so the next run retries
-    // the same alert — the counts are still « newer than the previous alert ».
-    await sql`update wipp_event_lives set share_notified_at = ${l.share_notified_at}::timestamptz where event_id = ${eventId} and share_notified_at = ${at}::timestamptz`.catch(() => undefined);
-    return "failed";
-  }
-  return "sent";
-}
-
-/** Called by Supabase pg_cron every 30 s (secret checked here); only lives with a screen share running. */
-export async function runShareNotify(secret: string) {
-  const sql = await getSql();
-  const ok = await sql<{ ok: boolean }>`select exists (select 1 from wipp_cron_secrets where name = 'share' and secret = ${secret}) as ok`;
-  if (!ok[0]?.ok) throw new WippHttpError(403, "forbidden", "Accès refusé.");
-  const lives = await sql<{ event_id: string }>`
-    select event_id from wipp_event_lives where state = 'live' and sharing_since is not null and share_notify limit 200
-  `;
-  const result = { lives: lives.length, sent: 0, failed: 0 };
-  for (const l of lives) {
-    const r = await flushShareNotify(l.event_id).catch(() => "failed" as const);
-    if (r === "sent") result.sent += 1;
-    if (r === "failed") result.failed += 1;
-  }
-  return result;
 }
 
 // ——— Rappels (lancés toutes les 5 min par Supabase pg_cron) ———
