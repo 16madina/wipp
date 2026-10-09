@@ -32,6 +32,7 @@ type LiveRow = {
   spotlight_id: string | null;
   featured_identity: string | null;
   stage_layout: "shared" | "dominant" | "inset";
+  share_notify: boolean;
 };
 
 const ROOM_PREFIX = "wipp-live-";
@@ -59,7 +60,7 @@ async function loadLive(eventId: string): Promise<LiveRow> {
   const rows = await sql<LiveRow>`
     select l.event_id, e.owner_id, e.title, e.starts_at::text, e.status, l.visibility, l.mode, l.state,
            l.duration_min, l.max_viewers, l.max_speakers, l.comments_on, l.reactions_on, l.questions_on,
-           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity, l.stage_layout
+           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity, l.stage_layout, l.share_notify
     from wipp_event_lives l join wipp_events e on e.id = l.event_id
     where l.event_id = ${eventId} limit 1
   `;
@@ -127,6 +128,8 @@ export async function getEventLive(meId: string, eventId: string) {
   const live = await loadLive(eventId);
   await assertCanSee(live, meId);
   const hostAbsentSince = live.owner_id === meId ? null : await checkHostPresence(live).catch(() => null);
+  // Viewers' heartbeat also sends the host the alerts held back by the 30-s grouping.
+  if (live.owner_id !== meId) void flushShareNotify(eventId).catch(() => undefined);
   const sql = await getSql();
   const counts = await sql<{ registered: number }>`
     select count(*)::int as registered from wipp_event_live_members where event_id = ${eventId} and status = 'registered'
@@ -267,7 +270,7 @@ async function closeLive(live: LiveRow, cancel = false) {
   const sql = await getSql();
   await sql`
     update wipp_event_lives set state = ${cancel && live.state === "scheduled" ? "cancelled" : "ended"}, ended_at = now(),
-      spotlight_id = null, qa_mode = false, featured_identity = null, updated_at = now()
+      spotlight_id = null, qa_mode = false, featured_identity = null, sharing_since = null, updated_at = now()
     where event_id = ${eventId}
   `;
   await sql`
@@ -491,6 +494,7 @@ export async function liveStage(meId: string, eventId: string) {
     maxSpeakers: live.max_speakers,
     featured: live.featured_identity,
     layout: live.stage_layout ?? "shared",
+    shareNotify: live.share_notify ?? true,
     ownerIdentity: identityOf(live.owner_id),
     speakers: rows.filter((r) => r.role === "speaker").sort((a, b) => Date.parse(a.stage_since ?? "") - Date.parse(b.stage_since ?? "")).map(person),
     hands: isOwner
@@ -533,6 +537,7 @@ export async function setHand(meId: string, eventId: string, up: boolean) {
     await sql`update wipp_event_live_members set hand_raised_at = null, updated_at = now() where event_id = ${eventId} and profile_id = ${meId}`;
   }
   await broadcast(eventId, { t: "stage", hand: up ? identityOf(meId) : undefined });
+  if (up) void flushShareNotify(eventId).catch(() => undefined);
   return liveStage(meId, eventId);
 }
 
@@ -827,6 +832,7 @@ export async function askLiveQuestion(meId: string, eventId: string, raw: string
   const id = `q_${randomBytes(9).toString("hex")}`;
   await sql`insert into wipp_event_live_questions (id, event_id, author_id, body) values (${id}, ${eventId}, ${meId}, ${text})`;
   await broadcast(eventId, { t: "q" });
+  void flushShareNotify(eventId).catch(() => undefined);
   return { id };
 }
 
@@ -942,6 +948,79 @@ async function broadcast(eventId: string, payload: Record<string, unknown>) {
   if (!rs) return;
   const data = new TextEncoder().encode(JSON.stringify({ ...payload, from: "server" }));
   await rs.sendData(roomOf(eventId), data, DataPacket_Kind.RELIABLE, { topic: "wipp-live" }).catch(() => undefined);
+}
+
+// ——— WIPP 1.1 : prévenir le host pendant son partage d'écran ———
+
+const SHARE_NOTIFY_GAP_MS = 30_000;
+
+/** Host: sharing started / stopped (the server then knows when to alert him). */
+export async function setSharing(meId: string, eventId: string, on: boolean) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const sql = await getSql();
+  await sql`
+    update wipp_event_lives set sharing_since = ${on ? new Date().toISOString() : null}, share_notified_at = null, updated_at = now()
+    where event_id = ${eventId}
+  `;
+  return { ok: true };
+}
+
+export async function setShareNotify(meId: string, eventId: string, on: boolean) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const sql = await getSql();
+  await sql`update wipp_event_lives set share_notify = ${on}, updated_at = now() where event_id = ${eventId}`;
+  return { ok: true, shareNotify: on };
+}
+
+/**
+ * While the host shares his screen (he may be in Safari / Keynote, WIPP suspended), a server PUSH tells him
+ * about new raised hands and new questions — grouped, at most one every 30 s, never the question text
+ * (the banner can be seen in the shared screen). No push for comments or reactions.
+ * Called on each raised hand / question, and by the viewers' 30-s heartbeat (sends what was held back).
+ */
+async function flushShareNotify(eventId: string) {
+  const sql = await getSql();
+  const rows = await sql<{ owner_id: string; sharing_since: string | null; share_notify: boolean; share_notified_at: string | null; state: string }>`
+    select e.owner_id, l.sharing_since::text, l.share_notify, l.share_notified_at::text, l.state
+    from wipp_event_lives l join wipp_events e on e.id = l.event_id where l.event_id = ${eventId} limit 1
+  `;
+  const l = rows[0];
+  if (!l || l.state !== "live" || !l.sharing_since || !l.share_notify) return;
+  if (l.share_notified_at && Date.now() - Date.parse(l.share_notified_at) < SHARE_NOTIFY_GAP_MS) return;
+  const since = l.share_notified_at ?? l.sharing_since;
+  const n = await sql<{ hands: number; questions: number }>`
+    select
+      (select count(*)::int from wipp_event_live_members where event_id = ${eventId} and hand_raised_at > ${since}::timestamptz and role <> 'speaker') as hands,
+      (select count(*)::int from wipp_event_live_questions where event_id = ${eventId} and created_at > ${since}::timestamptz and status <> 'deleted') as questions
+  `;
+  const hands = Number(n[0]?.hands ?? 0);
+  const questions = Number(n[0]?.questions ?? 0);
+  if (!hands && !questions) return;
+  // Claim the slot first (two calls at the same time send one alert only).
+  const claimed = await sql<{ event_id: string }>`
+    update wipp_event_lives set share_notified_at = now()
+    where event_id = ${eventId} and (share_notified_at is null or share_notified_at = ${l.share_notified_at}::timestamptz)
+    returning event_id
+  `;
+  if (!claimed[0]) return;
+  const parts = [
+    hands ? `✋ ${hands} demande${hands > 1 ? "s" : ""} de parole` : "",
+    questions ? `❓ ${questions} nouvelle${questions > 1 ? "s" : ""} question${questions > 1 ? "s" : ""}` : "",
+  ].filter(Boolean);
+  try {
+    const { sendProfilePush } = await import("@/lib/push/notify");
+    await sendProfilePush({
+      profileId: l.owner_id,
+      title: "WIPP Conférence",
+      body: parts.join(" · "),
+      channelId: "messages",
+      data: { type: "live", eventId: `share:${eventId}:${Date.now().toString(36)}`, publicId: eventId },
+    });
+  } catch {
+    /* never blocks the live */
+  }
 }
 
 // ——— Rappels (lancés toutes les 5 min par Supabase pg_cron) ———

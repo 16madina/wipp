@@ -266,6 +266,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     })();
     return () => {
       cancelled = true;
+      if (room.localParticipant.isScreenShareEnabled) {
+        void import("../lib/event-live").then(({ setSharingState }) => setSharingState(eventId, false)).catch(() => undefined);
+      }
       void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
       void room.disconnect();
       if (Platform.OS !== "web") void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
@@ -631,6 +634,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       setTimeout(() => setToast(null), 2500);
     }
     if (mine) wasSharing.current = true;
+    // Tell the server, so it can alert the host (pushes) while he is in another app.
+    void import("../lib/event-live").then(({ setSharingState }) => setSharingState(eventId, mine)).catch(() => undefined);
   }, [screen?.local, isOrganizer]);
 
   function flipCamera() {
@@ -1120,6 +1125,20 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 <Press onPress={flipCamera} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={{ color: "#fff", fontSize: 15 }}>Retourner la caméra</Text>
                 </Press>
+                <OptionRow
+                  label="Me prévenir pendant le partage"
+                  value={st.stage?.shareNotify ?? true}
+                  onPress={() => {
+                    const next = !(st.stage?.shareNotify ?? true);
+                    st.setStage((cur) => (cur ? { ...cur, shareNotify: next } : cur));
+                    void import("../lib/event-live")
+                      .then(({ setShareNotify }) => setShareNotify(eventId, next))
+                      .catch((err) => {
+                        st.setStage((cur) => (cur ? { ...cur, shareNotify: !next } : cur));
+                        Alert.alert("Réglage", errorText(err, "Réglage impossible."));
+                      });
+                  }}
+                />
                 <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
                 <OptionRow label="Commentaires" value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
                 <OptionRow label="Réactions" value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
