@@ -44,31 +44,69 @@ export function useLiveStage(eventId: string) {
 }
 
 /** 1 = full screen · 2 = split · 3 = one wide + two · 4 = 2 × 2 · featured = big + thumbnails. */
-/** onMenu: organizer only — the « ⋯ » on each speaker's video. */
-export function StageGrid({ tiles, featured, topInset, onMenu }: { tiles: StageTile[]; featured: string | null; topInset: number; onMenu?: (t: StageTile) => void }) {
+/**
+ * Several people on stage: where the video area sits and how big each video is. Everything under
+ * `bottom` is free for the comments, so they never cover a face, a name or a ⋯ button.
+ */
+export function stageBox(n: number, featured: boolean, width: number, height: number, top: number, reserveBottom: number) {
+  const pad = 12;
+  const gap = 8;
+  const avail = Math.max(160, height - top - reserveBottom);
+  const colW = (width - pad * 2 - gap) / 2;
+  let tileH: number;
+  if (featured) tileH = Math.min((width - pad * 2) * 1.05, avail);
+  else if (n <= 2) tileH = Math.min(colW * 1.33, avail); // two portrait videos side by side (3:4)
+  else tileH = Math.min(colW * 1.1, (avail - gap) / 2); // 3 or 4: two rows
+  const rows = featured || n <= 2 ? 1 : 2;
+  const bottom = top + tileH * rows + (rows - 1) * gap;
+  return { pad, gap, colW, tileH, top, bottom };
+}
+
+/**
+ * 1 = full screen (unchanged). 2 = side by side (organizer left). 3 = two + one centered. 4 = 2 × 2.
+ * Featured = one big video, the others as thumbnails. onMenu: organizer only (« ⋯ » on each speaker).
+ */
+export function StageGrid({
+  tiles,
+  featured,
+  box,
+  onMenu,
+}: {
+  tiles: StageTile[];
+  featured: string | null;
+  box: ReturnType<typeof stageBox> | null;
+  onMenu?: (t: StageTile) => void;
+}) {
   if (!tiles.length) return null;
-  const big = featured ? tiles.find((t) => t.identity === featured) : undefined;
-  if (big && tiles.length > 1) {
-    const minis = tiles.filter((t) => t !== big);
+  if (tiles.length === 1 || !box) {
     return (
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-        <Tile t={big} style={{ flex: 1 }} onMenu={onMenu} topInset={topInset} />
-        <View style={{ position: "absolute", top: topInset + 100, right: 10, gap: 8 }}>
+        <Tile t={tiles[0]} style={{ flex: 1 }} label={false} />
+      </View>
+    );
+  }
+  const big = featured ? tiles.find((t) => t.identity === featured) : undefined;
+  const rounded = { borderRadius: 14, overflow: "hidden" as const };
+  if (big) {
+    const minis = tiles.filter((t) => t !== big);
+    return (
+      <View style={{ position: "absolute", top: box.top, left: box.pad, right: box.pad, height: box.tileH }}>
+        <Tile t={big} style={[{ flex: 1 }, rounded]} onMenu={onMenu} />
+        <View style={{ position: "absolute", top: 52, right: 8, gap: 8 }}>
           {minis.map((t) => (
-            <Tile key={t.identity} t={t} style={{ width: 92, height: 124, borderRadius: 12, overflow: "hidden" }} small onMenu={onMenu} />
+            <Tile key={t.identity} t={t} style={[{ width: 84, height: 112 }, rounded]} small onMenu={onMenu} />
           ))}
         </View>
       </View>
     );
   }
-  const n = tiles.length;
-  const rows: StageTile[][] = n === 1 ? [tiles] : n === 2 ? [[tiles[0]], [tiles[1]]] : n === 3 ? [[tiles[0]], [tiles[1], tiles[2]]] : [tiles.slice(0, 2), tiles.slice(2, 4)];
+  const rows: StageTile[][] = tiles.length <= 2 ? [tiles] : [tiles.slice(0, 2), tiles.slice(2, 4)];
   return (
-    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, gap: n > 1 ? 2 : 0, backgroundColor: "#000" }}>
+    <View style={{ position: "absolute", top: box.top, left: box.pad, right: box.pad, gap: box.gap }}>
       {rows.map((row, i) => (
-        <View key={i} style={{ flex: 1, flexDirection: "row", gap: 2 }}>
+        <View key={i} style={{ flexDirection: "row", gap: box.gap, justifyContent: "center" }}>
           {row.map((t) => (
-            <Tile key={t.identity} t={t} style={{ flex: 1 }} label={n > 1} onMenu={onMenu} topInset={i === 0 ? topInset : 0} />
+            <Tile key={t.identity} t={t} style={[{ width: box.colW, height: box.tileH }, rounded]} onMenu={onMenu} />
           ))}
         </View>
       ))}
@@ -76,37 +114,43 @@ export function StageGrid({ tiles, featured, topInset, onMenu }: { tiles: StageT
   );
 }
 
-function Tile({ t, style, small, label = true, onMenu, topInset = 0 }: { t: StageTile; style: object; small?: boolean; label?: boolean; onMenu?: (t: StageTile) => void; topInset?: number }) {
+function Tile({ t, style, small, label = true, onMenu }: { t: StageTile; style: object; small?: boolean; label?: boolean; onMenu?: (t: StageTile) => void }) {
   // The organizer's own video has no menu (he controls himself with the bar).
   const menu = onMenu && !t.organizer && !t.local;
   return (
-    <View style={[{ backgroundColor: "#0b0f1a", borderWidth: t.speaking ? 2 : 0, borderColor: GOLD }, style]}>
+    <View style={[{ backgroundColor: "#0b0f1a" }, style]}>
       {t.url ? (
         <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={small ? 1 : 0} />
       ) : (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={small ? 40 : 72} />
-          {!small ? <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.6)", fontSize: 12 }}>Caméra éteinte</Text> : null}
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#111727" }}>
+          <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={small ? 40 : 64} />
+          {!small ? <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.55)", fontSize: 11 }}>Caméra éteinte</Text> : null}
         </View>
       )}
+      {/* Who is speaking: a discreet gold frame (drawn over the video so the size never jumps). */}
+      {t.speaking ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, borderWidth: 2, borderColor: GOLD }} /> : null}
       {label ? (
-        <View style={{ position: "absolute", left: 8, bottom: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 3, paddingRight: 9, paddingVertical: 3, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", maxWidth: "88%" }}>
-          {!small ? <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={22} /> : null}
-          {t.micOn ? <Mic size={12} color="#fff" /> : <MicOff size={12} color="#ff6b6b" />}
-          <Text numberOfLines={1} style={{ color: "#fff", fontSize: small ? 10 : 13, fontFamily: "Inter_600SemiBold" }}>
-            {t.name}
-            {!small ? (t.organizer ? " · organisateur" : " · intervenant") : ""}
-          </Text>
+        <View style={{ position: "absolute", left: 6, right: menu ? 6 : 6, bottom: 6, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 3, paddingRight: 8, paddingVertical: 3, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.62)" }}>
+            {!small ? <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={20} /> : null}
+            {t.micOn ? <Mic size={12} color="#fff" /> : <MicOff size={12} color="#ff6b6b" />}
+            <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: small ? 10 : 12, fontFamily: "Inter_600SemiBold" }}>{t.name}</Text>
+            {t.organizer && !small ? (
+              <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, backgroundColor: GOLD }}>
+                <Text style={{ color: "#0b1220", fontSize: 9, fontFamily: "Inter_700Bold" }}>HOST</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       ) : null}
       {menu ? (
         <Press
           accessibilityLabel={`Options pour ${t.name}`}
           onPress={() => onMenu!(t)}
-          hitSlop={8}
-          style={{ position: "absolute", right: 8, top: small ? 6 : topInset ? topInset + 54 : 8, width: small ? 28 : 34, height: small ? 28 : 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
+          hitSlop={10}
+          style={{ position: "absolute", right: 6, top: 6, width: small ? 30 : 36, height: small ? 30 : 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
         >
-          <MoreHorizontal size={small ? 14 : 18} color="#fff" />
+          <MoreHorizontal size={small ? 15 : 18} color="#fff" />
         </Press>
       ) : null}
     </View>

@@ -6,7 +6,7 @@
  * - Toute action de modération passe par le serveur WIPP (permissions LiveKit, exclusion).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Animated, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from "livekit-client";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -16,7 +16,7 @@ import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
-import { StageGrid, StageInviteCard, StageSheet, useLiveStage, type StageTile } from "../components/LiveStage";
+import { StageGrid, StageInviteCard, StageSheet, stageBox, useLiveStage, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
@@ -97,6 +97,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const claps = useRef<number[]>([]);
   const floaterId = useRef(0);
   const isOrganizer = info?.role === "organizer";
+  const win = useWindowDimensions();
   const role = myRole ?? info?.role ?? "viewer";
   const publisher = role === "organizer" || role === "speaker";
 
@@ -588,6 +589,14 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const title = useWippStore((s) => s.lifestyle.find((e) => e.id === eventId)?.title ?? "Direct");
   const ordered = useMemo(() => [...people].sort((a, b) => (a.role === "organizer" ? -1 : b.role === "organizer" ? 1 : a.name.localeCompare(b.name))), [people]);
 
+  // ——— Layout: 1 person = full screen with floating comments (unchanged);
+  // 2+ people = videos in a box under the top bar, comments in their own space below. ———
+  const multi = tiles.length > 1;
+  const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
+  const spotlightH = qa.data?.spotlight ? 150 : 0;
+  const box = multi ? stageBox(tiles.length, Boolean(st.stage?.featured && tiles.some((t) => t.identity === st.stage?.featured)), win.width, win.height, insets.top + 78, controlsH + 110 + spotlightH) : null;
+  const commentsMax = box ? Math.max(70, win.height - box.bottom - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
+
   if (phase === "ended") {
     return (
       <LiveEndScreen
@@ -606,7 +615,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {tiles.some((t) => t.url) || tiles.length > 1 ? (
-        <StageGrid tiles={tiles} featured={st.stage?.featured ?? null} topInset={insets.top} onMenu={isOrganizer ? speakerMenu : undefined} />
+        <StageGrid tiles={tiles} featured={st.stage?.featured ?? null} box={box} onMenu={isOrganizer ? speakerMenu : undefined} />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15, lineHeight: 21 }}>
@@ -667,7 +676,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       {qa.data?.spotlight ? (
         <SpotlightCard
           q={qa.data.spotlight}
-          top={insets.top + 74}
+          top={box ? box.bottom + 8 : insets.top + 74}
           organizer={isOrganizer}
           onDone={() => void spotAction("done")}
           onHide={() => void spotAction("unshow")}
@@ -676,7 +685,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       ) : null}
 
       {/* Floating reactions (right side, never block touches) */}
-      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: 320 }}>
+      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: box ? Math.max(120, win.height - box.bottom - insets.bottom - 130) : 320 }}>
         {floaters.map((f) => (
           <Animated.Text
             key={f.id}
@@ -698,9 +707,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
       {/* Bottom: comments over the video, then the bar */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
-        <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />
+        {multi ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />}
         {showComments ? (
-          <View style={{ maxHeight: qa.data?.spotlight || tiles.length > 1 ? 150 : 230, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
+          <View style={{ maxHeight: commentsMax, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
             <FlatList
               data={comments}
               keyExtractor={(c) => c.id}
