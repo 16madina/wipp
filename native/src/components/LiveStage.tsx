@@ -50,7 +50,7 @@ type Rect = { t: StageTile; x: number; y: number; w: number; h: number; small?: 
 
 /** Height of the stage when several people are on it: big videos first, comments get what is left. */
 export function stageHeight(winH: number, controlsH: number) {
-  return Math.round(Math.min(winH * 0.6, winH - controlsH - 130));
+  return Math.round(Math.min(winH * 0.54, winH - controlsH - 150));
 }
 
 /**
@@ -83,7 +83,7 @@ function layoutRects(tiles: StageTile[], featured: string | null, layout: StageL
     }
   } else {
     rects.push({ t: big, x: 0, y: 0, w: W, h: S, top: true });
-    const gap = 10;
+    const gap = 4; // squares close together
     if (mode === "dominant") {
       // A row of squares at the bottom of the host's video (no logo here).
       const q = Math.min((W - 24 - gap * (others.length - 1)) / Math.max(2, others.length), S * 0.3, 120);
@@ -162,9 +162,13 @@ export function StageGrid({
         );
       })}
       {logo ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: logo.x - 21, top: logo.y - 21, width: 42, height: 42, borderRadius: 21, overflow: "hidden", borderWidth: 1.5, borderColor: GOLD, backgroundColor: "#000" }}>
-          <Image source={stageLogo} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-        </View>
+        // The real WIPP logo, transparent PNG (no disc behind it).
+        <Image
+          pointerEvents="none"
+          source={stageLogo}
+          style={{ position: "absolute", left: logo.x - 20, top: logo.y - 20, width: 40, height: 40, shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}
+          contentFit="contain"
+        />
       ) : null}
     </View>
   );

@@ -594,13 +594,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
   // ——— Layout: 1 person = full screen with floating comments (unchanged);
   // 2+ people = videos in a box under the top bar, comments in their own space below. ———
-  const multi = tiles.length > 1;
+  const layoutPick: StageLayout = st.stage?.layout ?? "shared";
+  const featuredOn = Boolean(st.stage?.featured && tiles.some((t) => t.identity === st.stage?.featured));
+  // « Invités intégrés »: the host is full screen (like alone), guests float on top, comments float too.
+  const fullHost = tiles.length >= 3 && layoutPick === "inset" && !featuredOn;
+  const multi = tiles.length > 1 && !fullHost;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
   const spotlightH = qa.data?.spotlight ? 150 : 0;
-  const stageH = multi ? stageHeight(win.height, controlsH) : 0;
+  const stageH = fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
   const box = multi ? { bottom: stageH } : null;
   const commentsMax = box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
-  const layout: StageLayout = st.stage?.layout ?? "shared";
+  const layout: StageLayout = layoutPick;
 
   if (phase === "ended") {
     return (
@@ -694,7 +698,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       {qa.data?.spotlight ? (
         <SpotlightCard
           q={qa.data.spotlight}
-          top={box ? box.bottom + 8 : insets.top + 74}
+          top={box ? box.bottom + 8 : fullHost ? insets.top + 58 + (tiles.length - 1 > 2 ? 2 : 1) * (Math.min(win.width * 0.26, win.height * 0.3, 118) + 4) + 8 : insets.top + 74}
           organizer={isOrganizer}
           onDone={() => void spotAction("done")}
           onHide={() => void spotAction("unshow")}
