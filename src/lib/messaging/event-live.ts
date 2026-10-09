@@ -95,7 +95,7 @@ async function assertCanSee(live: LiveRow, meId: string) {
 export async function saveEventLive(
   meId: string,
   eventId: string,
-  input: { visibility?: string; mode?: string; durationMin?: number; maxViewers?: number },
+  input: { visibility?: string; mode?: string; durationMin?: number; maxViewers?: number; showRegistered?: boolean },
 ) {
   const sql = await getSql();
   const ev = await sql<{ owner_id: string }>`select owner_id from wipp_events where id = ${eventId} limit 1`;
@@ -106,11 +106,13 @@ export async function saveEventLive(
   const duration = Math.min(480, Math.max(10, Math.round(Number(input.durationMin) || 60)));
   // Safe first limit until real load tests: 100 viewers.
   const maxViewers = Math.min(100, Math.max(2, Math.round(Number(input.maxViewers) || 100)));
+  const showRegistered = input.showRegistered !== false;
   await sql`
-    insert into wipp_event_lives (event_id, visibility, mode, duration_min, max_viewers)
-    values (${eventId}, ${visibility}, ${mode}, ${duration}, ${maxViewers})
+    insert into wipp_event_lives (event_id, visibility, mode, duration_min, max_viewers, show_registered)
+    values (${eventId}, ${visibility}, ${mode}, ${duration}, ${maxViewers}, ${showRegistered})
     on conflict (event_id) do update set visibility = excluded.visibility, mode = excluded.mode,
-      duration_min = excluded.duration_min, max_viewers = excluded.max_viewers, updated_at = now()
+      duration_min = excluded.duration_min, max_viewers = excluded.max_viewers,
+      show_registered = excluded.show_registered, updated_at = now()
   `;
   // The event is « online » (no address) and free in this first version.
   await sql`update wipp_events set is_online = true, is_free = true, online_url = null, updated_at = now() where id = ${eventId}`;

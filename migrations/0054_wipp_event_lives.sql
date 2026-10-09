@@ -89,3 +89,6 @@ BEGIN
            OR e.city ILIKE '%' || q || '%' OR e.place ILIKE '%' || q || '%')
   ), '[]'::jsonb);
 END $function$;
+
+-- 0055 (appliquée séparément) : show_registered (afficher les inscrits, oui par défaut) et jusqu'à 10 photos
+-- d'inscrits / d'intéressés dans wipp_lot7_events. Voir migrations/0055_wipp_event_lives_show_registered.sql.

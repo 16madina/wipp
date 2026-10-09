@@ -1,7 +1,7 @@
 import { PharmacyResults } from "./pharmacies";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { Brush, CakeSlice, Coffee, Flower2, Scissors, Shirt, Utensils, Wrench, Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
 import { Avatar } from "../components/Avatar";
@@ -790,7 +790,7 @@ function LifestylePane() {
   }, [lifestyle, q, cat, where, myCity, myPos]);
   useEffect(() => {
     let cancel = false;
-    void (async () => {
+    const load = async () => {
       try {
         const { fetchEvents } = await import("../lib/lot7/api");
         const rows = await fetchEvents(useWippStore.getState().serverProfileId);
@@ -801,9 +801,15 @@ function LifestylePane() {
       } catch (err) {
         if (!cancel) setLoadError(errorText(err, "Impossible de charger les événements."));
       }
-    })();
+    };
+    void load();
+    // Keep counts and « EN DIRECT » fresh: every 30 s while the list is open, and when WIPP comes back.
+    const tick = setInterval(() => void load(), 30_000);
+    const sub = AppState.addEventListener("change", (st) => st === "active" && void load());
     return () => {
       cancel = true;
+      clearInterval(tick);
+      sub.remove();
     };
   }, []);
   return (
@@ -869,7 +875,13 @@ function LifestylePane() {
             online={e.isOnline}
             live={e.live ? liveBadge(e.live) : null}
             priceLabel={eventAccessText(e).toUpperCase()}
-            interested={{ count: e.interestedCount ?? 0, avatars: e.interestedAvatars ?? [] }}
+            interested={
+              e.live
+                ? e.live.registered != null
+                  ? { count: e.live.registered, avatars: e.live.registeredAvatars, label: `${e.live.registered} inscrit${e.live.registered > 1 ? "s" : ""}` }
+                  : undefined
+                : { count: e.interestedCount ?? 0, avatars: e.interestedAvatars ?? [] }
+            }
             distance={myPos && e.lat && !e.isOnline ? kmLabel(kmBetween(myPos, { lat: e.lat, lng: e.lng })) : undefined}
             saved={saved}
             onPress={() => push({ name: "lifestyle", itemId: e.id })}

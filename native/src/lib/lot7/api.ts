@@ -568,7 +568,7 @@ export async function removeListing(id: string) {
 }
 
 type EventRow = {
-  live?: { visibility: string; mode: string; state: string; duration_min: number; registered: number; my_status: string | null } | null;
+  live?: { visibility: string; mode: string; state: string; duration_min: number; registered: number | null; registered_avatars?: string[]; show_registered?: boolean; my_status: string | null } | null;
   id: string;
   owner_id: string;
   title: string;
@@ -680,7 +680,9 @@ function mapEvent(row: EventRow, me: string | null, image: string): LifestyleIte
           mode: row.live.mode === "interactive" ? "interactive" : "conference",
           state: (["scheduled", "live", "ended", "cancelled"].includes(row.live.state) ? row.live.state : "scheduled") as "scheduled",
           durationMin: Number(row.live.duration_min) || 60,
-          registered: Number(row.live.registered) || 0,
+          registered: row.live.registered == null ? null : Number(row.live.registered) || 0,
+          registeredAvatars: Array.isArray(row.live.registered_avatars) ? row.live.registered_avatars.slice(0, 10) : [],
+          showRegistered: row.live.show_registered !== false,
           myStatus: row.live.my_status === "invited" || row.live.my_status === "registered" || row.live.my_status === "banned" ? row.live.my_status : null,
         }
       : undefined,

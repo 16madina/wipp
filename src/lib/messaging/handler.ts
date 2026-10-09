@@ -523,7 +523,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const eventId = decodeURIComponent(b);
       if (method === "GET" && !c) return json(await live.getEventLive(me.id, eventId));
       if (method === "POST" && !c) {
-        const body = await readBody<{ visibility?: string; mode?: string; durationMin?: number; maxViewers?: number }>(request);
+        const body = await readBody<{ visibility?: string; mode?: string; durationMin?: number; maxViewers?: number; showRegistered?: boolean }>(request);
         return json(await live.saveEventLive(me.id, eventId, body));
       }
       if (method === "POST" && c === "register") return json(await live.registerEventLive(me.id, eventId, true));

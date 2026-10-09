@@ -631,7 +631,10 @@ export type EventLive = {
   mode: "conference" | "interactive";
   state: "scheduled" | "live" | "ended" | "cancelled";
   durationMin: number;
-  registered: number;
+  /** null when the organizer hides the count. */
+  registered: number | null;
+  registeredAvatars: string[];
+  showRegistered: boolean;
   myStatus: "invited" | "registered" | "banned" | null;
 };
 

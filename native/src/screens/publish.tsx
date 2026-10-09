@@ -539,6 +539,8 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
   const [wippLive, setWippLive] = useState(Boolean(existing?.live));
   const [visibility, setVisibility] = useState<"public" | "private">(existing?.live?.visibility ?? "public");
   const [durationMin, setDurationMin] = useState(existing?.live?.durationMin ?? 60);
+  // Show the number and photos of registered people on the card (yes unless the organizer says no).
+  const [showRegistered, setShowRegistered] = useState(existing?.live?.showRegistered ?? true);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -630,7 +632,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
         if (wippLive) {
           setStatus("Salle en direct…");
           const { saveLive } = await import("../lib/event-live");
-          await saveLive(savedId, { visibility, mode: "conference", durationMin });
+          await saveLive(savedId, { visibility, mode: "conference", durationMin, showRegistered });
         }
       }
       useWippStore.setState({ lifestyle: await fetchEvents(owner) });
@@ -775,6 +777,10 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                       <Text style={{ fontSize: 12, color: durationMin === m ? colors.accentFg : colors.fg }}>{m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h 30` : `${m / 60} h`}</Text>
                     </Press>
                   ))}
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ flex: 1, color: colors.fg, fontSize: 13 }}>Afficher le nombre d’inscrits</Text>
+                  <Toggle value={showRegistered} onChange={setShowRegistered} />
                 </View>
                 <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 15 }}>
                   Gratuit · jusqu’à 100 spectateurs · aucun enregistrement. {visibility === "private" ? "Tu inviteras tes contacts depuis la fiche de l’événement." : "Visible par tous dans Événements."}

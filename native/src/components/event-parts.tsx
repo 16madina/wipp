@@ -161,7 +161,7 @@ export function EventCard({
   saved?: boolean;
   onPress: () => void;
   onSave?: () => void;
-  interested?: { count: number; avatars: string[] };
+  interested?: { count: number; avatars: string[]; label?: string };
   distance?: string;
   /** WIPP online event: « EN DIRECT » (red) or « À venir » / « Terminé ». */
   live?: string | null;
@@ -194,18 +194,26 @@ export function EventCard({
         ) : null}
       </View>
       {interested && interested.count > 0 ? (
-        <View style={{ position: "absolute", right: 12, bottom: 12, flexDirection: "row", alignItems: "center", gap: 6 }}>
+        // Up to 10 photos, then « +N », above the title so nothing overlaps.
+        <View style={{ position: "absolute", left: 14, right: 12, bottom: 82, flexDirection: "row", alignItems: "center", gap: 6 }}>
           <View style={{ flexDirection: "row" }}>
-            {interested.avatars.slice(0, 3).map((a, i) => (
-              <View key={`${a}-${i}`} style={{ marginLeft: i ? -10 : 0, borderRadius: 14, borderWidth: 2, borderColor: colors.accent }}>
+            {interested.avatars.slice(0, 10).map((a, i) => (
+              <View key={`${a}-${i}`} style={{ marginLeft: i ? -9 : 0, borderRadius: 14, borderWidth: 2, borderColor: colors.accent }}>
                 <Avatar user={{ avatar: a, displayName: "·" }} size={24} />
               </View>
             ))}
+            {interested.count > Math.min(10, interested.avatars.length) ? (
+              <View style={{ marginLeft: interested.avatars.length ? -9 : 0, height: 28, minWidth: 28, paddingHorizontal: 5, borderRadius: 14, borderWidth: 2, borderColor: colors.accent, backgroundColor: "rgba(0,0,0,0.75)", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" }}>+{interested.count - Math.min(10, interested.avatars.length)}</Text>
+              </View>
+            ) : null}
           </View>
-          <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>+{interested.count} intéressé{interested.count > 1 ? "s" : ""}</Text>
+          <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
+            {interested.label ?? `${interested.count} intéressé${interested.count > 1 ? "s" : ""}`}
+          </Text>
         </View>
       ) : null}
-      <View style={{ position: "absolute", left: 14, right: interested && interested.count > 0 ? 130 : 14, bottom: 12 }}>
+      <View style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
         <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 19, fontFamily: "Inter_800ExtraBold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>{title}</Text>
         {subtitle ? <Text numberOfLines={1} style={{ marginTop: 2, color: fgA(0.8), fontSize: 13 }}>{subtitle}</Text> : null}
         <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 14 }}>

@@ -34,7 +34,7 @@ async function api<T>(path: string, body?: unknown) {
 const at = (eventId: string, action = "") => `lives/${encodeURIComponent(eventId)}${action ? `/${action}` : ""}`;
 
 export const getLive = (eventId: string) => api<LiveInfo>(at(eventId));
-export const saveLive = (eventId: string, input: { visibility: "public" | "private"; mode: "conference" | "interactive"; durationMin: number }) =>
+export const saveLive = (eventId: string, input: { visibility: "public" | "private"; mode: "conference" | "interactive"; durationMin: number; showRegistered: boolean }) =>
   api<LiveInfo>(at(eventId), input);
 export const registerLive = (eventId: string, on: boolean) => api<LiveInfo>(at(eventId, on ? "register" : "unregister"), {});
 export const inviteToLive = (eventId: string, usernames: string[]) => api<{ invited: number }>(at(eventId, "invite"), { usernames });
