@@ -257,6 +257,8 @@ export async function endEventLive(meId: string, eventId: string, cancel = false
       spotlight_id = null, qa_mode = false, updated_at = now()
     where event_id = ${eventId}
   `;
+  // Everyone switches to the end screen at once, then the LiveKit room is closed.
+  await broadcast(eventId, { t: "ended" });
   const rs = roomService();
   if (rs) await rs.deleteRoom(roomOf(eventId)).catch(() => undefined);
   return getEventLive(meId, eventId);
@@ -282,6 +284,14 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
     if (count >= live.max_viewers + live.max_speakers) throw new WippHttpError(409, "full", "Le direct est complet.");
   }
   const speaker = isOwner || m?.role === "speaker";
+  // Real presence (the end-of-live review is only open to people who came in).
+  if (!isOwner) {
+    const sql = await getSql();
+    await sql`
+      insert into wipp_event_live_attendance (event_id, profile_id) values (${eventId}, ${meId})
+      on conflict (event_id, profile_id) do update set last_joined_at = now()
+    `.catch(() => undefined);
+  }
   const at = new AccessToken(env.apiKey, env.apiSecret, {
     identity: identityOf(meId),
     name: displayName.slice(0, 60) || "WIPP",
@@ -330,6 +340,70 @@ export async function setEventLiveSettings(
   `;
   await broadcast(eventId, { t: "settings", commentsOn, reactionsOn, questionsOn, qaMode });
   return { commentsOn, reactionsOn, questionsOn, qaMode };
+}
+
+// ——— Fin de conférence : résumé et avis ———
+
+const REVIEW_WINDOW_MS = 14 * 24 * 3600_000;
+
+/** End screen: title, organizer, my review (participants) or the numbers (organizer). */
+export async function liveSummary(meId: string, eventId: string) {
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  const sql = await getSql();
+  const owner = await sql<{ display_name: string; username: string; avatar_url: string | null }>`
+    select display_name, username, avatar_url from wipp_profiles where id = ${live.owner_id} limit 1
+  `;
+  const isOwner = live.owner_id === meId;
+  const attended = isOwner
+    ? true
+    : Boolean((await sql<{ ok: boolean }>`select exists (select 1 from wipp_event_live_attendance where event_id = ${eventId} and profile_id = ${meId}) as ok`)[0]?.ok);
+  const mine = await sql<{ rating: number | null; body: string }>`
+    select rating, body from wipp_event_live_reviews where event_id = ${eventId} and profile_id = ${meId} limit 1
+  `;
+  const open = live.state === "live" || (live.state === "ended" && (!live.ended_at || Date.now() - Date.parse(live.ended_at) < REVIEW_WINDOW_MS));
+  let stats: { attendees: number; questions: number; reviews: number; average: number | null } | null = null;
+  if (isOwner) {
+    const n = await sql<{ attendees: number; questions: number; reviews: number; average: number | null }>`
+      select
+        (select count(*)::int from wipp_event_live_attendance where event_id = ${eventId}) as attendees,
+        (select count(*)::int from wipp_event_live_questions where event_id = ${eventId} and status <> 'deleted') as questions,
+        (select count(*)::int from wipp_event_live_reviews where event_id = ${eventId} and status = 'visible') as reviews,
+        (select round(avg(rating)::numeric, 1)::float from wipp_event_live_reviews where event_id = ${eventId} and status = 'visible' and rating is not null) as average
+    `;
+    stats = n[0] ?? null;
+  }
+  return {
+    eventId,
+    title: live.title,
+    state: live.state,
+    isOwner,
+    organizer: { name: owner[0]?.display_name || owner[0]?.username || "WIPP", username: owner[0]?.username ?? "", avatar: owner[0]?.avatar_url ?? null },
+    canReview: !isOwner && attended && open,
+    myReview: mine[0] ? { rating: mine[0].rating, text: mine[0].body } : null,
+    stats,
+  };
+}
+
+/** One review per participant (rewriting replaces it). Only people who really joined, never the organizer. */
+export async function saveLiveReview(meId: string, eventId: string, input: { rating?: number | null; text?: string }) {
+  const summary = await liveSummary(meId, eventId);
+  if (summary.isOwner) throw new WippHttpError(403, "own_event", "Tu ne peux pas évaluer ta propre conférence.");
+  if (!summary.canReview) throw new WippHttpError(403, "not_attended", "Seules les personnes qui ont participé au direct peuvent laisser un avis.");
+  const rating = input.rating == null ? null : Math.round(Number(input.rating));
+  if (rating != null && (rating < 1 || rating > 5)) throw new WippHttpError(400, "invalid", "Note de 1 à 5.");
+  const text = String(input.text ?? "").replace(/\s+/g, " ").trim().slice(0, 500);
+  if (rating == null && !text) throw new WippHttpError(400, "empty", "Choisis une note ou écris un commentaire.");
+  const sql = await getSql();
+  if (text) {
+    const bad = await sql<{ bad: boolean }>`select public.wipp_text_is_offensive(${text}) as bad`;
+    if (bad[0]?.bad) throw new WippHttpError(400, "offensive_text", "Ton commentaire contient un mot interdit.");
+  }
+  await sql`
+    insert into wipp_event_live_reviews (event_id, profile_id, rating, body) values (${eventId}, ${meId}, ${rating}, ${text})
+    on conflict (event_id, profile_id) do update set rating = excluded.rating, body = excluded.body, updated_at = now()
+  `;
+  return { ok: true };
 }
 
 // ——— Étape B : questions-réponses ———

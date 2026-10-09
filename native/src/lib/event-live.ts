@@ -67,6 +67,18 @@ export const voteLiveQuestion = (eventId: string, questionId: string, on: boolea
   api<{ votes: number; myVote: boolean }>(at(eventId, `questions/${encodeURIComponent(questionId)}/vote`), { on });
 export const moderateLiveQuestion = (eventId: string, questionId: string, action: "show" | "unshow" | "done" | "ignore" | "delete" | "restore") =>
   api<{ ok: boolean; status: string }>(at(eventId, `questions/${encodeURIComponent(questionId)}/moderate`), { action });
+export type LiveSummary = {
+  eventId: string;
+  title: string;
+  state: string;
+  isOwner: boolean;
+  organizer: { name: string; username: string; avatar: string | null };
+  canReview: boolean;
+  myReview: { rating: number | null; text: string } | null;
+  stats: { attendees: number; questions: number; reviews: number; average: number | null } | null;
+};
+export const liveSummary = (eventId: string) => api<LiveSummary>(at(eventId, "summary"));
+export const saveLiveReview = (eventId: string, rating: number | null, text: string) => api<{ ok: boolean }>(at(eventId, "review"), { rating, text });
 export const postLiveComment = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "comment"), { text });
 export const deleteLiveComment = (eventId: string, id: string) => api<{ ok: boolean }>(at(eventId, "delete-comment"), { id });
 

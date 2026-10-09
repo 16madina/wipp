@@ -550,6 +550,11 @@ export async function handleWippApi(request: Request): Promise<Response> {
         const body = await readBody<{ identity?: string }>(request);
         return json(await live.banFromEventLive(me.id, eventId, String(body.identity ?? "")));
       }
+      if (method === "GET" && c === "summary") return json(await live.liveSummary(me.id, eventId));
+      if (method === "POST" && c === "review") {
+        const body = await readBody<{ rating?: number | null; text?: string }>(request);
+        return json(await live.saveLiveReview(me.id, eventId, body));
+      }
       if (method === "GET" && c === "questions") return json(await live.listLiveQuestions(me.id, eventId));
       if (method === "POST" && c === "questions" && !d) {
         const body = await readBody<{ text?: string }>(request);

@@ -15,6 +15,7 @@ import { Eye, EyeOff, Flag, Heart, HelpCircle, Mic, MicOff, MoreHorizontal, Refr
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
+import { LiveEndScreen } from "../components/LiveEndScreen";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
@@ -82,6 +83,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [micOn, setMicOn] = useState(false);
   const lastComment = useRef(0);
   const camWanted = useRef(false);
+  // The organizer ended it: no reconnection attempt, straight to the end screen.
+  const endedRef = useRef(false);
+  const [qaAnnounce, setQaAnnounce] = useState(0);
+  const prevQa = useRef<boolean | null>(null);
   const micWanted = useRef(false);
   const lastReaction = useRef(0);
   const claps = useRef<number[]>([]);
@@ -130,6 +135,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     // live is still on and come back with a fresh token. Only a real end shows « terminé ».
     room.on(RoomEvent.Disconnected, (reason) => {
       if (cancelled) return;
+      if (endedRef.current) {
+        setPhase("ended");
+        return;
+      }
       void (async () => {
         const { getLive, liveToken } = await import("../lib/event-live");
         for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
@@ -254,6 +263,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       qa.soon();
     } else if (t === "q" && msg.from === "server") {
       qa.soon();
+    } else if (t === "ended" && msg.from === "server") {
+      endedRef.current = true;
+      setPhase("ended");
+      void roomRef.current?.disconnect();
     }
   }
 
@@ -383,6 +396,12 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     }
   }
 
+  // « Lancer les questions-réponses »: a short, soft announcement for everyone.
+  useEffect(() => {
+    if (prevQa.current === false && settings.qaMode) setQaAnnounce((n) => n + 1);
+    prevQa.current = settings.qaMode;
+  }, [settings.qaMode]);
+
   async function spotAction(action: "done" | "unshow") {
     const q = qa.data?.spotlight;
     if (!q) return;
@@ -420,8 +439,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           void import("../lib/event-live")
             .then(({ endLive }) => endLive(eventId))
             .then(() => {
+              endedRef.current = true;
+              setPhase("ended");
               void roomRef.current?.disconnect();
-              pop();
             })
             .catch((err) => Alert.alert("Direct", errorText(err, "Impossible de terminer.")));
         },
@@ -445,6 +465,20 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const title = useWippStore((s) => s.lifestyle.find((e) => e.id === eventId)?.title ?? "Direct");
   const ordered = useMemo(() => [...people].sort((a, b) => (a.role === "organizer" ? -1 : b.role === "organizer" ? 1 : a.name.localeCompare(b.name))), [people]);
 
+  if (phase === "ended") {
+    return (
+      <LiveEndScreen
+        eventId={eventId}
+        onBack={() => {
+          // Back to the events: leave the room and the event sheet behind it.
+          const st = useWippStore.getState();
+          st.pop();
+          if (useWippStore.getState().stack.at(-1)?.name === "lifestyle") useWippStore.getState().pop();
+        }}
+      />
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
@@ -457,9 +491,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               ? "Connexion au direct…"
               : phase === "failed"
                 ? failNote
-                : phase === "ended"
-                  ? "Le direct est terminé."
-                  : publisher && !camOn
+                : publisher && !camOn
                     ? "Ta caméra est éteinte. Active-la pour passer à l’antenne."
                     : "L’organisateur va bientôt apparaître."}
           </Text>
@@ -539,6 +571,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         ))}
       </View>
       <ClapWave wave={clapWave} />
+      <QaAnnounce n={qaAnnounce} />
 
       {/* Bottom: comments over the video, then the bar */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
@@ -570,10 +603,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 setAskFocus(true);
                 setSheet("questions");
               }}
-              style={{ alignSelf: "flex-start", marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 32, borderRadius: 16, backgroundColor: "rgba(212,160,23,0.92)" }}
+              style={{ alignSelf: "center", marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, height: 42, borderRadius: 21, backgroundColor: "#d4a017", shadowColor: "#d4a017", shadowOpacity: 0.6, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 }}
             >
-              <HelpCircle size={15} color="#0b1220" />
-              <Text style={{ color: "#0b1220", fontSize: 13, fontFamily: "Inter_700Bold" }}>Poser une question</Text>
+              <HelpCircle size={18} color="#0b1220" />
+              <Text style={{ color: "#0b1220", fontSize: 15, fontFamily: "Inter_700Bold" }}>Poser une question</Text>
             </Press>
           ) : null}
           {settings.commentsOn || isOrganizer ? (
@@ -776,6 +809,28 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         {children}
       </View>
     </View>
+  );
+}
+
+/** « C'est le moment de vos questions ! » — fades in, stays ~3 s, fades out. */
+function QaAnnounce({ n }: { n: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!n) return;
+    anim.setValue(0);
+    Animated.sequence([
+      Animated.timing(anim, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.delay(2800),
+      Animated.timing(anim, { toValue: 0, duration: 450, useNativeDriver: true }),
+    ]).start();
+  }, [n]);
+  if (!n) return null;
+  return (
+    <Animated.View pointerEvents="none" style={{ position: "absolute", top: "38%", left: 24, right: 24, alignItems: "center", opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }}>
+      <View style={{ paddingHorizontal: 22, paddingVertical: 16, borderRadius: 20, backgroundColor: "rgba(6,10,24,0.86)", borderWidth: 1, borderColor: "rgba(212,160,23,0.8)" }}>
+        <Text style={{ color: "#fff", fontSize: 19, textAlign: "center", fontFamily: "Inter_700Bold" }}>🎤 C’est le moment de vos questions !</Text>
+      </View>
+    </Animated.View>
   );
 }
 
