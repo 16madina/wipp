@@ -24,6 +24,7 @@ export type LiveToken = {
   identity: string;
   role: "organizer" | "speaker" | "viewer";
   ownerIdentity: string;
+  pid: string;
   settings: { commentsOn: boolean; reactionsOn: boolean; questionsOn: boolean; qaMode: boolean; mode: string };
 };
 
@@ -79,6 +80,29 @@ export type LiveSummary = {
 };
 export const liveSummary = (eventId: string) => api<LiveSummary>(at(eventId, "summary"));
 export const saveLiveReview = (eventId: string, rating: number | null, text: string) => api<{ ok: boolean }>(at(eventId, "review"), { rating, text });
+export type StagePerson = { pid: string; identity: string; name: string; username: string; avatar: string | null; micRevoked: boolean; camRevoked: boolean; at?: number };
+export type LiveStage = {
+  mode: "conference" | "interactive";
+  maxSpeakers: number;
+  featured: string | null;
+  ownerIdentity: string;
+  speakers: StagePerson[];
+  hands: StagePerson[];
+  invites: StagePerson[];
+  me: { onStage: boolean; handRaised: boolean; invitedAt: number | null; micRevoked: boolean; camRevoked: boolean };
+  freeSeats: number;
+};
+export const liveStage = (eventId: string) => api<LiveStage>(at(eventId, "stage"));
+type StageAction =
+  | { action: "hand"; up: boolean }
+  | { action: "invite"; pid: string }
+  | { action: "dismiss"; pid: string }
+  | { action: "answer"; accept: boolean }
+  | { action: "leave"; pid?: string }
+  | { action: "media"; pid: string; micRevoked?: boolean; camRevoked?: boolean }
+  | { action: "feature"; identity: string | null }
+  | { action: "mode"; mode: "conference" | "interactive" };
+export const stageAction = (eventId: string, body: StageAction) => api<LiveStage>(at(eventId, "stage"), body);
 export const postLiveComment = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "comment"), { text });
 export const deleteLiveComment = (eventId: string, id: string) => api<{ ok: boolean }>(at(eventId, "delete-comment"), { id });
 

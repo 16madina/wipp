@@ -30,6 +30,7 @@ type LiveRow = {
   ended_at: string | null;
   qa_mode: boolean;
   spotlight_id: string | null;
+  featured_identity: string | null;
 };
 
 const ROOM_PREFIX = "wipp-live-";
@@ -57,7 +58,7 @@ async function loadLive(eventId: string): Promise<LiveRow> {
   const rows = await sql<LiveRow>`
     select l.event_id, e.owner_id, e.title, e.starts_at::text, e.status, l.visibility, l.mode, l.state,
            l.duration_min, l.max_viewers, l.max_speakers, l.comments_on, l.reactions_on, l.questions_on,
-           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id
+           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity
     from wipp_event_lives l join wipp_events e on e.id = l.event_id
     where l.event_id = ${eventId} limit 1
   `;
@@ -73,8 +74,8 @@ async function loadLive(eventId: string): Promise<LiveRow> {
 
 async function memberOf(eventId: string, profileId: string) {
   const sql = await getSql();
-  const rows = await sql<{ status: string; role: string }>`
-    select status, role from wipp_event_live_members where event_id = ${eventId} and profile_id = ${profileId} limit 1
+  const rows = await sql<{ status: string; role: string; mic_revoked: boolean; cam_revoked: boolean }>`
+    select status, role, mic_revoked, cam_revoked from wipp_event_live_members where event_id = ${eventId} and profile_id = ${profileId} limit 1
   `;
   return rows[0] ?? null;
 }
@@ -254,7 +255,12 @@ export async function endEventLive(meId: string, eventId: string, cancel = false
   const sql = await getSql();
   await sql`
     update wipp_event_lives set state = ${cancel && live.state === "scheduled" ? "cancelled" : "ended"}, ended_at = now(),
-      spotlight_id = null, qa_mode = false, updated_at = now()
+      spotlight_id = null, qa_mode = false, featured_identity = null, updated_at = now()
+    where event_id = ${eventId}
+  `;
+  await sql`
+    update wipp_event_live_members set role = case when role = 'speaker' then 'viewer' else role end,
+      hand_raised_at = null, stage_invited_at = null, stage_since = null
     where event_id = ${eventId}
   `;
   // Everyone switches to the end screen at once, then the LiveKit room is closed.
@@ -303,8 +309,13 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
     roomJoin: true,
     room,
     canSubscribe: true,
+    // Speakers: only the sources the organizer has not taken back (a reconnection keeps the same limits).
     canPublish: speaker,
-    canPublishSources: speaker ? [TrackSource.CAMERA, TrackSource.MICROPHONE, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO] : [],
+    canPublishSources: isOwner
+      ? [TrackSource.CAMERA, TrackSource.MICROPHONE, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO]
+      : speaker
+        ? [...(m?.cam_revoked ? [] : [TrackSource.CAMERA]), ...(m?.mic_revoked ? [] : [TrackSource.MICROPHONE])]
+        : [],
     // Reactions only (comments go through the server: filter, anti-spam, on/off).
     canPublishData: isOwner || live.reactions_on,
     canUpdateOwnMetadata: false,
@@ -317,6 +328,7 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
     role: isOwner ? "organizer" : speaker ? "speaker" : "viewer",
     ownerIdentity: identityOf(live.owner_id),
     settings: { commentsOn: live.comments_on, reactionsOn: live.reactions_on, questionsOn: live.questions_on, qaMode: live.qa_mode, mode: live.mode },
+    pid: meId,
   };
 }
 
@@ -340,6 +352,260 @@ export async function setEventLiveSettings(
   `;
   await broadcast(eventId, { t: "settings", commentsOn, reactionsOn, questionsOn, qaMode });
   return { commentsOn, reactionsOn, questionsOn, qaMode };
+}
+
+// ——— Étape C : scène (mains levées, invitations, intervenants) ———
+
+const INVITE_TTL_MS = 60_000;
+const handToggles = new Map<string, number>();
+
+type StageRow = {
+  profile_id: string;
+  role: string;
+  hand_raised_at: string | null;
+  stage_invited_at: string | null;
+  stage_since: string | null;
+  mic_revoked: boolean;
+  cam_revoked: boolean;
+  display_name: string;
+  username: string;
+  avatar_url: string | null;
+};
+
+function inviteLive(at: string | null) {
+  return Boolean(at && Date.now() - Date.parse(at) < INVITE_TTL_MS);
+}
+
+/** Atomic LiveKit permissions for a participant (viewer = read-only, reactions only). */
+async function applyPermissions(live: LiveRow, profileId: string, speaker: boolean, micRevoked: boolean, camRevoked: boolean) {
+  const rs = roomService();
+  if (!rs) return;
+  const sources = speaker ? [...(camRevoked ? [] : [TrackSource.CAMERA]), ...(micRevoked ? [] : [TrackSource.MICROPHONE])] : [];
+  await rs
+    .updateParticipant(roomOf(live.event_id), identityOf(profileId), {
+      metadata: JSON.stringify({ role: speaker ? "speaker" : "viewer", pid: profileId }),
+      permission: {
+        canSubscribe: true,
+        canPublish: speaker && sources.length > 0,
+        canPublishSources: sources,
+        canPublishData: live.reactions_on,
+        canUpdateMetadata: false,
+        hidden: false,
+      },
+    })
+    .catch(() => undefined); // not in the room right now: the next token carries the same rights
+}
+
+async function stageRows(eventId: string) {
+  const sql = await getSql();
+  return sql<StageRow>`
+    select m.profile_id, m.role, m.hand_raised_at::text, m.stage_invited_at::text, m.stage_since::text, m.mic_revoked, m.cam_revoked,
+           p.display_name, p.username, p.avatar_url
+    from wipp_event_live_members m join wipp_profiles p on p.id = m.profile_id
+    where m.event_id = ${eventId} and m.status <> 'banned'
+      and (m.role = 'speaker' or m.hand_raised_at is not null or m.stage_invited_at is not null)
+  `;
+}
+
+async function freeSeats(live: LiveRow) {
+  const rows = await stageRows(live.event_id);
+  const taken = rows.filter((r) => r.role === "speaker" || inviteLive(r.stage_invited_at)).length;
+  return live.max_speakers - 1 - taken; // the organizer always has a seat
+}
+
+/** Who is on stage, raised hands and invitations (organizer); my own state (everyone). */
+export async function liveStage(meId: string, eventId: string) {
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  const isOwner = live.owner_id === meId;
+  const rows = await stageRows(eventId);
+  const person = (r: StageRow) => ({
+    pid: r.profile_id,
+    identity: identityOf(r.profile_id),
+    name: r.display_name,
+    username: r.username,
+    avatar: r.avatar_url,
+    micRevoked: r.mic_revoked,
+    camRevoked: r.cam_revoked,
+  });
+  const me = rows.find((r) => r.profile_id === meId);
+  return {
+    mode: live.mode,
+    maxSpeakers: live.max_speakers,
+    featured: live.featured_identity,
+    ownerIdentity: identityOf(live.owner_id),
+    speakers: rows.filter((r) => r.role === "speaker").sort((a, b) => Date.parse(a.stage_since ?? "") - Date.parse(b.stage_since ?? "")).map(person),
+    hands: isOwner
+      ? rows
+          .filter((r) => r.role !== "speaker" && r.hand_raised_at && !inviteLive(r.stage_invited_at))
+          .sort((a, b) => Date.parse(a.hand_raised_at!) - Date.parse(b.hand_raised_at!))
+          .map((r) => ({ ...person(r), at: Date.parse(r.hand_raised_at!) }))
+      : [],
+    invites: isOwner ? rows.filter((r) => r.role !== "speaker" && inviteLive(r.stage_invited_at)).map((r) => ({ ...person(r), at: Date.parse(r.stage_invited_at!) })) : [],
+    me: {
+      onStage: isOwner || me?.role === "speaker",
+      handRaised: Boolean(me?.hand_raised_at),
+      invitedAt: me && me.role !== "speaker" && inviteLive(me.stage_invited_at) ? Date.parse(me.stage_invited_at!) : null,
+      micRevoked: Boolean(me?.mic_revoked),
+      camRevoked: Boolean(me?.cam_revoked),
+    },
+    freeSeats: await freeSeats(live),
+  };
+}
+
+/** Raise / lower my hand. One active request; toggling is slowed down. */
+export async function setHand(meId: string, eventId: string, up: boolean) {
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  if (live.owner_id === meId) throw new WippHttpError(400, "owner", "Tu es déjà sur scène.");
+  if (live.state !== "live") throw new WippHttpError(409, "not_live", "Le direct n’est pas en cours.");
+  const key = `${eventId}:${meId}`;
+  const now = Date.now();
+  if (up && now - (handToggles.get(key) ?? 0) < 10_000) throw new WippHttpError(429, "slow_down", "Attends quelques secondes avant de relever la main.");
+  handToggles.set(key, now);
+  if (handToggles.size > 5000) handToggles.clear();
+  const sql = await getSql();
+  if (up) {
+    await sql`
+      insert into wipp_event_live_members (event_id, profile_id, status, hand_raised_at) values (${eventId}, ${meId}, 'registered', now())
+      on conflict (event_id, profile_id) do update set hand_raised_at = coalesce(wipp_event_live_members.hand_raised_at, now()), updated_at = now()
+      where wipp_event_live_members.status <> 'banned' and wipp_event_live_members.role <> 'speaker'
+    `;
+  } else {
+    await sql`update wipp_event_live_members set hand_raised_at = null, updated_at = now() where event_id = ${eventId} and profile_id = ${meId}`;
+  }
+  await broadcast(eventId, { t: "stage", hand: up ? identityOf(meId) : undefined });
+  return liveStage(meId, eventId);
+}
+
+/** Organizer invites someone up (a raised hand or anyone in the room). Needs a free seat; switches to interactive. */
+export async function inviteToStage(meId: string, eventId: string, profileId: string) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  if (live.state !== "live") throw new WippHttpError(409, "not_live", "Le direct n’est pas en cours.");
+  if (profileId === meId) throw new WippHttpError(400, "owner", "Tu es déjà sur scène.");
+  const m = await memberOf(eventId, profileId);
+  if (m?.status === "banned") throw new WippHttpError(403, "banned", "Cette personne a été exclue.");
+  if (m?.role === "speaker") return liveStage(meId, eventId);
+  if ((await freeSeats(live)) <= 0) throw new WippHttpError(409, "full", `La scène est complète (${live.max_speakers} personnes maximum).`);
+  const sql = await getSql();
+  if (live.mode !== "interactive") await sql`update wipp_event_lives set mode = 'interactive', updated_at = now() where event_id = ${eventId}`;
+  await sql`
+    insert into wipp_event_live_members (event_id, profile_id, status, stage_invited_at) values (${eventId}, ${profileId}, 'registered', now())
+    on conflict (event_id, profile_id) do update set stage_invited_at = now(), hand_raised_at = null, updated_at = now()
+    where wipp_event_live_members.status <> 'banned'
+  `;
+  await broadcast(eventId, { t: "stage", invite: identityOf(profileId) });
+  return liveStage(meId, eventId);
+}
+
+/** Organizer: refuse a raised hand or cancel an invitation. */
+export async function dismissStageRequest(meId: string, eventId: string, profileId: string) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const sql = await getSql();
+  await sql`
+    update wipp_event_live_members set hand_raised_at = null, stage_invited_at = null, updated_at = now()
+    where event_id = ${eventId} and profile_id = ${profileId} and role <> 'speaker'
+  `;
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
+}
+
+/** The invited person answers. Only a « yes » within 60 s, with a free seat, makes them a speaker. */
+export async function answerStageInvite(meId: string, eventId: string, accept: boolean) {
+  const live = await loadLive(eventId);
+  await assertCanSee(live, meId);
+  const sql = await getSql();
+  const rows = await sql<{ stage_invited_at: string | null; role: string }>`
+    select stage_invited_at::text, role from wipp_event_live_members where event_id = ${eventId} and profile_id = ${meId} limit 1
+  `;
+  const row = rows[0];
+  if (!accept) {
+    await sql`update wipp_event_live_members set stage_invited_at = null, updated_at = now() where event_id = ${eventId} and profile_id = ${meId}`;
+    await broadcast(eventId, { t: "stage" });
+    return liveStage(meId, eventId);
+  }
+  if (live.state !== "live") throw new WippHttpError(409, "not_live", "Le direct n’est pas en cours.");
+  if (!row || !inviteLive(row.stage_invited_at)) {
+    await sql`update wipp_event_live_members set stage_invited_at = null where event_id = ${eventId} and profile_id = ${meId}`;
+    throw new WippHttpError(410, "expired", "L’invitation a expiré.");
+  }
+  // My own pending invitation already holds a seat: count the others only.
+  const others = (await stageRows(eventId)).filter((r) => r.profile_id !== meId && (r.role === "speaker" || inviteLive(r.stage_invited_at))).length;
+  if (others >= live.max_speakers - 1) throw new WippHttpError(409, "full", "La scène est complète.");
+  await sql`
+    update wipp_event_live_members set role = 'speaker', stage_invited_at = null, hand_raised_at = null, stage_since = now(),
+      mic_revoked = false, cam_revoked = false, updated_at = now()
+    where event_id = ${eventId} and profile_id = ${meId}
+  `;
+  await applyPermissions(live, meId, true, false, false);
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
+}
+
+/** Back to the audience: by myself, or the organizer takes someone down. Rights are taken back at once. */
+export async function leaveStage(meId: string, eventId: string, profileId?: string) {
+  const live = await loadLive(eventId);
+  const target = profileId && profileId !== meId ? profileId : meId;
+  if (target !== meId) assertOwner(live, meId);
+  else await assertCanSee(live, meId);
+  const sql = await getSql();
+  await sql`
+    update wipp_event_live_members set role = 'viewer', stage_invited_at = null, hand_raised_at = null, stage_since = null, updated_at = now()
+    where event_id = ${eventId} and profile_id = ${target} and role = 'speaker'
+  `;
+  if (live.featured_identity === identityOf(target)) await sql`update wipp_event_lives set featured_identity = null where event_id = ${eventId}`;
+  await applyPermissions(live, target, false, false, false);
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
+}
+
+/** Organizer takes back (or gives back) a speaker's microphone or camera. Never turns them ON remotely. */
+export async function setSpeakerMedia(meId: string, eventId: string, profileId: string, input: { micRevoked?: boolean; camRevoked?: boolean }) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const m = await memberOf(eventId, profileId);
+  if (m?.role !== "speaker") throw new WippHttpError(404, "not_speaker", "Cette personne n’est pas sur scène.");
+  const micRevoked = typeof input.micRevoked === "boolean" ? input.micRevoked : m.mic_revoked;
+  const camRevoked = typeof input.camRevoked === "boolean" ? input.camRevoked : m.cam_revoked;
+  const sql = await getSql();
+  await sql`
+    update wipp_event_live_members set mic_revoked = ${micRevoked}, cam_revoked = ${camRevoked}, updated_at = now()
+    where event_id = ${eventId} and profile_id = ${profileId}
+  `;
+  await applyPermissions(live, profileId, true, micRevoked, camRevoked);
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
+}
+
+/** Organizer puts one speaker in big (null = back to the grid). Same view for everyone. */
+export async function setFeatured(meId: string, eventId: string, identity: string | null) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const sql = await getSql();
+  const value = identity ? String(identity).slice(0, 64) : null;
+  await sql`update wipp_event_lives set featured_identity = ${value}, updated_at = now() where event_id = ${eventId}`;
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
+}
+
+/** Conference ⇄ interactive. Back to « conference »: every speaker goes back to the audience. */
+export async function setLiveMode(meId: string, eventId: string, mode: string) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const next = mode === "interactive" ? "interactive" : "conference";
+  const sql = await getSql();
+  await sql`update wipp_event_lives set mode = ${next}, featured_identity = case when ${next} = 'conference' then null else featured_identity end, updated_at = now() where event_id = ${eventId}`;
+  if (next === "conference") {
+    const down = await sql<{ profile_id: string }>`
+      update wipp_event_live_members set role = 'viewer', stage_invited_at = null, stage_since = null, updated_at = now()
+      where event_id = ${eventId} and (role = 'speaker' or stage_invited_at is not null) returning profile_id
+    `;
+    for (const d of down) await applyPermissions({ ...live, mode: next }, d.profile_id, false, false, false);
+  }
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
 }
 
 // ——— Fin de conférence : résumé et avis ———

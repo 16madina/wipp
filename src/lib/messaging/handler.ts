@@ -550,6 +550,22 @@ export async function handleWippApi(request: Request): Promise<Response> {
         const body = await readBody<{ identity?: string }>(request);
         return json(await live.banFromEventLive(me.id, eventId, String(body.identity ?? "")));
       }
+      if (method === "GET" && c === "stage") return json(await live.liveStage(me.id, eventId));
+      if (method === "POST" && c === "stage") {
+        const body = await readBody<{ action?: string; pid?: string; up?: boolean; accept?: boolean; micRevoked?: boolean; camRevoked?: boolean; identity?: string | null; mode?: string }>(request);
+        const pid = String(body.pid ?? "");
+        switch (body.action) {
+          case "hand": return json(await live.setHand(me.id, eventId, body.up !== false));
+          case "invite": return json(await live.inviteToStage(me.id, eventId, pid));
+          case "dismiss": return json(await live.dismissStageRequest(me.id, eventId, pid));
+          case "answer": return json(await live.answerStageInvite(me.id, eventId, Boolean(body.accept)));
+          case "leave": return json(await live.leaveStage(me.id, eventId, pid || undefined));
+          case "media": return json(await live.setSpeakerMedia(me.id, eventId, pid, { micRevoked: body.micRevoked, camRevoked: body.camRevoked }));
+          case "feature": return json(await live.setFeatured(me.id, eventId, body.identity ?? null));
+          case "mode": return json(await live.setLiveMode(me.id, eventId, String(body.mode ?? "")));
+          default: throw new WippHttpError(400, "invalid", "Action inconnue.");
+        }
+      }
       if (method === "GET" && c === "summary") return json(await live.liveSummary(me.id, eventId));
       if (method === "POST" && c === "review") {
         const body = await readBody<{ rating?: number | null; text?: string }>(request);

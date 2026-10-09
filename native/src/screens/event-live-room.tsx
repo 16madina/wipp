@@ -11,11 +11,12 @@ import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Eye, EyeOff, Flag, Heart, HelpCircle, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LogOut, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
+import { StageGrid, StageInviteCard, StageSheet, useLiveStage, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
@@ -66,8 +67,12 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [info, setInfo] = useState<LiveToken | null>(null);
   const [phase, setPhase] = useState<"connecting" | "connected" | "reconnecting" | "ended" | "failed">("connecting");
   const [failNote, setFailNote] = useState("");
-  const [stageUrl, setStageUrl] = useState<string | null>(null);
-  const [stageMirror, setStageMirror] = useState(false);
+  // Étape C: everyone on stage (organizer + speakers), laid out by StageGrid.
+  const [tiles, setTiles] = useState<StageTile[]>([]);
+  const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
+  const st = useLiveStage(eventId);
+  const handToast = useRef<Set<string>>(new Set());
+  const [toast, setToast] = useState<string | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [floaters, setFloaters] = useState<Floater[]>([]);
@@ -75,7 +80,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [draft, setDraft] = useState("");
   const [showComments, setShowComments] = useState(true);
   const [settings, setSettings] = useState({ commentsOn: true, reactionsOn: true, questionsOn: true, qaMode: false });
-  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions" | "questions">("none");
+  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions" | "questions" | "stage">("none");
   const [askFocus, setAskFocus] = useState(false);
   // Étape B: questions kept by the server; « q » / « spot » signals refresh them for everyone.
   const qa = useLiveQuestions(eventId);
@@ -92,7 +97,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const claps = useRef<number[]>([]);
   const floaterId = useRef(0);
   const isOrganizer = info?.role === "organizer";
-  const publisher = info?.role === "organizer" || info?.role === "speaker";
+  const role = myRole ?? info?.role ?? "viewer";
+  const publisher = role === "organizer" || role === "speaker";
 
   // ——— connect ———
   useEffect(() => {
@@ -109,11 +115,32 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           return { identity: p.identity, name: p.name || "WIPP", role: meta.role ?? "viewer", pid: meta.pid, av: meta.av };
         }),
       );
-      // Stage: the organizer's camera (or any speaker publishing a camera).
-      const owner = all.find((p) => roleOf(p).role === "organizer") ?? all.find((p) => p.getTrackPublication(Track.Source.Camera)?.track);
-      const cam = owner?.getTrackPublication(Track.Source.Camera);
-      setStageUrl(cam?.track && !cam.isMuted ? streamURL(cam.track) : null);
-      setStageMirror(owner === room.localParticipant);
+      // Stage: organizer first, then speakers (anyone allowed to publish), with or without a camera.
+      const onStage = all.filter((p) => {
+        const role = roleOf(p).role;
+        return role === "organizer" || role === "speaker" || Boolean(p.getTrackPublication(Track.Source.Camera)?.track);
+      });
+      onStage.sort((a, b) => (roleOf(a).role === "organizer" ? -1 : roleOf(b).role === "organizer" ? 1 : 0));
+      setTiles(
+        onStage.map((p) => {
+          const cam = p.getTrackPublication(Track.Source.Camera);
+          const mic = p.getTrackPublication(Track.Source.Microphone);
+          const meta = roleOf(p);
+          return {
+            identity: p.identity,
+            name: p.name || "WIPP",
+            avatar: meta.av,
+            url: cam?.track && !cam.isMuted ? streamURL(cam.track) : null,
+            mirror: p === room.localParticipant,
+            micOn: Boolean(mic?.track && !mic.isMuted),
+            speaking: p.isSpeaking,
+            organizer: meta.role === "organizer",
+          };
+        }),
+      );
+      // My own role follows what the server wrote in my LiveKit metadata (taken down → viewer at once).
+      const mine = roleOf(room.localParticipant).role;
+      if (mine === "organizer" || mine === "speaker" || mine === "viewer") setMyRole(mine);
     };
     for (const ev of [
       RoomEvent.Connected,
@@ -126,6 +153,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       RoomEvent.LocalTrackPublished,
       RoomEvent.LocalTrackUnpublished,
       RoomEvent.ParticipantMetadataChanged,
+      RoomEvent.ActiveSpeakersChanged,
+      RoomEvent.ParticipantPermissionsChanged,
     ]) {
       room.on(ev, refresh);
     }
@@ -151,8 +180,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             if (cancelled) return;
             setPhase("connected");
             refresh();
-            // Back after a cut: the questions and the card on screen come back as the server keeps them.
+            // Back after a cut: questions, card on screen and stage roles come back as the server keeps them.
             void qa.reload();
+            void st.reload();
             const pubs = tok.role === "organizer" || tok.role === "speaker";
             if (pubs && camWanted.current) await room.localParticipant.setCameraEnabled(true).catch(() => undefined);
             if (pubs && micWanted.current) await room.localParticipant.setMicrophoneEnabled(true).catch(() => undefined);
@@ -200,6 +230,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         setPhase("connected");
         refresh();
         void qa.reload();
+        void st.reload();
         if (tok.role === "organizer" || tok.role === "speaker") askToPublish(room);
       } catch (err) {
         if (!cancelled) {
@@ -224,6 +255,12 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         onPress: () => {
           void (async () => {
             try {
+              // Speaking: switch to the call audio mode (echo cancellation), loudspeaker on.
+              const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
+              await AudioSession.configureAudio({
+                android: { audioTypeOptions: AndroidAudioTypePresets.communication, preferredOutputList: ["speaker", "bluetooth", "headset"] },
+                ios: { defaultOutput: "speaker" },
+              }).catch(() => undefined);
               await room.localParticipant.setCameraEnabled(true);
               await room.localParticipant.setMicrophoneEnabled(true);
               setCamOn(true);
@@ -263,6 +300,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       qa.soon();
     } else if (t === "q" && msg.from === "server") {
       qa.soon();
+    } else if (t === "stage" && msg.from === "server") {
+      st.soon();
+      // Organizer: one discreet note per new raised hand (no repeats).
+      if (typeof msg.hand === "string" && !handToast.current.has(msg.hand)) {
+        handToast.current.add(msg.hand);
+        if (roomRef.current && roleOf(roomRef.current.localParticipant).role === "organizer") {
+          const who = [...roomRef.current.remoteParticipants.values()].find((x) => x.identity === msg.hand)?.name ?? "Quelqu’un";
+          setToast(`✋ ${who} lève la main`);
+          setTimeout(() => setToast(null), 3000);
+        }
+      }
     } else if (t === "ended" && msg.from === "server") {
       endedRef.current = true;
       setPhase("ended");
@@ -396,6 +444,56 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     }
   }
 
+  // Back to the audience (by me or the organizer): LiveKit has stopped my tracks; reset the buttons.
+  useEffect(() => {
+    if (role === "viewer" && (camOn || micOn)) {
+      setCamOn(false);
+      setMicOn(false);
+      camWanted.current = false;
+      micWanted.current = false;
+    }
+  }, [role]);
+
+  async function stage(body: Parameters<typeof import("../lib/event-live").stageAction>[1]) {
+    try {
+      const { stageAction } = await import("../lib/event-live");
+      st.setStage(await stageAction(eventId, body));
+      return true;
+    } catch (err) {
+      Alert.alert("Scène", errorText(err, "Action impossible."));
+      return false;
+    }
+  }
+
+  async function joinStage() {
+    if (!(await stage({ action: "answer", accept: true }))) return;
+    setMyRole("speaker");
+    // Let LiveKit deliver the new rights, then ask for consent: nothing turns on until the person says yes.
+    await new Promise((ok) => setTimeout(ok, 700));
+    if (roomRef.current) askToPublish(roomRef.current);
+  }
+
+  function leaveStageSelf() {
+    Alert.alert("Quitter la scène", "Ton micro et ta caméra seront coupés. Tu restes dans le direct comme spectateur.", [
+      { text: "Rester", style: "cancel" },
+      {
+        text: "Quitter la scène",
+        onPress: () => {
+          void (async () => {
+            await roomRef.current?.localParticipant.setCameraEnabled(false).catch(() => undefined);
+            await roomRef.current?.localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
+            if (await stage({ action: "leave" })) setMyRole("viewer");
+          })();
+        },
+      },
+    ]);
+  }
+
+  function flipCamera() {
+    const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as unknown as { mediaStreamTrack?: { _switchCamera?: () => void } } | undefined;
+    track?.mediaStreamTrack?._switchCamera?.();
+  }
+
   // « Lancer les questions-réponses »: a short, soft announcement for everyone.
   useEffect(() => {
     if (prevQa.current === false && settings.qaMode) setQaAnnounce((n) => n + 1);
@@ -482,8 +580,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
-      {stageUrl ? (
-        <RTCView streamURL={stageUrl} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} objectFit="cover" mirror={stageMirror} zOrder={0} />
+      {tiles.some((t) => t.url) || tiles.length > 1 ? (
+        <StageGrid tiles={tiles} featured={st.stage?.featured ?? null} topInset={insets.top} />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15, lineHeight: 21 }}>
@@ -577,7 +675,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
         <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />
         {showComments ? (
-          <View style={{ maxHeight: qa.data?.spotlight ? 150 : 230, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
+          <View style={{ maxHeight: qa.data?.spotlight || tiles.length > 1 ? 150 : 230, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
             <FlatList
               data={comments}
               keyExtractor={(c) => c.id}
@@ -653,14 +751,16 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 }}>
                   {camOn ? <Video size={20} color="#fff" /> : <VideoOff size={20} color="#ff6b6b" />}
                 </BarButton>
-                <BarButton label="Retourner" onPress={() => {
-                  const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as unknown as { mediaStreamTrack?: { _switchCamera?: () => void } } | undefined;
-                  track?.mediaStreamTrack?._switchCamera?.();
-                }}>
-                  <SwitchCamera size={20} color="#fff" />
-                </BarButton>
               </>
-            ) : null}
+            ) : (
+              <BarButton
+                label={st.stage?.me.handRaised ? "Main levée" : "Lever la main"}
+                highlight={Boolean(st.stage?.me.handRaised)}
+                onPress={() => void stage({ action: "hand", up: !st.stage?.me.handRaised })}
+              >
+                <Hand size={20} color={st.stage?.me.handRaised ? "#d4a017" : "#fff"} />
+              </BarButton>
+            )}
             <BarButton
               label="Questions"
               badge={(qa.data?.questions ?? []).filter((q) => q.status === "pending").length}
@@ -676,8 +776,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             <BarButton label="Participants" onPress={() => setSheet("people")}>
               <Users size={20} color="#fff" />
             </BarButton>
-            <BarButton label={showComments ? "Masquer" : "Afficher"} onPress={() => setShowComments((v) => !v)}>
-              {showComments ? <EyeOff size={20} color="#fff" /> : <Eye size={20} color="#fff" />}
+            <BarButton label="Plus" badge={isOrganizer ? st.stage?.hands.length : undefined} onPress={() => setSheet("options")}>
+              <MoreHorizontal size={20} color="#fff" />
             </BarButton>
           </View>
         </View>
@@ -716,6 +816,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 onLongPress={() => {
                   if (item.identity === roomRef.current?.localParticipant.identity) return;
                   const actions: { text: string; style?: "destructive" | "cancel"; onPress?: () => void }[] = [];
+                  if (isOrganizer && item.role === "viewer" && item.pid) actions.push({ text: "Inviter sur scène", onPress: () => void stage({ action: "invite", pid: item.pid! }) });
                   if (isOrganizer) actions.push({ text: "Exclure", style: "destructive", onPress: () => exclude(item.identity, item.name) });
                   if (item.pid) actions.push({ text: "Signaler", onPress: () => report(item.pid!, item.identity) });
                   actions.push({ text: "Annuler", style: "cancel" });
@@ -738,12 +839,56 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         </Sheet>
       ) : null}
 
+      {sheet === "stage" && isOrganizer ? (
+        <StageSheet
+          eventId={eventId}
+          stage={st.stage}
+          onClose={() => setSheet("none")}
+          onChanged={(s2) => st.setStage(s2)}
+          onInviteSomeone={() => setSheet("people")}
+        />
+      ) : null}
+      {st.stage?.me.invitedAt && role === "viewer" ? (
+        <StageInviteCard invitedAt={st.stage.me.invitedAt} onJoin={() => void joinStage()} onRefuse={() => void stage({ action: "answer", accept: false })} />
+      ) : null}
+      {toast ? (
+        <View pointerEvents="none" style={{ position: "absolute", top: insets.top + 74, alignSelf: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "rgba(6,10,24,0.88)", borderWidth: 1, borderColor: "rgba(212,160,23,0.6)" }}>
+          <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{toast}</Text>
+        </View>
+      ) : null}
+
       {/* Options */}
       {sheet === "options" ? (
         <Sheet onClose={() => setSheet("none")} title={isOrganizer ? "Options organisateur" : "Options"}>
           <ScrollView>
             {isOrganizer ? (
               <>
+                <Press onPress={() => setSheet("stage")} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Hand size={18} color="#d4a017" />
+                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>Scène et demandes de parole</Text>
+                  {st.stage?.hands.length ? (
+                    <View style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>{st.stage.hands.length}</Text>
+                    </View>
+                  ) : null}
+                </Press>
+                <OptionRow
+                  label="Mode interactif (jusqu’à 4 sur scène)"
+                  value={st.stage?.mode === "interactive"}
+                  onPress={() => {
+                    const next = st.stage?.mode === "interactive" ? "conference" : "interactive";
+                    if (next === "conference" && st.stage?.speakers.length) {
+                      Alert.alert("Mode Conférence", "Les intervenants redescendront parmi les spectateurs.", [
+                        { text: "Annuler", style: "cancel" },
+                        { text: "Continuer", onPress: () => void stage({ action: "mode", mode: next }) },
+                      ]);
+                    } else void stage({ action: "mode", mode: next });
+                  }}
+                />
+                <Press onPress={flipCamera} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#fff", fontSize: 15 }}>Retourner la caméra</Text>
+                </Press>
+                <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
                 <OptionRow label="Commentaires" value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
                 <OptionRow label="Réactions" value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
                 <OptionRow label="Questions ouvertes" value={settings.questionsOn} onPress={() => void toggleSetting("questionsOn")} />
@@ -754,6 +899,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               </>
             ) : (
               <>
+                {role === "speaker" ? (
+                  <>
+                    <Press onPress={flipCamera} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                      <Text style={{ color: "#fff", fontSize: 15 }}>Retourner la caméra</Text>
+                    </Press>
+                    <Press onPress={leaveStageSelf} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                      <LogOut size={17} color="#ff6b6b" />
+                      <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Quitter la scène</Text>
+                    </Press>
+                  </>
+                ) : null}
                 <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
                 <Press onPress={() => pop()} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Quitter le direct</Text>
