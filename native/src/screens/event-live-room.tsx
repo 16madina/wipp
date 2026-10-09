@@ -956,7 +956,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                   ) : null}
                 </Press>
                 <OptionRow
-                  label="Mode interactif (jusqu’à 4 sur scène)"
+                  label="Mode interactif (jusqu’à 5 sur scène)"
                   value={st.stage?.mode === "interactive"}
                   onPress={() => {
                     const next = st.stage?.mode === "interactive" ? "conference" : "interactive";

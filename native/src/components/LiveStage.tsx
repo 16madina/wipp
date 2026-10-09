@@ -46,7 +46,7 @@ export function useLiveStage(eventId: string) {
 
 /** 1 = full screen · 2 = split · 3 = one wide + two · 4 = 2 × 2 · featured = big + thumbnails. */
 export type StageLayout = "shared" | "dominant" | "inset";
-type Rect = { t: StageTile; x: number; y: number; w: number; h: number; small?: boolean; top?: boolean; menuLeft?: boolean };
+type Rect = { t: StageTile; x: number; y: number; w: number; h: number; small?: boolean; top?: boolean; menuLeft?: boolean; compact?: boolean };
 
 /** Height of the stage when several people are on it: big videos first, comments get what is left. */
 export function stageHeight(winH: number, controlsH: number) {
@@ -75,10 +75,17 @@ function layoutRects(tiles: StageTile[], featured: string | null, layout: StageL
       rects.push({ t: big, x: 0, y: 0, w: W / 2, h: S, top: true });
       rects.push({ t: others[0], x: W / 2, y: 0, w: W / 2, h: S / 2, top: true }, { t: others[1], x: W / 2, y: S / 2, w: W / 2, h: S / 2 });
       logo = { x: W / 2, y: S / 2 };
-    } else {
-      const all = [big, ...others].slice(0, 4);
+    } else if (n === 4) {
+      const all = [big, ...others];
       // Bottom-left video: its ⋯ goes top-left so it never touches the centre logo.
       all.forEach((t, i) => rects.push({ t, x: (i % 2) * (W / 2), y: Math.floor(i / 2) * (S / 2), w: W / 2, h: S / 2, top: i < 2, menuLeft: i === 2 }));
+      logo = { x: W / 2, y: S / 2 };
+    } else {
+      // 5 people: host on the left half, the 4 guests in a 2 × 2 grid on the right half (nobody hidden).
+      rects.push({ t: big, x: 0, y: 0, w: W / 2, h: S, top: true });
+      others.slice(0, 4).forEach((t, i) =>
+        rects.push({ t, x: W / 2 + (i % 2) * (W / 4), y: Math.floor(i / 2) * (S / 2), w: W / 4, h: S / 2, top: i < 2, compact: true }),
+      );
       logo = { x: W / 2, y: S / 2 };
     }
   } else {
@@ -144,7 +151,7 @@ export function StageGrid({
           <Tile
             key={r.t.identity}
             t={r.t}
-            small={r.small}
+            small={r.small || r.compact}
             menuTop={r.top && !r.small ? topSafe + 50 : 6}
             menuLeft={r.menuLeft}
             labelLeft={logo && Math.abs(r.x - logo.x) < 2 && Math.abs(r.y + r.h - logo.y) < 2 ? 30 : 6}
@@ -273,7 +280,7 @@ export function StageSheet({
       <Press accessibilityLabel="Fermer" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }} />
       <View style={{ maxHeight: "68%", paddingHorizontal: 18, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 14), borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: "rgba(9,12,24,0.97)", borderTopWidth: 1, borderColor: "rgba(212,160,23,0.35)" }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>Scène · {seats}/{stage?.maxSpeakers ?? 4}</Text>
+          <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>Scène · {seats}/{stage?.maxSpeakers ?? 5}</Text>
           <Press accessibilityLabel="Fermer" onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <X size={20} color="#fff" />
           </Press>
