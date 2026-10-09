@@ -91,6 +91,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   // The organizer ended it: no reconnection attempt, straight to the end screen.
   const endedRef = useRef(false);
   const [qaAnnounce, setQaAnnounce] = useState(0);
+  // Organizer gone (battery, network…): since when, as the server saw it; the live ends 5 min later.
+  const [hostGone, setHostGone] = useState<{ since: number; graceMs: number } | null>(null);
+  const [nowTick, setNowTick] = useState(Date.now());
   const prevQa = useRef<boolean | null>(null);
   const micWanted = useRef(false);
   const lastReaction = useRef(0);
@@ -450,6 +453,45 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     }
   }
 
+  // Heartbeat (viewers and speakers): every 30 s the server checks the organizer is still here and
+  // ends the live after 5 min without him. We show the countdown and switch to the end screen.
+  useEffect(() => {
+    if (phase !== "connected" && phase !== "reconnecting") return;
+    if (info?.role === "organizer") return;
+    let stop = false;
+    const beat = async () => {
+      try {
+        const { getLive } = await import("../lib/event-live");
+        const l = await getLive(eventId);
+        if (stop) return;
+        if (l.state !== "live") {
+          endedRef.current = true;
+          setPhase("ended");
+          void roomRef.current?.disconnect();
+          return;
+        }
+        setHostGone(l.hostAbsentSince ? { since: Date.parse(l.hostAbsentSince), graceMs: l.hostGraceMs ?? 300_000 } : null);
+      } catch {
+        /* offline: LiveKit reconnection handles it */
+      }
+    };
+    void beat();
+    const id = setInterval(() => void beat(), 30_000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [phase, info?.role, eventId]);
+  // The organizer is back in the room: hide the message at once (no need to wait for the next beat).
+  useEffect(() => {
+    if (hostGone && tiles.some((t) => t.organizer)) setHostGone(null);
+  }, [tiles, hostGone]);
+  useEffect(() => {
+    if (!hostGone) return;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hostGone]);
+
   // Back to the audience (by me or the organizer): LiveKit has stopped my tracks; reset the buttons.
   useEffect(() => {
     if (role === "viewer" && (camOn || micOn)) {
@@ -580,7 +622,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
   function leave() {
     if (isOrganizer && phase === "connected") {
-      Alert.alert("Quitter", "Le direct continue sans toi tant que tu ne le termines pas.", [
+      Alert.alert("Quitter", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
         { text: "Rester", style: "cancel" },
         { text: "Quitter sans terminer", onPress: () => pop() },
         { text: "Terminer pour tous", style: "destructive", onPress: endForAll },
@@ -728,6 +770,21 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         ))}
       </View>
       <ClapWave wave={clapWave} />
+      {hostGone && !isOrganizer ? (
+        <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: 24, right: 24, alignItems: "center" }}>
+          <View style={{ paddingHorizontal: 18, paddingVertical: 14, borderRadius: 18, backgroundColor: "rgba(6,10,24,0.9)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)" }}>
+            <Text style={{ color: "#fff", fontSize: 15, textAlign: "center", fontFamily: "Inter_700Bold" }}>L’organisateur a perdu la connexion</Text>
+            <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.75)", fontSize: 13, textAlign: "center", lineHeight: 18 }}>
+              {(() => {
+                const left = Math.max(0, Math.ceil((hostGone.since + hostGone.graceMs - nowTick) / 1000));
+                const mm = Math.floor(left / 60);
+                const ss = String(left % 60).padStart(2, "0");
+                return `Le direct reprendra dès son retour. Sinon, il se terminera automatiquement dans ${mm}:${ss}.`;
+              })()}
+            </Text>
+          </View>
+        </View>
+      ) : null}
       <QaAnnounce n={qaAnnounce} />
 
       {/* Bottom: comments over the video, then the bar */}

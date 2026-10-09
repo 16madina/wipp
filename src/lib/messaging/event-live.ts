@@ -126,6 +126,7 @@ export async function saveEventLive(
 export async function getEventLive(meId: string, eventId: string) {
   const live = await loadLive(eventId);
   await assertCanSee(live, meId);
+  const hostAbsentSince = live.owner_id === meId ? null : await checkHostPresence(live).catch(() => null);
   const sql = await getSql();
   const counts = await sql<{ registered: number }>`
     select count(*)::int as registered from wipp_event_live_members where event_id = ${eventId} and status = 'registered'
@@ -147,6 +148,9 @@ export async function getEventLive(meId: string, eventId: string) {
     registered: Number(counts[0]?.registered ?? 0),
     myStatus: isOwner ? "organizer" : (m?.status ?? null),
     isOwner,
+    // Organizer missing from the room since… (null = present). The live ends 5 min later.
+    hostAbsentSince,
+    hostGraceMs: HOST_GRACE_MS,
   };
 }
 
@@ -253,6 +257,13 @@ export async function startEventLive(meId: string, eventId: string) {
 export async function endEventLive(meId: string, eventId: string, cancel = false) {
   const live = await loadLive(eventId);
   assertOwner(live, meId);
+  await closeLive(live, cancel);
+  return getEventLive(meId, eventId);
+}
+
+/** Ends a live for everyone (organizer, or the server when the organizer has been gone too long). */
+async function closeLive(live: LiveRow, cancel = false) {
+  const eventId = live.event_id;
   const sql = await getSql();
   await sql`
     update wipp_event_lives set state = ${cancel && live.state === "scheduled" ? "cancelled" : "ended"}, ended_at = now(),
@@ -268,7 +279,51 @@ export async function endEventLive(meId: string, eventId: string, cancel = false
   await broadcast(eventId, { t: "ended" });
   const rs = roomService();
   if (rs) await rs.deleteRoom(roomOf(eventId)).catch(() => undefined);
-  return getEventLive(meId, eventId);
+}
+
+/** Organizer gone (battery, network, app closed): the live ends by itself after this long. */
+export const HOST_GRACE_MS = 5 * 60_000;
+
+/**
+ * Is the organizer still in the LiveKit room? Notes since when he is missing, clears it when he is
+ * back, and ends the live after HOST_GRACE_MS. Called by the room heartbeat and before any join.
+ */
+async function checkHostPresence(live: LiveRow): Promise<string | null> {
+  if (live.state !== "live") return null;
+  const rs = roomService();
+  if (!rs) return null;
+  let present = false;
+  let empty = true;
+  try {
+    const people = await rs.listParticipants(roomOf(live.event_id));
+    present = people.some((p) => p.identity === identityOf(live.owner_id));
+    empty = people.length === 0;
+  } catch {
+    present = false; // no room at all = nobody there
+  }
+  const sql = await getSql();
+  // Nobody at all in the room (organizer gone long ago, everyone left) and started more than 2 min ago:
+  // close it now instead of making the next visitor wait.
+  if (empty && live.started_at && Date.now() - Date.parse(live.started_at) > 2 * 60_000) {
+    await closeLive(live);
+    live.state = "ended";
+    return null;
+  }
+  if (present) {
+    await sql`update wipp_event_lives set host_absent_since = null where event_id = ${live.event_id} and host_absent_since is not null`;
+    return null;
+  }
+  const rows = await sql<{ since: string }>`
+    update wipp_event_lives set host_absent_since = coalesce(host_absent_since, now())
+    where event_id = ${live.event_id} returning host_absent_since::text as since
+  `;
+  const since = rows[0]?.since ?? null;
+  if (since && Date.now() - Date.parse(since) > HOST_GRACE_MS) {
+    await closeLive(live);
+    live.state = "ended";
+    return null;
+  }
+  return since;
 }
 
 /** Short-lived token for the live room. The role decides what LiveKit lets the person do. */
@@ -276,6 +331,7 @@ export async function eventLiveToken(meId: string, eventId: string, displayName:
   const live = await loadLive(eventId);
   await assertCanSee(live, meId);
   const isOwner = live.owner_id === meId;
+  if (!isOwner) await checkHostPresence(live).catch(() => null);
   if (live.state !== "live" && !(isOwner && live.state === "scheduled")) {
     throw new WippHttpError(409, "not_live", live.state === "scheduled" ? "Le direct n’a pas encore commencé." : "Ce direct est terminé.");
   }

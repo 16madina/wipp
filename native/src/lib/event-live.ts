@@ -15,6 +15,8 @@ export type LiveInfo = {
   registered: number;
   myStatus: "organizer" | "invited" | "registered" | "banned" | null;
   isOwner: boolean;
+  hostAbsentSince?: string | null;
+  hostGraceMs?: number;
 };
 
 export type LiveToken = {
