@@ -85,6 +85,7 @@ export type LiveStage = {
   mode: "conference" | "interactive";
   maxSpeakers: number;
   featured: string | null;
+  layout: "shared" | "dominant" | "inset";
   ownerIdentity: string;
   speakers: StagePerson[];
   hands: StagePerson[];
@@ -101,7 +102,8 @@ type StageAction =
   | { action: "leave"; pid?: string }
   | { action: "media"; pid: string; micRevoked?: boolean; camRevoked?: boolean }
   | { action: "feature"; identity: string | null }
-  | { action: "mode"; mode: "conference" | "interactive" };
+  | { action: "mode"; mode: "conference" | "interactive" }
+  | { action: "layout"; layout: "shared" | "dominant" | "inset" };
 export const stageAction = (eventId: string, body: StageAction) => api<LiveStage>(at(eventId, "stage"), body);
 export const postLiveComment = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "comment"), { text });
 export const deleteLiveComment = (eventId: string, id: string) => api<{ ok: boolean }>(at(eventId, "delete-comment"), { id });

@@ -11,12 +11,12 @@ import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LogOut, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
-import { StageGrid, StageInviteCard, StageSheet, stageBox, useLiveStage, type StageTile } from "../components/LiveStage";
+import { StageGrid, StageInviteCard, StageSheet, stageHeight, useLiveStage, type StageLayout, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
@@ -80,7 +80,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [draft, setDraft] = useState("");
   const [showComments, setShowComments] = useState(true);
   const [settings, setSettings] = useState({ commentsOn: true, reactionsOn: true, questionsOn: true, qaMode: false });
-  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions" | "questions" | "stage">("none");
+  const [sheet, setSheet] = useState<"none" | "people" | "options" | "reactions" | "questions" | "stage" | "layout">("none");
   const [askFocus, setAskFocus] = useState(false);
   // Étape B: questions kept by the server; « q » / « spot » signals refresh them for everyone.
   const qa = useLiveQuestions(eventId);
@@ -594,8 +594,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const multi = tiles.length > 1;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
   const spotlightH = qa.data?.spotlight ? 150 : 0;
-  const box = multi ? stageBox(tiles.length, Boolean(st.stage?.featured && tiles.some((t) => t.identity === st.stage?.featured)), win.width, win.height, insets.top + 78, controlsH + 110 + spotlightH) : null;
-  const commentsMax = box ? Math.max(70, win.height - box.bottom - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
+  const stageH = multi ? stageHeight(win.height, controlsH) : 0;
+  const box = multi ? { bottom: stageH } : null;
+  const commentsMax = box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
+  const layout: StageLayout = st.stage?.layout ?? "shared";
 
   if (phase === "ended") {
     return (
@@ -615,7 +617,15 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {tiles.some((t) => t.url) || tiles.length > 1 ? (
-        <StageGrid tiles={tiles} featured={st.stage?.featured ?? null} box={box} onMenu={isOrganizer ? speakerMenu : undefined} />
+        <StageGrid
+          tiles={tiles}
+          featured={st.stage?.featured ?? null}
+          layout={layout}
+          width={win.width}
+          stageH={stageH}
+          topSafe={insets.top}
+          onMenu={isOrganizer ? speakerMenu : undefined}
+        />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15, lineHeight: 21 }}>
@@ -656,6 +666,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{viewers}</Text>
         </Press>
         <View style={{ flex: 1 }} />
+        {isOrganizer && tiles.length >= 3 ? (
+          <Press accessibilityLabel="Disposition de la scène" onPress={() => setSheet("layout")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+            <LayoutGrid size={20} color="#d4a017" />
+          </Press>
+        ) : null}
         <Press accessibilityLabel="Options" onPress={() => setSheet("options")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           <MoreHorizontal size={22} color="#fff" />
         </Press>
@@ -891,6 +906,33 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         </View>
       ) : null}
 
+      {sheet === "layout" && isOrganizer ? (
+        <Sheet onClose={() => setSheet("none")} title="Disposition de la scène">
+          <View style={{ flexDirection: "row", gap: 10, paddingVertical: 6 }}>
+            {(
+              [
+                ["shared", "Scène partagée"],
+                ["dominant", "Host dominant"],
+                ["inset", "Invités intégrés"],
+              ] as const
+            ).map(([id, label]) => (
+              <Press
+                key={id}
+                onPress={() => {
+                  setSheet("none");
+                  void stage({ action: "layout", layout: id });
+                }}
+                style={{ flex: 1, alignItems: "center", gap: 8, padding: 10, borderRadius: 14, borderWidth: 1.5, borderColor: layout === id ? "#d4a017" : "rgba(255,255,255,0.12)", backgroundColor: layout === id ? "rgba(212,160,23,0.12)" : "transparent" }}
+              >
+                <LayoutThumb kind={id} />
+                <Text style={{ color: layout === id ? "#d4a017" : "#fff", fontSize: 12, textAlign: "center", fontFamily: "Inter_600SemiBold" }}>{label}</Text>
+              </Press>
+            ))}
+          </View>
+          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 6 }}>Tous les spectateurs voient la même disposition.</Text>
+        </Sheet>
+      ) : null}
+
       {/* Options */}
       {sheet === "options" ? (
         <Sheet onClose={() => setSheet("none")} title={isOrganizer ? "Options organisateur" : "Options"}>
@@ -997,6 +1039,45 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
           </Press>
         </View>
         {children}
+      </View>
+    </View>
+  );
+}
+
+/** Small drawing of each scene layout for the picker. */
+function LayoutThumb({ kind }: { kind: StageLayout }) {
+  const box = { width: 64, height: 46, borderRadius: 6, backgroundColor: "#1b2133", overflow: "hidden" as const };
+  const cell = { backgroundColor: "rgba(212,160,23,0.55)", borderRadius: 2 };
+  if (kind === "shared") {
+    return (
+      <View style={[box, { flexDirection: "row", gap: 2, padding: 2 }]}>
+        <View style={[cell, { flex: 1 }]} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <View style={[cell, { flex: 1 }]} />
+          <View style={[cell, { flex: 1 }]} />
+        </View>
+      </View>
+    );
+  }
+  if (kind === "dominant") {
+    return (
+      <View style={[box, { padding: 2, justifyContent: "flex-end" }]}>
+        <View style={[cell, { position: "absolute", top: 2, left: 2, right: 2, bottom: 2, opacity: 0.45 }]} />
+        <View style={{ flexDirection: "row", gap: 3, justifyContent: "center", marginBottom: 3 }}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[cell, { width: 12, height: 12, backgroundColor: "#d4a017" }]} />
+          ))}
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={[box, { padding: 2 }]}>
+      <View style={[cell, { position: "absolute", top: 2, left: 2, right: 2, bottom: 2, opacity: 0.45 }]} />
+      <View style={{ position: "absolute", top: 5, right: 5, width: 27, flexDirection: "row", flexWrap: "wrap", gap: 3 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={[cell, { width: 12, height: 12, backgroundColor: "#d4a017" }]} />
+        ))}
       </View>
     </View>
   );

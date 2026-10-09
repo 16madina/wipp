@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Platform, ScrollView, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Hand, Maximize2, Mic, MicOff, Minimize2, MoreHorizontal, UserMinus, Video, VideoOff, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
@@ -44,77 +45,141 @@ export function useLiveStage(eventId: string) {
 }
 
 /** 1 = full screen · 2 = split · 3 = one wide + two · 4 = 2 × 2 · featured = big + thumbnails. */
-/**
- * Several people on stage: where the video area sits and how big each video is. Everything under
- * `bottom` is free for the comments, so they never cover a face, a name or a ⋯ button.
- */
-export function stageBox(n: number, featured: boolean, width: number, height: number, top: number, reserveBottom: number) {
-  const pad = 12;
-  const gap = 8;
-  const avail = Math.max(160, height - top - reserveBottom);
-  const colW = (width - pad * 2 - gap) / 2;
-  let tileH: number;
-  if (featured) tileH = Math.min((width - pad * 2) * 1.05, avail);
-  else if (n <= 2) tileH = Math.min(colW * 1.33, avail); // two portrait videos side by side (3:4)
-  else tileH = Math.min(colW * 1.1, (avail - gap) / 2); // 3 or 4: two rows
-  const rows = featured || n <= 2 ? 1 : 2;
-  const bottom = top + tileH * rows + (rows - 1) * gap;
-  return { pad, gap, colW, tileH, top, bottom };
+export type StageLayout = "shared" | "dominant" | "inset";
+type Rect = { t: StageTile; x: number; y: number; w: number; h: number; small?: boolean; top?: boolean; menuLeft?: boolean };
+
+/** Height of the stage when several people are on it: big videos first, comments get what is left. */
+export function stageHeight(winH: number, controlsH: number) {
+  return Math.round(Math.min(winH * 0.6, winH - controlsH - 130));
 }
 
 /**
- * 1 = full screen (unchanged). 2 = side by side (organizer left). 3 = two + one centered. 4 = 2 × 2.
- * Featured = one big video, the others as thumbnails. onMenu: organizer only (« ⋯ » on each speaker).
+ * Where each video goes (WIPP's own scene, see the reference images):
+ * 2 = split in half · shared = host left + guests stacked / 2×2 · dominant = host full + row of squares at
+ * the bottom · inset = host full + floating block of squares top right. « Mettre en avant » = dominant with
+ * the featured person big.
  */
+function layoutRects(tiles: StageTile[], featured: string | null, layout: StageLayout, W: number, S: number, topSafe: number) {
+  const n = tiles.length;
+  const host = tiles.find((t) => t.organizer) ?? tiles[0];
+  const big = (featured && tiles.find((t) => t.identity === featured)) || host;
+  const others = tiles.filter((t) => t !== big);
+  const rects: Rect[] = [];
+  let logo: { x: number; y: number } | null = null;
+  const mode: StageLayout | "split" = featured && n > 1 ? "dominant" : n === 2 ? "split" : layout;
+  if (mode === "split") {
+    rects.push({ t: big, x: 0, y: 0, w: W / 2, h: S, top: true }, { t: others[0], x: W / 2, y: 0, w: W / 2, h: S, top: true });
+    logo = { x: W / 2, y: S / 2 };
+  } else if (mode === "shared") {
+    if (n === 3) {
+      rects.push({ t: big, x: 0, y: 0, w: W / 2, h: S, top: true });
+      rects.push({ t: others[0], x: W / 2, y: 0, w: W / 2, h: S / 2, top: true }, { t: others[1], x: W / 2, y: S / 2, w: W / 2, h: S / 2 });
+      logo = { x: W / 2, y: S / 2 };
+    } else {
+      const all = [big, ...others].slice(0, 4);
+      // Bottom-left video: its ⋯ goes top-left so it never touches the centre logo.
+      all.forEach((t, i) => rects.push({ t, x: (i % 2) * (W / 2), y: Math.floor(i / 2) * (S / 2), w: W / 2, h: S / 2, top: i < 2, menuLeft: i === 2 }));
+      logo = { x: W / 2, y: S / 2 };
+    }
+  } else {
+    rects.push({ t: big, x: 0, y: 0, w: W, h: S, top: true });
+    const gap = 10;
+    if (mode === "dominant") {
+      // A row of squares at the bottom of the host's video, the logo in the middle of the row.
+      const logoW = 44;
+      const q = Math.min((W - 24 - logoW - gap * others.length) / Math.max(2, others.length), S * 0.3, 120);
+      const rowW = q * others.length + gap * others.length + logoW;
+      let x = (W - rowW) / 2;
+      const y = S - q - 12;
+      const left = Math.ceil(others.length / 2);
+      others.forEach((t, i) => {
+        if (i === left) {
+          logo = { x: x + logoW / 2 - gap / 2, y: y + q / 2 };
+          x += logoW;
+        }
+        rects.push({ t, x, y, w: q, h: q, small: true });
+        x += q + gap;
+      });
+      if (!logo) logo = { x: x + logoW / 2 - gap / 2, y: y + q / 2 };
+    } else {
+      // A floating block of squares at the top right of the host's video, the logo at its centre.
+      const q = Math.min(W * 0.26, S * 0.3, 118);
+      const cols = 2;
+      const x0 = W - cols * q - gap - 12;
+      const y0 = topSafe + 8;
+      others.forEach((t, i) => rects.push({ t, x: x0 + (i % cols) * (q + gap), y: y0 + Math.floor(i / cols) * (q + gap), w: q, h: q, small: true }));
+      const rows = Math.ceil(others.length / cols);
+      logo = rows > 1 ? { x: x0 + q + gap / 2, y: y0 + q + gap / 2 } : { x: x0 + q + gap / 2, y: y0 + q };
+    }
+  }
+  return { rects, logo, bigIdentity: big.identity };
+}
+
+const stageLogo = require("../../assets/brand/stage-logo.png");
+
+/** One person: full screen (unchanged). Several: the WIPP scene, height S, under the top bar. */
 export function StageGrid({
   tiles,
   featured,
-  box,
+  layout,
+  width,
+  stageH,
+  topSafe,
   onMenu,
 }: {
   tiles: StageTile[];
   featured: string | null;
-  box: ReturnType<typeof stageBox> | null;
+  layout: StageLayout;
+  width: number;
+  stageH: number;
+  topSafe: number;
   onMenu?: (t: StageTile) => void;
 }) {
   if (!tiles.length) return null;
-  if (tiles.length === 1 || !box) {
+  if (tiles.length === 1) {
     return (
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
         <Tile t={tiles[0]} style={{ flex: 1 }} label={false} />
       </View>
     );
   }
-  const big = featured ? tiles.find((t) => t.identity === featured) : undefined;
-  const rounded = { borderRadius: 14, overflow: "hidden" as const };
-  if (big) {
-    const minis = tiles.filter((t) => t !== big);
-    return (
-      <View style={{ position: "absolute", top: box.top, left: box.pad, right: box.pad, height: box.tileH }}>
-        <Tile t={big} style={[{ flex: 1 }, rounded]} onMenu={onMenu} />
-        <View style={{ position: "absolute", top: 52, right: 8, gap: 8 }}>
-          {minis.map((t) => (
-            <Tile key={t.identity} t={t} style={[{ width: 84, height: 112 }, rounded]} small onMenu={onMenu} />
-          ))}
-        </View>
-      </View>
-    );
-  }
-  const rows: StageTile[][] = tiles.length <= 2 ? [tiles] : [tiles.slice(0, 2), tiles.slice(2, 4)];
+  const { rects, logo, bigIdentity } = layoutRects(tiles, featured, layout, width, stageH, topSafe);
+  const line = 1; // very thin separators
   return (
-    <View style={{ position: "absolute", top: box.top, left: box.pad, right: box.pad, gap: box.gap }}>
-      {rows.map((row, i) => (
-        <View key={i} style={{ flexDirection: "row", gap: box.gap, justifyContent: "center" }}>
-          {row.map((t) => (
-            <Tile key={t.identity} t={t} style={[{ width: box.colW, height: box.tileH }, rounded]} onMenu={onMenu} />
-          ))}
+    <View style={{ position: "absolute", top: 0, left: 0, width, height: stageH, backgroundColor: "#000" }}>
+      {rects.map((r) => {
+        const inset = r.small ? 0 : line / 2;
+        return (
+          <Tile
+            key={r.t.identity}
+            t={r.t}
+            small={r.small}
+            menuTop={r.top && !r.small ? topSafe + 50 : 6}
+            menuLeft={r.menuLeft}
+            labelLeft={logo && Math.abs(r.x - logo.x) < 2 && Math.abs(r.y + r.h - logo.y) < 2 ? 30 : 6}
+            labelLift={r.t.identity === bigIdentity && rects.some((x) => x.small && x.y > stageH / 2) ? Math.min(stageH * 0.3, 120) + 16 : 0}
+            style={{
+              position: "absolute",
+              left: r.x + inset,
+              top: r.y + inset,
+              width: r.w - inset * 2,
+              height: r.h - inset * 2,
+              ...(r.small ? { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(212,160,23,0.55)" } : {}),
+            }}
+            onMenu={onMenu}
+          />
+        );
+      })}
+      {logo ? (
+        <View pointerEvents="none" style={{ position: "absolute", left: logo.x - 21, top: logo.y - 21, width: 42, height: 42, borderRadius: 21, overflow: "hidden", borderWidth: 1.5, borderColor: GOLD, backgroundColor: "#000" }}>
+          <Image source={stageLogo} style={{ width: "100%", height: "100%" }} contentFit="cover" />
         </View>
-      ))}
+      ) : null}
     </View>
   );
 }
 
-function Tile({ t, style, small, label = true, onMenu }: { t: StageTile; style: object; small?: boolean; label?: boolean; onMenu?: (t: StageTile) => void }) {
+function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 0, menuLeft, labelLeft = 6 }: { t: StageTile; style: object; small?: boolean; label?: boolean; onMenu?: (t: StageTile) => void; menuTop?: number; labelLift?: number; menuLeft?: boolean; labelLeft?: number }) {
   // The organizer's own video has no menu (he controls himself with the bar).
   const menu = onMenu && !t.organizer && !t.local;
   return (
@@ -128,9 +193,9 @@ function Tile({ t, style, small, label = true, onMenu }: { t: StageTile; style: 
         </View>
       )}
       {/* Who is speaking: a discreet gold frame (drawn over the video so the size never jumps). */}
-      {t.speaking ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, borderWidth: 2, borderColor: GOLD }} /> : null}
+      {t.speaking ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: small ? 14 : 0, borderWidth: 2, borderColor: GOLD }} /> : null}
       {label ? (
-        <View style={{ position: "absolute", left: 6, right: menu ? 6 : 6, bottom: 6, flexDirection: "row", alignItems: "center" }}>
+        <View style={{ position: "absolute", left: labelLeft, right: 6, bottom: 6 + labelLift, flexDirection: "row", alignItems: "center" }}>
           <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 3, paddingRight: 8, paddingVertical: 3, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.62)" }}>
             {!small ? <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={20} /> : null}
             {t.micOn ? <Mic size={12} color="#fff" /> : <MicOff size={12} color="#ff6b6b" />}
@@ -148,7 +213,7 @@ function Tile({ t, style, small, label = true, onMenu }: { t: StageTile; style: 
           accessibilityLabel={`Options pour ${t.name}`}
           onPress={() => onMenu!(t)}
           hitSlop={10}
-          style={{ position: "absolute", right: 6, top: 6, width: small ? 30 : 36, height: small ? 30 : 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
+          style={{ position: "absolute", ...(menuLeft ? { left: 6 } : { right: 6 }), top: menuTop, width: small ? 30 : 36, height: small ? 30 : 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
         >
           <MoreHorizontal size={small ? 15 : 18} color="#fff" />
         </Press>

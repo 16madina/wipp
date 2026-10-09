@@ -563,6 +563,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
           case "media": return json(await live.setSpeakerMedia(me.id, eventId, pid, { micRevoked: body.micRevoked, camRevoked: body.camRevoked }));
           case "feature": return json(await live.setFeatured(me.id, eventId, body.identity ?? null));
           case "mode": return json(await live.setLiveMode(me.id, eventId, String(body.mode ?? "")));
+          case "layout": return json(await live.setStageLayout(me.id, eventId, String((body as { layout?: string }).layout ?? "")));
           default: throw new WippHttpError(400, "invalid", "Action inconnue.");
         }
       }

@@ -31,6 +31,7 @@ type LiveRow = {
   qa_mode: boolean;
   spotlight_id: string | null;
   featured_identity: string | null;
+  stage_layout: "shared" | "dominant" | "inset";
 };
 
 const ROOM_PREFIX = "wipp-live-";
@@ -58,7 +59,7 @@ async function loadLive(eventId: string): Promise<LiveRow> {
   const rows = await sql<LiveRow>`
     select l.event_id, e.owner_id, e.title, e.starts_at::text, e.status, l.visibility, l.mode, l.state,
            l.duration_min, l.max_viewers, l.max_speakers, l.comments_on, l.reactions_on, l.questions_on,
-           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity
+           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity, l.stage_layout
     from wipp_event_lives l join wipp_events e on e.id = l.event_id
     where l.event_id = ${eventId} limit 1
   `;
@@ -433,6 +434,7 @@ export async function liveStage(meId: string, eventId: string) {
     mode: live.mode,
     maxSpeakers: live.max_speakers,
     featured: live.featured_identity,
+    layout: live.stage_layout ?? "shared",
     ownerIdentity: identityOf(live.owner_id),
     speakers: rows.filter((r) => r.role === "speaker").sort((a, b) => Date.parse(a.stage_since ?? "") - Date.parse(b.stage_since ?? "")).map(person),
     hands: isOwner
@@ -586,6 +588,17 @@ export async function setFeatured(meId: string, eventId: string, identity: strin
   const sql = await getSql();
   const value = identity ? String(identity).slice(0, 64) : null;
   await sql`update wipp_event_lives set featured_identity = ${value}, updated_at = now() where event_id = ${eventId}`;
+  await broadcast(eventId, { t: "stage" });
+  return liveStage(meId, eventId);
+}
+
+/** Host: how 3–4 people are laid out (same view for everyone). Display only. */
+export async function setStageLayout(meId: string, eventId: string, layout: string) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  const next = layout === "dominant" || layout === "inset" ? layout : "shared";
+  const sql = await getSql();
+  await sql`update wipp_event_lives set stage_layout = ${next}, updated_at = now() where event_id = ${eventId}`;
   await broadcast(eventId, { t: "stage" });
   return liveStage(meId, eventId);
 }
