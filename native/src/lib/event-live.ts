@@ -88,7 +88,6 @@ export type LiveStage = {
   maxSpeakers: number;
   featured: string | null;
   layout: "shared" | "dominant" | "inset";
-  shareNotify?: boolean;
   ownerIdentity: string;
   speakers: StagePerson[];
   hands: StagePerson[];
@@ -107,9 +106,8 @@ type StageAction =
   | { action: "feature"; identity: string | null }
   | { action: "mode"; mode: "conference" | "interactive" }
   | { action: "layout"; layout: "shared" | "dominant" | "inset" };
-/** WIPP 1.1: the host tells the server he shares his screen (so it can alert him), and his alert setting. */
+/** WIPP 1.1: the host tells the server he shares his screen (the server tells every viewer at once). */
 export const setSharingState = (eventId: string, on: boolean) => api<{ ok: boolean }>(at(eventId, "stage"), { action: "sharing", on });
-export const setShareNotify = (eventId: string, on: boolean) => api<{ ok: boolean; shareNotify: boolean }>(at(eventId, "stage"), { action: "share-notify", on });
 export const stageAction = (eventId: string, body: StageAction) => api<LiveStage>(at(eventId, "stage"), body);
 export const postLiveComment = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "comment"), { text });
 export const deleteLiveComment = (eventId: string, id: string) => api<{ ok: boolean }>(at(eventId, "delete-comment"), { id });

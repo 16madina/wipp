@@ -16,7 +16,7 @@ import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
-import { ScreenFullscreen, ScreenPicker, ScreenStage, SharingBanner, type ScreenShare } from "../components/LiveScreenShare";
+import { ScreenFullscreen, ScreenPicker, ScreenStage, SharingBanner, useFrameSize, type ScreenShare } from "../components/LiveScreenShare";
 import { StageGrid, StageInviteCard, StageSheet, stageHeight, useLiveStage, type StageLayout, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
@@ -75,6 +75,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const pickerRef = useRef<{ open: () => Promise<void> } | null>(null);
   const wasSharing = useRef(false);
   const [screenFull, setScreenFull] = useState(false);
+  const shareFrame = useFrameSize();
+  // Share track the server said is over (host stopped): ignored even if LiveKit has not removed it yet.
+  const deadShare = useRef<string | null>(null);
+  const refreshRef = useRef<() => void>(() => undefined);
   const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
   const st = useLiveStage(eventId);
   const handToast = useRef<Set<string>>(new Set());
@@ -151,8 +155,21 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         }),
       );
       // Screen share: a separate track; whoever publishes one is shown big (only the host can).
-      const sharer = all.find((p) => p.getTrackPublication(Track.Source.ScreenShare)?.track);
-      const sp = sharer?.getTrackPublication(Track.Source.ScreenShare);
+      // A share track counts only while it is really alive: not ended by iOS, not declared over by the
+      // server. Otherwise the viewer would keep a big black screen after the host stopped.
+      const liveShare = (p: Participant) => {
+        const pub = p.getTrackPublication(Track.Source.ScreenShare);
+        const ms = (pub?.track as unknown as { mediaStreamTrack?: { readyState?: string } } | undefined)?.mediaStreamTrack;
+        if (!pub?.track || pub.isMuted || ms?.readyState === "ended") return null;
+        if (deadShare.current && pub.trackSid === deadShare.current) return null;
+        return pub;
+      };
+      // Host: the iOS broadcast ended without LiveKit noticing → unpublish it ourselves.
+      const myPub = room.localParticipant.getTrackPublication(Track.Source.ScreenShare);
+      const myMs = (myPub?.track as unknown as { mediaStreamTrack?: { readyState?: string } } | undefined)?.mediaStreamTrack;
+      if (myPub?.track && myMs?.readyState === "ended") void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+      const sharer = all.find((p) => liveShare(p));
+      const sp = sharer ? liveShare(sharer) : undefined;
       // Real size of the received track (to check the text is sharp, not an enlarged small image).
       const dims = (sp as unknown as { dimensions?: { width: number; height: number } } | undefined)?.dimensions;
       setScreen(
@@ -168,6 +185,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       RoomEvent.Connected,
       RoomEvent.ParticipantConnected,
       RoomEvent.ParticipantDisconnected,
+      RoomEvent.TrackPublished,
+      RoomEvent.TrackUnpublished,
       RoomEvent.TrackSubscribed,
       RoomEvent.TrackUnsubscribed,
       RoomEvent.TrackMuted,
@@ -180,6 +199,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]) {
       room.on(ev, refresh);
     }
+    refreshRef.current = refresh;
+    // Safety net: a missed LiveKit event never leaves a stale (black) share on screen for more than 2 s.
+    const sweep = setInterval(refresh, 2000);
     room.on(RoomEvent.Reconnecting, () => !cancelled && setPhase("reconnecting"));
     room.on(RoomEvent.Reconnected, () => !cancelled && setPhase("connected"));
     // Connection fully lost (not just a short cut LiveKit resumes by itself): ask the server whether the
@@ -266,6 +288,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     })();
     return () => {
       cancelled = true;
+      clearInterval(sweep);
       if (room.localParticipant.isScreenShareEnabled) {
         void import("../lib/event-live").then(({ setSharingState }) => setSharingState(eventId, false)).catch(() => undefined);
       }
@@ -323,6 +346,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     } else if (t === "settings" && msg.from === "server") {
       setSettings({ commentsOn: Boolean(msg.commentsOn), reactionsOn: Boolean(msg.reactionsOn), questionsOn: Boolean(msg.questionsOn), qaMode: Boolean(msg.qaMode) });
       qa.soon();
+    } else if (t === "sharing" && msg.from === "server") {
+      // The host started / stopped sharing: stopped → drop the share now, whatever LiveKit still holds.
+      const room = roomRef.current;
+      if (msg.on) deadShare.current = null;
+      else if (room) {
+        for (const p of room.remoteParticipants.values()) {
+          const sid = p.getTrackPublication(Track.Source.ScreenShare)?.trackSid;
+          if (sid) deadShare.current = sid;
+        }
+      }
+      refreshRef.current();
     } else if (t === "spot" && msg.from === "server") {
       const q = (msg.q ?? null) as import("../lib/event-live").LiveQuestion | null;
       qa.setData((cur) => (cur ? { ...cur, spotlight: q } : cur));
@@ -723,8 +757,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const multi = (tiles.length > 1 && !fullHost) || sharing;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
   const spotlightH = qa.data?.spotlight ? 150 : 0;
-  // Sharing: the screen takes ~70 % of the phone (comments, questions and reactions stay below).
-  const stageH = sharing ? Math.round(Math.min(win.height * 0.7, win.height - controlsH - 110)) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
+  // Sharing: the screen takes all the room above the controls (a 2-line strip of comments stays visible).
+  const stageH = sharing ? Math.round(win.height - controlsH - 64) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
   const box = multi ? { bottom: stageH } : null;
   const commentsMax = box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
   const layout: StageLayout = layoutPick;
@@ -747,7 +781,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {screen ? (
-        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} onFullscreen={() => setScreenFull(true)} />
+        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} onFullscreen={() => setScreenFull(true)} />
       ) : tiles.some((t) => t.url) || tiles.length > 1 ? (
         <StageGrid
           tiles={tiles}
@@ -851,7 +885,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       </View>
       <ClapWave wave={clapWave} />
       <ScreenPicker ref={pickerRef} />
-      {screen && screenFull && !screen.local ? <ScreenFullscreen screen={screen} onClose={() => setScreenFull(false)} /> : null}
+      {screen && screenFull && !screen.local ? <ScreenFullscreen screen={screen} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} onClose={() => setScreenFull(false)} /> : null}
       {screen?.local ? <SharingBanner top={insets.top + 46} onStop={() => void stopScreenShare()} /> : null}
       {hostGone && !isOrganizer ? (
         <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: 24, right: 24, alignItems: "center" }}>
@@ -1125,20 +1159,6 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 <Press onPress={flipCamera} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={{ color: "#fff", fontSize: 15 }}>Retourner la caméra</Text>
                 </Press>
-                <OptionRow
-                  label="Me prévenir pendant le partage"
-                  value={st.stage?.shareNotify ?? true}
-                  onPress={() => {
-                    const next = !(st.stage?.shareNotify ?? true);
-                    st.setStage((cur) => (cur ? { ...cur, shareNotify: next } : cur));
-                    void import("../lib/event-live")
-                      .then(({ setShareNotify }) => setShareNotify(eventId, next))
-                      .catch((err) => {
-                        st.setStage((cur) => (cur ? { ...cur, shareNotify: !next } : cur));
-                        Alert.alert("Réglage", errorText(err, "Réglage impossible."));
-                      });
-                  }}
-                />
                 <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
                 <OptionRow label="Commentaires" value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
                 <OptionRow label="Réactions" value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
