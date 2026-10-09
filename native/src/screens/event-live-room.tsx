@@ -597,6 +597,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const layoutPick: StageLayout = st.stage?.layout ?? "shared";
   const featuredOn = Boolean(st.stage?.featured && tiles.some((t) => t.identity === st.stage?.featured));
   // « Invités intégrés »: the host is full screen (like alone), guests float on top, comments float too.
+  // « Invités intégrés »: the host is full screen (whole phone), guests float top right, comments float over the video.
   const fullHost = tiles.length >= 3 && layoutPick === "inset" && !featuredOn;
   const multi = tiles.length > 1 && !fullHost;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
@@ -698,7 +699,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       {qa.data?.spotlight ? (
         <SpotlightCard
           q={qa.data.spotlight}
-          top={box ? box.bottom + 8 : fullHost ? insets.top + 58 + (tiles.length - 1 > 2 ? 2 : 1) * (Math.min(win.width * 0.26, win.height * 0.3, 118) + 4) + 8 : insets.top + 74}
+          top={box ? box.bottom + 8 : fullHost ? insets.top + 58 + Math.min(win.height - insets.top - 72, win.height * 0.4) + 8 : insets.top + 74}
           organizer={isOrganizer}
           onDone={() => void spotAction("done")}
           onHide={() => void spotAction("unshow")}

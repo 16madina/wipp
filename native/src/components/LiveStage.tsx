@@ -99,15 +99,18 @@ function layoutRects(tiles: StageTile[], featured: string | null, layout: StageL
       const y = S - q - 12;
       others.forEach((t, i) => rects.push({ t, x: x0 + i * (q + gap), y, w: q, h: q, small: true }));
     } else {
-      // A floating block of squares, top right of the host's video, BELOW the top bar (never over ✕).
-      // The logo sits exactly at the centre between the squares.
-      const q = Math.min(W * 0.26, S * 0.3, 118);
+      // « Invités intégrés » (reference image): the host is full screen; the guests are a 2 × 2 block of
+      // tall portrait videos at the top right, below the top bar, the logo at its centre.
       const cols = 2;
-      const x0 = W - cols * q - gap - 12;
-      const y0 = topSafe + 58;
-      others.forEach((t, i) => rects.push({ t, x: x0 + (i % cols) * (q + gap), y: y0 + Math.floor(i / cols) * (q + gap), w: q, h: q, small: true }));
       const rows = Math.ceil(others.length / cols);
-      logo = { x: x0 + q + gap / 2, y: rows > 1 ? y0 + q + gap / 2 : y0 + q / 2 };
+      const top = topSafe + 58;
+      // Full-screen host: the block goes down to about the middle of the screen (reference image).
+      const blockH = Math.max(120, Math.min(S - top - 14, S * 0.4));
+      const tileH = rows > 1 ? (blockH - gap) / 2 : Math.min(blockH, blockH * 0.6);
+      const tileW = Math.min(tileH * 0.64, W * 0.21);
+      const x0 = W - cols * tileW - gap - 10;
+      others.forEach((t, i) => rects.push({ t, x: x0 + (i % cols) * (tileW + gap), y: top + Math.floor(i / cols) * (tileH + gap), w: tileW, h: tileH, small: true }));
+      logo = { x: x0 + tileW + gap / 2, y: rows > 1 ? top + tileH + gap / 2 : top + tileH / 2 };
     }
   }
   return { rects, logo, bigIdentity: big.identity };
