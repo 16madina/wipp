@@ -501,8 +501,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     if (!pid) return;
     const info = st.stage?.speakers.find((x) => x.pid === pid);
     const featured = st.stage?.featured === t.identity;
+    // Two on stage: the split screen already shows both big, so « Mettre en avant » is not offered.
+    const canFeature = featured || tiles.length > 2;
     Alert.alert(t.name, "Intervenant sur scène", [
-      { text: featured ? "Revenir à la grille" : "Mettre en avant", onPress: () => void stage({ action: "feature", identity: featured ? null : t.identity }) },
+      ...(canFeature ? [{ text: featured ? "Revenir à la grille" : "Mettre en avant", onPress: () => void stage({ action: "feature", identity: featured ? null : t.identity }) }] : []),
       { text: info?.micRevoked ? "Rendre le micro" : "Couper le micro", onPress: () => void stage({ action: "media", pid, micRevoked: !info?.micRevoked }) },
       { text: info?.camRevoked ? "Rendre la caméra" : "Couper la caméra", onPress: () => void stage({ action: "media", pid, camRevoked: !info?.camRevoked }) },
       {

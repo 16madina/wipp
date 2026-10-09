@@ -50,7 +50,7 @@ type Rect = { t: StageTile; x: number; y: number; w: number; h: number; small?: 
 
 /** Height of the stage when several people are on it: big videos first, comments get what is left. */
 export function stageHeight(winH: number, controlsH: number) {
-  return Math.round(Math.min(winH * 0.54, winH - controlsH - 150));
+  return Math.round(Math.min(winH * 0.5, winH - controlsH - 160));
 }
 
 /**
@@ -328,9 +328,11 @@ export function StageSheet({
                 <View key={p.pid} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" }}>
                   <Row p={p} />
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                    <Icon label={isFeatured ? "Grille" : "En avant"} onPress={() => void act({ action: "feature", identity: isFeatured ? null : p.identity })}>
-                      {isFeatured ? <Minimize2 size={14} color="#fff" /> : <Maximize2 size={14} color="#fff" />}
-                    </Icon>
+                    {isFeatured || stage.speakers.length > 1 ? (
+                      <Icon label={isFeatured ? "Grille" : "En avant"} onPress={() => void act({ action: "feature", identity: isFeatured ? null : p.identity })}>
+                        {isFeatured ? <Minimize2 size={14} color="#fff" /> : <Maximize2 size={14} color="#fff" />}
+                      </Icon>
+                    ) : null}
                     <Icon label={p.micRevoked ? "Rendre le micro" : "Couper le micro"} onPress={() => void act({ action: "media", pid: p.pid, micRevoked: !p.micRevoked })}>
                       {p.micRevoked ? <MicOff size={14} color="#ff6b6b" /> : <Mic size={14} color="#fff" />}
                     </Icon>
