@@ -57,7 +57,13 @@ function listingPriceText(listing: Listing) {
   return negotiable && !/négociable/i.test(money) ? `${money} · négociable` : money;
 }
 
-function isUpcomingEvent(item: { startsAt?: string; endsAt?: string }) {
+function isUpcomingEvent(item: { startsAt?: string; endsAt?: string; live?: { state: string } }) {
+  // A WIPP live: listed while on air, or not yet started (up to 12 h after its planned start).
+  if (item.live) {
+    if (item.live.state === "live") return true;
+    if (item.live.state !== "scheduled") return false;
+    return (Date.parse(item.startsAt ?? "") || 0) > Date.now() - 12 * 3600_000;
+  }
   const end = item.endsAt ? Date.parse(item.endsAt) : Number.NaN;
   const start = item.startsAt ? Date.parse(item.startsAt) : Number.NaN;
   const deadline = Number.isNaN(end) ? start : end;
@@ -763,7 +769,9 @@ function LifestylePane() {
     const near = fold(myCity);
     return lifestyle
       // A WIPP live stays listed while it is on air, even past its start time.
-      .filter((e) => (e.live ? e.live.state === "live" || (e.live.state === "scheduled" && isUpcomingEvent(e)) : isUpcomingEvent(e)))
+      // A WIPP live stays listed until the organizer starts and ends it (a start time already passed
+      // — e.g. created late — must not hide it), and for up to 12 h after its planned start.
+      .filter(isUpcomingEvent)
       .filter((e) => where === "all" || (where === "online" ? e.isOnline || Boolean(e.live) : !e.isOnline && !e.live))
       .filter((e) => cat === "Tous" || fold(e.category ?? "") === fold(cat))
       .filter((e) => !needle || fold(`${e.title} ${e.city} ${e.place} ${e.category ?? ""} ${e.details ?? ""} ${e.note}`).includes(needle))
