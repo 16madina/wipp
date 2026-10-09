@@ -176,7 +176,7 @@ export function StageGrid({
         <Image
           pointerEvents="none"
           source={stageLogo}
-          style={{ position: "absolute", left: logo.x - 20, top: logo.y - 20, width: 40, height: 40, shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}
+          style={{ position: "absolute", left: logo.x - 26, top: logo.y - 20, width: 52, height: 40, shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}
           contentFit="contain"
         />
       ) : null}
