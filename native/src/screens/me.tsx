@@ -1398,25 +1398,12 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
           </Press>
         )) : null}
         {kind !== "listings" ? (
-          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-            {events.map((e) => {
-              const start = e.startsAt ? new Date(e.startsAt) : null;
-              const end = e.endsAt ? new Date(e.endsAt) : null;
-              return (
-                <EventCard
-                  key={e.id}
-                  title={e.title}
-                  subtitle={(e.details || e.note || e.place || "").split("\n")[0]}
-                  image={e.image ? (e.image.startsWith("http") ? { uri: e.image } : wippSrc(e.image)) : null}
-                  starts={start && !Number.isNaN(start.getTime()) ? start : null}
-                  ends={end && !Number.isNaN(end.getTime()) ? end : null}
-                  city={e.city}
-                  online={e.isOnline}
-                  priceLabel={e.isFree === false ? [e.price, e.currency].filter(Boolean).join(" ") || "PAYANT" : "GRATUIT"}
-                  onPress={() => push({ name: "lifestyle", itemId: e.id })}
-                />
-              );
-            })}
+          <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 10 }}>
+            {[...events]
+              .sort((x, y) => Number(eventIsOver(x)) - Number(eventIsOver(y)) || (Date.parse(x.startsAt ?? "") || 0) - (Date.parse(y.startsAt ?? "") || 0))
+              .map((e) => (
+                <MyEventRow key={e.id} e={e} mine={kind === "events"} onPress={() => push({ name: "lifestyle", itemId: e.id })} />
+              ))}
           </View>
         ) : null}
         {loadError ? <Text style={{ padding: 16, color: colors.danger, fontSize: 13 }}>{loadError}</Text> : null}
@@ -1441,6 +1428,66 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
         ) : null}
       </ScrollView>
     </ScreenRoot>
+  );
+}
+
+function eventIsOver(e: { live?: { state: string }; startsAt?: string; endsAt?: string }) {
+  if (e.live) return e.live.state === "ended" || e.live.state === "cancelled";
+  const end = Date.parse(e.endsAt ?? "") || Date.parse(e.startsAt ?? "");
+  return Boolean(end) && end < Date.now();
+}
+
+/** Compact row for « Mes événements »: picture, title, date, status; numbers once a WIPP live is over. */
+function MyEventRow({ e, mine, onPress }: { e: import("../lib/types").LifestyleItem; mine: boolean; onPress: () => void }) {
+  const over = eventIsOver(e);
+  const [stats, setStats] = useState<{ attendees: number; questions: number; reviews: number; average: number | null } | null>(null);
+  useEffect(() => {
+    if (!mine || !e.live || e.live.state !== "ended") return;
+    void import("../lib/event-live")
+      .then(({ liveSummary }) => liveSummary(e.id))
+      .then((s2) => setStats(s2.stats))
+      .catch(() => undefined);
+  }, [e.id, e.live?.state, mine]);
+  const start = e.startsAt ? new Date(e.startsAt) : null;
+  const when = start && !Number.isNaN(start.getTime())
+    ? start.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + " · " + start.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  const status = e.live
+    ? e.live.state === "live" ? "EN DIRECT" : e.live.state === "ended" ? "Terminé" : e.live.state === "cancelled" ? "Annulé" : "À venir"
+    : over ? "Terminé" : "À venir";
+  const statusColor = status === "EN DIRECT" ? "#e5383b" : status === "À venir" ? colors.accent : "rgba(255,255,255,0.18)";
+  const src = e.image ? (e.image.startsWith("http") ? { uri: e.image } : wippSrc(e.image)) : null;
+  return (
+    <Press onPress={onPress} style={{ flexDirection: "row", gap: 12, padding: 10, borderRadius: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hair, opacity: over ? 0.92 : 1 }}>
+      <View style={{ width: 72, height: 72, borderRadius: 12, overflow: "hidden", backgroundColor: colors.navy }}>
+        {src ? <Image source={src} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
+        {over ? (
+          <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingVertical: 2, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center" }}>
+            <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>TERMINÉ</Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={{ flex: 1, justifyContent: "center", gap: 3 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{e.title}</Text>
+          <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: statusColor }}>
+            <Text style={{ color: status === "À venir" ? colors.accentFg : "#fff", fontSize: 10, fontFamily: "Inter_700Bold" }}>{status}</Text>
+          </View>
+        </View>
+        <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>
+          {[when, e.live ? "En ligne sur WIPP" : e.isOnline ? "En ligne" : e.city].filter(Boolean).join(" · ")}
+        </Text>
+        {stats ? (
+          <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 12 }}>
+            👥 {stats.attendees} participant{stats.attendees > 1 ? "s" : ""} · ❓ {stats.questions} · {stats.average != null ? `★ ${stats.average} (${stats.reviews})` : "pas encore d’avis"}
+          </Text>
+        ) : e.live && e.live.registered != null && !over ? (
+          <Text style={{ color: colors.fg, fontSize: 12 }}>{e.live.registered} inscrit{e.live.registered > 1 ? "s" : ""}</Text>
+        ) : !e.live && (e.interestedCount ?? 0) > 0 ? (
+          <Text style={{ color: colors.fg, fontSize: 12 }}>{e.interestedCount} intéressé{(e.interestedCount ?? 0) > 1 ? "s" : ""}</Text>
+        ) : null}
+      </View>
+    </Press>
   );
 }
 

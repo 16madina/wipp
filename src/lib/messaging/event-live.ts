@@ -944,6 +944,59 @@ async function broadcast(eventId: string, payload: Record<string, unknown>) {
   await rs.sendData(roomOf(eventId), data, DataPacket_Kind.RELIABLE, { topic: "wipp-live" }).catch(() => undefined);
 }
 
+// ——— Rappels (lancés toutes les 5 min par Supabase pg_cron) ———
+
+/** Reminders: 3 days before, the same day, 30 min before (registered people AND the organizer). */
+const REMINDERS = [
+  { kind: "d3", from: 72 * 3600_000, until: 48 * 3600_000 },
+  { kind: "day", from: 10 * 3600_000, until: 60 * 60_000 },
+  { kind: "m30", from: 30 * 60_000, until: 0 },
+] as const;
+
+function reminderText(kind: (typeof REMINDERS)[number]["kind"], organizer: boolean) {
+  if (organizer) {
+    if (kind === "d3") return "Ton direct WIPP a lieu dans 3 jours.";
+    if (kind === "day") return "Ton direct WIPP a lieu aujourd’hui. Pense à le démarrer à l’heure !";
+    return "Ton direct commence dans 30 minutes : prépare-toi à le démarrer.";
+  }
+  if (kind === "d3") return "C’est dans 3 jours ! Tu es inscrit(e) à ce direct WIPP.";
+  if (kind === "day") return "C’est aujourd’hui ! Rendez-vous sur WIPP pour le direct.";
+  return "Le direct commence dans 30 minutes.";
+}
+
+export async function runLiveReminders(secret: string) {
+  const sql = await getSql();
+  const ok = await sql<{ ok: boolean }>`select exists (select 1 from wipp_cron_secrets where name = 'live' and secret = ${secret}) as ok`;
+  if (!ok[0]?.ok) throw new WippHttpError(403, "forbidden", "Accès refusé.");
+  const lives = await sql<{ event_id: string; owner_id: string; title: string; starts_at: string }>`
+    select l.event_id, e.owner_id, e.title, e.starts_at::text
+    from wipp_event_lives l join wipp_events e on e.id = l.event_id
+    where l.state = 'scheduled' and e.status = 'active' and e.starts_at is not null
+      and e.starts_at > now() and e.starts_at < now() + interval '72 hours'
+  `;
+  let sent = 0;
+  for (const live of lives) {
+    const left = Date.parse(live.starts_at) - Date.now();
+    const due = REMINDERS.find((r) => left <= r.from && left > r.until);
+    if (!due) continue;
+    const people = await sql<{ profile_id: string }>`
+      select profile_id from wipp_event_live_members where event_id = ${live.event_id} and status = 'registered'
+      union select ${live.owner_id}
+    `;
+    for (const p of people) {
+      // One reminder of each kind per person (primary key): never twice.
+      const fresh = await sql<{ profile_id: string }>`
+        insert into wipp_event_live_reminders (event_id, profile_id, kind) values (${live.event_id}, ${p.profile_id}, ${due.kind})
+        on conflict do nothing returning profile_id
+      `;
+      if (!fresh[0]) continue;
+      void notifyLive(p.profile_id, live.event_id, live.title, reminderText(due.kind, p.profile_id === live.owner_id));
+      sent += 1;
+    }
+  }
+  return { lives: lives.length, sent };
+}
+
 async function notifyLive(profileId: string, eventId: string, title: string, body: string) {
   try {
     const { sendProfilePush } = await import("@/lib/push/notify");
@@ -952,7 +1005,7 @@ async function notifyLive(profileId: string, eventId: string, title: string, bod
       title: title.slice(0, 64) || "WIPP",
       body,
       channelId: "messages",
-      data: { type: "live", eventId: `live:${eventId}:${Date.now().toString(36)}`, publicId: eventId },
+      data: { type: "live", eventId: `live:${eventId}:${profileId.slice(-8)}:${Date.now().toString(36)}`, publicId: eventId },
     });
   } catch {
     /* A failed notification never blocks the live. */

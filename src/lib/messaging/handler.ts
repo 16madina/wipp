@@ -517,6 +517,11 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (method === "POST" && a === "cron" && b === "live-reminders") {
+      const { runLiveReminders } = await import("./event-live");
+      return json(await runLiveReminders(request.headers.get("x-wipp-cron") ?? ""));
+    }
+
     if (a === "lives" && b) {
       const me = await resolveSession(bearer(request));
       const live = await import("./event-live");
