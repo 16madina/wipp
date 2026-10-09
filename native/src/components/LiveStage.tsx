@@ -85,31 +85,22 @@ function layoutRects(tiles: StageTile[], featured: string | null, layout: StageL
     rects.push({ t: big, x: 0, y: 0, w: W, h: S, top: true });
     const gap = 10;
     if (mode === "dominant") {
-      // A row of squares at the bottom of the host's video, the logo in the middle of the row.
-      const logoW = 44;
-      const q = Math.min((W - 24 - logoW - gap * others.length) / Math.max(2, others.length), S * 0.3, 120);
-      const rowW = q * others.length + gap * others.length + logoW;
-      let x = (W - rowW) / 2;
+      // A row of squares at the bottom of the host's video (no logo here).
+      const q = Math.min((W - 24 - gap * (others.length - 1)) / Math.max(2, others.length), S * 0.3, 120);
+      const rowW = q * others.length + gap * (others.length - 1);
+      const x0 = (W - rowW) / 2;
       const y = S - q - 12;
-      const left = Math.ceil(others.length / 2);
-      others.forEach((t, i) => {
-        if (i === left) {
-          logo = { x: x + logoW / 2 - gap / 2, y: y + q / 2 };
-          x += logoW;
-        }
-        rects.push({ t, x, y, w: q, h: q, small: true });
-        x += q + gap;
-      });
-      if (!logo) logo = { x: x + logoW / 2 - gap / 2, y: y + q / 2 };
+      others.forEach((t, i) => rects.push({ t, x: x0 + i * (q + gap), y, w: q, h: q, small: true }));
     } else {
-      // A floating block of squares at the top right of the host's video, the logo at its centre.
+      // A floating block of squares, top right of the host's video, BELOW the top bar (never over ✕).
+      // The logo sits exactly at the centre between the squares.
       const q = Math.min(W * 0.26, S * 0.3, 118);
       const cols = 2;
       const x0 = W - cols * q - gap - 12;
-      const y0 = topSafe + 8;
+      const y0 = topSafe + 58;
       others.forEach((t, i) => rects.push({ t, x: x0 + (i % cols) * (q + gap), y: y0 + Math.floor(i / cols) * (q + gap), w: q, h: q, small: true }));
       const rows = Math.ceil(others.length / cols);
-      logo = rows > 1 ? { x: x0 + q + gap / 2, y: y0 + q + gap / 2 } : { x: x0 + q + gap / 2, y: y0 + q };
+      logo = { x: x0 + q + gap / 2, y: rows > 1 ? y0 + q + gap / 2 : y0 + q / 2 };
     }
   }
   return { rects, logo, bigIdentity: big.identity };

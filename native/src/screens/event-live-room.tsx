@@ -222,12 +222,15 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         if (cancelled) return;
         setInfo(tok);
         setSettings({ commentsOn: tok.settings.commentsOn, reactionsOn: tok.settings.reactionsOn, questionsOn: tok.settings.questionsOn, qaMode: Boolean(tok.settings.qaMode) });
-        const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
-        await AudioSession.configureAudio({
-          android: { audioTypeOptions: AndroidAudioTypePresets.media, preferredOutputList: ["speaker", "bluetooth", "headset"] },
-          ios: { defaultOutput: "speaker" },
-        });
-        await AudioSession.startAudioSession();
+        // Phone audio session (iOS / Android only; the web version has none).
+        if (Platform.OS !== "web") {
+          const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
+          await AudioSession.configureAudio({
+            android: { audioTypeOptions: AndroidAudioTypePresets.media, preferredOutputList: ["speaker", "bluetooth", "headset"] },
+            ios: { defaultOutput: "speaker" },
+          });
+          await AudioSession.startAudioSession();
+        }
         await room.connect(tok.url, tok.token);
         if (cancelled) return;
         setPhase("connected");
@@ -245,7 +248,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     return () => {
       cancelled = true;
       void room.disconnect();
-      void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
+      if (Platform.OS !== "web") void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
     };
   }, [eventId]);
 
