@@ -5,7 +5,7 @@
  * Viewers: the shared screen is the main area, the host's camera (and the other speakers) as thumbnails.
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { findNodeHandle, NativeModules, Platform, Pressable, ScrollView, StatusBar, Text, View, useWindowDimensions } from "react-native";
+import { Animated, findNodeHandle, NativeModules, PanResponder, Platform, Pressable, ScrollView, StatusBar, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Maximize2, MonitorUp, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
@@ -111,10 +111,67 @@ function Quality({ size, bottom = 8 }: { size: { width: number; height: number }
 }
 
 /**
- * The shared screen takes the whole stage at the source's own shape:
- * - portrait source (iPhone): full height, the people sit in the free side margin, never on the picture;
- * - landscape source (slides, iPad, site in landscape): full width, centred, people in a row under it;
- * when there is no free margin they shrink to small floating bubbles in a corner.
+ * Floating people while a screen is shared: a discreet column on the side, never a reserved strip.
+ * Drag it anywhere; it snaps to the nearest corner so it never ends up in the middle of the slides.
+ */
+function FloatingPeople({ people, area }: { people: StageTile[]; area: { width: number; height: number } }) {
+  const W = 66;
+  const H = 88;
+  const colH = people.length * (H + 6);
+  const spots = (corner: number) => ({
+    x: corner % 2 === 0 ? area.width - W - 8 : 8,
+    y: corner < 2 ? Math.max(8, area.height - colH - 8) : 8,
+  });
+  const [corner, setCorner] = useState(0);
+  const pos = useRef(new Animated.ValueXY(spots(0))).current;
+  const start = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    pos.setValue(spots(corner));
+  }, [area.width, area.height, people.length]);
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) + Math.abs(g.dy) > 6,
+      onPanResponderGrant: () => {
+        start.current = { x: (pos.x as unknown as { _value: number })._value, y: (pos.y as unknown as { _value: number })._value };
+      },
+      onPanResponderMove: (_e, g) => pos.setValue({ x: start.current.x + g.dx, y: start.current.y + g.dy }),
+      onPanResponderRelease: (_e, g) => {
+        const x = start.current.x + g.dx + W / 2;
+        const y = start.current.y + g.dy + colH / 2;
+        const c = (x > area.width / 2 ? 0 : 1) + (y > area.height / 2 ? 0 : 2);
+        setCorner(c);
+        Animated.spring(pos, { toValue: spots(c), useNativeDriver: false, friction: 7 }).start();
+      },
+    }),
+  ).current;
+  if (!people.length) return null;
+  return (
+    <Animated.View {...pan.panHandlers} style={{ position: "absolute", left: 0, top: 0, gap: 6, transform: pos.getTranslateTransform() }}>
+      {people.map((t) => (
+        <View key={t.identity} style={{ width: W, height: H, borderRadius: 12, overflow: "hidden", backgroundColor: "#111727", borderWidth: t.speaking ? 2 : 1, borderColor: t.speaking ? GOLD : "rgba(212,160,23,0.5)" }}>
+          {t.url ? (
+            <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={1} />
+          ) : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={30} />
+            </View>
+          )}
+          <View style={{ position: "absolute", left: 3, right: 3, bottom: 3, paddingHorizontal: 3, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.6)" }}>
+            <Text numberOfLines={1} style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>
+              {t.organizer ? "HOST" : t.name}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+/**
+ * The shared screen IS the stage: from just under the top bar down to the comments, full width, at the
+ * source's own shape (portrait iPhone = full height, landscape slides = full width), never stretched or
+ * cropped. The people float on the side (draggable), nothing is reserved for them.
+ * Host: he keeps a normal view — his own camera big, a « Tu partages ton écran » pill, guests floating.
  */
 export function ScreenStage({
   screen,
@@ -135,53 +192,42 @@ export function ScreenStage({
   onDimensionsChange: (e: { nativeEvent: { width: number; height: number } }) => void;
   onFullscreen?: () => void;
 }) {
-  const people = [...tiles].sort((a, b) => Number(b.organizer) - Number(a.organizer)).slice(0, 5);
-  const top = topSafe + 46;
-  const areaH = stageH - top;
-  const box = { width, height: areaH };
-  const pic = fit(box, frame);
+  const sorted = [...tiles].sort((a, b) => Number(b.organizer) - Number(a.organizer)).slice(0, 5);
+  const top = topSafe + 40;
+  const area = { width, height: stageH - top };
   const landscape = Boolean(frame && frame.width > frame.height);
-  const sideFree = (width - pic.width) / 2;
-  const belowFree = areaH - pic.height;
-  // Thumbnails: as large as the free margin allows (44–64 pt wide), small bubbles otherwise.
-  const side = !landscape && sideFree >= 52;
-  const below = landscape && belowFree >= 70;
-  const thumbW = side ? Math.min(64, sideFree - 10) : below ? Math.min(64, (belowFree - 12) * 0.75) : 40;
-  const thumbH = side || below ? Math.round(thumbW * 1.33) : 40;
-  const peopleStyle = side
-    ? { right: Math.max(4, (sideFree - thumbW) / 2), top: 0, bottom: 0, justifyContent: "center" as const, flexDirection: "column" as const }
-    : below
-      ? { left: 0, right: 0, bottom: 6, justifyContent: "center" as const, flexDirection: "row" as const }
-      : { right: 8, bottom: 8, flexDirection: "column" as const };
+  const me = screen.local ? sorted.find((t) => t.local) : undefined;
+  const floating = me ? sorted.filter((t) => t !== me) : sorted;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, width, height: stageH, backgroundColor: "#000" }}>
-      <View style={{ position: "absolute", top, left: 0, width, height: areaH }}>
+      <View style={{ position: "absolute", top, left: 0, width: area.width, height: area.height }}>
         {screen.local ? (
-          // The host does not watch his own screen (it would mirror itself endlessly).
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <MonitorUp size={34} color={GOLD} />
-            <Text style={{ marginTop: 10, color: "#fff", fontSize: 16, textAlign: "center", fontFamily: "Inter_700Bold" }}>Tu partages ton écran</Text>
-            <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.65)", fontSize: 13, textAlign: "center", lineHeight: 18 }}>
-              Ouvre ta présentation, un site ou une app : les spectateurs voient ce que tu montres.
-            </Text>
+          // The host never watches his own screen (endless mirror): his camera stays big, like before sharing.
+          <View style={{ flex: 1, backgroundColor: "#111727" }}>
+            {me?.url ? (
+              <RTCView streamURL={me.url} style={{ flex: 1 }} objectFit="cover" mirror zOrder={0} />
+            ) : (
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                <Avatar user={{ displayName: me?.name ?? "WIPP", avatar: me?.avatar ?? undefined }} size={84} />
+              </View>
+            )}
+            <View pointerEvents="none" style={{ position: "absolute", left: 10, bottom: 10, right: 90, flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.5)" }}>
+              <MonitorUp size={18} color={GOLD} />
+              <Text style={{ flex: 1, color: "#fff", fontSize: 12, lineHeight: 16 }}>
+                <Text style={{ fontFamily: "Inter_700Bold" }}>Les spectateurs voient ton écran.</Text> Ouvre ta présentation, un site ou une app.
+              </Text>
+            </View>
           </View>
         ) : screen.url ? (
           <>
-            <View style={below ? { width, height: areaH - thumbH - 12, alignItems: "center", justifyContent: "center" } : { flex: 1 }}>
-              <ZoomableScreen
-                url={screen.url}
-                box={below ? { width, height: areaH - thumbH - 12 } : box}
-                frame={frame}
-                onDimensionsChange={onDimensionsChange}
-              />
-            </View>
+            <ZoomableScreen url={screen.url} box={area} frame={frame} onDimensionsChange={onDimensionsChange} />
             <Quality size={frame} />
             {onFullscreen ? (
               <Press
                 accessibilityLabel="Plein écran"
                 onPress={onFullscreen}
                 hitSlop={8}
-                style={{ position: "absolute", top: 6, right: 8, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.6)" }}
+                style={{ position: "absolute", top: 6, left: 8, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.6)" }}
               >
                 <Maximize2 size={13} color="#fff" />
                 <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{landscape ? "Plein écran paysage" : "Plein écran"}</Text>
@@ -193,29 +239,7 @@ export function ScreenStage({
             <Text style={{ color: "rgba(255,255,255,0.6)" }}>Chargement du partage…</Text>
           </View>
         )}
-        <View pointerEvents="none" style={{ position: "absolute", gap: 6, ...peopleStyle }}>
-          {people.map((t) => (
-            <View
-              key={t.identity}
-              style={{ width: thumbW, height: thumbH, borderRadius: side || below ? 10 : thumbW / 2, overflow: "hidden", backgroundColor: "#111727", borderWidth: t.speaking ? 2 : 1, borderColor: t.speaking ? GOLD : "rgba(212,160,23,0.45)", opacity: side || below ? 1 : 0.9 }}
-            >
-              {t.url ? (
-                <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={1} />
-              ) : (
-                <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                  <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={side || below ? 28 : 22} />
-                </View>
-              )}
-              {side || below ? (
-                <View style={{ position: "absolute", left: 2, right: 2, bottom: 2, paddingHorizontal: 3, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.6)" }}>
-                  <Text numberOfLines={1} style={{ color: "#fff", fontSize: 8, fontFamily: "Inter_600SemiBold" }}>
-                    {t.organizer ? "HOST" : t.name}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          ))}
-        </View>
+        <FloatingPeople people={floating} area={area} />
       </View>
     </View>
   );
