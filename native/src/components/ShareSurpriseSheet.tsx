@@ -156,6 +156,8 @@ export function ShareSurpriseSheet({
   const [animation, setAnimation] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [animCat, setAnimCat] = useState<string | null>(null);
+  // Événements: the open celebration tab (declared here, before any early return).
+  const [eventTab, setEventTab] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
   const [previewPlay, setPreviewPlay] = useState<{ id: string; n: number } | null>(null);
   const previewSequence = useRef(0);
@@ -227,7 +229,6 @@ export function ShareSurpriseSheet({
 
   if (!open) return null;
   // Événements: one tab per celebration (only those that already have animations).
-  const [eventTab, setEventTab] = useState<string | null>(null);
   const catItems = animCat ? (animationCollections[animCat] ?? []) : [];
   const tabs = animCat === "evenements" ? eventGroups.filter((g) => catItems.some((item) => item.group === g.id)) : [];
   const activeTab = tabs.length ? (tabs.find((g) => g.id === eventTab)?.id ?? tabs[0].id) : null;
