@@ -190,6 +190,8 @@ const nuitAnimations: SurpriseAnimationItem[] = [
 
 /** Bonne nuit: real animations (Grok videos), added as they are made. */
 const nuitClips: SurpriseAnimationItem[] = [
+  clip("nuit-mouton", "Mouton"),
+  clip("nuit-ours", "Beaux rêves"),
   clip("nuit-lune", "Lune et étoiles"),
 ];
 
