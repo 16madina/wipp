@@ -23,10 +23,8 @@ Tout le JavaScript est partagé et déjà fait :
   `ScreenFullscreen`, `SharingBanner`, `useFrameSize`.
 - `native/src/lib/event-live.ts` — appels serveur (`setSharingState`, etc.).
 
-Aujourd'hui, sur Android, `startScreenShare()` (dans `event-live-room.tsx`) s'arrête sur
-`Platform.OS !== "ios"` avec le message « Le partage d'écran arrive bientôt sur Android ».
-**Un Android peut déjà REGARDER un partage** (la partie spectateur est commune) : il reste à permettre
-à un host Android de PARTAGER.
+**Un Android peut déjà REGARDER un partage** (la partie spectateur est commune). La partie « host Android
+qui PARTAGE » est préparée dans le code (section 2) mais n'a jamais tourné sur un vrai Android.
 
 ### Comportement validé sur iPhone (le résultat attendu sur Android)
 
@@ -95,63 +93,64 @@ Côté spectateur, la meilleure qualité est demandée pour la piste d'écran (`
 Sur iPhone, le host envoie **664 × 1440** et le spectateur reçoit **664 × 1440** (mesuré).
 **Objectif Android : côté long ≈ 1440 px, 15 images/s, texte lisible.**
 
-## 2. Travail à faire sur Android
+## 2. Ce qui est DÉJÀ préparé dans le code (fait sur le Mac, non testé sur Android)
 
-### 2.1 Remettre le service de capture (MediaProjection)
+> Tout ceci est dans `wipp-1.1`. Vérifié par les types et par une compilation iPhone seulement :
+> **rien n'a pu être essayé sur un vrai Android.** Ton travail : compiler, installer, mesurer, tester.
 
-Le service a été retiré pour l'avertissement Google Play (BOOT_COMPLETED / services de premier plan).
+### 2.1 Service de capture (MediaProjection) — fait
+- `native/plugins/withWippAndroidBootFix.js` : le service `com.oney.WebRTCModule.MediaProjectionService`
+  n'est plus dans la liste `removed` (seul `LocationTaskService` reste retiré).
+- `native/android/app/src/main/AndroidManifest.xml` (modifié **à la main**, sans prebuild) : la ligne
+  `<service … MediaProjectionService tools:node="remove"/>` est supprimée. Le service vient donc du
+  manifeste de la bibliothèque `@livekit/react-native-webrtc`, qui le déclare déjà avec
+  `android:foregroundServiceType="mediaProjection"`.
+- **À vérifier après compilation** : dans le manifeste fusionné
+  (`android/app/build/intermediates/merged_manifests/…/AndroidManifest.xml`), le service est présent avec
+  `foregroundServiceType="mediaProjection"`.
 
-- Dans `native/plugins/withWippAndroidBootFix.js`, la liste `removed` contient
-  `"com.oney.WebRTCModule.MediaProjectionService"` → **l'enlever de cette liste** (garder la suppression de
-  `expo.modules.location.services.LocationTaskService`).
-- Vérifier dans le manifeste final (`native/android/app/src/main/AndroidManifest.xml` après prebuild) :
-  ```xml
-  <service android:name="com.oney.WebRTCModule.MediaProjectionService"
-           android:foregroundServiceType="mediaProjection" android:exported="false" />
-  ```
-  (le type `mediaProjection` est obligatoire depuis Android 14 / API 34).
-- Rappel : `native/android/` est suivi par Git ; un **prebuild Android est requis après toute modification
-  de configuration** (plugins, `app.json`).
+### 2.2 Permission — fait
+- `FOREGROUND_SERVICE_MEDIA_PROJECTION` ajoutée dans `native/app.json` (`android.permissions`) et dans le
+  manifeste Android.
+- `RECEIVE_BOOT_COMPLETED` reste bloquée. Ne pas la remettre.
 
-### 2.2 Permissions (`app.json` → `android.permissions`, puis manifeste)
+### 2.3 Bouton « Partager l'écran » — fait
+Dans `startScreenShare()` (`event-live-room.tsx`) : Android n'est plus refusé. Le sélecteur iOS n'est
+appelé que sur iPhone ; sur Android, `setScreenShareEnabled(true, undefined, {…})` affiche directement la
+fenêtre système. Mêmes réglages de qualité que sur iPhone. Le chemin iPhone est inchangé.
 
-- `android.permission.FOREGROUND_SERVICE` (déjà présent)
-- `android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION` (**nouveau**, requis Android 14+)
-- `android.permission.POST_NOTIFICATIONS` (déjà demandé : la notification système de capture est obligatoire)
-- NE PAS remettre `RECEIVE_BOOT_COMPLETED`.
+### 2.4 Taille envoyée — fait, **valeur à confirmer par mesure**
+Dans `keepShareSharp()`, sur Android seulement : `scaleResolutionDownBy = max(1, côtéLong / 1440)`, le
+côté long étant lu dans `mediaStreamTrack.getSettings()` (sinon la taille de l'écran en pixels).
+iPhone : reste à 1.
+- Mesurer la taille réellement envoyée (`track.getSenderStats()` → `frameWidth` / `frameHeight`) et la
+  taille reçue chez le spectateur (`onDimensionsChange`). Objectif : ≈ 1440 px sur le côté long, des deux côtés.
+- Si `getSettings()` ne renvoie rien d'utile ou si la taille est fausse, corriger **uniquement** ce calcul.
+- Les chiffres de test ont été retirés de l'interface : pour mesurer, les afficher temporairement puis
+  **les retirer avant de rendre le travail**.
 
-### 2.3 Activer le bouton sur Android
+### 2.5 Pas de prebuild
+`native/android/` est suivi par Git et le manifeste a été mis à jour à la main, en cohérence avec le
+plugin et `app.json`. **Ne pas lancer `expo prebuild`** sans raison précise et sans l'accord de
+l'utilisatrice (un prebuild régénérerait le dossier Android).
 
-Dans `startScreenShare()` (`event-live-room.tsx`), remplacer seulement le refus Android :
+### 2.6 Fichiers `.caf` — ne pas s'en occuper
+Sur le Mac, `android/app/src/main/res/raw/` contient deux fichiers non suivis (`wipp_ring.caf`,
+`wipp_message.caf`). Ce sont des sons au format Apple, copiés là par un ancien prebuild ; Android ne sait
+pas les lire. Ils ne sont volontairement **pas** dans la branche.
 
-1. Garder la même alerte d'explication (« Tout ce qui s'affiche sur ton écran sera visible… »).
-2. Sur Android, ne pas appeler `pickerRef.current?.open()` (iOS seulement) : appeler directement
-   `setScreenShareEnabled(true, undefined, { …mêmes options que ci-dessus… })` puis `keepShareSharp(room)`.
-   C'est `getDisplayMedia` qui affiche la fenêtre système Android.
-3. Refus de l'utilisateur → `catch` déjà en place : « Le partage d'écran n'a pas pu démarrer… le direct continue ».
-4. Ne rien changer d'autre dans ce fichier : l'arrêt, le bandeau, `setSharingState`, la scène spectateur
-   sont communs.
+## 2 bis. Ce qu'il te reste à faire
 
-### 2.4 Qualité : vérifier, ne pas supposer
-
-Sur Android, la capture donne en général l'écran en pleine définition (par ex. 1080 × 2400), plus que sur
-iPhone. À vérifier **par mesure** (statistiques de l'encodeur : `track.getSenderStats()` →
-`frameWidth` / `frameHeight`, et taille reçue côté spectateur via `onDimensionsChange`) :
-
-- Si le côté long envoyé dépasse nettement 1440 px, le limiter à ≈ 1440 (par exemple avec
-  `scaleResolutionDownBy` calculé dans `keepShareSharp` pour Android uniquement), pour garder la fluidité
-  à 1,8 Mb/s. Ne pas modifier le comportement iOS.
-- Si le spectateur reçoit moins que ce qui est envoyé, chercher la cause avant de corriger
-  (sur iPhone, c'était la copie « simulcast » à moitié taille).
-- Les chiffres de test ont été retirés de l'interface iPhone : pour mesurer, les afficher temporairement
-  puis **les retirer avant de rendre le travail**.
-
-### 2.5 Arrêt depuis Android
-
-L'utilisateur peut arrêter depuis la notification système ou la barre d'état. Vérifier que la piste passe
-bien à `ended` et que le host la dépublie (code commun : `readyState === "ended"` →
-`setScreenShareEnabled(false)`), puis que le service de premier plan et sa notification disparaissent.
-Quitter ou terminer le direct pendant un partage doit aussi tout arrêter.
+1. `git status`, puis récupérer `wipp-1.1` (ne rien écraser sans accord).
+2. Compiler une version de test et l'installer sur le Samsung.
+3. Vérifier le manifeste fusionné (2.1, 2.2).
+4. Mesurer la taille envoyée / reçue (2.4).
+5. **Arrêt depuis Android** : l'utilisateur peut arrêter depuis la notification système ou la barre
+   d'état. Vérifier que la piste passe à `ended`, que le host la dépublie (code commun :
+   `readyState === "ended"` → `setScreenShareEnabled(false)`), et que le service de premier plan et sa
+   notification disparaissent. Quitter ou terminer le direct pendant un partage doit aussi tout arrêter.
+   C'est le point le plus important : aucun écran noir chez le spectateur.
+6. Faire les 13 tests ci-dessous. Ne corriger que ce qui échoue, sans toucher à la disposition.
 
 ## 3. Tests (Samsung + un iPhone)
 

@@ -6,7 +6,7 @@
  * - Toute action de modération passe par le serveur WIPP (permissions LiveKit, exclusion).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Alert, Animated, Dimensions, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Room, RoomEvent, Track, VideoQuality, type Participant, type RemoteParticipant } from "livekit-client";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -678,8 +678,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
   /** Host: explain, then the iOS system sheet (« Démarrer la diffusion »), then publish the screen. */
   function startScreenShare() {
-    if (Platform.OS !== "ios") {
-      Alert.alert("Partage d’écran", "Le partage d’écran arrive bientôt sur Android. Il fonctionne sur iPhone.");
+    if (Platform.OS !== "ios" && Platform.OS !== "android") {
+      Alert.alert("Partage d’écran", "Le partage d’écran fonctionne dans l’app WIPP sur iPhone et Android.");
       return;
     }
     Alert.alert(
@@ -694,8 +694,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               const room = roomRef.current;
               if (!room) return;
               try {
-                await pickerRef.current?.open();
-                // WIPP opens its side; the extension connects once the user taps « Démarrer la diffusion ».
+                // iPhone: the system sheet, then the extension connects once the user taps « Démarrer la diffusion ».
+                // Android: nothing to open here — publishing shows the system « Commencer la diffusion » window.
+                if (Platform.OS === "ios") await pickerRef.current?.open();
                 // One sharp version only (no half-size copy), sharpness before frame rate, a moderate bitrate:
                 // slides and text stay readable, and the connection is not overloaded.
                 await room.localParticipant.setScreenShareEnabled(true, undefined, {
@@ -721,6 +722,16 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
    */
   async function keepShareSharp(room: Room) {
     type Enc = { scaleResolutionDownBy?: number; maxBitrate?: number; maxFramerate?: number; active?: boolean };
+    // Android captures the screen at full definition (e.g. 1080 × 2400): keep the long side around 1440 px,
+    // like the iPhone, so it stays smooth at this bitrate. iPhone: already 664 × 1440, sent as it is.
+    const androidScale = () => {
+      if (Platform.OS !== "android") return 1;
+      const ms = (room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track as unknown as { mediaStreamTrack?: { getSettings?: () => { width?: number; height?: number } } } | undefined)?.mediaStreamTrack;
+      const set = ms?.getSettings?.() ?? {};
+      const disp = Dimensions.get("screen");
+      const long = Math.max(Number(set.width ?? 0), Number(set.height ?? 0)) || Math.max(disp.width, disp.height) * disp.scale;
+      return Math.max(1, long / 1440);
+    };
     type Sender = { getParameters: () => { encodings?: Enc[]; degradationPreference?: string }; setParameters: (p: unknown) => Promise<unknown> };
     for (let i = 0; i < 6; i++) {
       await new Promise((ok) => setTimeout(ok, 700));
@@ -731,7 +742,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         const encs = params.encodings ?? [];
         if (!encs.length) continue;
         encs.forEach((e, idx) => {
-          e.scaleResolutionDownBy = 1;
+          e.scaleResolutionDownBy = androidScale();
           e.maxFramerate = 15;
           if (idx === encs.length - 1) e.maxBitrate = 1_800_000;
         });
