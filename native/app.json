@@ -23,8 +23,8 @@
       ],
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSCameraUsageDescription": "WIPP utilise la caméra pour le scan QR, les photos et les appels vidéo.",
-        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les messages vocaux et les appels audio.",
+        "NSCameraUsageDescription": "WIPP utilise la caméra pour les appels vidéo, les directs (WIPP Conférence), les photos, les Stories et le scan des QR WIPP.",
+        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les appels, les directs (WIPP Conférence), les messages vocaux et les vidéos.",
         "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
         "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque.",
         "NSFaceIDUsageDescription": "WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil.",

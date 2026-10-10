@@ -6,7 +6,7 @@
  * - Toute action de modération passe par le serveur WIPP (permissions LiveKit, exclusion).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Dimensions, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Alert, Animated, AppState, Dimensions, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Room, RoomEvent, Track, VideoQuality, type Participant, type RemoteParticipant } from "livekit-client";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -862,6 +862,71 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]);
   }
 
+  // Host: confirm « I am in my live » every 30 s, only while WIPP is on screen or the screen is shared.
+  // When it stops (app left, phone off), the server warns him by push and ends the live after 5 min.
+  const sharingMine = Boolean(screen?.local);
+  useEffect(() => {
+    if (!isOrganizer || phase === "ended" || phase === "failed") return;
+    let stop = false;
+    const beat = () => {
+      if (stop || (AppState.currentState !== "active" && !sharingMine)) return;
+      void import("../lib/event-live").then(({ hostBeat }) => hostBeat(eventId)).catch(() => undefined);
+    };
+    beat();
+    const id = setInterval(beat, 30_000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") beat();
+    });
+    return () => {
+      stop = true;
+      clearInterval(id);
+      sub.remove();
+    };
+  }, [isOrganizer, phase, eventId, sharingMine]);
+
+  /** Viewer: report the live itself (its organizer), in one visible tap from « ⋯ ». */
+  function reportLive() {
+    const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
+    if (!host) {
+      Alert.alert("Signalement", "Le direct n’est pas encore chargé. Réessaie dans un instant.");
+      return;
+    }
+    setSheet("none");
+    report(host, "direct");
+  }
+
+  /** Viewer: block the organizer and leave his live. */
+  function blockHost() {
+    const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
+    if (!host) return;
+    Alert.alert("Bloquer l’organisateur", "Tu quitteras ce direct. Cette personne ne pourra plus te contacter et tu ne verras plus ses contenus.", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Bloquer",
+        style: "destructive",
+        onPress: () => {
+          void import("../lib/connections").then(({ blockProfile }) => blockProfile(host)).then((ok) => {
+            if (!ok) {
+              Alert.alert("Blocage", "Le blocage n’a pas pu être enregistré. Réessaie.");
+              return;
+            }
+            setSheet("none");
+            pop();
+          });
+        },
+      },
+    ]);
+  }
+
+  /** Viewer: « ⋯ » on an intervenant's video → report him. */
+  function viewerTileMenu(t: StageTile) {
+    if (!t.pid) return;
+    Alert.alert(t.name, undefined, [
+      { text: "Signaler", onPress: () => report(t.pid!, t.identity) },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
+
   function leave() {
     if (isOrganizer && phase === "connected") {
       Alert.alert("Quitter", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
@@ -932,7 +997,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           width={win.width}
           stageH={stageH}
           topSafe={insets.top}
-          onMenu={isOrganizer ? speakerMenu : undefined}
+          onMenu={isOrganizer ? speakerMenu : viewerTileMenu}
         />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -1355,6 +1420,13 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                   </>
                 ) : null}
                 <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
+                <Press accessibilityLabel="Signaler ce direct" onPress={reportLive} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Flag size={17} color="#ff6b6b" />
+                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Signaler ce direct</Text>
+                </Press>
+                <Press accessibilityLabel="Bloquer l’organisateur" onPress={blockHost} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Bloquer l’organisateur</Text>
+                </Press>
                 <Press onPress={() => pop()} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Quitter le direct</Text>
                 </Press>

@@ -108,6 +108,10 @@ type StageAction =
   | { action: "layout"; layout: "shared" | "dominant" | "inset" };
 /** WIPP 1.1: the host tells the server he shares his screen (the server tells every viewer at once). */
 export const setSharingState = (eventId: string, on: boolean) => api<{ ok: boolean }>(at(eventId, "stage"), { action: "sharing", on });
+/** Host: « I am here » (every 30 s while WIPP shows the live or shares the screen). */
+export const hostBeat = (eventId: string) => api<{ ok: boolean; state: string }>(at(eventId, "beat"), {});
+/** « Reprendre le live »: the live I am hosting right now, if any. */
+export const myActiveLive = () => api<{ live: { eventId: string; title: string; endsAt: string | null } | null }>("live-mine");
 export const stageAction = (eventId: string, body: StageAction) => api<LiveStage>(at(eventId, "stage"), body);
 export const postLiveComment = (eventId: string, text: string) => api<{ id: string }>(at(eventId, "comment"), { text });
 export const deleteLiveComment = (eventId: string, id: string) => api<{ ok: boolean }>(at(eventId, "delete-comment"), { id });

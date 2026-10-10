@@ -54,7 +54,7 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>WIPP utilise la caméra pour les appels vidéo, les photos, les Stories et le scan des QR WIPP.</string>
+    <string>WIPP utilise la caméra pour les appels vidéo, les directs (WIPP Conférence), les photos, les Stories et le scan des QR WIPP.</string>
     <key>NSContactsUsageDescription</key>
     <string>WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.</string>
     <key>NSFaceIDUsageDescription</key>
@@ -62,7 +62,7 @@
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>WIPP utilise le micro pour les appels, les messages vocaux et les vidéos.</string>
+    <string>WIPP utilise le micro pour les appels, les directs (WIPP Conférence), les messages vocaux et les vidéos.</string>
     <key>NSMotionUsageDescription</key>
     <string>WIPP utilise le mouvement de votre téléphone uniquement lorsque vous utilisez WIPP Touch, afin de détecter le rapprochement avec un autre appareil.</string>
     <key>NSNearbyInteractionUsageDescription</key>

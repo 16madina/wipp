@@ -5,7 +5,7 @@ function withWippCallNative(config) {
   config = withInfoPlist(config, (cfg) => {
     const plist = cfg.modResults;
     plist.NSMicrophoneUsageDescription =
-      "WIPP utilise le micro pour les messages vocaux et les appels audio.";
+      plist.NSMicrophoneUsageDescription || "WIPP utilise le micro pour les appels, les directs, les messages vocaux et les vidéos.";
     plist.NSCameraUsageDescription =
       plist.NSCameraUsageDescription || "WIPP utilise la caméra pour les appels vidéo et le scan QR.";
     const modes = new Set(plist.UIBackgroundModes || []);
