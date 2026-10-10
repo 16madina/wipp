@@ -45,8 +45,10 @@ final class SampleUploader {
     defer { CVPixelBufferUnlockBaseAddress(pixels, .readOnly) }
     let width = CVPixelBufferGetWidth(pixels)
     let height = CVPixelBufferGetHeight(pixels)
-    // Half size: sharp enough for slides, light enough for the network and the 50 MB limit.
-    let scale: CGFloat = 0.5
+    // iOS hands the extension an already reduced screen (≈ 886 × 1920 on a Pro Max). Keep the long side at
+    // 1440 px at most (≈ 665 × 1440): text stays readable, and it stays light for the network and the
+    // 50 MB limit. (Before: half size, ≈ 443 × 960 — too soft for slides.)
+    let scale: CGFloat = min(1, 1440 / CGFloat(max(width, height, 1)))
     let image = CIImage(cvPixelBuffer: pixels).transformed(by: CGAffineTransform(scaleX: scale, y: scale))
     guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
           let jpeg = Self.ciContext.jpegRepresentation(of: image, colorSpace: colorSpace, options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.6])

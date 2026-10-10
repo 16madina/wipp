@@ -84,6 +84,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   // Host, while testing: real size of what his phone sends (after encoding).
   const [sentSize, setSentSize] = useState<{ width: number; height: number } | null>(null);
   const [shareTick, setShareTick] = useState(0);
+  // Immersive scene (viewer, portrait screen share): the title and the controls sit over the picture and hide
+  // by themselves; one tap brings them back.
+  const [chrome, setChrome] = useState(true);
+  const [typing, setTyping] = useState(false);
+  const chromeHint = useRef(false);
   const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
   const st = useLiveStage(eventId);
   const handToast = useRef<Set<string>>(new Set());
@@ -721,6 +726,24 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     return () => clearInterval(t);
   }, [screen?.local]);
 
+  // Immersive scene: the controls hide by themselves after 4 s (not while typing or with a panel open).
+  const immersiveOn = Boolean(screen && !screen.local && !(shareFrame.size && shareFrame.size.width > shareFrame.size.height));
+  useEffect(() => {
+    if (immersiveOn) setChrome(true);
+  }, [immersiveOn]);
+  useEffect(() => {
+    if (!immersiveOn || !chrome || typing || draft.length > 0 || sheet !== "none") return;
+    const t = setTimeout(() => {
+      setChrome(false);
+      if (!chromeHint.current) {
+        chromeHint.current = true;
+        setToast("Touche l’écran pour afficher les commandes");
+        setTimeout(() => setToast(null), 2800);
+      }
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [immersiveOn, chrome, typing, draft.length > 0, sheet]);
+
   // Sharing: comments float over the bottom of the screen and fade away after a few seconds.
   useEffect(() => {
     if (!screen || !comments.length) return;
@@ -842,9 +865,13 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const shareLandscape = Boolean(screen && !screen.local && shareFrame.size && shareFrame.size.width > shareFrame.size.height);
   const shareTop = insets.top + 48;
   const sharePicH = shareLandscape && shareFrame.size ? Math.round((win.width * shareFrame.size.height) / shareFrame.size.width) : 0;
+  // Immersive scene: a portrait screen has the same shape as the viewer's phone, so it fills the whole
+  // screen edge to edge (nothing cropped, nothing stretched); the interface floats over it.
+  const immersive = Boolean(screen && !screen.local && !shareLandscape);
+  const chromeOn = !immersive || chrome || typing || draft.length > 0 || sheet !== "none";
   const recentComments = sharing && !shareLandscape ? comments.filter((c) => Date.now() - (c.at ?? 0) < 7000).slice(-3) : [];
   void shareTick;
-  const stageH = sharing ? Math.round(win.height - controlsH) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
+  const stageH = immersive ? win.height : sharing ? Math.round(win.height - controlsH) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
   const box = multi ? { bottom: stageH } : null;
   const commentsMax = shareLandscape ? Math.max(70, stageH - shareTop - sharePicH - 110 - spotlightH) : box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
   const layout: StageLayout = layoutPick;
@@ -867,7 +894,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {screen ? (
-        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} sent={sentSize} />
+        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} sent={sentSize} immersive={immersive} bottomPad={controlsH} onTap={immersive ? () => setChrome((v) => !v) : undefined} />
       ) : tiles.some((t) => t.url) || tiles.length > 1 ? (
         <StageGrid
           tiles={tiles}
@@ -898,6 +925,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       )}
 
       {/* Top bar */}
+      {chromeOn ? (
+        <>
       <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.65)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 110 }} />
       <View style={{ position: "absolute", top: insets.top + 6, left: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Image source={logoGold} style={{ width: 62, height: 24 }} contentFit="contain" />
@@ -924,7 +953,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         ) : (
           <View style={{ flex: 1 }} />
         )}
-        {screen && !screen.local && screen.url ? (
+        {screen && !screen.local && screen.url && shareLandscape ? (
           <Press accessibilityLabel={shareLandscape ? "Plein écran paysage" : "Plein écran"} onPress={() => setScreenFull(true)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <Maximize2 size={19} color="#d4a017" />
           </Press>
@@ -941,6 +970,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <X size={22} color="#fff" />
         </Press>
       </View>
+        </>
+      ) : null}
       <Text numberOfLines={1} style={{ display: sharing ? "none" : "flex", position: "absolute", top: insets.top + 46, left: 14, right: 60, color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 6 }}>
         {title}
       </Text>
@@ -963,7 +994,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       ) : null}
 
       {/* Floating reactions (right side, never block touches) */}
-      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: box ? Math.max(120, win.height - box.bottom - insets.bottom - 130) : 320 }}>
+      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: box && !immersive ? Math.max(120, win.height - box.bottom - insets.bottom - 130) : 320 }}>
         {floaters.map((f) => (
           <Animated.Text
             key={f.id}
@@ -1003,9 +1034,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
       {/* Bottom: comments over the video, then the bar */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
-        {multi ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />}
+        {multi && !(immersive && chromeOn) ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: immersive ? 230 : 360 }} />}
         {showComments && sharing && !shareLandscape ? (
-          <View pointerEvents="none" style={{ paddingLeft: 10, paddingRight: 70, paddingBottom: 4, gap: 4, alignItems: "flex-start" }}>
+          <View pointerEvents="none" style={{ paddingLeft: 10, paddingRight: 70, paddingBottom: chromeOn ? 4 : Math.max(insets.bottom, 10) + 6, gap: 4, alignItems: "flex-start" }}>
             {recentComments.map((c) => (
               <View key={c.id} style={{ maxWidth: "100%", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: "rgba(8,12,24,0.62)" }}>
                 <Text numberOfLines={2} style={{ color: "#fff", fontSize: 13, lineHeight: 17 }}>
@@ -1035,6 +1066,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             />
           </View>
         ) : null}
+        {chromeOn ? (
         <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) }}>
           {settings.qaMode && !isOrganizer && settings.questionsOn ? (
             <Press
@@ -1056,6 +1088,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                 placeholder="Écrire un commentaire…"
                 placeholderTextColor="rgba(255,255,255,0.55)"
                 returnKeyType="send"
+                onFocus={() => setTyping(true)}
+                onBlur={() => setTyping(false)}
                 onSubmitEditing={() => void sendComment()}
                 style={{ flex: 1, color: "#fff", fontSize: 14 }}
               />
@@ -1122,6 +1156,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             </BarButton>
           </View>
         </View>
+        ) : null}
         {sheet === "reactions" ? (
           <View style={{ position: "absolute", left: 12, right: 12, bottom: Math.max(insets.bottom, 10) + 120, flexDirection: "row", justifyContent: "space-around", paddingVertical: 10, borderRadius: 28, backgroundColor: "rgba(10,12,20,0.92)", borderWidth: 1, borderColor: "rgba(212,160,23,0.4)" }}>
             {LIVE_REACTIONS.map((r) => (

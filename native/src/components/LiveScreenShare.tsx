@@ -64,12 +64,15 @@ function ZoomableScreen({
   frame,
   onDimensionsChange,
   rotate = false,
+  onTap,
 }: {
   url: string;
   box: { width: number; height: number };
   frame: { width: number; height: number } | null;
   onDimensionsChange: (e: { nativeEvent: { width: number; height: number } }) => void;
   rotate?: boolean;
+  /** One tap on the picture (pinch and drag still zoom / move it). */
+  onTap?: () => void;
 }) {
   // Rotated (landscape slides on a portrait phone, full screen): fit in the swapped box, then turn 90°.
   const inner = rotate ? fit({ width: box.height, height: box.width }, frame) : fit(box, frame);
@@ -85,7 +88,8 @@ function ZoomableScreen({
       showsHorizontalScrollIndicator={false}
       showsVerticalScrollIndicator={false}
     >
-      <View style={{ width: shown.width, height: shown.height, alignItems: "center", justifyContent: "center" }}>
+      <Pressable onPress={onTap} disabled={!onTap} style={{ width: box.width, height: box.height, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: shown.width, height: shown.height, alignItems: "center", justifyContent: "center" }}>
         <View style={{ width: inner.width, height: inner.height, transform: rotate ? [{ rotate: "90deg" }] : [] }}>
           <RTCView
             streamURL={url}
@@ -95,7 +99,8 @@ function ZoomableScreen({
             {...({ onDimensionsChange } as object)}
           />
         </View>
-      </View>
+        </View>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -121,6 +126,8 @@ function FloatingPeople({
   thumbW,
   home,
   row,
+  padTop = 6,
+  padBottom = 6,
 }: {
   people: StageTile[];
   area: { width: number; height: number };
@@ -128,13 +135,16 @@ function FloatingPeople({
   /** Where they sit by default (a free margin); dragging then snaps to the corners. */
   home: { x: number; y: number };
   row: boolean;
+  /** Keep clear of the floating top bar / bottom controls when snapping to a corner. */
+  padTop?: number;
+  padBottom?: number;
 }) {
   const W = thumbW;
   const H = Math.round(W * 1.33);
   const gw = row ? people.length * (W + 6) - 6 : W;
   const gh = row ? H : people.length * (H + 6) - 6;
   const spots = (corner: number) =>
-    corner < 0 ? home : { x: corner % 2 === 0 ? area.width - gw - 6 : 6, y: corner < 2 ? Math.max(6, area.height - gh - 6) : 6 };
+    corner < 0 ? home : { x: corner % 2 === 0 ? area.width - gw - 6 : 6, y: corner < 2 ? Math.max(padTop, area.height - gh - padBottom) : padTop };
   const corner = useRef(-1);
   const pos = useRef(new Animated.ValueXY(home)).current;
   const start = useRef({ x: 0, y: 0 });
@@ -199,6 +209,9 @@ export function ScreenStage({
   frame,
   onDimensionsChange,
   sent,
+  immersive = false,
+  bottomPad = 0,
+  onTap,
 }: {
   screen: ScreenShare;
   tiles: StageTile[];
@@ -209,9 +222,14 @@ export function ScreenStage({
   onDimensionsChange: (e: { nativeEvent: { width: number; height: number } }) => void;
   /** Host, while testing: the size his phone really sends. */
   sent?: { width: number; height: number } | null;
+  /** Viewer, portrait source: the picture fills the whole phone, everything else floats over it. */
+  immersive?: boolean;
+  /** Height of the floating bottom controls (the people never snap under them). */
+  bottomPad?: number;
+  onTap?: () => void;
 }) {
   const sorted = [...tiles].sort((a, b) => Number(b.organizer) - Number(a.organizer)).slice(0, 5);
-  const top = topSafe + 48;
+  const top = immersive ? 0 : topSafe + 48;
   const area = { width, height: stageH - top };
   const landscape = Boolean(!screen.local && frame && frame.width > frame.height);
   const me = screen.local ? sorted.find((t) => t.local) : undefined;
@@ -222,10 +240,12 @@ export function ScreenStage({
   const margin = (width - pic.width) / 2;
   // Up to 5 people must fit in the margin column: shrink the thumbnails if needed.
   const fitCol = (area.height - 12) / Math.max(1, floating.length) / 1.33 - 6;
-  const thumbW = landscape ? 56 : Math.round(Math.max(40, Math.min(66, margin >= 46 ? margin - 8 : 60, fitCol)));
+  const thumbW = landscape ? 56 : immersive ? (floating.length <= 2 ? 62 : floating.length === 3 ? 54 : 46) : Math.round(Math.max(40, Math.min(66, margin >= 46 ? margin - 8 : 60, fitCol)));
   const home = landscape
     ? { x: 8, y: box.height + 8 }
-    : { x: margin >= 46 ? width - margin + (margin - thumbW) / 2 : width - thumbW - 6, y: 6 };
+    : immersive
+      ? { x: width - thumbW - 8, y: topSafe + 54 }
+      : { x: margin >= 46 ? width - margin + (margin - thumbW) / 2 : width - thumbW - 6, y: 6 };
   return (
     <View style={{ position: "absolute", top: 0, left: 0, width, height: stageH, backgroundColor: "#070b16" }}>
       <LinearGradient pointerEvents="none" colors={["#0d1630", "#0a1022", "#070b16"]} style={{ position: "absolute", top: 0, left: 0, width, height: stageH }} />
@@ -250,8 +270,8 @@ export function ScreenStage({
           </View>
         ) : screen.url ? (
           <>
-            <ZoomableScreen url={screen.url} box={box} frame={frame} onDimensionsChange={onDimensionsChange} />
-            <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width, height: box.height }}>
+            <ZoomableScreen url={screen.url} box={box} frame={frame} onDimensionsChange={onDimensionsChange} onTap={onTap} />
+            <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width, height: immersive ? topSafe + 80 : box.height }}>
               <Quality size={frame} bottom={6} />
             </View>
           </>
@@ -260,7 +280,7 @@ export function ScreenStage({
             <Text style={{ color: "rgba(255,255,255,0.6)" }}>Chargement du partage…</Text>
           </View>
         )}
-        <FloatingPeople people={floating} area={area} thumbW={thumbW} home={home} row={landscape} />
+        <FloatingPeople people={floating} area={area} thumbW={thumbW} home={home} row={landscape} padTop={immersive ? topSafe + 54 : 6} padBottom={immersive ? bottomPad + 8 : 6} />
       </View>
     </View>
   );
@@ -293,9 +313,7 @@ export function ScreenFullscreen({
   return (
     <View style={{ position: "absolute", top: 0, left: 0, width: win.width, height: win.height, backgroundColor: "#000", zIndex: 50 }}>
       <StatusBar hidden />
-      <Pressable onPress={() => setChrome((v) => !v)} style={{ flex: 1 }}>
-        <ZoomableScreen url={screen.url} box={{ width: win.width, height: win.height }} frame={frame} onDimensionsChange={onDimensionsChange} rotate={landscape} />
-      </Pressable>
+      <ZoomableScreen url={screen.url} box={{ width: win.width, height: win.height }} frame={frame} onDimensionsChange={onDimensionsChange} rotate={landscape} onTap={() => setChrome((v) => !v)} />
       {chrome ? (
         <>
           <Press
