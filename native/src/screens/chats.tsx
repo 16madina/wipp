@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
   BadgeCheck,
   Ban,
@@ -205,6 +205,7 @@ export function ChatsScreen() {
             <WippWordmark size={compact ? 18 : 22} />
           </Pressable>
           <View style={{ flex: 1 }} />
+          <ResumeLiveButton />
           <IconBtn size={headerIcon} label={t("search")} onPress={() => push({ name: "global-search" })}>
             <Search size={20} color={colors.fg} />
           </IconBtn>
@@ -1479,5 +1480,45 @@ export function PrivateChatsScreen() {
       </ScrollView>
       {gate}
     </ScreenRoot>
+  );
+}
+
+
+/**
+ * « Reprendre le live »: shown in the Chats header while I am hosting a live that I left. One tap goes
+ * straight back into it (it ends by itself 5 min after I left).
+ */
+function ResumeLiveButton() {
+  const push = useWippStore((s) => s.push);
+  const [live, setLive] = useState<{ eventId: string; title: string } | null>(null);
+  useEffect(() => {
+    let stop = false;
+    const load = () => {
+      void import("../lib/event-live")
+        .then(({ myActiveLive }) => myActiveLive())
+        .then((r) => !stop && setLive(r.live))
+        .catch(() => undefined);
+    };
+    load();
+    const id = setInterval(load, 30_000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") load();
+    });
+    return () => {
+      stop = true;
+      clearInterval(id);
+      sub.remove();
+    };
+  }, []);
+  if (!live) return null;
+  return (
+    <Press
+      accessibilityLabel="Reprendre le live"
+      onPress={() => push({ name: "event-live", eventId: live.eventId })}
+      style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 32, paddingHorizontal: 11, marginRight: 4, borderRadius: 16, backgroundColor: "#e5383b" }}
+    >
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#fff" }} />
+      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" }}>Reprendre le live</Text>
+    </Press>
   );
 }

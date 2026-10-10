@@ -57,7 +57,8 @@ function withWippAndroidBootFix(config) {
     const names = new Set(replaced.map((r) => r.$["android:name"]));
     app.receiver = [...(app.receiver ?? []).filter((r) => !names.has(r.$?.["android:name"])), ...replaced];
 
-    const removed = ["expo.modules.location.services.LocationTaskService", "com.oney.WebRTCModule.MediaProjectionService"];
+    // WIPP 1.1: MediaProjectionService is kept (host screen sharing in a live, started by the user only).
+    const removed = ["expo.modules.location.services.LocationTaskService"];
     app.service = [
       ...(app.service ?? []).filter((s) => !removed.includes(s.$?.["android:name"])),
       ...removed.map((name) => ({ $: { "android:name": name, "tools:node": "remove" } })),

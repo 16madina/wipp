@@ -23,9 +23,9 @@
       ],
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSCameraUsageDescription": "WIPP utilise la caméra pour le scan QR, les photos et les appels vidéo.",
-        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les messages vocaux et les appels audio.",
-        "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
+        "NSCameraUsageDescription": "WIPP utilise la caméra pour les appels vidéo, les directs (WIPP Conférence), les photos, les Stories et le scan des QR WIPP.",
+        "NSMicrophoneUsageDescription": "WIPP utilise le micro pour les appels, les directs (WIPP Conférence), les messages vocaux et les vidéos.",
+        "NSPhotoLibraryUsageDescription": "WIPP accède à tes photos pour les envoyer dans tes conversations et les utiliser dans ton profil, tes Stories, tes annonces et tes événements.",
         "NSPhotoLibraryAddUsageDescription": "WIPP peut enregistrer un média reçu dans ta photothèque.",
         "NSFaceIDUsageDescription": "WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil.",
         "NSLocationWhenInUseUsageDescription": "WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.",
@@ -169,6 +169,7 @@
         "FOREGROUND_SERVICE_MICROPHONE",
         "FOREGROUND_SERVICE_CAMERA",
         "FOREGROUND_SERVICE_PHONE_CALL",
+        "FOREGROUND_SERVICE_MEDIA_PROJECTION",
         "USE_FULL_SCREEN_INTENT",
         "VIBRATE",
         "MANAGE_OWN_CALLS"
@@ -236,7 +237,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "WIPP accède à tes photos pour les envoyer dans tes conversations.",
+          "photosPermission": "WIPP accède à tes photos pour les envoyer dans tes conversations et les utiliser dans ton profil, tes Stories, tes annonces et tes événements.",
           "cameraPermission": "WIPP utilise la caméra pour prendre une photo ou une vidéo à envoyer.",
           "microphonePermission": "WIPP utilise le micro pour les appels, les messages vocaux et les vidéos."
         }
@@ -317,6 +318,7 @@
         }
       ],
       "./plugins/withWippNotificationService",
+      "./plugins/withWippBroadcast",
       "./plugins/withWippAndroidBootFix"
     ],
     "web": {

@@ -1,136 +1,140 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>AppGroupIdentifier</key>
-	<string>group.com.wipp.app</string>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>WIPP</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundlePackageType</key>
-	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>wipp</string>
-				<string>com.wipp.app</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>exp+wipp</string>
-			</array>
-		</dict>
-	</array>
-	<key>CFBundleVersion</key>
-	<string>4</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>12.0</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<false/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-	<key>NSCameraUsageDescription</key>
-	<string>WIPP utilise la caméra pour les appels vidéo, les photos, les Stories et le scan des QR WIPP.</string>
-	<key>NSContactsUsageDescription</key>
-	<string>WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>WIPP utilise le micro pour les appels, les messages vocaux et les vidéos.</string>
-	<key>NSMotionUsageDescription</key>
-	<string>WIPP utilise le mouvement de votre téléphone uniquement lorsque vous utilisez WIPP Touch, afin de détecter le rapprochement avec un autre appareil.</string>
-	<key>NSNearbyInteractionUsageDescription</key>
-	<string>WIPP Touch mesure la distance avec l’autre téléphone, uniquement pendant WIPP Touch, pour confirmer que vous êtes côte à côte.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>WIPP peut enregistrer un média reçu dans ta photothèque.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>WIPP accède à tes photos pour les envoyer dans tes conversations.</string>
-	<key>NSUserActivityTypes</key>
-	<array>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
-		<string>INSendMessageIntent</string>
-	</array>
-	<key>RCTNewArchEnabled</key>
-	<true/>
-	<key>UIApplicationShortcutItems</key>
-	<array>
-		<dict>
-			<key>UIApplicationShortcutItemIconSymbolName</key>
-			<string>hand.tap.fill</string>
-			<key>UIApplicationShortcutItemSubtitle</key>
-			<string>Rapprochez vos téléphones</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>WIPP Touch</string>
-			<key>UIApplicationShortcutItemType</key>
-			<string>wipp-touch</string>
-			<key>UIApplicationShortcutItemUserInfo</key>
-			<dict>
-				<key>screen</key>
-				<string>wgo-touch</string>
-			</dict>
-		</dict>
-	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-		<string>voip</string>
-		<string>remote-notification</string>
-	</array>
-	<key>UILaunchStoryboardName</key>
-	<string>SplashScreen</string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>arm64</string>
-	</array>
-	<key>UIRequiresFullScreen</key>
-	<false/>
-	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleDefault</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UIUserInterfaceStyle</key>
-	<string>Automatic</string>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>applinks:wippapp.com</string>
-	</array>
-</dict>
+  <dict>
+    <key>AppGroupIdentifier</key>
+    <string>group.com.wipp.app</string>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>WIPP</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>wipp</string>
+          <string>com.wipp.app</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+wipp</string>
+        </array>
+      </dict>
+    </array>
+    <key>CFBundleVersion</key>
+    <string>4</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSAllowsArbitraryLoads</key>
+      <false/>
+      <key>NSAllowsLocalNetworking</key>
+      <true/>
+    </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>WIPP utilise la caméra pour les appels vidéo, les directs (WIPP Conférence), les photos, les Stories et le scan des QR WIPP.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>WIPP utilise le micro pour les appels, les directs (WIPP Conférence), les messages vocaux et les vidéos.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>WIPP utilise le mouvement de votre téléphone uniquement lorsque vous utilisez WIPP Touch, afin de détecter le rapprochement avec un autre appareil.</string>
+    <key>NSNearbyInteractionUsageDescription</key>
+    <string>WIPP Touch mesure la distance avec l’autre téléphone, uniquement pendant WIPP Touch, pour confirmer que vous êtes côte à côte.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>WIPP peut enregistrer un média reçu dans ta photothèque.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>WIPP accède à tes photos pour les envoyer dans tes conversations et les utiliser dans ton profil, tes Stories, tes annonces et tes événements.</string>
+    <key>NSUserActivityTypes</key>
+    <array>
+      <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
+      <string>INSendMessageIntent</string>
+    </array>
+    <key>RCTNewArchEnabled</key>
+    <true/>
+    <key>UIApplicationShortcutItems</key>
+    <array>
+      <dict>
+        <key>UIApplicationShortcutItemIconSymbolName</key>
+        <string>hand.tap.fill</string>
+        <key>UIApplicationShortcutItemSubtitle</key>
+        <string>Rapprochez vos téléphones</string>
+        <key>UIApplicationShortcutItemTitle</key>
+        <string>WIPP Touch</string>
+        <key>UIApplicationShortcutItemType</key>
+        <string>wipp-touch</string>
+        <key>UIApplicationShortcutItemUserInfo</key>
+        <dict>
+          <key>screen</key>
+          <string>wgo-touch</string>
+        </dict>
+      </dict>
+    </array>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>audio</string>
+      <string>voip</string>
+      <string>remote-notification</string>
+    </array>
+    <key>UILaunchStoryboardName</key>
+    <string>SplashScreen</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+      <string>arm64</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <false/>
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleDefault</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIUserInterfaceStyle</key>
+    <string>Automatic</string>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+      <string>applinks:wippapp.com</string>
+    </array>
+    <key>RTCAppGroupIdentifier</key>
+    <string>group.com.wipp.app</string>
+    <key>RTCScreenSharingExtension</key>
+    <string>com.wipp.app.broadcast</string>
+  </dict>
 </plist>

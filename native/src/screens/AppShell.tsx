@@ -3,6 +3,7 @@ import { RewardsScreen } from "./rewards";
 import { PharmaciesScreen } from "./pharmacies";
 import { useShareIntentContext } from "expo-share-intent";
 import { isTabScreen, useWippStore } from "../lib/store";
+import { useLiveSession } from "../lib/live-session";
 import type { Screen } from "../lib/types";
 import { TabBar } from "../components/TabBar";
 import {
@@ -116,6 +117,29 @@ const AUTH = new Set([
   "otp",
   "setup",
 ]);
+
+/** The stack entry of a live: it only says « this live is open »; the room itself lives in LiveHost. */
+function LiveStackSlot({ eventId }: { eventId: string }) {
+  useEffect(() => {
+    useLiveSession.getState().open(eventId);
+  }, [eventId]);
+  return <View style={{ flex: 1, backgroundColor: "#000" }} />;
+}
+
+/**
+ * The live room, mounted ONCE for as long as the person is in a live: full screen when the live is the
+ * top screen, a small floating window over the rest of WIPP otherwise (the connection is never cut).
+ */
+function LiveHost({ top }: { top: Screen }) {
+  const eventId = useLiveSession((s) => s.eventId);
+  if (!eventId) return null;
+  const full = top.name === "event-live" && top.eventId === eventId;
+  return (
+    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+      <EventLiveRoomScreen key={eventId} eventId={eventId} mini={!full} />
+    </View>
+  );
+}
 
 function ScreenSwitch({ screen }: { screen: Screen }) {
   switch (screen.name) {
@@ -269,7 +293,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "lifestyle":
       return <LifestyleScreen itemId={screen.itemId} />;
     case "event-live":
-      return <EventLiveRoomScreen eventId={screen.eventId} />;
+      return <LiveStackSlot eventId={screen.eventId} />;
     case "create-lifestyle":
       return <CreateLifestyleScreen eventId={screen.eventId} />;
     case "create-listing":
@@ -508,6 +532,9 @@ export function AppShell() {
             <ScreenSwitch screen={top} />
           </ScreenErrorBoundary>
           {showTabs ? <TabBar active={top.name} /> : null}
+          <ScreenErrorBoundary resetKey="live" silent onBack={() => useLiveSession.getState().clear()}>
+            <LiveHost top={top} />
+          </ScreenErrorBoundary>
           <ScreenErrorBoundary resetKey="call" silent onBack={() => undefined}>
             <CallOverlay />
           </ScreenErrorBoundary>

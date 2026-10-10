@@ -6,16 +6,18 @@
  * - Toute action de modération passe par le serveur WIPP (permissions LiveKit, exclusion).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
-import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from "livekit-client";
+import { Alert, Animated, AppState, Dimensions, Easing, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Room, RoomEvent, Track, VideoQuality, type Participant, type RemoteParticipant } from "livekit-client";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, Maximize2, Minimize2, MonitorUp, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
+import { useLiveSession } from "../lib/live-session";
+import { MiniLive, ScreenFullscreen, ScreenPicker, ScreenStage, SharingBanner, useFrameSize, type ScreenShare } from "../components/LiveScreenShare";
 import { StageGrid, StageInviteCard, StageSheet, stageHeight, useLiveStage, type StageLayout, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
@@ -44,7 +46,7 @@ export const LIVE_REACTIONS = [
 ] as const;
 const EMOJI = Object.fromEntries(LIVE_REACTIONS.map((r) => [r.code, r.emoji])) as Record<string, string>;
 
-type Comment = { id: string; name: string; text: string; pid?: string; identity: string };
+type Comment = { id: string; name: string; text: string; pid?: string; identity: string; at?: number };
 type Floater = { id: number; emoji: string; x: number; anim: Animated.Value };
 type Person = { identity: string; name: string; role: string; pid?: string; av?: string };
 
@@ -60,8 +62,15 @@ function roleOf(p: Participant) {
   }
 }
 
-export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
-  const pop = useWippStore((s) => s.pop);
+export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string; mini?: boolean }) {
+  const popStack = useWippStore((s) => s.pop);
+  // Leaving the live for good: forget the session (the room disconnects), then go back if the live is on screen.
+  const pop = () => {
+    useLiveSession.getState().clear();
+    if (useWippStore.getState().stack.at(-1)?.name === "event-live") popStack();
+  };
+  /** « Réduire »: back to the previous screen, the live goes on in a small floating window. */
+  const minimize = () => popStack();
   const insets = useSafeAreaInsets();
   const roomRef = useRef<Room | null>(null);
   const [info, setInfo] = useState<LiveToken | null>(null);
@@ -69,6 +78,27 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [failNote, setFailNote] = useState("");
   // Étape C: everyone on stage (organizer + speakers), laid out by StageGrid.
   const [tiles, setTiles] = useState<StageTile[]>([]);
+  // Étape D: the shared screen (one at a time), if any.
+  const [screen, setScreen] = useState<ScreenShare | null>(null);
+  const pickerRef = useRef<{ open: () => Promise<void> } | null>(null);
+  const wasSharing = useRef(false);
+  const [screenFull, setScreenFull] = useState(false);
+  const shareFrame = useFrameSize();
+  // Share track the server said is over (host stopped): ignored even if LiveKit has not removed it yet.
+  const deadShare = useRef<string | null>(null);
+  const refreshRef = useRef<() => void>(() => undefined);
+  // Share track for which the best quality was already asked (once per track).
+  const askedHigh = useRef<string | null>(null);
+  const [shareTick, setShareTick] = useState(0);
+  // Immersive scene (viewer, portrait screen share): the title and the controls sit over the picture and hide
+  // by themselves; one tap brings them back.
+  const [chrome, setChrome] = useState(true);
+  const [typing, setTyping] = useState(false);
+  const chromeHint = useRef(false);
+  const inputRef = useRef<TextInput>(null);
+  // Leaving the stage by myself (no « retiré(e) » message then).
+  const selfLeft = useRef(false);
+  const prevRole = useRef<string | null>(null);
   const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
   const st = useLiveStage(eventId);
   const handToast = useRef<Set<string>>(new Set());
@@ -144,6 +174,39 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           };
         }),
       );
+      // Screen share: a separate track; whoever publishes one is shown big (only the host can).
+      // A share track counts only while it is really alive: not ended by iOS, not declared over by the
+      // server. Otherwise the viewer would keep a big black screen after the host stopped.
+      const liveShare = (p: Participant) => {
+        const pub = p.getTrackPublication(Track.Source.ScreenShare);
+        const ms = (pub?.track as unknown as { mediaStreamTrack?: { readyState?: string } } | undefined)?.mediaStreamTrack;
+        if (!pub?.track || pub.isMuted || ms?.readyState === "ended") return null;
+        if (deadShare.current && pub.trackSid === deadShare.current) return null;
+        return pub;
+      };
+      // Host: the iOS broadcast ended without LiveKit noticing → unpublish it ourselves.
+      const myPub = room.localParticipant.getTrackPublication(Track.Source.ScreenShare);
+      const myMs = (myPub?.track as unknown as { mediaStreamTrack?: { readyState?: string } } | undefined)?.mediaStreamTrack;
+      if (myPub?.track && myMs?.readyState === "ended") void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+      const sharer = all.find((p) => liveShare(p));
+      const sp = sharer ? liveShare(sharer) : undefined;
+      // Viewer: always ask the server for the sharpest version of the shared screen (text must stay readable),
+      // whatever the size of the view — the camera tiles keep their automatic quality.
+      if (sp && sharer !== room.localParticipant && askedHigh.current !== sp.trackSid) {
+        askedHigh.current = sp.trackSid;
+        try {
+          (sp as unknown as { setVideoQuality?: (q: VideoQuality) => void }).setVideoQuality?.(VideoQuality.HIGH);
+        } catch {
+          /* quality stays automatic */
+        }
+      }
+      // Real size of the received track (to check the text is sharp, not an enlarged small image).
+      const dims = (sp as unknown as { dimensions?: { width: number; height: number } } | undefined)?.dimensions;
+      setScreen(
+        sharer && sp?.track && !sp.isMuted
+          ? { url: streamURL(sp.track), identity: sharer.identity, local: sharer === room.localParticipant, width: dims?.width, height: dims?.height }
+          : null,
+      );
       // My own role follows what the server wrote in my LiveKit metadata (taken down → viewer at once).
       const mine = roleOf(room.localParticipant).role;
       if (mine === "organizer" || mine === "speaker" || mine === "viewer") setMyRole(mine);
@@ -152,6 +215,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       RoomEvent.Connected,
       RoomEvent.ParticipantConnected,
       RoomEvent.ParticipantDisconnected,
+      RoomEvent.TrackPublished,
+      RoomEvent.TrackUnpublished,
       RoomEvent.TrackSubscribed,
       RoomEvent.TrackUnsubscribed,
       RoomEvent.TrackMuted,
@@ -164,6 +229,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]) {
       room.on(ev, refresh);
     }
+    refreshRef.current = refresh;
+    // Safety net: a missed LiveKit event never leaves a stale (black) share on screen for more than 2 s.
+    const sweep = setInterval(refresh, 2000);
     room.on(RoomEvent.Reconnecting, () => !cancelled && setPhase("reconnecting"));
     room.on(RoomEvent.Reconnected, () => !cancelled && setPhase("connected"));
     // Connection fully lost (not just a short cut LiveKit resumes by itself): ask the server whether the
@@ -250,6 +318,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     })();
     return () => {
       cancelled = true;
+      clearInterval(sweep);
+      if (room.localParticipant.isScreenShareEnabled) {
+        void import("../lib/event-live").then(({ setSharingState }) => setSharingState(eventId, false)).catch(() => undefined);
+      }
+      void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
       void room.disconnect();
       if (Platform.OS !== "web") void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
     };
@@ -303,6 +376,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     } else if (t === "settings" && msg.from === "server") {
       setSettings({ commentsOn: Boolean(msg.commentsOn), reactionsOn: Boolean(msg.reactionsOn), questionsOn: Boolean(msg.questionsOn), qaMode: Boolean(msg.qaMode) });
       qa.soon();
+    } else if (t === "sharing" && msg.from === "server") {
+      // The host started / stopped sharing: stopped → drop the share now, whatever LiveKit still holds.
+      const room = roomRef.current;
+      if (msg.on) deadShare.current = null;
+      else if (room) {
+        for (const p of room.remoteParticipants.values()) {
+          const sid = p.getTrackPublication(Track.Source.ScreenShare)?.trackSid;
+          if (sid) deadShare.current = sid;
+        }
+      }
+      refreshRef.current();
     } else if (t === "spot" && msg.from === "server") {
       const q = (msg.q ?? null) as import("../lib/event-live").LiveQuestion | null;
       qa.setData((cur) => (cur ? { ...cur, spotlight: q } : cur));
@@ -329,7 +413,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
   function addComment(c: Comment) {
     // Keep the last 30: older ones scroll away (nothing is stored).
-    setComments((cur) => [...cur.slice(-29), c]);
+    setComments((cur) => [...cur.slice(-29), { ...c, at: Date.now() }]);
   }
 
   function showReaction(code: string) {
@@ -513,6 +597,42 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     }
   }
 
+  // Taken off the stage by the organizer: say it clearly (the person stays in the live as a viewer).
+  useEffect(() => {
+    const was = prevRole.current;
+    prevRole.current = role;
+    if (was !== "speaker" || role !== "viewer") return;
+    if (selfLeft.current) {
+      selfLeft.current = false;
+      return;
+    }
+    if (endedRef.current || phase !== "connected") return;
+    Alert.alert("Tu n’es plus sur scène", "L’organisateur t’a retiré(e) de la scène. Ton micro et ta caméra sont coupés ; tu restes dans le direct comme spectateur.");
+  }, [role]);
+
+  /** Tap a comment: answer its author (« @Nom » at the start of the comment, shown in colour). */
+  function replyTo(c: Comment) {
+    if (!settings.commentsOn && !isOrganizer) return;
+    setDraft(`@${c.name} `.slice(0, COMMENT_MAX));
+    setChrome(true);
+    setTimeout(() => inputRef.current?.focus(), 150);
+  }
+
+  /** The comment text, with a leading « @Nom » (a reply) in colour. */
+  function commentBody(text: string) {
+    if (!text.startsWith("@")) return text;
+    const names = [...new Set([...comments.map((c) => c.name), ...people.map((p) => p.name)])].sort((a, b) => b.length - a.length);
+    const hit = names.find((n) => text.startsWith(`@${n}`));
+    const mention = hit ? `@${hit}` : (/^@\S+/.exec(text)?.[0] ?? "");
+    if (!mention) return text;
+    return (
+      <>
+        <Text style={{ color: "#7cc4ff", fontFamily: "Inter_600SemiBold" }}>{mention}</Text>
+        {text.slice(mention.length)}
+      </>
+    );
+  }
+
   async function joinStage() {
     if (!(await stage({ action: "answer", accept: true }))) return;
     setMyRole("speaker");
@@ -528,9 +648,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         text: "Quitter la scène",
         onPress: () => {
           void (async () => {
+            selfLeft.current = true;
             await roomRef.current?.localParticipant.setCameraEnabled(false).catch(() => undefined);
             await roomRef.current?.localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
             if (await stage({ action: "leave" })) setMyRole("viewer");
+            else selfLeft.current = false;
           })();
         },
       },
@@ -561,6 +683,134 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       { text: "Annuler", style: "cancel" },
     ]);
   }
+
+  /** Host: explain, then the iOS system sheet (« Démarrer la diffusion »), then publish the screen. */
+  function startScreenShare() {
+    if (Platform.OS !== "ios" && Platform.OS !== "android") {
+      Alert.alert("Partage d’écran", "Le partage d’écran fonctionne dans l’app WIPP sur iPhone et Android.");
+      return;
+    }
+    Alert.alert(
+      "Partager ton écran",
+      "Tout ce qui s’affiche sur ton écran sera visible par les spectateurs : présentation, site, app… et aussi tes notifications. Pense à activer « Ne pas déranger ». Rien n’est enregistré.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Continuer",
+          onPress: () => {
+            void (async () => {
+              const room = roomRef.current;
+              if (!room) return;
+              try {
+                // iPhone: the system sheet, then the extension connects once the user taps « Démarrer la diffusion ».
+                // Android: nothing to open here — publishing shows the system « Commencer la diffusion » window.
+                if (Platform.OS === "ios") await pickerRef.current?.open();
+                // One sharp version only (no half-size copy), sharpness before frame rate, a moderate bitrate:
+                // slides and text stay readable, and the connection is not overloaded.
+                await room.localParticipant.setScreenShareEnabled(true, undefined, {
+                  simulcast: false,
+                  screenShareEncoding: { maxBitrate: 1_800_000, maxFramerate: 15 },
+                  degradationPreference: "maintain-resolution",
+                });
+                wasSharing.current = true;
+                void keepShareSharp(room);
+              } catch (err) {
+                Alert.alert("Partage d’écran", errorText(err, "Le partage d’écran n’a pas pu démarrer. Tu peux réessayer, le direct continue."));
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
+  /**
+   * LiveKit assumes a 1280 × 720 landscape source; the iPhone screen is portrait (≈ 664 × 1440 sent by the
+   * extension). Make sure the encoder sends it at its real size, never scaled down by a wrong assumption.
+   */
+  async function keepShareSharp(room: Room) {
+    type Enc = { scaleResolutionDownBy?: number; maxBitrate?: number; maxFramerate?: number; active?: boolean };
+    // Android captures the screen at full definition (e.g. 1080 × 2400): keep the long side around 1440 px,
+    // like the iPhone, so it stays smooth at this bitrate. iPhone: already 664 × 1440, sent as it is.
+    const androidScale = () => {
+      if (Platform.OS !== "android") return 1;
+      const ms = (room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track as unknown as { mediaStreamTrack?: { getSettings?: () => { width?: number; height?: number } } } | undefined)?.mediaStreamTrack;
+      const set = ms?.getSettings?.() ?? {};
+      const disp = Dimensions.get("screen");
+      const long = Math.max(Number(set.width ?? 0), Number(set.height ?? 0)) || Math.max(disp.width, disp.height) * disp.scale;
+      return Math.max(1, long / 1440);
+    };
+    type Sender = { getParameters: () => { encodings?: Enc[]; degradationPreference?: string }; setParameters: (p: unknown) => Promise<unknown> };
+    for (let i = 0; i < 6; i++) {
+      await new Promise((ok) => setTimeout(ok, 700));
+      const sender = (room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track as unknown as { sender?: Sender } | undefined)?.sender;
+      if (!sender) continue;
+      try {
+        const params = sender.getParameters();
+        const encs = params.encodings ?? [];
+        if (!encs.length) continue;
+        encs.forEach((e, idx) => {
+          e.scaleResolutionDownBy = androidScale();
+          e.maxFramerate = 15;
+          if (idx === encs.length - 1) e.maxBitrate = 1_800_000;
+        });
+        params.degradationPreference = "maintain-resolution";
+        await sender.setParameters(params);
+        return;
+      } catch {
+        /* the sender is not ready yet: try again */
+      }
+    }
+  }
+
+  // Immersive scene: the controls hide by themselves after 4 s (not while typing or with a panel open).
+  const immersiveOn = Boolean(screen && !screen.local && !(shareFrame.size && shareFrame.size.width > shareFrame.size.height));
+  useEffect(() => {
+    if (immersiveOn) setChrome(true);
+  }, [immersiveOn]);
+  useEffect(() => {
+    if (!immersiveOn || !chrome || typing || draft.length > 0 || sheet !== "none") return;
+    const t = setTimeout(() => {
+      setChrome(false);
+      if (!chromeHint.current) {
+        chromeHint.current = true;
+        setToast("Touche l’écran pour afficher les commandes");
+        setTimeout(() => setToast(null), 2800);
+      }
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [immersiveOn, chrome, typing, draft.length > 0, sheet]);
+
+  // Sharing: comments float over the bottom of the screen and fade away after a few seconds.
+  useEffect(() => {
+    if (!screen || !comments.length) return;
+    const t = setInterval(() => setShareTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [Boolean(screen), comments.length]);
+
+  async function stopScreenShare() {
+    wasSharing.current = false;
+    await roomRef.current?.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+  }
+
+  // The sharing ended: leave the viewer's full-screen view by itself.
+  useEffect(() => {
+    if (!screen) setScreenFull(false);
+  }, [screen]);
+
+  // Sharing stopped by iOS (red bar, control centre, interruption): tell the host, the live goes on.
+  useEffect(() => {
+    if (!isOrganizer) return;
+    const mine = screen?.local ?? false;
+    if (!mine && wasSharing.current) {
+      wasSharing.current = false;
+      setToast("Partage d’écran arrêté");
+      setTimeout(() => setToast(null), 2500);
+    }
+    if (mine) wasSharing.current = true;
+    // Tell the server, so it can alert the host (pushes) while he is in another app.
+    void import("../lib/event-live").then(({ setSharingState }) => setSharingState(eventId, mine)).catch(() => undefined);
+  }, [screen?.local, isOrganizer]);
 
   function flipCamera() {
     const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as unknown as { mediaStreamTrack?: { _switchCamera?: () => void } } | undefined;
@@ -620,6 +870,76 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]);
   }
 
+  // Host: confirm « I am in my live » every 30 s, only while WIPP is on screen or the screen is shared.
+  // When it stops (app left, phone off), the server warns him by push and ends the live after 5 min.
+  const sharingMine = Boolean(screen?.local);
+  useEffect(() => {
+    if (!isOrganizer || phase === "ended" || phase === "failed") return;
+    let stop = false;
+    const beat = () => {
+      if (stop || (AppState.currentState !== "active" && !sharingMine)) return;
+      void import("../lib/event-live").then(({ hostBeat }) => hostBeat(eventId)).catch(() => undefined);
+    };
+    beat();
+    const id = setInterval(beat, 30_000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") beat();
+    });
+    return () => {
+      stop = true;
+      clearInterval(id);
+      sub.remove();
+    };
+  }, [isOrganizer, phase, eventId, sharingMine]);
+
+  /** Viewer: report the live itself (its organizer), in one visible tap from « ⋯ ». */
+  function reportLive() {
+    const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
+    if (!host) {
+      Alert.alert("Signalement", "Le direct n’est pas encore chargé. Réessaie dans un instant.");
+      return;
+    }
+    setSheet("none");
+    report(host, "direct");
+  }
+
+  /** Viewer: block the organizer and leave his live. */
+  function blockHost() {
+    const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
+    if (!host) return;
+    Alert.alert("Bloquer l’organisateur", "Tu quitteras ce direct. Cette personne ne pourra plus te contacter et tu ne verras plus ses contenus.", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Bloquer",
+        style: "destructive",
+        onPress: () => {
+          void import("../lib/connections").then(({ blockProfile }) => blockProfile(host)).then((ok) => {
+            if (!ok) {
+              Alert.alert("Blocage", "Le blocage n’a pas pu être enregistré. Réessaie.");
+              return;
+            }
+            setSheet("none");
+            pop();
+          });
+        },
+      },
+    ]);
+  }
+
+  /** Viewer: « ⋯ » on an intervenant's video → report him. */
+  function viewerTileMenu(t: StageTile) {
+    if (!t.pid) return;
+    Alert.alert(t.name, undefined, [
+      { text: "Signaler", onPress: () => report(t.pid!, t.identity) },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
+
+  // Reduced and the live is over: nothing left to float.
+  useEffect(() => {
+    if (mini && (phase === "ended" || phase === "failed")) useLiveSession.getState().clear();
+  }, [mini, phase]);
+
   function leave() {
     if (isOrganizer && phase === "connected") {
       Alert.alert("Quitter", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
@@ -643,13 +963,47 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   // « Invités intégrés »: the host is full screen (like alone), guests float on top, comments float too.
   // « Invités intégrés »: the host is full screen (whole phone), guests float top right, comments float over the video.
   const fullHost = tiles.length >= 3 && layoutPick === "inset" && !featuredOn;
-  const multi = tiles.length > 1 && !fullHost;
+  const sharing = Boolean(screen);
+  const multi = (tiles.length > 1 && !fullHost) || sharing;
   const controlsH = Math.max(insets.bottom, 10) + 8 + 44 + 10 + 62 + (settings.qaMode && !isOrganizer && settings.questionsOn ? 52 : 0);
   const spotlightH = qa.data?.spotlight ? 150 : 0;
-  const stageH = fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
+  // Sharing: the screen goes down to the comment field; nothing is reserved for comments (they float over it).
+  // A landscape source (slides) only needs the top of the stage: the comments get the room below as a list.
+  const shareLandscape = Boolean(screen && !screen.local && shareFrame.size && shareFrame.size.width > shareFrame.size.height);
+  const shareTop = insets.top + 48;
+  const sharePicH = shareLandscape && shareFrame.size ? Math.round((win.width * shareFrame.size.height) / shareFrame.size.width) : 0;
+  // Immersive scene: a portrait screen has the same shape as the viewer's phone, so it fills the whole
+  // screen edge to edge (nothing cropped, nothing stretched); the interface floats over it.
+  const immersive = Boolean(screen && !screen.local && !shareLandscape);
+  const chromeOn = !immersive || chrome || typing || draft.length > 0 || sheet !== "none";
+  const recentComments = sharing && !shareLandscape ? comments.filter((c) => Date.now() - (c.at ?? 0) < 7000).slice(-3) : [];
+  void shareTick;
+  const stageH = immersive ? win.height : sharing ? Math.round(win.height - controlsH) : fullHost ? win.height : multi ? stageHeight(win.height, controlsH) : 0;
   const box = multi ? { bottom: stageH } : null;
-  const commentsMax = box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
+  const commentsMax = shareLandscape ? Math.max(70, stageH - shareTop - sharePicH - 110 - spotlightH) : box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
   const layout: StageLayout = layoutPick;
+
+  if (mini) {
+    if (phase === "ended" || phase === "failed") return null;
+    const main = tiles.find((t) => t.organizer) ?? tiles[0];
+    const url = screen && !screen.local ? screen.url : (main?.url ?? null);
+    return (
+      <MiniLive
+        url={url}
+        mirror={!(screen && !screen.local) && Boolean(main?.mirror)}
+        label="EN DIRECT"
+        onOpen={() => useWippStore.getState().push({ name: "event-live", eventId })}
+        onClose={() => {
+          if (isOrganizer) {
+            Alert.alert("Quitter le direct", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
+              { text: "Rester", style: "cancel" },
+              { text: "Quitter sans terminer", onPress: () => useLiveSession.getState().clear() },
+            ]);
+          } else useLiveSession.getState().clear();
+        }}
+      />
+    );
+  }
 
   if (phase === "ended") {
     return (
@@ -658,6 +1012,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         onBack={() => {
           // Back to the events: leave the room and the event sheet behind it.
           const st = useWippStore.getState();
+          useLiveSession.getState().clear();
           st.pop();
           if (useWippStore.getState().stack.at(-1)?.name === "lifestyle") useWippStore.getState().pop();
         }}
@@ -668,7 +1023,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
-      {tiles.some((t) => t.url) || tiles.length > 1 ? (
+      {screen ? (
+        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} immersive={immersive} bottomPad={controlsH} onTap={immersive ? () => setChrome((v) => !v) : undefined} />
+      ) : tiles.some((t) => t.url) || tiles.length > 1 ? (
         <StageGrid
           tiles={tiles}
           featured={st.stage?.featured ?? null}
@@ -676,7 +1033,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           width={win.width}
           stageH={stageH}
           topSafe={insets.top}
-          onMenu={isOrganizer ? speakerMenu : undefined}
+          onMenu={isOrganizer ? speakerMenu : viewerTileMenu}
+          pip={!publisher}
         />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -698,6 +1056,8 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       )}
 
       {/* Top bar */}
+      {chromeOn ? (
+        <>
       <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.65)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 110 }} />
       <View style={{ position: "absolute", top: insets.top + 6, left: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Image source={logoGold} style={{ width: 62, height: 24 }} contentFit="contain" />
@@ -717,7 +1077,21 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <Eye size={13} color="#fff" />
           <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{viewers}</Text>
         </Press>
-        <View style={{ flex: 1 }} />
+        {sharing ? (
+          <Text numberOfLines={1} style={{ flex: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+            {title}
+          </Text>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
+        <Press accessibilityLabel="Réduire le direct" onPress={minimize} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Minimize2 size={19} color="#fff" />
+        </Press>
+        {screen && !screen.local && screen.url && shareLandscape ? (
+          <Press accessibilityLabel={shareLandscape ? "Plein écran paysage" : "Plein écran"} onPress={() => setScreenFull(true)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+            <Maximize2 size={19} color="#d4a017" />
+          </Press>
+        ) : null}
         {isOrganizer && tiles.length >= 3 ? (
           <Press accessibilityLabel="Disposition de la scène" onPress={() => setSheet("layout")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <LayoutGrid size={20} color="#d4a017" />
@@ -730,7 +1104,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <X size={22} color="#fff" />
         </Press>
       </View>
-      <Text numberOfLines={1} style={{ position: "absolute", top: insets.top + 46, left: 14, right: 60, color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 6 }}>
+        </>
+      ) : null}
+      <Text numberOfLines={1} style={{ display: sharing ? "none" : "flex", position: "absolute", top: insets.top + 46, left: 14, right: 60, color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 6 }}>
         {title}
       </Text>
       {phase === "reconnecting" ? (
@@ -743,7 +1119,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       {qa.data?.spotlight ? (
         <SpotlightCard
           q={qa.data.spotlight}
-          top={box ? box.bottom + 8 : fullHost ? insets.top + 58 + Math.min(win.height - insets.top - 72, win.height * 0.4) + 8 : insets.top + 74}
+          top={sharing ? shareTop + (shareLandscape ? sharePicH + 100 : 8) : box ? box.bottom + 8 : fullHost ? insets.top + 58 + Math.min(win.height - insets.top - 72, win.height * 0.4) + 8 : insets.top + 74}
           organizer={isOrganizer}
           onDone={() => void spotAction("done")}
           onHide={() => void spotAction("unshow")}
@@ -752,7 +1128,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       ) : null}
 
       {/* Floating reactions (right side, never block touches) */}
-      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: box ? Math.max(120, win.height - box.bottom - insets.bottom - 130) : 320 }}>
+      <View pointerEvents="none" style={{ position: "absolute", right: 10, bottom: insets.bottom + 120, width: 70, height: box && !immersive ? Math.max(120, win.height - box.bottom - insets.bottom - 130) : 320 }}>
         {floaters.map((f) => (
           <Animated.Text
             key={f.id}
@@ -770,6 +1146,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         ))}
       </View>
       <ClapWave wave={clapWave} />
+      <ScreenPicker ref={pickerRef} />
+      {screen && screenFull && !screen.local ? <ScreenFullscreen screen={screen} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} onClose={() => setScreenFull(false)} /> : null}
+      {screen?.local ? <SharingBanner top={insets.top + 46} onStop={() => void stopScreenShare()} /> : null}
       {hostGone && !isOrganizer ? (
         <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: 24, right: 24, alignItems: "center" }}>
           <View style={{ paddingHorizontal: 18, paddingVertical: 14, borderRadius: 18, backgroundColor: "rgba(6,10,24,0.9)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)" }}>
@@ -789,8 +1168,19 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
 
       {/* Bottom: comments over the video, then the bar */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
-        {multi ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360 }} />}
-        {showComments ? (
+        {multi && !(immersive && chromeOn) ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: immersive ? 230 : 360 }} />}
+        {showComments && sharing && !shareLandscape ? (
+          <View pointerEvents="box-none" style={{ paddingLeft: 10, paddingRight: 70, paddingBottom: chromeOn ? 4 : Math.max(insets.bottom, 10) + 6, gap: 4, alignItems: "flex-start" }}>
+            {recentComments.map((c) => (
+              <Pressable key={c.id} onPress={() => replyTo(c)} onLongPress={() => commentMenu(c)} style={{ maxWidth: "100%", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: "rgba(8,12,24,0.62)" }}>
+                <Text numberOfLines={2} style={{ color: "#fff", fontSize: 13, lineHeight: 17 }}>
+                  <Text style={{ color: "#e9c46a", fontFamily: "Inter_700Bold" }}>{c.name} </Text>
+                  {commentBody(c.text)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : showComments ? (
           <View style={{ maxHeight: commentsMax, paddingLeft: 12, paddingRight: 90 }} pointerEvents="box-none">
             <FlatList
               data={comments}
@@ -798,9 +1188,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               inverted={false}
               onContentSizeChange={(_, __) => undefined}
               renderItem={({ item }) => (
-                <Pressable onLongPress={() => commentMenu(item)} style={{ paddingVertical: 4 }}>
-                  <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.name}</Text>
-                  <Text style={{ color: "#fff", fontSize: 14, lineHeight: 19, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.text}</Text>
+                <Pressable onPress={() => replyTo(item)} onLongPress={() => commentMenu(item)} style={{ paddingVertical: 4 }}>
+                  <Text style={{ color: "#e9c46a", fontSize: 12, fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.name}</Text>
+                  <Text style={{ color: "#fff", fontSize: 14, lineHeight: 19, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{commentBody(item.text)}</Text>
                 </Pressable>
               )}
               ref={(list) => {
@@ -810,6 +1200,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             />
           </View>
         ) : null}
+        {chromeOn ? (
         <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) }}>
           {settings.qaMode && !isOrganizer && settings.questionsOn ? (
             <Press
@@ -826,11 +1217,14 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           {settings.commentsOn || isOrganizer ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 44, borderRadius: 22, paddingLeft: 16, paddingRight: 6, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" }}>
               <TextInput
+                ref={inputRef}
                 value={draft}
                 onChangeText={(v) => setDraft(v.slice(0, COMMENT_MAX))}
                 placeholder="Écrire un commentaire…"
                 placeholderTextColor="rgba(255,255,255,0.55)"
                 returnKeyType="send"
+                onFocus={() => setTyping(true)}
+                onBlur={() => setTyping(false)}
                 onSubmitEditing={() => void sendComment()}
                 style={{ flex: 1, color: "#fff", fontSize: 14 }}
               />
@@ -897,6 +1291,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
             </BarButton>
           </View>
         </View>
+        ) : null}
         {sheet === "reactions" ? (
           <View style={{ position: "absolute", left: 12, right: 12, bottom: Math.max(insets.bottom, 10) + 120, flexDirection: "row", justifyContent: "space-around", paddingVertical: 10, borderRadius: 28, backgroundColor: "rgba(10,12,20,0.92)", borderWidth: 1, borderColor: "rgba(212,160,23,0.4)" }}>
             {LIVE_REACTIONS.map((r) => (
@@ -1006,6 +1401,17 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           <ScrollView>
             {isOrganizer ? (
               <>
+                <Press
+                  onPress={() => {
+                    setSheet("none");
+                    if (screen?.local) void stopScreenShare();
+                    else startScreenShare();
+                  }}
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}
+                >
+                  <MonitorUp size={18} color="#d4a017" />
+                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>{screen?.local ? "Arrêter le partage d’écran" : "Partager l’écran"}</Text>
+                </Press>
                 <Press onPress={() => setSheet("stage")} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                   <Hand size={18} color="#d4a017" />
                   <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>Scène et demandes de parole</Text>
@@ -1054,6 +1460,13 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
                   </>
                 ) : null}
                 <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
+                <Press accessibilityLabel="Signaler ce direct" onPress={reportLive} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Flag size={17} color="#ff6b6b" />
+                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Signaler ce direct</Text>
+                </Press>
+                <Press accessibilityLabel="Bloquer l’organisateur" onPress={blockHost} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Bloquer l’organisateur</Text>
+                </Press>
                 <Press onPress={() => pop()} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Quitter le direct</Text>
                 </Press>
