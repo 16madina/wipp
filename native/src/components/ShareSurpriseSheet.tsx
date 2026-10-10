@@ -33,6 +33,7 @@ import {
   designPicker,
   findAnimation,
   surpriseAnimationCategories,
+  eventGroups,
   surpriseDesigns,
   surpriseKindArt,
   type Surprise,
@@ -225,7 +226,12 @@ export function ShareSurpriseSheet({
   }
 
   if (!open) return null;
-  const animItems = animCat ? (animationCollections[animCat] ?? []) : surpriseAnimationCategories;
+  // Événements: one tab per celebration (only those that already have animations).
+  const [eventTab, setEventTab] = useState<string | null>(null);
+  const catItems = animCat ? (animationCollections[animCat] ?? []) : [];
+  const tabs = animCat === "evenements" ? eventGroups.filter((g) => catItems.some((item) => item.group === g.id)) : [];
+  const activeTab = tabs.length ? (tabs.find((g) => g.id === eventTab)?.id ?? tabs[0].id) : null;
+  const animItems = animCat ? (activeTab ? catItems.filter((item) => item.group === activeTab) : catItems) : surpriseAnimationCategories;
   const drawerTitle =
     drawer === "card"
       ? picker.label
@@ -594,6 +600,23 @@ export function ShareSurpriseSheet({
           ) : (
             <>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                {tabs.length ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: "100%" }} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+                    {tabs.map((g) => {
+                      const on = g.id === activeTab;
+                      return (
+                        <Press
+                          key={g.id}
+                          accessibilityLabel={g.label}
+                          onPress={() => setEventTab(g.id)}
+                          style={{ paddingHorizontal: 14, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.surpriseGold : "#303746", borderWidth: 1, borderColor: on ? colors.surpriseGold : colors.hair }}
+                        >
+                          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: on ? "#0b1220" : colors.fg }}>{g.label}</Text>
+                        </Press>
+                      );
+                    })}
+                  </ScrollView>
+                ) : null}
                 {animCat && !animItems.length ? (
                   <Text style={{ width: "100%", paddingVertical: 28, textAlign: "center", color: colors.muted, fontSize: 14, lineHeight: 20 }}>
                     Les animations de cette catégorie arrivent bientôt.

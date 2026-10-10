@@ -26,6 +26,8 @@ export type SurpriseAnimationItem = {
   durationMs?: number;
   /** Soundtrack played with the animation (can be muted). */
   sound?: string;
+  /** Tab inside a category (Événements: halloween, noel…). */
+  group?: string;
 };
 export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: string };
 
@@ -203,13 +205,27 @@ const nuitClips: SurpriseAnimationItem[] = [
 ];
 
 /** Événements: filled as the seasonal animations are made (Halloween, Saint-Valentin, Noël…). */
+/** Tabs of the « Événements » category, in display order. A tab only shows once it has animations. */
+export const eventGroups: { id: string; label: string }[] = [
+  { id: "halloween", label: "Halloween" },
+  { id: "noel", label: "Noël" },
+  { id: "nouvel-an", label: "Bonne année" },
+  { id: "saint-valentin", label: "Saint-Valentin" },
+  { id: "paques", label: "Pâques" },
+  { id: "fete-meres", label: "Fête des mères" },
+  { id: "fete-peres", label: "Fête des pères" },
+  { id: "action-de-grace", label: "Action de grâce" },
+  { id: "aid", label: "Aïd" },
+  { id: "felicitations", label: "Félicitations" },
+];
+const eventClip = (group: string, id: string, label: string): SurpriseAnimationItem => ({ ...clip(id, label), group });
 const evenementsAnimations: SurpriseAnimationItem[] = [
-  clip("event-halloween", "Halloween"),
-  clip("event-noel", "Noël"),
-  clip("event-nouvel-an", "Bonne année"),
-  clip("event-saint-valentin", "Saint-Valentin"),
-  clip("event-paques", "Pâques"),
-  clip("event-felicitations", "Félicitations"),
+  eventClip("halloween", "event-halloween", "Citrouille"),
+  eventClip("noel", "event-noel", "Sapin"),
+  eventClip("nouvel-an", "event-nouvel-an", "Champagne"),
+  eventClip("saint-valentin", "event-saint-valentin", "Cupidon"),
+  eventClip("paques", "event-paques", "Poussin"),
+  eventClip("felicitations", "event-felicitations", "Diplôme"),
 ];
 
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
