@@ -219,16 +219,18 @@ export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
   { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg" },
 ];
 
+/** Only real animations are offered: a still picture never appears in the picker. */
+const moving = (items: SurpriseAnimationItem[]) => items.filter((item) => Boolean(item.anim));
+
+// The old still pictures (day_*, love_*, night_*) stay in `surpriseAnimations`, so surprises already sent
+// with them still show — they are just no longer offered.
 export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
-  // « Bonne journée » was the same idea as « Bonjour »: its animations now live in Bonjour.
-  bonjour: [...bonjourAnimations, ...journeeAnimations],
-  anniversaire: anniversaireAnimations,
-  amour: amourAnimations,
-  "bon-retablissement": retablissementAnimations,
-  evenements: evenementsAnimations,
-  // The 11 old « Bonne nuit » items were still pictures, not animations: hidden from the picker while the
-  // real animations are made. They stay in `surpriseAnimations` so surprises already sent still show.
-  "bonne-nuit": nuitClips,
+  bonjour: moving(bonjourAnimations),
+  anniversaire: moving(anniversaireAnimations),
+  amour: moving(amourAnimations),
+  "bon-retablissement": moving(retablissementAnimations),
+  evenements: moving(evenementsAnimations),
+  "bonne-nuit": moving(nuitClips),
 };
 
 export const surpriseKindArt: Record<SurpriseType, string> = {
