@@ -1477,6 +1477,29 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
               />
             </>
           ) : null}
+          {!mine ? (
+            <Press
+              accessibilityLabel="Signaler l’événement"
+              onPress={() => {
+                Alert.alert("Signaler l’événement", undefined, [
+                  ...REPORT_REASONS.map((reason) => ({
+                    text: reason,
+                    onPress: () => {
+                      // Events share the listings' report queue; « event: » tells the moderators what it is.
+                      void submitContentReport({ contentType: "listing", contentId: `event:${item.id}`, targetProfileId: item.hostId.startsWith("srvuser:") ? item.hostId : null, reason }).then(
+                        () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner."),
+                        (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                      );
+                    },
+                  })),
+                  { text: "Annuler", style: "cancel" as const },
+                ]);
+              }}
+              style={{ marginTop: 18, alignSelf: "center", paddingVertical: 8, paddingHorizontal: 12 }}
+            >
+              <Text style={{ color: colors.muted, fontSize: 13, textDecorationLine: "underline" }}>Signaler l’événement</Text>
+            </Press>
+          ) : null}
         </View>
       </ScrollView>
     </ScreenRoot>
