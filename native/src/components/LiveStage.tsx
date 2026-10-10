@@ -127,6 +127,7 @@ export function StageGrid({
   stageH,
   topSafe,
   onMenu,
+  pip = false,
 }: {
   tiles: StageTile[];
   featured: string | null;
@@ -135,12 +136,14 @@ export function StageGrid({
   stageH: number;
   topSafe: number;
   onMenu?: (t: StageTile) => void;
+  /** Viewer (iPhone): the organizer's video keeps playing in a floating window when WIPP goes to the background. */
+  pip?: boolean;
 }) {
   if (!tiles.length) return null;
   if (tiles.length === 1) {
     return (
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-        <Tile t={tiles[0]} style={{ flex: 1 }} label={false} />
+        <Tile t={tiles[0]} style={{ flex: 1 }} label={false} pip={pip && !tiles[0].local} />
       </View>
     );
   }
@@ -168,6 +171,7 @@ export function StageGrid({
               ...(r.small ? { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(212,160,23,0.55)" } : {}),
             }}
             onMenu={onMenu}
+            pip={pip && r.t.organizer && !r.t.local}
           />
         );
       })}
@@ -184,13 +188,13 @@ export function StageGrid({
   );
 }
 
-function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 0, menuLeft, labelLeft = 6 }: { t: StageTile; style: object; small?: boolean; label?: boolean; onMenu?: (t: StageTile) => void; menuTop?: number; labelLift?: number; menuLeft?: boolean; labelLeft?: number }) {
+function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 0, menuLeft, labelLeft = 6, pip = false }: { t: StageTile; style: object; small?: boolean; label?: boolean; pip?: boolean; onMenu?: (t: StageTile) => void; menuTop?: number; labelLift?: number; menuLeft?: boolean; labelLeft?: number }) {
   // The organizer's own video has no menu (he controls himself with the bar).
   const menu = onMenu && !t.organizer && !t.local;
   return (
     <View style={[{ backgroundColor: "#0b0f1a" }, style]}>
       {t.url ? (
-        <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={small ? 1 : 0} />
+        <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={small ? 1 : 0} {...(pip ? ({ iosPIP: { enabled: true, startAutomatically: true, stopAutomatically: true, preferredSize: { width: 9, height: 16 } } } as object) : {})} />
       ) : (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#111727" }}>
           <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={small ? 40 : 64} />

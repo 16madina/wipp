@@ -65,6 +65,7 @@ function ZoomableScreen({
   onDimensionsChange,
   rotate = false,
   onTap,
+  pip = false,
 }: {
   url: string;
   box: { width: number; height: number };
@@ -73,6 +74,8 @@ function ZoomableScreen({
   rotate?: boolean;
   /** One tap on the picture (pinch and drag still zoom / move it). */
   onTap?: () => void;
+  /** iPhone: keeps playing in a floating window when WIPP goes to the background. */
+  pip?: boolean;
 }) {
   // Rotated (landscape slides on a portrait phone, full screen): fit in the swapped box, then turn 90°.
   const inner = rotate ? fit({ width: box.height, height: box.width }, frame) : fit(box, frame);
@@ -97,6 +100,7 @@ function ZoomableScreen({
             objectFit="contain"
             zOrder={0}
             {...({ onDimensionsChange } as object)}
+            {...(pip ? ({ iosPIP: { enabled: true, startAutomatically: true, stopAutomatically: true, preferredSize: { width: 9, height: 16 } } } as object) : {})}
           />
         </View>
         </View>
@@ -255,7 +259,7 @@ export function ScreenStage({
           </View>
         ) : screen.url ? (
           <>
-            <ZoomableScreen url={screen.url} box={box} frame={frame} onDimensionsChange={onDimensionsChange} onTap={onTap} />
+            <ZoomableScreen url={screen.url} box={box} frame={frame} onDimensionsChange={onDimensionsChange} onTap={onTap} pip />
           </>
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -327,5 +331,64 @@ export function SharingBanner({ top, onStop }: { top: number; onStop: () => void
         <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Arrêter</Text>
       </Press>
     </View>
+  );
+}
+
+/**
+ * « Réduire »: the live as a small floating window inside WIPP (sound and video go on while the person
+ * reads messages). Drag it anywhere; tap = back to the live; ✕ = leave the live.
+ * iPhone: it also follows outside WIPP (picture in picture) when the app goes to the background.
+ */
+export function MiniLive({ url, mirror, label, onOpen, onClose }: { url: string | null; mirror?: boolean; label: string; onOpen: () => void; onClose: () => void }) {
+  const win = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const W = 112;
+  const H = 168;
+  const pos = useRef(new Animated.ValueXY({ x: win.width - W - 12, y: win.height - H - insets.bottom - 110 })).current;
+  const start = useRef({ x: 0, y: 0 });
+  const moved = useRef(false);
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        moved.current = false;
+        start.current = { x: (pos.x as unknown as { _value: number })._value, y: (pos.y as unknown as { _value: number })._value };
+      },
+      onPanResponderMove: (_e, g) => {
+        if (Math.abs(g.dx) + Math.abs(g.dy) > 6) moved.current = true;
+        pos.setValue({ x: start.current.x + g.dx, y: start.current.y + g.dy });
+      },
+      onPanResponderRelease: (_e, g) => {
+        if (!moved.current) {
+          onOpen();
+          return;
+        }
+        const x = start.current.x + g.dx + W / 2 > win.width / 2 ? win.width - W - 12 : 12;
+        const y = Math.max(insets.top + 8, Math.min(win.height - H - insets.bottom - 90, start.current.y + g.dy));
+        Animated.spring(pos, { toValue: { x, y }, useNativeDriver: false, friction: 7 }).start();
+      },
+    }),
+  ).current;
+  return (
+    <Animated.View
+      {...pan.panHandlers}
+      accessibilityLabel="Revenir au direct"
+      style={{ position: "absolute", left: 0, top: 0, width: W, height: H, borderRadius: 16, overflow: "hidden", backgroundColor: "#0b1020", borderWidth: 1.5, borderColor: GOLD, transform: pos.getTranslateTransform(), shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 10, elevation: 12 }}
+    >
+      {url ? (
+        <RTCView streamURL={url} style={{ flex: 1 }} objectFit="cover" mirror={mirror} zOrder={2} {...({ iosPIP: { enabled: true, startAutomatically: true, stopAutomatically: true, preferredSize: { width: 9, height: 16 } } } as object)} />
+      ) : (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <MonitorUp size={22} color={GOLD} />
+        </View>
+      )}
+      <View pointerEvents="none" style={{ position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "#e5383b" }}>
+        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#fff" }} />
+        <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" }}>{label}</Text>
+      </View>
+      <Pressable accessibilityLabel="Quitter le direct" onPress={onClose} hitSlop={8} style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)" }}>
+        <X size={14} color="#fff" />
+      </Pressable>
+    </Animated.View>
   );
 }

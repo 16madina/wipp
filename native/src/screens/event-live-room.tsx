@@ -11,12 +11,13 @@ import { Room, RoomEvent, Track, VideoQuality, type Participant, type RemotePart
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, Maximize2, MonitorUp, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
+import { Eye, EyeOff, Flag, Hand, Heart, HelpCircle, LayoutGrid, LogOut, Maximize2, Minimize2, MonitorUp, Mic, MicOff, MoreHorizontal, RefreshCw, Send, SwitchCamera, Users, Video, VideoOff, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { QuestionsSheet, SpotlightCard, useLiveQuestions } from "../components/LiveQuestions";
 import { LiveEndScreen } from "../components/LiveEndScreen";
-import { ScreenFullscreen, ScreenPicker, ScreenStage, SharingBanner, useFrameSize, type ScreenShare } from "../components/LiveScreenShare";
+import { useLiveSession } from "../lib/live-session";
+import { MiniLive, ScreenFullscreen, ScreenPicker, ScreenStage, SharingBanner, useFrameSize, type ScreenShare } from "../components/LiveScreenShare";
 import { StageGrid, StageInviteCard, StageSheet, stageHeight, useLiveStage, type StageLayout, type StageTile } from "../components/LiveStage";
 import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
@@ -61,8 +62,15 @@ function roleOf(p: Participant) {
   }
 }
 
-export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
-  const pop = useWippStore((s) => s.pop);
+export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string; mini?: boolean }) {
+  const popStack = useWippStore((s) => s.pop);
+  // Leaving the live for good: forget the session (the room disconnects), then go back if the live is on screen.
+  const pop = () => {
+    useLiveSession.getState().clear();
+    if (useWippStore.getState().stack.at(-1)?.name === "event-live") popStack();
+  };
+  /** « Réduire »: back to the previous screen, the live goes on in a small floating window. */
+  const minimize = () => popStack();
   const insets = useSafeAreaInsets();
   const roomRef = useRef<Room | null>(null);
   const [info, setInfo] = useState<LiveToken | null>(null);
@@ -927,6 +935,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     ]);
   }
 
+  // Reduced and the live is over: nothing left to float.
+  useEffect(() => {
+    if (mini && (phase === "ended" || phase === "failed")) useLiveSession.getState().clear();
+  }, [mini, phase]);
+
   function leave() {
     if (isOrganizer && phase === "connected") {
       Alert.alert("Quitter", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
@@ -970,6 +983,28 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const commentsMax = shareLandscape ? Math.max(70, stageH - shareTop - sharePicH - 110 - spotlightH) : box ? Math.max(70, win.height - stageH - 10 - spotlightH - controlsH) : qa.data?.spotlight ? 150 : 230;
   const layout: StageLayout = layoutPick;
 
+  if (mini) {
+    if (phase === "ended" || phase === "failed") return null;
+    const main = tiles.find((t) => t.organizer) ?? tiles[0];
+    const url = screen && !screen.local ? screen.url : (main?.url ?? null);
+    return (
+      <MiniLive
+        url={url}
+        mirror={!(screen && !screen.local) && Boolean(main?.mirror)}
+        label="EN DIRECT"
+        onOpen={() => useWippStore.getState().push({ name: "event-live", eventId })}
+        onClose={() => {
+          if (isOrganizer) {
+            Alert.alert("Quitter le direct", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
+              { text: "Rester", style: "cancel" },
+              { text: "Quitter sans terminer", onPress: () => useLiveSession.getState().clear() },
+            ]);
+          } else useLiveSession.getState().clear();
+        }}
+      />
+    );
+  }
+
   if (phase === "ended") {
     return (
       <LiveEndScreen
@@ -977,6 +1012,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         onBack={() => {
           // Back to the events: leave the room and the event sheet behind it.
           const st = useWippStore.getState();
+          useLiveSession.getState().clear();
           st.pop();
           if (useWippStore.getState().stack.at(-1)?.name === "lifestyle") useWippStore.getState().pop();
         }}
@@ -998,6 +1034,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           stageH={stageH}
           topSafe={insets.top}
           onMenu={isOrganizer ? speakerMenu : viewerTileMenu}
+          pip={!publisher}
         />
       ) : (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -1047,6 +1084,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         ) : (
           <View style={{ flex: 1 }} />
         )}
+        <Press accessibilityLabel="Réduire le direct" onPress={minimize} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Minimize2 size={19} color="#fff" />
+        </Press>
         {screen && !screen.local && screen.url && shareLandscape ? (
           <Press accessibilityLabel={shareLandscape ? "Plein écran paysage" : "Plein écran"} onPress={() => setScreenFull(true)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <Maximize2 size={19} color="#d4a017" />
