@@ -207,6 +207,7 @@ const evenementsAnimations: SurpriseAnimationItem[] = [
   clip("event-halloween", "Halloween"),
   clip("event-noel", "Noël"),
   clip("event-nouvel-an", "Bonne année"),
+  clip("event-saint-valentin", "Saint-Valentin"),
   clip("event-paques", "Pâques"),
   clip("event-felicitations", "Félicitations"),
 ];

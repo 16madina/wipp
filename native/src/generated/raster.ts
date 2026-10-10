@@ -130,6 +130,7 @@ export const raster = {
   "fx/surprise/anims/event-noel-poster.png": require("../../assets/wipp/fx/surprise/anims/event-noel-poster.png"),
   "fx/surprise/anims/event-nouvel-an-poster.png": require("../../assets/wipp/fx/surprise/anims/event-nouvel-an-poster.png"),
   "fx/surprise/anims/event-paques-poster.png": require("../../assets/wipp/fx/surprise/anims/event-paques-poster.png"),
+  "fx/surprise/anims/event-saint-valentin-poster.png": require("../../assets/wipp/fx/surprise/anims/event-saint-valentin-poster.png"),
   "fx/surprise/anims/nuit-chaton-poster.png": require("../../assets/wipp/fx/surprise/anims/nuit-chaton-poster.png"),
   "fx/surprise/anims/nuit-etoile-poster.png": require("../../assets/wipp/fx/surprise/anims/nuit-etoile-poster.png"),
   "fx/surprise/anims/nuit-hibou-poster.png": require("../../assets/wipp/fx/surprise/anims/nuit-hibou-poster.png"),

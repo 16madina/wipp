@@ -32,6 +32,7 @@ export const ANIM_MS: Record<string, number> = {
   "event-noel": 10117,
   "event-nouvel-an": 10117,
   "event-paques": 10117,
+  "event-saint-valentin": 10117,
   "nuit-chaton": 10117,
   "nuit-etoile": 10117,
   "nuit-hibou": 10117,
