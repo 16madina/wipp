@@ -617,7 +617,7 @@ export const useWippStore = create<Store>((set, get) => ({
     if (!chatId.startsWith("srv:")) pumpReceipt(get, set, chatId, message.id);
 
     const groupServer = existingChat?.type === "group" && chatId.startsWith("srv:");
-    if (groupServer && (message.type === "text" || message.type === "sticker" || message.type === "poll" || message.type === "event")) {
+    if (groupServer && (message.type === "text" || message.type === "sticker" || message.type === "poll" || message.type === "event" || message.type === "scratch")) {
       void (async () => {
         try {
           const { postGroupMessage, mentionIdsInText } = await import("./lot7/api");
@@ -644,6 +644,17 @@ export const useWippStore = create<Store>((set, get) => ({
               ? JSON.stringify({ k: "wipp-group-media", type: "poll", poll: message.poll })
               : message.type === "event" && message.groupEvent
                 ? JSON.stringify({ k: "wipp-group-media", type: "event", event: eventForBody })
+                : message.type === "scratch"
+                  ? // Surprise in a group: the secret text and its staging travel together, inside the encrypted body.
+                    JSON.stringify({
+                      k: "wipp-group-media",
+                      type: "scratch",
+                      text: message.text ?? "",
+                      scratchCardId: message.scratchCardId,
+                      scratchDesign: message.scratchDesign,
+                      effectId: message.effectId,
+                      duration: message.duration,
+                    })
                 : message.type === "text" || !message.stickerId
                 ? message.text ?? ""
                 : JSON.stringify({ k: "wipp-group-media", type: "sticker", stickerId: message.stickerId, text: message.text });

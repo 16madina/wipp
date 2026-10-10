@@ -594,7 +594,8 @@ async function decryptGroupMerged(state: StoreSlice, localChatId: string, identi
   const last = next.at(-1);
   return {
     messages: { ...state.messages, [localChatId]: next },
-    chats: state.chats.map((c) => (c.id === localChatId && last?.text ? { ...c, preview: last.text } : c)),
+    // A surprise never shows its secret in the chat list.
+    chats: state.chats.map((c) => (c.id === localChatId && last?.text ? { ...c, preview: last.type === "scratch" ? "Surprise ✨" : last.text } : c)),
   };
 }
 
@@ -635,13 +636,34 @@ function groupMediaFields(inner: string): Partial<Message> | null {
   const t = inner.trim();
   if (!t.startsWith("{")) return null;
   try {
-    const p = JSON.parse(t) as { k?: string; type?: Message["type"]; text?: string; stickerId?: string; poll?: Message["poll"]; event?: unknown };
+    const p = JSON.parse(t) as {
+      k?: string;
+      type?: Message["type"];
+      text?: string;
+      stickerId?: string;
+      poll?: Message["poll"];
+      event?: unknown;
+      scratchCardId?: string;
+      scratchDesign?: string;
+      effectId?: string;
+      duration?: number;
+    };
     if (p.k === "wipp-group-media" && p.type === "event") {
       const ev = validEvent(p.event);
       return ev ? { type: "event", groupEvent: ev, text: undefined } : null;
     }
     if (p.k !== "wipp-group-media" || !p.type) return null;
     if (p.type === "poll") return validPoll(p.poll) ? { type: "poll", poll: validPoll(p.poll)!, text: undefined } : null;
+    if (p.type === "scratch") {
+      return {
+        type: "scratch",
+        text: typeof p.text === "string" ? p.text : "",
+        scratchCardId: typeof p.scratchCardId === "string" ? p.scratchCardId : "scratch",
+        scratchDesign: typeof p.scratchDesign === "string" ? p.scratchDesign : "heart",
+        effectId: typeof p.effectId === "string" ? p.effectId : undefined,
+        duration: typeof p.duration === "number" ? p.duration : undefined,
+      };
+    }
     return { type: p.type, text: p.text, stickerId: p.stickerId };
   } catch {
     return null;

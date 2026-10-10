@@ -41,6 +41,8 @@ export function groupPreview(body: string) {
       // End-to-end encrypted (group key): the phone shows the real text once decrypted.
       if (parsed.e2e === true) return "Message chiffré";
       if (parsed.k === "wipp-group-media") {
+        // A surprise never shows its secret in a preview.
+        if (parsed.type === "scratch") return "Surprise ✨";
         if (parsed.text) return parsed.text.slice(0, 140);
         if (parsed.type === "image") return "Photo";
         if (parsed.type === "video") return "Vidéo";
