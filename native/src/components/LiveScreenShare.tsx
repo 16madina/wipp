@@ -105,17 +105,6 @@ function ZoomableScreen({
   );
 }
 
-function Quality({ size, bottom = 8 }: { size: { width: number; height: number } | null; bottom?: number }) {
-  if (!size) return null;
-  return (
-    <View pointerEvents="none" style={{ position: "absolute", left: 8, bottom, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.55)" }}>
-      <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 10 }}>
-        {size.width} × {size.height}
-      </Text>
-    </View>
-  );
-}
-
 /**
  * Floating people while a screen is shared: a discreet column on the side, never a reserved strip.
  * Drag it anywhere; it snaps to the nearest corner so it never ends up in the middle of the slides.
@@ -208,7 +197,6 @@ export function ScreenStage({
   topSafe,
   frame,
   onDimensionsChange,
-  sent,
   immersive = false,
   bottomPad = 0,
   onTap,
@@ -220,8 +208,6 @@ export function ScreenStage({
   topSafe: number;
   frame: { width: number; height: number } | null;
   onDimensionsChange: (e: { nativeEvent: { width: number; height: number } }) => void;
-  /** Host, while testing: the size his phone really sends. */
-  sent?: { width: number; height: number } | null;
   /** Viewer, portrait source: the picture fills the whole phone, everything else floats over it. */
   immersive?: boolean;
   /** Height of the floating bottom controls (the people never snap under them). */
@@ -264,16 +250,12 @@ export function ScreenStage({
               <MonitorUp size={18} color={GOLD} />
               <Text style={{ flex: 1, color: "#fff", fontSize: 12, lineHeight: 16 }}>
                 <Text style={{ fontFamily: "Inter_700Bold" }}>Les spectateurs voient ton écran.</Text> Ouvre ta présentation, un site ou une app.
-                {sent ? `\nEnvoyé : ${sent.width} × ${sent.height}` : ""}
               </Text>
             </View>
           </View>
         ) : screen.url ? (
           <>
             <ZoomableScreen url={screen.url} box={box} frame={frame} onDimensionsChange={onDimensionsChange} onTap={onTap} />
-            <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width, height: immersive ? topSafe + 80 : box.height }}>
-              <Quality size={frame} bottom={6} />
-            </View>
           </>
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -328,7 +310,6 @@ export function ScreenFullscreen({
           <Text pointerEvents="none" style={{ position: "absolute", bottom: insets.bottom + 10, alignSelf: "center", color: "rgba(255,255,255,0.55)", fontSize: 11 }}>
             {landscape ? "Tourne ton téléphone · pince pour zoomer" : "Pince avec deux doigts pour zoomer"}
           </Text>
-          <Quality size={frame} bottom={insets.bottom + 8} />
         </>
       ) : null}
     </View>

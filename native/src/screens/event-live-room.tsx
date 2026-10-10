@@ -81,8 +81,6 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const refreshRef = useRef<() => void>(() => undefined);
   // Share track for which the best quality was already asked (once per track).
   const askedHigh = useRef<string | null>(null);
-  // Host, while testing: real size of what his phone sends (after encoding).
-  const [sentSize, setSentSize] = useState<{ width: number; height: number } | null>(null);
   const [shareTick, setShareTick] = useState(0);
   // Immersive scene (viewer, portrait screen share): the title and the controls sit over the picture and hide
   // by themselves; one tap brings them back.
@@ -718,7 +716,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   }
 
   /**
-   * LiveKit assumes a 1280 × 720 landscape source; the iPhone screen is portrait (≈ 645 × 1398 sent by the
+   * LiveKit assumes a 1280 × 720 landscape source; the iPhone screen is portrait (≈ 664 × 1440 sent by the
    * extension). Make sure the encoder sends it at its real size, never scaled down by a wrong assumption.
    */
   async function keepShareSharp(room: Room) {
@@ -745,28 +743,6 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       }
     }
   }
-
-  // Host: what is really sent (shown while testing), read from the encoder every 3 s.
-  useEffect(() => {
-    if (!screen?.local) {
-      setSentSize(null);
-      return;
-    }
-    const read = async () => {
-      const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track as unknown as
-        | { getSenderStats?: () => Promise<{ frameWidth?: number; frameHeight?: number }[]> }
-        | undefined;
-      const stats = await track?.getSenderStats?.().catch(() => []);
-      const best = (stats ?? []).reduce<{ width: number; height: number } | null>((b, v) => {
-        const w = Number(v.frameWidth ?? 0);
-        const h = Number(v.frameHeight ?? 0);
-        return w * h > (b ? b.width * b.height : 0) ? { width: w, height: h } : b;
-      }, null);
-      if (best) setSentSize(best);
-    };
-    const t = setInterval(() => void read(), 3000);
-    return () => clearInterval(t);
-  }, [screen?.local]);
 
   // Immersive scene: the controls hide by themselves after 4 s (not while typing or with a panel open).
   const immersiveOn = Boolean(screen && !screen.local && !(shareFrame.size && shareFrame.size.width > shareFrame.size.height));
@@ -936,7 +912,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Stage */}
       {screen ? (
-        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} sent={sentSize} immersive={immersive} bottomPad={controlsH} onTap={immersive ? () => setChrome((v) => !v) : undefined} />
+        <ScreenStage screen={screen} tiles={tiles} width={win.width} stageH={stageH} topSafe={insets.top} frame={shareFrame.size} onDimensionsChange={shareFrame.onDimensionsChange} immersive={immersive} bottomPad={controlsH} onTap={immersive ? () => setChrome((v) => !v) : undefined} />
       ) : tiles.some((t) => t.url) || tiles.length > 1 ? (
         <StageGrid
           tiles={tiles}
