@@ -89,6 +89,10 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
   const [chrome, setChrome] = useState(true);
   const [typing, setTyping] = useState(false);
   const chromeHint = useRef(false);
+  const inputRef = useRef<TextInput>(null);
+  // Leaving the stage by myself (no « retiré(e) » message then).
+  const selfLeft = useRef(false);
+  const prevRole = useRef<string | null>(null);
   const [myRole, setMyRole] = useState<"organizer" | "speaker" | "viewer" | null>(null);
   const st = useLiveStage(eventId);
   const handToast = useRef<Set<string>>(new Set());
@@ -587,6 +591,42 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
     }
   }
 
+  // Taken off the stage by the organizer: say it clearly (the person stays in the live as a viewer).
+  useEffect(() => {
+    const was = prevRole.current;
+    prevRole.current = role;
+    if (was !== "speaker" || role !== "viewer") return;
+    if (selfLeft.current) {
+      selfLeft.current = false;
+      return;
+    }
+    if (endedRef.current || phase !== "connected") return;
+    Alert.alert("Tu n’es plus sur scène", "L’organisateur t’a retiré(e) de la scène. Ton micro et ta caméra sont coupés ; tu restes dans le direct comme spectateur.");
+  }, [role]);
+
+  /** Tap a comment: answer its author (« @Nom » at the start of the comment, shown in colour). */
+  function replyTo(c: Comment) {
+    if (!settings.commentsOn && !isOrganizer) return;
+    setDraft(`@${c.name} `.slice(0, COMMENT_MAX));
+    setChrome(true);
+    setTimeout(() => inputRef.current?.focus(), 150);
+  }
+
+  /** The comment text, with a leading « @Nom » (a reply) in colour. */
+  function commentBody(text: string) {
+    if (!text.startsWith("@")) return text;
+    const names = [...new Set([...comments.map((c) => c.name), ...people.map((p) => p.name)])].sort((a, b) => b.length - a.length);
+    const hit = names.find((n) => text.startsWith(`@${n}`));
+    const mention = hit ? `@${hit}` : (/^@\S+/.exec(text)?.[0] ?? "");
+    if (!mention) return text;
+    return (
+      <>
+        <Text style={{ color: "#7cc4ff", fontFamily: "Inter_600SemiBold" }}>{mention}</Text>
+        {text.slice(mention.length)}
+      </>
+    );
+  }
+
   async function joinStage() {
     if (!(await stage({ action: "answer", accept: true }))) return;
     setMyRole("speaker");
@@ -602,9 +642,11 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
         text: "Quitter la scène",
         onPress: () => {
           void (async () => {
+            selfLeft.current = true;
             await roomRef.current?.localParticipant.setCameraEnabled(false).catch(() => undefined);
             await roomRef.current?.localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
             if (await stage({ action: "leave" })) setMyRole("viewer");
+            else selfLeft.current = false;
           })();
         },
       },
@@ -1036,14 +1078,14 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
         {multi && !(immersive && chromeOn) ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: immersive ? 230 : 360 }} />}
         {showComments && sharing && !shareLandscape ? (
-          <View pointerEvents="none" style={{ paddingLeft: 10, paddingRight: 70, paddingBottom: chromeOn ? 4 : Math.max(insets.bottom, 10) + 6, gap: 4, alignItems: "flex-start" }}>
+          <View pointerEvents="box-none" style={{ paddingLeft: 10, paddingRight: 70, paddingBottom: chromeOn ? 4 : Math.max(insets.bottom, 10) + 6, gap: 4, alignItems: "flex-start" }}>
             {recentComments.map((c) => (
-              <View key={c.id} style={{ maxWidth: "100%", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: "rgba(8,12,24,0.62)" }}>
+              <Pressable key={c.id} onPress={() => replyTo(c)} onLongPress={() => commentMenu(c)} style={{ maxWidth: "100%", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: "rgba(8,12,24,0.62)" }}>
                 <Text numberOfLines={2} style={{ color: "#fff", fontSize: 13, lineHeight: 17 }}>
-                  <Text style={{ color: "#e9c46a", fontFamily: "Inter_600SemiBold" }}>{c.name} </Text>
-                  {c.text}
+                  <Text style={{ color: "#e9c46a", fontFamily: "Inter_700Bold" }}>{c.name} </Text>
+                  {commentBody(c.text)}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         ) : showComments ? (
@@ -1054,9 +1096,9 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
               inverted={false}
               onContentSizeChange={(_, __) => undefined}
               renderItem={({ item }) => (
-                <Pressable onLongPress={() => commentMenu(item)} style={{ paddingVertical: 4 }}>
-                  <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.name}</Text>
-                  <Text style={{ color: "#fff", fontSize: 14, lineHeight: 19, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.text}</Text>
+                <Pressable onPress={() => replyTo(item)} onLongPress={() => commentMenu(item)} style={{ paddingVertical: 4 }}>
+                  <Text style={{ color: "#e9c46a", fontSize: 12, fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{item.name}</Text>
+                  <Text style={{ color: "#fff", fontSize: 14, lineHeight: 19, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 4 }}>{commentBody(item.text)}</Text>
                 </Pressable>
               )}
               ref={(list) => {
@@ -1083,6 +1125,7 @@ export function EventLiveRoomScreen({ eventId }: { eventId: string }) {
           {settings.commentsOn || isOrganizer ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 44, borderRadius: 22, paddingLeft: 16, paddingRight: 6, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" }}>
               <TextInput
+                ref={inputRef}
                 value={draft}
                 onChangeText={(v) => setDraft(v.slice(0, COMMENT_MAX))}
                 placeholder="Écrire un commentaire…"
