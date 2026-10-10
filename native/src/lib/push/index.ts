@@ -307,10 +307,30 @@ async function applyScreen(screen: Screen, eventId?: string) {
   useWippStore.getState().push(screen);
 }
 
+/**
+ * A « live » notification about the live I am hosting right now (« Tu as laissé un direct en cours ») goes
+ * straight back into the room, not just to the event sheet.
+ */
+async function resumeMyLive(data: Record<string, unknown>) {
+  if (data.type !== "live" || typeof data.publicId !== "string") return;
+  try {
+    const { myActiveLive } = await import("../event-live");
+    const mine = (await myActiveLive()).live;
+    if (!mine || mine.eventId !== data.publicId) return;
+    const st = useWippStore.getState();
+    const top = st.stack.at(-1);
+    if (top?.name === "event-live" && top.eventId === mine.eventId) return;
+    st.push({ name: "event-live", eventId: mine.eventId });
+  } catch {
+    /* the event sheet is already open: the person can join from there */
+  }
+}
+
 /** Opens the screen a push points to (used by Android notifications shown by notifee). */
 export async function openFromPushData(data: Record<string, unknown>) {
   const screen = screenFromPushData(data);
   if (screen) await applyScreen(screen, typeof data.eventId === "string" ? data.eventId : undefined);
+  void resumeMyLive(data);
 }
 
 export async function enqueueUrl(url: string) {
@@ -346,6 +366,7 @@ async function handleResponse(response: Notifications.NotificationResponse) {
   const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
   const screen = screenFromPushData(data);
   if (screen) await applyScreen(screen, typeof data.eventId === "string" ? data.eventId : undefined);
+  void resumeMyLive(data);
 }
 
 export async function captureLaunchIntents() {

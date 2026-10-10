@@ -150,7 +150,28 @@ pas les lire. Ils ne sont volontairement **pas** dans la branche.
    `readyState === "ended"` → `setScreenShareEnabled(false)`), et que le service de premier plan et sa
    notification disparaissent. Quitter ou terminer le direct pendant un partage doit aussi tout arrêter.
    C'est le point le plus important : aucun écran noir chez le spectateur.
-6. Faire les 13 tests ci-dessous. Ne corriger que ce qui échoue, sans toucher à la disposition.
+6. Faire les 14 tests ci-dessous. Ne corriger que ce qui échoue, sans toucher à la disposition.
+
+## 2 ter. Ajouts du 10 octobre (après le partage d'écran) — communs, déjà dans le code
+
+Tout ceci est en JavaScript commun et **devrait fonctionner tel quel sur Android** ; à vérifier, pas à réécrire.
+
+- **Signalement** : « Signaler ce direct » et « Bloquer l'organisateur » dans le menu « ⋯ » du spectateur ;
+  « ⋯ » → « Signaler » sur la vidéo de chaque intervenant.
+- **Présence de l'hôte** : le téléphone de l'hôte appelle `lives/:id/beat` toutes les 30 s tant que WIPP est
+  à l'écran (ou qu'il partage son écran). Le serveur (tâche Supabase chaque minute) prévient l'hôte parti par
+  notification (≈ 1 min, puis ≈ 1 min avant la fin) et ferme le direct après 5 minutes, même sans spectateur.
+  **Android** : vérifier que le battement continue pendant un partage d'écran depuis une autre app
+  (le service de premier plan doit garder le JavaScript actif) ; sinon l'hôte serait vu « parti » en plein partage.
+- **« Reprendre le live »** : bouton rouge dans l'en-tête des Chats tant qu'on a un direct en cours ; toucher
+  la notification « Tu as laissé un direct en cours » ramène directement dans la salle.
+- **Direct flottant dans WIPP** : bouton « Réduire » → petite fenêtre déplaçable, la connexion n'est jamais
+  coupée (`native/src/lib/live-session.ts`, `LiveHost` dans `AppShell.tsx`, `MiniLive`).
+- **Direct flottant HORS de WIPP** : fait sur iPhone seulement (propriété `iosPIP` de la vue vidéo).
+  **Android : pas fait.** Il faudrait le mode « picture-in-picture » d'Android (activité avec
+  `supportsPictureInPicture`, entrée en PiP quand l'app passe en arrière-plan). **Ne pas commencer sans
+  l'accord de l'utilisatrice** : d'abord expliquer la solution et ses risques.
+- **Textes d'autorisation iOS** : sans objet pour Android.
 
 ## 3. Tests (Samsung + un iPhone)
 
@@ -173,7 +194,10 @@ iPhone host → Android spectateur).
 10. **Avec intervenants** : refaire le test 9 avec un invité sur scène.
 11. **Refus de l'autorisation** : message clair, le direct continue.
 12. **Fin du direct pendant un partage** : tout s'arrête proprement, plus de notification.
-13. **Non-régression** : appels WIPP ordinaires, messagerie et notifications ordinaires inchangés.
+13. **Ajouts du 10 octobre** : signaler le direct / bloquer l'organisateur ; quitter son direct en hôte
+    (notifications à ≈ 1 min et ≈ 4 min, fermeture à 5 min) ; bouton « Reprendre le live » ; « Réduire »
+    (fenêtre flottante dans WIPP) ; battement de présence pendant un partage d'écran Android.
+14. **Non-régression** : appels WIPP ordinaires, messagerie et notifications ordinaires inchangés.
 
 ## 4. Google Play (à préparer, NE PAS envoyer sans accord)
 
@@ -191,5 +215,5 @@ iPhone host → Android spectateur).
 3. Manifeste : service MediaProjection avec `foregroundServiceType="mediaProjection"`, permission
    `FOREGROUND_SERVICE_MEDIA_PROJECTION`, pas de `BOOT_COMPLETED`.
 4. Taille envoyée et taille reçue mesurées (Android host), et réglage retenu.
-5. Résultat des tests 1 à 13, un par un, avec ce qui n'a pas pu être testé.
+5. Résultat des tests 1 à 14, un par un, avec ce qui n'a pas pu être testé.
 6. Toute différence d'affichage constatée sur Android, **sans l'avoir corrigée dans la disposition**.
