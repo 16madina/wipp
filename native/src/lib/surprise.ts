@@ -190,6 +190,25 @@ const nuitAnimations: SurpriseAnimationItem[] = [
   { id: "night-window", label: "Fenêtre", art: "fx/nuit/night_window.png" },
 ];
 
+const amitieAnimations: SurpriseAnimationItem[] = [
+  clip("amitie-puzzle", "On se complète"),
+  clip("amitie-heros", "Mon héros"),
+  clip("amitie-loin", "Loin des yeux"),
+];
+
+const voyageAnimations: SurpriseAnimationItem[] = [
+  clip("voyage-valise", "Bon voyage"),
+  clip("voyage-passeport", "C’est parti"),
+  clip("voyage-vacances", "Bonnes vacances"),
+  clip("voyage-route", "Bonne route"),
+  clip("voyage-montgolfiere", "Profite bien"),
+  clip("voyage-globe", "Où que tu sois"),
+  clip("voyage-carte", "Je pense à toi"),
+  clip("voyage-train", "Rentre bien"),
+  clip("voyage-aventure", "À l’aventure"),
+  clip("voyage-arrivee", "Bonne arrivée"),
+];
+
 /** Bonne nuit: real animations (Grok videos), added as they are made. */
 const nuitClips: SurpriseAnimationItem[] = [
   clip("nuit-mouton", "Mouton"),
@@ -221,10 +240,21 @@ export const eventGroups: { id: string; label: string }[] = [
 const eventClip = (group: string, id: string, label: string): SurpriseAnimationItem => ({ ...clip(id, label), group });
 const evenementsAnimations: SurpriseAnimationItem[] = [
   eventClip("halloween", "event-halloween", "Citrouille"),
+  eventClip("halloween", "event-halloween-sorciere", "Sorcière"),
+  eventClip("halloween", "event-halloween-araignee", "Araignée"),
+  eventClip("halloween", "event-halloween-monstre", "Petit monstre"),
+  eventClip("halloween", "event-halloween-chaudron", "Chaudron"),
+  eventClip("halloween", "event-halloween-fantomes", "Fantômes"),
+  eventClip("halloween", "event-halloween-vampire", "Vampire"),
+  eventClip("halloween", "event-halloween-momie", "Momie"),
+  eventClip("halloween", "event-halloween-bonbons", "Bonbons"),
   eventClip("noel", "event-noel", "Sapin"),
   eventClip("nouvel-an", "event-nouvel-an", "Champagne"),
   eventClip("saint-valentin", "event-saint-valentin", "Cupidon"),
   eventClip("paques", "event-paques", "Poussin"),
+  eventClip("fete-peres", "event-fete-peres", "Trophée"),
+  eventClip("action-de-grace", "event-action-de-grace", "Dinde"),
+  eventClip("aid", "event-aid", "Lanternes"),
   eventClip("felicitations", "event-felicitations", "Diplôme"),
 ];
 
@@ -247,8 +277,8 @@ export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
   // Fêtes et temps forts de l'année (Halloween, Saint-Valentin, Noël, Action de grâce…).
   { id: "evenements", label: "Événements", art: "fx/surprise/anims/cat-evenements.jpg", collection: "evenements" },
   { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/cat-nuit.jpg", collection: "bonne-nuit" },
-  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/cat-voyage.jpg" },
-  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg" },
+  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/cat-voyage.jpg", collection: "voyage" },
+  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg", collection: "amitie" },
 ];
 
 /** Only real animations are offered: a still picture never appears in the picker. */
@@ -263,6 +293,8 @@ export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
   "bon-retablissement": moving(retablissementAnimations),
   evenements: moving(evenementsAnimations),
   "bonne-nuit": moving(nuitClips),
+  voyage: moving(voyageAnimations),
+  amitie: moving(amitieAnimations),
 };
 
 export const surpriseKindArt: Record<SurpriseType, string> = {
@@ -281,6 +313,8 @@ export const surpriseAnimations: SurpriseAnimationItem[] = [
   ...nuitAnimations,
   ...nuitClips,
   ...evenementsAnimations,
+  ...amitieAnimations,
+  ...voyageAnimations,
   ...surpriseAnimationCategories.filter((item) => !item.collection),
 ];
 
