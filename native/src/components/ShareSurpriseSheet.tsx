@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import { Animated, Dimensions, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -622,8 +623,19 @@ export function ShareSurpriseSheet({
                         alignItems: "center",
                       }}
                     >
-                      {art ? <Image source={art} style={{ width: "100%", height: "78%" }} contentFit="contain" /> : null}
-                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{item.label}</Text>
+                      {!animCat ? (
+                        // Category tile: the picture fills the whole frame, the name sits over it at the bottom.
+                        <>
+                          {art ? <Image source={art} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                          <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.78)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" }} />
+                          <Text numberOfLines={1} style={{ position: "absolute", left: 8, right: 8, bottom: 8, textAlign: "center", fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" }}>{item.label}</Text>
+                        </>
+                      ) : (
+                        <>
+                          {art ? <Image source={art} style={{ width: "100%", height: "78%" }} contentFit="contain" /> : null}
+                          <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{item.label}</Text>
+                        </>
+                      )}
                       {hasCollection ? <ChevronRight size={16} color={colors.surpriseBright} style={{ position: "absolute", right: 8, top: 8 }} /> : null}
                     </Press>
                   );

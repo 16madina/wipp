@@ -188,25 +188,25 @@ const nuitAnimations: SurpriseAnimationItem[] = [
 ];
 
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
-  { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/bonjour-bonne-journee-poster.png", collection: "bonjour" },
+  { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/cat-bonjour.jpg", collection: "bonjour" },
   {
     id: "anniversaire",
     label: "Anniversaire",
-    art: "fx/surprise/anims/anniversaire-gateau-poster.png",
+    art: "fx/surprise/anims/cat-anniversaire.jpg",
     collection: "anniversaire",
   },
-  { id: "amour", label: "Amour", art: "fx/surprise/anims/animation-amour.jpg", collection: "amour" },
+  { id: "amour", label: "Amour", art: "fx/surprise/anims/cat-amour.jpg", collection: "amour" },
   {
     id: "bon-retablissement",
     label: "Bon rétablissement",
-    art: "fx/surprise/anims/retablissement-bouquet-poster.png",
+    art: "fx/surprise/anims/cat-retablissement.jpg",
     collection: "bon-retablissement",
   },
-  { id: "beaute", label: "Beauté", art: "fx/surprise/anims/animation-beaute.jpg" },
-  { id: "bonne-journee", label: "Bonne journée", art: "fx/surprise/anims/animation-journee.jpg", collection: "bonne-journee" },
-  { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/animation-nuit.jpg", collection: "bonne-nuit" },
-  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/animation-voyage.jpg" },
-  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/animation-amitie.jpg" },
+  { id: "beaute", label: "Beauté", art: "fx/surprise/anims/cat-beaute.jpg" },
+  { id: "bonne-journee", label: "Bonne journée", art: "fx/surprise/anims/cat-journee.jpg", collection: "bonne-journee" },
+  { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/cat-nuit.jpg", collection: "bonne-nuit" },
+  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/cat-voyage.jpg" },
+  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg" },
 ];
 
 export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
