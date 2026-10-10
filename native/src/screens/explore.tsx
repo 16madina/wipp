@@ -1486,7 +1486,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                     text: reason,
                     onPress: () => {
                       // Events share the listings' report queue; « event: » tells the moderators what it is.
-                      void submitContentReport({ contentType: "listing", contentId: `event:${item.id}`, targetProfileId: item.hostId.startsWith("srvuser:") ? item.hostId : null, reason }).then(
+                      void submitContentReport({ contentType: "listing", contentId: `event:${item.id}`, targetProfileId: item.hostId?.startsWith("srvuser:") ? item.hostId : null, reason }).then(
                         () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner."),
                         (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
                       );
