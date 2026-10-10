@@ -15,7 +15,7 @@ for pair in "$@"; do
   id=${pair%%=*}; file=${pair#*=}
   tmp=$(mktemp -d)
   ffmpeg -v error -y -i "$SRC/$file" -an -vf "fps=15,scale=360:640,$KEY" "$tmp/f%04d.png"
-  img2webp -loop 0 -lossy -q 62 -m 4 -d 67 $tmp/f*.png -o "$WEB/$id.webp" >/dev/null 2>&1
+  img2webp -loop 0 -lossy -q ${Q:-62} -m 4 -d 67 $tmp/f*.png -o "$WEB/$id.webp" >/dev/null 2>&1
   ffmpeg -v error -y -i "$SRC/$file" -vn -c:a aac -b:a 96k "$WEB/$id.m4a"
   ffmpeg -v error -y -ss 4 -i "$SRC/$file" -frames:v 1 -vf "scale=360:640,$KEY" "$APP/$id-poster.png"
   rm -rf $tmp

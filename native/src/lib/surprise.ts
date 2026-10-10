@@ -198,11 +198,18 @@ const nuitClips: SurpriseAnimationItem[] = [
   clip("nuit-reveil", "À demain"),
   clip("nuit-peche", "Pêche aux étoiles"),
   clip("nuit-tisane", "Tisane"),
+  clip("nuit-nuage", "Au lit !"),
   clip("nuit-lune", "Lune et étoiles"),
 ];
 
 /** Événements: filled as the seasonal animations are made (Halloween, Saint-Valentin, Noël…). */
-const evenementsAnimations: SurpriseAnimationItem[] = [];
+const evenementsAnimations: SurpriseAnimationItem[] = [
+  clip("event-halloween", "Halloween"),
+  clip("event-noel", "Noël"),
+  clip("event-nouvel-an", "Bonne année"),
+  clip("event-paques", "Pâques"),
+  clip("event-felicitations", "Félicitations"),
+];
 
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
   { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/cat-bonjour.jpg", collection: "bonjour" },
