@@ -194,6 +194,13 @@ const amitieAnimations: SurpriseAnimationItem[] = [
   clip("amitie-puzzle", "On se complète"),
   clip("amitie-heros", "Mon héros"),
   clip("amitie-loin", "Loin des yeux"),
+  clip("amitie-meilleurs-amis", "Meilleurs amis"),
+  clip("amitie-calin", "Gros câlin"),
+  clip("amitie-parapluie", "Toujours là pour toi"),
+  clip("amitie-telephone", "Tu me manques"),
+  clip("amitie-soiree", "Soirée entre amis"),
+  clip("amitie-bracelet", "Amis pour la vie"),
+  clip("amitie-ballons", "Merci d’être là"),
 ];
 
 const voyageAnimations: SurpriseAnimationItem[] = [
@@ -248,10 +255,12 @@ const evenementsAnimations: SurpriseAnimationItem[] = [
   eventClip("halloween", "event-halloween-vampire", "Vampire"),
   eventClip("halloween", "event-halloween-momie", "Momie"),
   eventClip("halloween", "event-halloween-bonbons", "Bonbons"),
+  eventClip("halloween", "event-halloween-squelette", "Squelette"),
   eventClip("noel", "event-noel", "Sapin"),
   eventClip("nouvel-an", "event-nouvel-an", "Champagne"),
   eventClip("saint-valentin", "event-saint-valentin", "Cupidon"),
   eventClip("paques", "event-paques", "Poussin"),
+  eventClip("fete-meres", "event-fete-meres", "Bouquet géant"),
   eventClip("fete-peres", "event-fete-peres", "Trophée"),
   eventClip("action-de-grace", "event-action-de-grace", "Dinde"),
   eventClip("aid", "event-aid", "Lanternes"),
