@@ -54,6 +54,8 @@ export const remoteMedia: string[] = [
   "fx/surprise/anims/bonjour-soleil.webp",
   "fx/surprise/anims/bonjour-tournesol.m4a",
   "fx/surprise/anims/bonjour-tournesol.webp",
+  "fx/surprise/anims/nuit-lune.m4a",
+  "fx/surprise/anims/nuit-lune.webp",
   "fx/surprise/anims/retablissement-bouquet.m4a",
   "fx/surprise/anims/retablissement-bouquet.webp",
   "fx/surprise/anims/retablissement-bulle.m4a",

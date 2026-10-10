@@ -27,6 +27,7 @@ export const ANIM_MS: Record<string, number> = {
   "bonjour-reveil": 10184,
   "bonjour-soleil": 10050,
   "bonjour-tournesol": 10184,
+  "nuit-lune": 10117,
   "retablissement-bouquet": 10184,
   "retablissement-bulle": 10184,
   "retablissement-cadre": 10184,

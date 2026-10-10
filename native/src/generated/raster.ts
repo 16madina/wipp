@@ -125,6 +125,7 @@ export const raster = {
   "fx/surprise/anims/cat-nuit.jpg": require("../../assets/wipp/fx/surprise/anims/cat-nuit.jpg"),
   "fx/surprise/anims/cat-retablissement.jpg": require("../../assets/wipp/fx/surprise/anims/cat-retablissement.jpg"),
   "fx/surprise/anims/cat-voyage.jpg": require("../../assets/wipp/fx/surprise/anims/cat-voyage.jpg"),
+  "fx/surprise/anims/nuit-lune-poster.png": require("../../assets/wipp/fx/surprise/anims/nuit-lune-poster.png"),
   "fx/surprise/anims/retablissement-bouquet-poster.png": require("../../assets/wipp/fx/surprise/anims/retablissement-bouquet-poster.png"),
   "fx/surprise/anims/retablissement-bulle-poster.png": require("../../assets/wipp/fx/surprise/anims/retablissement-bulle-poster.png"),
   "fx/surprise/anims/retablissement-cadre-poster.png": require("../../assets/wipp/fx/surprise/anims/retablissement-cadre-poster.png"),

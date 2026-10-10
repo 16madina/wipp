@@ -188,6 +188,11 @@ const nuitAnimations: SurpriseAnimationItem[] = [
   { id: "night-window", label: "Fenêtre", art: "fx/nuit/night_window.png" },
 ];
 
+/** Bonne nuit: real animations (Grok videos), added as they are made. */
+const nuitClips: SurpriseAnimationItem[] = [
+  clip("nuit-lune", "Lune et étoiles"),
+];
+
 /** Événements: filled as the seasonal animations are made (Halloween, Saint-Valentin, Noël…). */
 const evenementsAnimations: SurpriseAnimationItem[] = [];
 
@@ -221,7 +226,9 @@ export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
   amour: amourAnimations,
   "bon-retablissement": retablissementAnimations,
   evenements: evenementsAnimations,
-  "bonne-nuit": nuitAnimations,
+  // The 11 old « Bonne nuit » items were still pictures, not animations: hidden from the picker while the
+  // real animations are made. They stay in `surpriseAnimations` so surprises already sent still show.
+  "bonne-nuit": nuitClips,
 };
 
 export const surpriseKindArt: Record<SurpriseType, string> = {
@@ -238,6 +245,8 @@ export const surpriseAnimations: SurpriseAnimationItem[] = [
   ...retablissementAnimations,
   ...journeeAnimations,
   ...nuitAnimations,
+  ...nuitClips,
+  ...evenementsAnimations,
   ...surpriseAnimationCategories.filter((item) => !item.collection),
 ];
 
