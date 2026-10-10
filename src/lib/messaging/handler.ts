@@ -522,9 +522,20 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await runLiveReminders(request.headers.get("x-wipp-cron") ?? ""));
     }
 
+    if (method === "POST" && a === "cron" && b === "live-presence") {
+      const { runLivePresence } = await import("./event-live");
+      return json(await runLivePresence(request.headers.get("x-wipp-cron") ?? ""));
+    }
+    if (method === "GET" && a === "live-mine" && !b) {
+      const me = await resolveSession(bearer(request));
+      const { myActiveLive } = await import("./event-live");
+      return json(await myActiveLive(me.id));
+    }
+
     if (a === "lives" && b) {
       const me = await resolveSession(bearer(request));
       const live = await import("./event-live");
+      if (method === "POST" && c === "beat") return json(await live.hostBeat(me.id, decodeURIComponent(b)));
       const eventId = decodeURIComponent(b);
       if (method === "GET" && !c) return json(await live.getEventLive(me.id, eventId));
       if (method === "POST" && !c) {
