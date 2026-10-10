@@ -1,4 +1,5 @@
 import { Clock3, Gift, Images, PartyPopper, type LucideIcon } from "lucide-react-native";
+import { ANIM_MS } from "../generated/anim-durations";
 
 export type SurpriseType = "scratch" | "countdown" | "gift" | "confetti";
 export type SurpriseOptions = { countdown?: { seconds: number } };
@@ -77,7 +78,7 @@ const clip = (id: string, label: string): SurpriseAnimationItem => ({
   anim: `fx/surprise/anims/${id}.webp`,
   sound: `fx/surprise/anims/${id}.m4a`,
   enter: "pop",
-  durationMs: 10_000,
+  durationMs: ANIM_MS[id] ?? 10_000,
 });
 
 export const amourAnimations: SurpriseAnimationItem[] = [
@@ -95,7 +96,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
     art: "fx/surprise/anims/amour-pluie-cristal-poster.png",
     anim: "fx/surprise/anims/amour-pluie-cristal.webp",
     enter: "pop",
-    durationMs: 7042,
+    durationMs: ANIM_MS["amour-pluie-cristal"],
   },
   {
     id: "amour-fusion",
@@ -103,7 +104,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
     art: "fx/surprise/anims/amour-fusion-poster.png",
     anim: "fx/surprise/anims/amour-fusion.webp",
     enter: "pop",
-    durationMs: 6200,
+    durationMs: ANIM_MS["amour-fusion"],
   },
   {
     id: "amour-bisous",
@@ -111,7 +112,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
     art: "fx/surprise/anims/amour-bisous-poster.png",
     anim: "fx/surprise/anims/amour-bisous.webp",
     enter: "bottom",
-    durationMs: 3200,
+    durationMs: ANIM_MS["amour-bisous"],
   },
   { id: "amour-monstre", label: "Petit monstre", art: "fx/surprise/anims/amour-monstre.png", enter: "pop" },
   { id: "love-hearts", label: "Cœurs", art: "fx/love/love_hearts.png", enter: "bottom" },

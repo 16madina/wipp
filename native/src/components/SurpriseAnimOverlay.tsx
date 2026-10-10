@@ -38,11 +38,21 @@ export function SurpriseAnimOverlay({
   const done = useRef(onDone);
   const soundRef = useRef<() => void>(() => undefined);
   const soundOn = useAnimSound();
+  // The countdown starts when the picture is really on screen (not while it downloads), and the fade-out
+  // ends BEFORE the file loops — an animation must never be seen starting a second time.
+  const [shown, setShown] = useState(0);
   done.current = onDone;
 
   useEffect(() => {
     if (!item || !src) return;
-    const hold = reduceMotion ? 1400 : Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
+    const animated = Boolean(item.anim) && !reduceMotion;
+    // Still loading: wait for onDisplay (4 s at most, then go on anyway).
+    if (animated && shown !== playKey + 1) {
+      const giveUp = setTimeout(() => setShown(playKey + 1), 4000);
+      return () => clearTimeout(giveUp);
+    }
+    const length = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
+    const hold = reduceMotion ? 1400 : animated ? Math.max(1000, length - 480) : length;
     opacity.setValue(0);
     scale.setValue(reduceMotion ? 1 : 0.82);
     Animated.parallel([
@@ -79,7 +89,7 @@ export function SurpriseAnimOverlay({
       opacity.stopAnimation();
       scale.stopAnimation();
     };
-  }, [item?.id, playKey, opacity, scale, src, reduceMotion]);
+  }, [item?.id, playKey, opacity, scale, src, reduceMotion, shown]);
 
   if (!item || !src) return null;
   // Only real animations go full screen; a still picture keeps its small frame.
@@ -112,6 +122,7 @@ export function SurpriseAnimOverlay({
           cachePolicy="memory-disk"
           recyclingKey={`${item.id}:${playKey}`}
           onDisplay={() => {
+            setShown(playKey + 1);
             if (Platform.OS !== "web" && !reduceMotion) void img.current?.startAnimating();
           }}
         />
