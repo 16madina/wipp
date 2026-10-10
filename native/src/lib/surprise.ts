@@ -192,6 +192,12 @@ const nuitAnimations: SurpriseAnimationItem[] = [
 const nuitClips: SurpriseAnimationItem[] = [
   clip("nuit-mouton", "Mouton"),
   clip("nuit-ours", "Beaux rêves"),
+  clip("nuit-etoile", "Douce nuit"),
+  clip("nuit-hibou", "Hibou"),
+  clip("nuit-chaton", "Dors bien"),
+  clip("nuit-reveil", "À demain"),
+  clip("nuit-peche", "Pêche aux étoiles"),
+  clip("nuit-tisane", "Tisane"),
   clip("nuit-lune", "Lune et étoiles"),
 ];
 
