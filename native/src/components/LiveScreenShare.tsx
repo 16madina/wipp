@@ -7,7 +7,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, findNodeHandle, NativeModules, PanResponder, Platform, Pressable, ScrollView, StatusBar, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Maximize2, MonitorUp, X } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { MonitorUp, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import type { StageTile } from "./LiveStage";
@@ -114,20 +115,34 @@ function Quality({ size, bottom = 8 }: { size: { width: number; height: number }
  * Floating people while a screen is shared: a discreet column on the side, never a reserved strip.
  * Drag it anywhere; it snaps to the nearest corner so it never ends up in the middle of the slides.
  */
-function FloatingPeople({ people, area }: { people: StageTile[]; area: { width: number; height: number } }) {
-  const W = 66;
-  const H = 88;
-  const colH = people.length * (H + 6);
-  const spots = (corner: number) => ({
-    x: corner % 2 === 0 ? area.width - W - 8 : 8,
-    y: corner < 2 ? Math.max(8, area.height - colH - 8) : 8,
-  });
-  const [corner, setCorner] = useState(0);
-  const pos = useRef(new Animated.ValueXY(spots(0))).current;
+function FloatingPeople({
+  people,
+  area,
+  thumbW,
+  home,
+  row,
+}: {
+  people: StageTile[];
+  area: { width: number; height: number };
+  thumbW: number;
+  /** Where they sit by default (a free margin); dragging then snaps to the corners. */
+  home: { x: number; y: number };
+  row: boolean;
+}) {
+  const W = thumbW;
+  const H = Math.round(W * 1.33);
+  const gw = row ? people.length * (W + 6) - 6 : W;
+  const gh = row ? H : people.length * (H + 6) - 6;
+  const spots = (corner: number) =>
+    corner < 0 ? home : { x: corner % 2 === 0 ? area.width - gw - 6 : 6, y: corner < 2 ? Math.max(6, area.height - gh - 6) : 6 };
+  const corner = useRef(-1);
+  const pos = useRef(new Animated.ValueXY(home)).current;
   const start = useRef({ x: 0, y: 0 });
+  const live = useRef({ spots, gw, gh, area });
+  live.current = { spots, gw, gh, area };
   useEffect(() => {
-    pos.setValue(spots(corner));
-  }, [area.width, area.height, people.length]);
+    pos.setValue(spots(corner.current));
+  }, [area.width, area.height, people.length, home.x, home.y, W, row]);
   const pan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) + Math.abs(g.dy) > 6,
@@ -136,28 +151,28 @@ function FloatingPeople({ people, area }: { people: StageTile[]; area: { width: 
       },
       onPanResponderMove: (_e, g) => pos.setValue({ x: start.current.x + g.dx, y: start.current.y + g.dy }),
       onPanResponderRelease: (_e, g) => {
-        const x = start.current.x + g.dx + W / 2;
-        const y = start.current.y + g.dy + colH / 2;
-        const c = (x > area.width / 2 ? 0 : 1) + (y > area.height / 2 ? 0 : 2);
-        setCorner(c);
-        Animated.spring(pos, { toValue: spots(c), useNativeDriver: false, friction: 7 }).start();
+        const l = live.current;
+        const x = start.current.x + g.dx + l.gw / 2;
+        const y = start.current.y + g.dy + l.gh / 2;
+        corner.current = (x > l.area.width / 2 ? 0 : 1) + (y > l.area.height / 2 ? 0 : 2);
+        Animated.spring(pos, { toValue: l.spots(corner.current), useNativeDriver: false, friction: 7 }).start();
       },
     }),
   ).current;
   if (!people.length) return null;
   return (
-    <Animated.View {...pan.panHandlers} style={{ position: "absolute", left: 0, top: 0, gap: 6, transform: pos.getTranslateTransform() }}>
+    <Animated.View {...pan.panHandlers} style={{ position: "absolute", left: 0, top: 0, gap: 6, flexDirection: row ? "row" : "column", transform: pos.getTranslateTransform() }}>
       {people.map((t) => (
-        <View key={t.identity} style={{ width: W, height: H, borderRadius: 12, overflow: "hidden", backgroundColor: "#111727", borderWidth: t.speaking ? 2 : 1, borderColor: t.speaking ? GOLD : "rgba(212,160,23,0.5)" }}>
+        <View key={t.identity} style={{ width: W, height: H, borderRadius: 10, overflow: "hidden", backgroundColor: "#111727", borderWidth: t.speaking ? 2 : 1, borderColor: t.speaking ? GOLD : "rgba(212,160,23,0.5)" }}>
           {t.url ? (
             <RTCView streamURL={t.url} style={{ flex: 1 }} objectFit="cover" mirror={t.mirror} zOrder={1} />
           ) : (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={30} />
+              <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={Math.min(30, W - 18)} />
             </View>
           )}
-          <View style={{ position: "absolute", left: 3, right: 3, bottom: 3, paddingHorizontal: 3, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.6)" }}>
-            <Text numberOfLines={1} style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>
+          <View style={{ position: "absolute", left: 2, right: 2, bottom: 2, paddingHorizontal: 3, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.6)" }}>
+            <Text numberOfLines={1} style={{ color: "#fff", fontSize: 8, fontFamily: "Inter_600SemiBold" }}>
               {t.organizer ? "HOST" : t.name}
             </Text>
           </View>
@@ -168,10 +183,12 @@ function FloatingPeople({ people, area }: { people: StageTile[]; area: { width: 
 }
 
 /**
- * The shared screen IS the stage: from just under the top bar down to the comments, full width, at the
- * source's own shape (portrait iPhone = full height, landscape slides = full width), never stretched or
- * cropped. The people float on the side (draggable), nothing is reserved for them.
- * Host: he keeps a normal view — his own camera big, a « Tu partages ton écran » pill, guests floating.
+ * The shared screen IS the stage, on a discreet night-blue background:
+ * - portrait source (iPhone): the whole height from the top bar to the comment field; the people sit at the
+ *   top of the right margin, sized to fit it, never on the picture;
+ * - landscape source (slides): full width at the top; the people in a row just under it.
+ * Never stretched or cropped. The people can be dragged anywhere (they snap to a corner).
+ * Host: he keeps a normal view — his own camera big, a « Les spectateurs voient ton écran » card.
  */
 export function ScreenStage({
   screen,
@@ -181,7 +198,7 @@ export function ScreenStage({
   topSafe,
   frame,
   onDimensionsChange,
-  onFullscreen,
+  sent,
 }: {
   screen: ScreenShare;
   tiles: StageTile[];
@@ -190,16 +207,28 @@ export function ScreenStage({
   topSafe: number;
   frame: { width: number; height: number } | null;
   onDimensionsChange: (e: { nativeEvent: { width: number; height: number } }) => void;
-  onFullscreen?: () => void;
+  /** Host, while testing: the size his phone really sends. */
+  sent?: { width: number; height: number } | null;
 }) {
   const sorted = [...tiles].sort((a, b) => Number(b.organizer) - Number(a.organizer)).slice(0, 5);
-  const top = topSafe + 40;
+  const top = topSafe + 48;
   const area = { width, height: stageH - top };
-  const landscape = Boolean(frame && frame.width > frame.height);
+  const landscape = Boolean(!screen.local && frame && frame.width > frame.height);
   const me = screen.local ? sorted.find((t) => t.local) : undefined;
   const floating = me ? sorted.filter((t) => t !== me) : sorted;
+  // Landscape: the picture sits at the top (its own height); portrait: it uses the whole area.
+  const box = landscape && frame ? { width, height: Math.min(area.height, Math.round((width * frame.height) / frame.width)) } : area;
+  const pic = screen.local ? area : fit(box, frame);
+  const margin = (width - pic.width) / 2;
+  // Up to 5 people must fit in the margin column: shrink the thumbnails if needed.
+  const fitCol = (area.height - 12) / Math.max(1, floating.length) / 1.33 - 6;
+  const thumbW = landscape ? 56 : Math.round(Math.max(40, Math.min(66, margin >= 46 ? margin - 8 : 60, fitCol)));
+  const home = landscape
+    ? { x: 8, y: box.height + 8 }
+    : { x: margin >= 46 ? width - margin + (margin - thumbW) / 2 : width - thumbW - 6, y: 6 };
   return (
-    <View style={{ position: "absolute", top: 0, left: 0, width, height: stageH, backgroundColor: "#000" }}>
+    <View style={{ position: "absolute", top: 0, left: 0, width, height: stageH, backgroundColor: "#070b16" }}>
+      <LinearGradient pointerEvents="none" colors={["#0d1630", "#0a1022", "#070b16"]} style={{ position: "absolute", top: 0, left: 0, width, height: stageH }} />
       <View style={{ position: "absolute", top, left: 0, width: area.width, height: area.height }}>
         {screen.local ? (
           // The host never watches his own screen (endless mirror): his camera stays big, like before sharing.
@@ -211,35 +240,27 @@ export function ScreenStage({
                 <Avatar user={{ displayName: me?.name ?? "WIPP", avatar: me?.avatar ?? undefined }} size={84} />
               </View>
             )}
-            <View pointerEvents="none" style={{ position: "absolute", left: 10, bottom: 10, right: 90, flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.5)" }}>
+            <View pointerEvents="none" style={{ position: "absolute", left: 10, top: 44, right: 90, flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.5)" }}>
               <MonitorUp size={18} color={GOLD} />
               <Text style={{ flex: 1, color: "#fff", fontSize: 12, lineHeight: 16 }}>
                 <Text style={{ fontFamily: "Inter_700Bold" }}>Les spectateurs voient ton écran.</Text> Ouvre ta présentation, un site ou une app.
+                {sent ? `\nEnvoyé : ${sent.width} × ${sent.height}` : ""}
               </Text>
             </View>
           </View>
         ) : screen.url ? (
           <>
-            <ZoomableScreen url={screen.url} box={area} frame={frame} onDimensionsChange={onDimensionsChange} />
-            <Quality size={frame} />
-            {onFullscreen ? (
-              <Press
-                accessibilityLabel="Plein écran"
-                onPress={onFullscreen}
-                hitSlop={8}
-                style={{ position: "absolute", top: 6, left: 8, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.6)" }}
-              >
-                <Maximize2 size={13} color="#fff" />
-                <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{landscape ? "Plein écran paysage" : "Plein écran"}</Text>
-              </Press>
-            ) : null}
+            <ZoomableScreen url={screen.url} box={box} frame={frame} onDimensionsChange={onDimensionsChange} />
+            <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width, height: box.height }}>
+              <Quality size={frame} bottom={6} />
+            </View>
           </>
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: "rgba(255,255,255,0.6)" }}>Chargement du partage…</Text>
           </View>
         )}
-        <FloatingPeople people={floating} area={area} />
+        <FloatingPeople people={floating} area={area} thumbW={thumbW} home={home} row={landscape} />
       </View>
     </View>
   );
