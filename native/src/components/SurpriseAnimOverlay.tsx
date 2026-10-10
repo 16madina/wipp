@@ -6,7 +6,11 @@ import { animSoundOn, setAnimSound, useAnimSound } from "../lib/anim-sound";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
-/** Transparent artwork floats over the chat without intercepting touches. */
+/**
+ * Transparent artwork floats over the chat without intercepting touches.
+ * Full-screen play (« centered »): the animation covers the WHOLE screen, so anything moving towards an
+ * edge leaves at the real edge of the phone — never cut in the middle of the screen like a pasted square.
+ */
 export function SurpriseAnimOverlay({
   animationId,
   playKey = 0,
@@ -78,6 +82,8 @@ export function SurpriseAnimOverlay({
   }, [item?.id, playKey, opacity, scale, src, reduceMotion]);
 
   if (!item || !src) return null;
+  // Only real animations go full screen; a still picture keeps its small frame.
+  const full = centered && Boolean(item.anim) && !reduceMotion;
 
   return (
     <View pointerEvents="box-none" style={centered ? [StyleSheet.absoluteFillObject, { zIndex: 30, alignItems: "center", justifyContent: "center" }] : { marginTop: 8, width: "100%", alignItems: "center" }}>
@@ -93,13 +99,13 @@ export function SurpriseAnimOverlay({
           {soundOn ? <Volume2 size={20} color="#fff" /> : <VolumeX size={20} color="#fff" />}
         </Pressable>
       ) : null}
-      <Animated.View pointerEvents="none" style={{ width: centered ? Math.min(width - 32, 360) : 200, height: centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
+      <Animated.View pointerEvents="none" style={{ width: full ? "100%" : centered ? Math.min(width - 32, 360) : 200, height: full ? "100%" : centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
         <Image
           ref={img}
           key={`${item.id}:${playKey}`}
           source={typeof src === "number" ? src : { uri: src.uri, isAnimated: true }}
           style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
-          contentFit="contain"
+          contentFit={full ? "cover" : "contain"}
           autoplay={!reduceMotion}
           useAppleWebpCodec={false}
           allowDownscaling={false}
