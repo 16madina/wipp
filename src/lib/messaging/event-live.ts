@@ -32,6 +32,9 @@ type LiveRow = {
   spotlight_id: string | null;
   featured_identity: string | null;
   stage_layout: "shared" | "dominant" | "inset";
+  host_seen_at: string | null;
+  host_absent_since: string | null;
+  host_warned: number;
   share_notify: boolean;
 };
 
@@ -60,7 +63,8 @@ async function loadLive(eventId: string): Promise<LiveRow> {
   const rows = await sql<LiveRow>`
     select l.event_id, e.owner_id, e.title, e.starts_at::text, e.status, l.visibility, l.mode, l.state,
            l.duration_min, l.max_viewers, l.max_speakers, l.comments_on, l.reactions_on, l.questions_on,
-           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity, l.stage_layout, l.share_notify
+           l.started_at::text, l.ended_at::text, l.qa_mode, l.spotlight_id, l.featured_identity, l.stage_layout, l.share_notify,
+           l.host_seen_at::text, l.host_absent_since::text, l.host_warned
     from wipp_event_lives l join wipp_events e on e.id = l.event_id
     where l.event_id = ${eventId} limit 1
   `;
@@ -240,7 +244,7 @@ export async function startEventLive(meId: string, eventId: string) {
   if (live.state === "ended" || live.state === "cancelled") throw new WippHttpError(409, "closed", "Cet événement est terminé.");
   const sql = await getSql();
   if (live.state !== "live") {
-    await sql`update wipp_event_lives set state = 'live', started_at = now(), ended_at = null, updated_at = now() where event_id = ${eventId}`;
+    await sql`update wipp_event_lives set state = 'live', started_at = now(), ended_at = null, host_seen_at = null, host_absent_since = null, host_warned = 0, updated_at = now() where event_id = ${eventId}`;
     // Limited keeping: questions of lives ended more than 30 days ago are removed.
     await sql`
       delete from wipp_event_live_questions q using wipp_event_lives l
@@ -285,46 +289,120 @@ async function closeLive(live: LiveRow, cancel = false) {
 /** Organizer gone (battery, network, app closed): the live ends by itself after this long. */
 export const HOST_GRACE_MS = 5 * 60_000;
 
+/** A host on a recent app says « I am here » every 30 s; older than this = he left his live. */
+const HOST_BEAT_STALE_MS = 75_000;
+
 /**
- * Is the organizer still in the LiveKit room? Notes since when he is missing, clears it when he is
- * back, and ends the live after HOST_GRACE_MS. Called by the room heartbeat and before any join.
+ * Is the organizer really in his live? Notes since when he is missing, clears it when he is back, warns HIM
+ * by push (1 min after he left, then 1 min before the end) and ends the live after HOST_GRACE_MS.
+ * - recent app: the host's phone confirms every 30 s (WIPP open on the live, or screen sharing);
+ * - older app (never confirmed): present = still connected to the LiveKit room.
+ * Called every minute by Supabase pg_cron, by the viewers' heartbeat and before any join.
  */
 async function checkHostPresence(live: LiveRow): Promise<string | null> {
   if (live.state !== "live") return null;
-  const rs = roomService();
-  if (!rs) return null;
-  let present = false;
-  let empty = true;
-  try {
-    const people = await rs.listParticipants(roomOf(live.event_id));
-    present = people.some((p) => p.identity === identityOf(live.owner_id));
-    empty = people.length === 0;
-  } catch {
-    present = false; // no room at all = nobody there
-  }
   const sql = await getSql();
-  // Nobody at all in the room (organizer gone long ago, everyone left) and started more than 2 min ago:
-  // close it now instead of making the next visitor wait.
-  if (empty && live.started_at && Date.now() - Date.parse(live.started_at) > 2 * 60_000) {
-    await closeLive(live);
-    live.state = "ended";
-    return null;
+  let present = false;
+  if (live.host_seen_at) {
+    present = Date.now() - Date.parse(live.host_seen_at) < HOST_BEAT_STALE_MS;
+  } else {
+    const rs = roomService();
+    if (!rs) return null;
+    let empty = true;
+    try {
+      const people = await rs.listParticipants(roomOf(live.event_id));
+      present = people.some((p) => p.identity === identityOf(live.owner_id));
+      empty = people.length === 0;
+    } catch {
+      present = false; // no room at all = nobody there
+    }
+    // Nobody at all in the room and started more than 2 min ago: close it now.
+    if (empty && live.started_at && Date.now() - Date.parse(live.started_at) > 2 * 60_000) {
+      await closeLive(live);
+      live.state = "ended";
+      return null;
+    }
   }
   if (present) {
-    await sql`update wipp_event_lives set host_absent_since = null where event_id = ${live.event_id} and host_absent_since is not null`;
+    await sql`update wipp_event_lives set host_absent_since = null, host_warned = 0 where event_id = ${live.event_id} and (host_absent_since is not null or host_warned <> 0)`;
     return null;
   }
   const rows = await sql<{ since: string }>`
     update wipp_event_lives set host_absent_since = coalesce(host_absent_since, now())
-    where event_id = ${live.event_id} returning host_absent_since::text as since
+    where event_id = ${live.event_id} and state = 'live' returning host_absent_since::text as since
   `;
   const since = rows[0]?.since ?? null;
-  if (since && Date.now() - Date.parse(since) > HOST_GRACE_MS) {
+  if (!since) return null;
+  const gone = Date.now() - Date.parse(since);
+  if (gone > HOST_GRACE_MS) {
     await closeLive(live);
     live.state = "ended";
+    await notifyLive(live.owner_id, live.event_id, "Ton direct est terminé", `« ${live.title} » a été arrêté automatiquement après 5 minutes sans toi.`);
     return null;
   }
+  // One warning of each kind per absence (atomic: two runs at the same moment send one push).
+  const step = gone >= HOST_GRACE_MS - 75_000 ? 2 : gone >= 45_000 ? 1 : 0;
+  if (step) {
+    const won = await sql<{ ok: number }>`
+      update wipp_event_lives set host_warned = ${step}
+      where event_id = ${live.event_id} and state = 'live' and host_absent_since is not null and host_warned < ${step}
+      returning 1 as ok
+    `;
+    if (won.length) {
+      const left = Math.max(1, Math.round((HOST_GRACE_MS - gone) / 60_000));
+      await notifyLive(
+        live.owner_id,
+        live.event_id,
+        step === 2 ? "Ton direct va s’arrêter" : "Tu as laissé un direct en cours",
+        step === 2
+          ? `Reviens dans « ${live.title} » : il s’arrête automatiquement dans ${left} minute${left > 1 ? "s" : ""}.`
+          : `Touche pour reprendre « ${live.title} ». Sinon il s’arrêtera automatiquement dans ${left} minutes.`,
+      );
+    }
+  }
   return since;
+}
+
+/** Host's phone, every 30 s while WIPP shows his live (or shares his screen): « I am here ». */
+export async function hostBeat(meId: string, eventId: string) {
+  const live = await loadLive(eventId);
+  assertOwner(live, meId);
+  if (live.state !== "live") return { ok: false, state: live.state };
+  const sql = await getSql();
+  await sql`update wipp_event_lives set host_seen_at = now(), host_absent_since = null, host_warned = 0 where event_id = ${eventId} and state = 'live'`;
+  return { ok: true, state: live.state };
+}
+
+/** « Reprendre le live »: the live I am hosting right now, if any. */
+export async function myActiveLive(meId: string) {
+  const sql = await getSql();
+  const rows = await sql<{ event_id: string; title: string; since: string | null }>`
+    select l.event_id, e.title, l.host_absent_since::text as since
+    from wipp_event_lives l join wipp_events e on e.id = l.event_id
+    where e.owner_id = ${meId} and l.state = 'live' order by l.started_at desc limit 1
+  `;
+  const r = rows[0];
+  if (!r) return { live: null };
+  return { live: { eventId: r.event_id, title: r.title, endsAt: r.since ? new Date(Date.parse(r.since) + HOST_GRACE_MS).toISOString() : null } };
+}
+
+/** Called every minute by Supabase pg_cron (secret checked here): every running live, even with no viewer. */
+export async function runLivePresence(secret: string) {
+  const sql = await getSql();
+  const ok = await sql<{ ok: boolean }>`select exists (select 1 from wipp_cron_secrets where name = 'live' and secret = ${secret}) as ok`;
+  if (!ok[0]?.ok) throw new WippHttpError(403, "forbidden", "Accès refusé.");
+  const ids = await sql<{ event_id: string }>`select event_id from wipp_event_lives where state = 'live' limit 200`;
+  let ended = 0;
+  for (const { event_id } of ids) {
+    try {
+      const live = await loadLive(event_id);
+      await checkHostPresence(live);
+      if (live.state === "ended") ended += 1;
+    } catch {
+      /* one live never blocks the others */
+    }
+  }
+  return { lives: ids.length, ended };
 }
 
 /** Short-lived token for the live room. The role decides what LiveKit lets the person do. */
