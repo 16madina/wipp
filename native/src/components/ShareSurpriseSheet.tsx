@@ -594,6 +594,11 @@ export function ShareSurpriseSheet({
           ) : (
             <>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                {animCat && !animItems.length ? (
+                  <Text style={{ width: "100%", paddingVertical: 28, textAlign: "center", color: colors.muted, fontSize: 14, lineHeight: 20 }}>
+                    Les animations de cette catégorie arrivent bientôt.
+                  </Text>
+                ) : null}
                 {animItems.map((item) => {
                   const art = wippSrc(item.art);
                   const on = animation === item.id;

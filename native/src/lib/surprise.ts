@@ -187,6 +187,9 @@ const nuitAnimations: SurpriseAnimationItem[] = [
   { id: "night-window", label: "Fenêtre", art: "fx/nuit/night_window.png" },
 ];
 
+/** Événements: filled as the seasonal animations are made (Halloween, Saint-Valentin, Noël…). */
+const evenementsAnimations: SurpriseAnimationItem[] = [];
+
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
   { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/cat-bonjour.jpg", collection: "bonjour" },
   {
@@ -203,18 +206,20 @@ export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
     collection: "bon-retablissement",
   },
   { id: "beaute", label: "Beauté", art: "fx/surprise/anims/cat-beaute.jpg" },
-  { id: "bonne-journee", label: "Bonne journée", art: "fx/surprise/anims/cat-journee.jpg", collection: "bonne-journee" },
+  // Fêtes et temps forts de l'année (Halloween, Saint-Valentin, Noël, Action de grâce…).
+  { id: "evenements", label: "Événements", art: "fx/surprise/anims/cat-evenements.jpg", collection: "evenements" },
   { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/cat-nuit.jpg", collection: "bonne-nuit" },
   { id: "voyage", label: "Voyage", art: "fx/surprise/anims/cat-voyage.jpg" },
   { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg" },
 ];
 
 export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
-  bonjour: bonjourAnimations,
+  // « Bonne journée » was the same idea as « Bonjour »: its animations now live in Bonjour.
+  bonjour: [...bonjourAnimations, ...journeeAnimations],
   anniversaire: anniversaireAnimations,
   amour: amourAnimations,
   "bon-retablissement": retablissementAnimations,
-  "bonne-journee": journeeAnimations,
+  evenements: evenementsAnimations,
   "bonne-nuit": nuitAnimations,
 };
 

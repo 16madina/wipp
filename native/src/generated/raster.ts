@@ -121,7 +121,7 @@ export const raster = {
   "fx/surprise/anims/cat-anniversaire.jpg": require("../../assets/wipp/fx/surprise/anims/cat-anniversaire.jpg"),
   "fx/surprise/anims/cat-beaute.jpg": require("../../assets/wipp/fx/surprise/anims/cat-beaute.jpg"),
   "fx/surprise/anims/cat-bonjour.jpg": require("../../assets/wipp/fx/surprise/anims/cat-bonjour.jpg"),
-  "fx/surprise/anims/cat-journee.jpg": require("../../assets/wipp/fx/surprise/anims/cat-journee.jpg"),
+  "fx/surprise/anims/cat-evenements.jpg": require("../../assets/wipp/fx/surprise/anims/cat-evenements.jpg"),
   "fx/surprise/anims/cat-nuit.jpg": require("../../assets/wipp/fx/surprise/anims/cat-nuit.jpg"),
   "fx/surprise/anims/cat-retablissement.jpg": require("../../assets/wipp/fx/surprise/anims/cat-retablissement.jpg"),
   "fx/surprise/anims/cat-voyage.jpg": require("../../assets/wipp/fx/surprise/anims/cat-voyage.jpg"),
