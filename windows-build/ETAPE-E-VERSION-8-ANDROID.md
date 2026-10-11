@@ -71,6 +71,16 @@ Ce `main` contient WIPP 1.1 (directs, partage d'écran). Le manifeste déclare
 - Petit personnage du champ de message : plus petit et un peu transparent.
 - Le journal d'erreurs du téléphone (`Documents/wipp-errors.json`) indique maintenant le composant fautif.
 
+**Ajouts du 11 octobre (nuit), déjà sur `main`**
+- Défilement d'une conversation : il ne reste plus bloqué après une carte grattée (`ScratchFoil.tsx`, `lib/scratch-state.ts`).
+- Liste des discussions : l'aperçu déjà déchiffré est gardé au retour sur l'onglet Chats, plus de retour à
+  « Message chiffré » (`previewAfterSync` dans `lib/messaging/sync.ts`).
+- Stickers Wippie (clips vidéo fond vert, `WippSticker.tsx` → `ChromaClipNative`) : sur iPhone le clip et sa page
+  de lecture sont maintenant copiés dans `cacheDirectory/wipp-clips/`. ⚠️ À vérifier sur Android : les Wippie
+  doivent bouger dans l'aperçu (toucher un sticker de l'onglet Wippie) et dans une conversation.
+- Panneau de stickers : la grille s'anime par petits groupes (4 images à la fois, un seul clip vidéo à la fois).
+  ⚠️ À vérifier sur Android : pas de ralentissement en laissant le panneau ouvert une minute.
+
 ## 4. Tests à faire faire à l'utilisatrice sur le Samsung
 
 1. WIPP Surprise : carte + compte à rebours 1 minute + confettis, envoyée d'un compte à l'autre, la
