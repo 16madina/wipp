@@ -307,7 +307,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const { compact, icon, headerIcon, tablet } = useDeviceLayout();
   const composerIcon = tablet ? 48 : icon;
   // The little WIPP guy inside the message field (opens the stickers).
-  const mascotSize = tablet ? 40 : compact ? 32 : 34;
+  const mascotSize = tablet ? 32 : compact ? 24 : 26;
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
   const chat = useWippStore((s) => s.chats.find((c) => c.id === chatId));
@@ -1158,7 +1158,10 @@ function ConversationInner({ chatId }: { chatId: string }) {
                       hitSlop={6}
                       style={{ width: Math.round(mascotSize * 1.3), height: 44, flexShrink: 0, marginRight: 6, alignItems: "center", justifyContent: "center" }}
                     >
-                      <ComposerMascot size={mascotSize} active={stickerBar} />
+                      {/* Discreet, like part of the field; full colour while the stickers are open. */}
+                      <View style={{ opacity: stickerBar ? 1 : 0.65 }}>
+                        <ComposerMascot size={mascotSize} active={stickerBar} />
+                      </View>
                     </Press>
                   </View>
                   <Press
