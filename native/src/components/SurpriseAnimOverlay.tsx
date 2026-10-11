@@ -54,10 +54,15 @@ export function SurpriseAnimOverlay({
     const length = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
     const hold = reduceMotion ? 1400 : animated ? Math.max(1000, length - 480) : length;
     opacity.setValue(0);
-    scale.setValue(reduceMotion ? 1 : 0.82);
+    // A clip that opens on a sheet starts zoomed so the sheet hides the whole screen, then eases back.
+    const fitW = Math.min(width, (height * 9) / 16);
+    const zoom = centered && animated && item.opening ? Math.max(width / (item.opening.w * fitW), height / (item.opening.h * fitW * (16 / 9))) : 1;
+    scale.setValue(zoom > 1 ? zoom : reduceMotion ? 1 : 0.82);
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 220, useNativeDriver: true }),
+      zoom > 1
+        ? Animated.sequence([Animated.delay(item.opening?.ms ?? 0), Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true })])
+        : Animated.timing(scale, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
     const fadeAt = setTimeout(() => {
       Animated.timing(opacity, { toValue: 0, duration: 320, useNativeDriver: true }).start();
@@ -89,7 +94,7 @@ export function SurpriseAnimOverlay({
       opacity.stopAnimation();
       scale.stopAnimation();
     };
-  }, [item?.id, playKey, opacity, scale, src, reduceMotion, shown]);
+  }, [item?.id, playKey, opacity, scale, src, reduceMotion, shown, centered, width, height]);
 
   if (!item || !src) return null;
   // Only real animations go full screen; a still picture keeps its small frame.

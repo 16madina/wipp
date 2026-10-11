@@ -28,6 +28,11 @@ export type SurpriseAnimationItem = {
   sound?: string;
   /** Tab inside a category (Événements: halloween, noel…). */
   group?: string;
+  /**
+   * The clip opens on a sheet (wrapping paper…) that must hide the whole screen: `w`/`h` are the part of
+   * the frame it takes; the clip starts zoomed on it, then eases back to its normal size after `ms`.
+   */
+  opening?: { w: number; h: number; ms: number };
 };
 export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: string };
 
@@ -171,12 +176,12 @@ const anniversaireAnimations: SurpriseAnimationItem[] = [
   clip("anniversaire-ballons", "Ballons"),
   clip("anniversaire-cupcake", "Cupcake"),
   clip("anniversaire-feux", "Feu d’artifice"),
-  clip("anniversaire-dechirure", "Surprise"),
+  { ...clip("anniversaire-dechirure", "Surprise"), opening: { w: 179 / 270, h: 351 / 480, ms: 4200 } },
   clip("anniversaire-ecran", "Écran brisé"),
   clip("anniversaire-ecran-2", "Écran brisé 2"),
   clip("anniversaire-voeu", "Fais un vœu"),
   clip("anniversaire-pinata", "Piñata"),
-  clip("anniversaire-surprise", "Surprise"),
+  clip("anniversaire-surprise", "Petit chiot"),
   clip("anniversaire-dj", "C’est ta journée"),
   clip("anniversaire-dino", "Joyeux anniv’"),
   clip("anniversaire-hourra", "Hip hip hip, hourra"),
