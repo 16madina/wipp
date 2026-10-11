@@ -8,8 +8,8 @@ import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
 /**
  * Transparent artwork floats over the chat without intercepting touches.
- * Full-screen play (« centered »): the animation covers the WHOLE screen, so anything moving towards an
- * edge leaves at the real edge of the phone — never cut in the middle of the screen like a pasted square.
+ * Full-screen play (« centered »): the animation takes the WHOLE width of the screen and is never cropped,
+ * so its text always stays readable; phones are taller than the 9:16 clips, the rest stays transparent.
  */
 export function SurpriseAnimOverlay({
   animationId,
@@ -115,7 +115,7 @@ export function SurpriseAnimOverlay({
           key={`${item.id}:${playKey}`}
           source={typeof src === "number" ? src : { uri: src.uri, isAnimated: true }}
           style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
-          contentFit={full ? "cover" : "contain"}
+          contentFit="contain"
           autoplay={!reduceMotion}
           useAppleWebpCodec={false}
           allowDownscaling={false}
