@@ -19,6 +19,8 @@ function patchAppDelegate(src) {
     var callKeepSettings = UserDefaults.standard.dictionary(forKey: "RNCallKeepSettings")
       ?? ["appName": "WIPP", "imageName": "CallKitLogo", "supportsVideo": true, "maximumCallGroups": "1", "maximumCallsPerCallGroup": "1"]
     callKeepSettings["ringtoneSound"] = "wipp_ring.caf"
+    callKeepSettings["handleType"] = "generic"
+    callKeepSettings["includesCallsInRecents"] = true
     UserDefaults.standard.set(callKeepSettings, forKey: "RNCallKeepSettings")
     let delegate = ReactNativeDelegate()`,
   );
@@ -134,7 +136,7 @@ function patchAppDelegate(src) {
     AppDelegate.callLog("voip push action=\\(action) \\(key.prefix(8))")
     if action == "ring" { AppDelegate.callerNames[key] = caller }
     RNVoipPushNotificationManager.didReceiveIncomingPush(with: payload, forType: type.rawValue)
-    RNCallKeep.reportNewIncomingCall(uuid, handle: "wipp", handleType: "generic", hasVideo: video, localizedCallerName: caller, supportsHolding: false, supportsDTMF: false, supportsGrouping: false, supportsUngrouping: false, fromPushKit: true, payload: data, withCompletionHandler: completion)
+    RNCallKeep.reportNewIncomingCall(uuid, handle: caller, handleType: "generic", hasVideo: video, localizedCallerName: caller, supportsHolding: false, supportsDTMF: false, supportsGrouping: false, supportsUngrouping: false, fromPushKit: true, payload: data, withCompletionHandler: completion)
     if action != "ring" {
       // Caller hung up / nobody answered: iOS still requires the report above, then we end it at once.
       if action == "cancel" && AppDelegate.missedPending[key] != nil { AppDelegate.notifyMissedCall(uuid: uuid, video: video) }

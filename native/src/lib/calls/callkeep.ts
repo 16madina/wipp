@@ -35,6 +35,9 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
         // Official WIPP ringtone (bundled CAF, < 30 s), also used when a VoIP push wakes the app.
         ringtoneSound: "wipp_ring.caf",
         supportsVideo: true,
+        // WIPP calls carry a name, not a phone number: say so, and list them in the iPhone Recents.
+        handleType: "generic",
+        includesCallsInRecents: true,
         maximumCallGroups: "1",
         maximumCallsPerCallGroup: "1",
       },
@@ -93,7 +96,8 @@ export function showSystemIncoming(callId: string, video: boolean, callerName?: 
     return (c === "x" ? n : (n & 0x3) | 0x8).toString(16);
   });
   uuidToCall.set(uuid, callId);
-  keep.displayIncomingCall(uuid, "wipp", callerName || "WIPP", "generic", video);
+  // The name of the caller is the handle, so each person gets a separate line in Recents.
+  keep.displayIncomingCall(uuid, callerName || "WIPP", callerName || "WIPP", "generic", video);
 }
 
 /** True when the iPhone call screen (CallKit) is already showing this call — it plays the ringtone itself. */

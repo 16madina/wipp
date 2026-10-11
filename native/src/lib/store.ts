@@ -1065,7 +1065,9 @@ export const useWippStore = create<Store>((set, get) => ({
             listings: [],
             lifestyle: [],
             pharmacies: [],
-            calls: [],
+            // Keep the real call history (only the demo calls go): emptying it here made the Calls tab
+            // flash « aucun résultat » at every sync.
+            calls: st.calls.filter((c) => c.id.startsWith("call_") || c.id.startsWith("gcall_") || c.id.startsWith("srvcall:")),
             shops: st.shops.filter((shop) => shop.id.startsWith("business:")),
             saves: [],
             stack: onSeed ? ([{ name: "chats" }] as Screen[]) : st.stack,
