@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { Image } from "expo-image";
 import Svg, { Defs, Image as SvgImage, Mask, Path, Rect } from "react-native-svg";
@@ -75,6 +75,8 @@ export function ScratchFoil({
       for (const v of hit.current) n += v;
       if (n / hit.current.length >= CLEAR_AT) {
         done.current = true;
+        // The card disappears under the finger: the gesture never « ends », so free the chat scroll here.
+        setScratching(false);
         onCleared();
       }
     });
@@ -96,6 +98,9 @@ export function ScratchFoil({
     },
     [mark, flush, hint],
   );
+
+  // Whatever happens to the card (opened, replayed, conversation left), never leave the chat frozen.
+  useEffect(() => () => setScratching(false), []);
 
   const pan = Gesture.Pan()
     .runOnJS(true)

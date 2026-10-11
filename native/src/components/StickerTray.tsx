@@ -40,13 +40,17 @@ function prefetchMoments() {
 }
 
 /** Has a real animation (WebP / video): previewed before sending instead of animating in the grid. */
+/** Stickers of the grid playing at the same time, and for how long before the next ones take over. */
+const WAVE_SIZE = 4;
+const WAVE_MS = 3000;
+const VIEWABILITY = { itemVisiblePercentThreshold: 70 };
+
 function isMoving(s: StickerDef) {
   return Boolean(s.anim) || /\.(webp|gif)(\?|$)/i.test(s.src);
 }
 
 const SURPRISES = [
   { name: "Carte à gratter", hint: "Gratte pour découvrir la surprise.", big: true },
-  { name: "Cadeau", hint: "Un message à dévoiler", big: false },
   { name: "Confettis", hint: "Une surprise qui éclate", big: false },
   { name: "Compte à rebours", hint: "Une surprise à attendre", big: false },
   { name: "Secret", hint: "Un message à débloquer", big: false },
@@ -143,6 +147,49 @@ export function StickerTray({
   useEffect(() => {
     if (tab === "pop") prefetchMoments();
   }, [tab]);
+
+  /**
+   * The grid comes alive a few stickers at a time: every few seconds the next ones on screen play, the
+   * others rest on their first image. Never all at once (that froze the iPhone); video clips one by one.
+   */
+  const onScreen = useRef<StickerDef[]>([]);
+  const waveAt = useRef(0);
+  const [live, setLive] = useState<string[]>([]);
+  const onViewable = useRef(({ viewableItems }: { viewableItems: { item: StickerDef }[] }) => {
+    onScreen.current = viewableItems.map((v) => v.item);
+  }).current;
+  const paused = reduceMotion || closing || Boolean(preview);
+  useEffect(() => {
+    waveAt.current = 0;
+    setLive([]);
+    if (paused) return;
+    const step = () => {
+      const moving = onScreen.current.filter(isMoving);
+      if (!moving.length) {
+        setLive([]);
+        return;
+      }
+      const next: string[] = [];
+      for (let n = 0; n < moving.length && next.length < WAVE_SIZE; n++) {
+        const s = moving[(waveAt.current + n) % moving.length]!;
+        const clip = /\.(mp4|webm)(\?|$)/i.test(s.anim ?? "");
+        // A video clip is a small player of its own: only ever one, and alone.
+        if (clip) {
+          if (!next.length) next.push(s.id);
+          break;
+        }
+        next.push(s.id);
+      }
+      waveAt.current = (waveAt.current + next.length) % moving.length;
+      setLive(next);
+    };
+    const first = setTimeout(step, 500);
+    const tick = setInterval(step, WAVE_MS);
+    return () => {
+      clearTimeout(first);
+      clearInterval(tick);
+    };
+  }, [tab, wippie, query, paused]);
 
 
   useEffect(() => {
@@ -305,6 +352,9 @@ export function StickerTray({
           columnWrapperStyle={cols > 1 ? { gap: 4 } : undefined}
           contentContainerStyle={{ paddingBottom: 8 }}
           ListEmptyComponent={query ? <NoResult query={query} /> : null}
+          onViewableItemsChanged={onViewable}
+          viewabilityConfig={VIEWABILITY}
+          extraData={live}
           renderItem={({ item: s }) => (
             <Press
               onPress={() => tapSticker(s)}
@@ -322,7 +372,7 @@ export function StickerTray({
                 borderColor: preview?.id === s.id ? colors.accent : "transparent",
               }}
             >
-              <WippSticker id={s.id} size={stickerSize} fill={scenes} still />
+              <WippSticker id={s.id} size={stickerSize} fill={scenes} still={!live.includes(s.id)} />
             </Press>
           )}
         />
