@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export const Route = createFileRoute("/$handle")({ component: ProfileLinkLanding });
 
 const PLAY_URL = "https://play.google.com/store/apps/details?id=com.wipp.app";
-const APP_STORE_URL = "https://apps.apple.com/app/wipp/id0000000000"; // placeholder until App Store id
+const APP_STORE_URL = "https://apps.apple.com/app/id6815072465";
 
 /**
  * Landing for a shared profile QR: https://wippapp.com/@username

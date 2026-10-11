@@ -56,7 +56,7 @@ function TouchInviteLanding() {
   }, [code]);
 
   const playUrl = "https://play.google.com/store/apps/details?id=com.wipp.app";
-  const appStoreUrl = "https://apps.apple.com/app/wipp/id0000000000"; // placeholder until App Store id
+  const appStoreUrl = "https://apps.apple.com/app/id6815072465";
 
   return (
     <main
