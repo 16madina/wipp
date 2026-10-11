@@ -321,8 +321,7 @@ export function ShareSurpriseSheet({
                 {gift ? <Image source={gift} style={{ width: 100, height: 100 }} contentFit="contain" /> : <Gift size={48} color={colors.accent} />}
                 <View style={{ flex: 1, paddingHorizontal: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>Surprise</Text>
-                    <Sparkles size={18} color={colors.surpriseGold} />
+                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>WIPP Surprise</Text>
                   </View>
                   <Text style={{ marginTop: 4, fontSize: 11, color: colors.shareSubtitle }}>Transforme tes messages en expériences.</Text>
                 </View>
@@ -369,8 +368,7 @@ export function ShareSurpriseSheet({
                   </Press>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Gift size={22} color={colors.surpriseBright} />
-                    <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>Surprise</Text>
-                    <Sparkles size={20} color={colors.surpriseBright} />
+                    <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>WIPP Surprise</Text>
                   </View>
                   <Text style={{ fontSize: 12, color: colors.surpriseSecondary }}>Transforme tes messages en expériences.</Text>
                 </View>
@@ -480,32 +478,39 @@ export function ShareSurpriseSheet({
                             style={{
                               flex: 1,
                               minWidth: 0,
-                              minHeight: 168,
+                              height: 168,
                               borderRadius: 12,
-                              padding: 10,
                               backgroundColor: colors.shareTile,
-                              borderWidth: on ? 1.5 : 1,
+                              borderWidth: on ? 2 : 1,
                               borderColor: on ? colors.surpriseGold : colors.shareTileBorder,
                               overflow: "hidden",
                             }}
                           >
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "transparent", alignItems: "center", justifyContent: "center" }}>
-                                <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
+                            {/* The picture fills the whole tile; the text sits on a dark fade at the bottom. */}
+                            {art ? <Image source={art} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} contentFit="cover" /> : null}
+                            <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.25)", "rgba(0,0,0,0)", "rgba(0,0,0,0.8)", "rgba(0,0,0,0.94)"]} locations={[0, 0.3, 0.62, 1]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+                            <View style={{ flex: 1, padding: 10, justifyContent: "space-between" }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                                  <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
+                                </View>
+                                {note ? (
+                                  <View style={{ flexShrink: 1, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center" }}>
+                                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }} numberOfLines={1}>
+                                      {note}
+                                    </Text>
+                                  </View>
+                                ) : null}
                               </View>
-                              {note ? (
-                                <Text style={{ flex: 1, fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }} numberOfLines={1}>
-                                  {note}
+                              <View>
+                                <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }} numberOfLines={1}>
+                                  {item.title}
                                 </Text>
-                              ) : null}
+                                <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.82)" }} numberOfLines={2}>
+                                  {item.description}
+                                </Text>
+                              </View>
                             </View>
-                            {art ? <Image source={art} style={{ width: "100%", height: 64, alignSelf: "center" }} contentFit="contain" /> : null}
-                            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }} numberOfLines={1}>
-                              {item.title}
-                            </Text>
-                            <Text style={{ marginTop: 2, fontSize: 11, color: colors.surpriseSecondary }} numberOfLines={2}>
-                              {item.description}
-                            </Text>
                           </Press>
                         );
                       })}
@@ -707,7 +712,7 @@ export function ShareSurpriseSheet({
                   <X size={22} color={colors.fg} />
                 </Press>
               </View>
-              <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>Surprise ✨</Text>
+              <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>WIPP Surprise</Text>
               <View style={{ marginTop: 12, alignItems: "center" }}>
                 <SurpriseReveal demo surprise={draft()} onPlayAnimation={(id) => setPreviewPlay({ id, n: ++previewSequence.current })} />
               </View>
