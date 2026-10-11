@@ -20,6 +20,8 @@ import {
 } from "../lib/calls/session";
 import { playBusyTone, playCallerWaiting, playIncomingRing, stopCallTones } from "../lib/calls/tones";
 import { isSystemRinging } from "../lib/calls/callkeep";
+import { hideOngoing, showOngoing } from "../lib/calls/android-ongoing";
+import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
@@ -114,7 +116,11 @@ export function CallOverlay() {
     if (session.phase === "outgoing") void playCallerWaiting();
     else if (session.phase === "ringing" && session.dir === "in") {
       // CallKit already rings (app in the background or call screen shown natively): no second ringtone.
-      if (AppState.currentState === "active" && !(session.callId && isSystemRinging(session.callId))) void playIncomingRing();
+      if (AppState.currentState === "active" && !(session.callId && isSystemRinging(session.callId))) {
+        void playIncomingRing();
+        // Android: the call screen rings now — stop the ringing notification that announced the call.
+        if (Platform.OS === "android" && session.callId) void clearIncomingCall(session.callId);
+      }
       else void stopCallTones();
     }
     else if (session.phase === "busy") void playBusyTone();
@@ -181,6 +187,27 @@ export function CallOverlay() {
       if (!session) lastCallId.current = null;
     }
   }, [session?.phase, session?.callId, session?.dir, session?.kind, session]);
+
+  // Android: « Appel WIPP en cours » stays in the notifications for the whole call, with « Raccrocher ».
+  // It also keeps the call connected when WIPP is no longer on screen.
+  const inCall = session?.phase === "connecting" || session?.phase === "connected" || session?.phase === "reconnecting";
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    if (!inCall || !session) {
+      void hideOngoing();
+      return;
+    }
+    void showOngoing({
+      title: session.kind === "video" ? "Appel vidéo WIPP en cours" : "Appel WIPP en cours",
+      body: session.displayName,
+      stopLabel: "Raccrocher",
+      onStop: () => void endCurrentCall(),
+      phoneCall: true,
+      camera: session.kind === "video",
+      since: session.startedAt,
+    });
+  }, [inCall, session?.kind, session?.displayName, session?.startedAt]);
+  useEffect(() => () => void hideOngoing(), []);
 
   useEffect(() => {
     if (!session?.url || !session.token) return;

@@ -54,6 +54,23 @@ const COMMENT_MAX = 200;
 const COMMENT_GAP_MS = 2000; // anti-spam (the server enforces it too)
 const REACTION_GAP_MS = 350;
 
+/**
+ * Stops the host's screen share. On Android, unpublishing is not enough: the native capture and its
+ * foreground service (the « Partage d'écran » notification) only go away once the track is released.
+ */
+async function endMyShare(room: Room) {
+  const track = room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track as unknown as { mediaStreamTrack?: { release?: () => void } } | undefined;
+  const ms = track?.mediaStreamTrack;
+  await room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+  if (Platform.OS === "android") {
+    try {
+      ms?.release?.();
+    } catch {
+      /* already released */
+    }
+  }
+}
+
 function roleOf(p: Participant) {
   try {
     return (JSON.parse(p.metadata || "{}") as { role?: string; pid?: string; av?: string }) ?? {};
@@ -187,7 +204,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       // Host: the iOS broadcast ended without LiveKit noticing → unpublish it ourselves.
       const myPub = room.localParticipant.getTrackPublication(Track.Source.ScreenShare);
       const myMs = (myPub?.track as unknown as { mediaStreamTrack?: { readyState?: string } } | undefined)?.mediaStreamTrack;
-      if (myPub?.track && myMs?.readyState === "ended") void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+      if (myPub?.track && myMs?.readyState === "ended") void endMyShare(room);
       const sharer = all.find((p) => liveShare(p));
       const sp = sharer ? liveShare(sharer) : undefined;
       // Viewer: always ask the server for the sharpest version of the shared screen (text must stay readable),
@@ -322,7 +339,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       if (room.localParticipant.isScreenShareEnabled) {
         void import("../lib/event-live").then(({ setSharingState }) => setSharingState(eventId, false)).catch(() => undefined);
       }
-      void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+      void endMyShare(room);
       void room.disconnect();
       if (Platform.OS !== "web") void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
     };
@@ -714,6 +731,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 });
                 wasSharing.current = true;
                 void keepShareSharp(room);
+                void stopShareIfNoPicture(room);
               } catch (err) {
                 Alert.alert("Partage d’écran", errorText(err, "Le partage d’écran n’a pas pu démarrer. Tu peux réessayer, le direct continue."));
               }
@@ -763,6 +781,39 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     }
   }
 
+  /**
+   * Android allows a single screen capture at a time. If another app already holds it (the phone's own
+   * screen recorder), the share is published but no picture ever leaves: the viewers get a black screen
+   * and nothing tells the host. No frame encoded after a few seconds → stop the share and say why.
+   */
+  async function stopShareIfNoPicture(room: Room) {
+    if (Platform.OS !== "android") return;
+    await new Promise((ok) => setTimeout(ok, 8000));
+    type Report = { type?: string; framesEncoded?: number };
+    type Sender = { getStats?: () => Promise<{ forEach: (fn: (r: Report) => void) => void }> };
+    const pub = room.localParticipant.getTrackPublication(Track.Source.ScreenShare);
+    const sender = (pub?.track as unknown as { sender?: Sender } | undefined)?.sender;
+    if (!pub?.track || !sender?.getStats) return;
+    try {
+      let reports = 0;
+      let frames = 0;
+      (await sender.getStats()).forEach((r) => {
+        if (r.type !== "outbound-rtp") return;
+        reports += 1;
+        frames += Number(r.framesEncoded ?? 0);
+      });
+      if (!reports || frames > 0) return;
+      wasSharing.current = false;
+      await endMyShare(room);
+      Alert.alert(
+        "Partage d’écran",
+        "Ton écran n’a pas pu être envoyé. Une autre application enregistre peut-être l’écran (enregistreur d’écran). Arrête-la, puis relance le partage. Le direct continue.",
+      );
+    } catch {
+      /* no statistics: leave the share as it is */
+    }
+  }
+
   // Immersive scene: the controls hide by themselves after 4 s (not while typing or with a panel open).
   const immersiveOn = Boolean(screen && !screen.local && !(shareFrame.size && shareFrame.size.width > shareFrame.size.height));
   useEffect(() => {
@@ -790,7 +841,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
   async function stopScreenShare() {
     wasSharing.current = false;
-    await roomRef.current?.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+    if (roomRef.current) await endMyShare(roomRef.current);
   }
 
   // The sharing ended: leave the viewer's full-screen view by itself.
@@ -891,6 +942,27 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       sub.remove();
     };
   }, [isOrganizer, phase, eventId, sharingMine]);
+
+  // Android: while the screen is shared, a visible notification with « Arrêter le partage », which also keeps
+  // the live connected when WIPP is no longer on screen (the host is showing another app).
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    if (!sharingMine) {
+      void import("../lib/calls/android-ongoing").then((m) => m.hideOngoing());
+      return;
+    }
+    void import("../lib/calls/android-ongoing").then((m) =>
+      m.showOngoing({
+        title: "Partage d’écran en cours",
+        body: "Les spectateurs de ton direct WIPP voient ton écran.",
+        stopLabel: "Arrêter le partage",
+        onStop: () => void stopScreenShare(),
+        camera: true,
+        screen: true,
+      }),
+    );
+    return () => void import("../lib/calls/android-ongoing").then((m) => m.hideOngoing());
+  }, [sharingMine]);
 
   /** Viewer: report the live itself (its organizer), in one visible tap from « ⋯ ». */
   function reportLive() {
