@@ -19,8 +19,10 @@ export class ScreenErrorBoundary extends Component<{ resetKey: string; onBack: (
     return props.resetKey !== state.key ? { error: null, key: props.resetKey } : null;
   }
 
-  componentDidCatch(error: Error) {
-    logAppError(error, false, "écran");
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    // The component names (first lines of the stack) say which part of the screen failed.
+    const where = (info.componentStack ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4).join(" < ");
+    logAppError(error, false, `écran ${where}`.slice(0, 200));
   }
 
   render() {

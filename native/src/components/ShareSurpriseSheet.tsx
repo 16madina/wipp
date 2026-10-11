@@ -57,16 +57,22 @@ const CONTENT = [
   { label: "Contact", icon: UserRound },
 ] as const;
 
+/** « Dans 1 heure », « Ce soir à minuit » or « lun. 12 oct. à 08:00 », shown on the tile once chosen. */
+function momentLabel(c: NonNullable<SurpriseOptions["countdown"]>) {
+  if (c.at) return new Date(c.at).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return c.seconds >= 86_400 ? "Dans 24 heures" : c.seconds >= 3600 ? "Dans 1 heure" : "Dans 1 minute";
+}
+
 const KINDS = [
-  { id: "scratch" as const, title: "Message à gratter", description: "Cache ton message. Il devra le gratter pour le découvrir.", Icon: Sparkles },
-  { id: "countdown" as const, title: "Compte à rebours", description: "Un paquet verrouillé jusqu’au moment choisi.", Icon: Clock3 },
-  { id: "confetti" as const, title: "Confettis", description: "Ton message s’affiche sous une pluie de confettis.", Icon: PartyPopper },
+  { id: "scratch" as const, title: "Carte à gratter", description: "Ton message est caché sous la carte. Touche pour la choisir.", Icon: Sparkles },
+  { id: "countdown" as const, title: "Compte à rebours", description: "Le paquet reste verrouillé jusqu’au moment choisi.", Icon: Clock3 },
+  { id: "confetti" as const, title: "Confettis", description: "Une pluie de confettis quand le message apparaît.", Icon: PartyPopper },
 ];
 
 const TONES = ["Tendre", "Drôle", "Poétique", "Enthousiaste", "Sobre"] as const;
 
 type Stage = "share" | "compose" | "contacts";
-type Drawer = "animation" | "card" | null;
+type Drawer = "animation" | "card" | "moment" | null;
 
 function RightDrawer({
   visible,
@@ -149,9 +155,11 @@ export function ShareSurpriseSheet({
   const contacts = Object.values(users).filter((u) => u?.connected);
   const [stage, setStage] = useState<Stage>(initialStage);
   const [secret, setSecret] = useState("");
-  const [kind, setKind] = useState<SurpriseType>("scratch");
+  const kind: SurpriseType = "scratch";
   const [design, setDesign] = useState<string | null>(defaultDesign("scratch"));
   const [opts, setOpts] = useState<SurpriseOptions>(defaultOptions("scratch"));
+  // One surprise = a card to scratch, with a countdown lock and/or confetti on top.
+  const [confetti, setConfetti] = useState(false);
   const [animation, setAnimation] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [animCat, setAnimCat] = useState<string | null>(null);
@@ -204,13 +212,13 @@ export function ShareSurpriseSheet({
     close();
   }
 
-  function chooseKind(id: SurpriseType) {
-    if (id !== kind) {
-      setKind(id);
-      setDesign(defaultDesign(id));
-      setOpts(defaultOptions(id));
-    }
+  function pressTile(id: SurpriseType) {
     haptic("select");
+    if (id === "confetti") setConfetti((on) => !on);
+    else if (id === "countdown") {
+      if (!opts.countdown) setOpts(defaultOptions("countdown"));
+      setDrawer("moment");
+    } else setDrawer("card");
   }
 
   function draft(): Surprise {
@@ -221,10 +229,10 @@ export function ShareSurpriseSheet({
       designId: design,
       animationId: animation,
       // A chosen date becomes a wait counted from now, the moment it is sent.
-      surpriseOptions:
-        kind === "countdown" && opts.countdown?.at
-          ? { countdown: { seconds: Math.max(60, Math.round((opts.countdown.at - Date.now()) / 1000)) } }
-          : opts,
+      surpriseOptions: opts.countdown?.at
+        ? { countdown: { seconds: Math.max(60, Math.round((opts.countdown.at - Date.now()) / 1000)) } }
+        : opts,
+      confetti,
       mine: true,
       time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
     };
@@ -239,7 +247,9 @@ export function ShareSurpriseSheet({
   const drawerTitle =
     drawer === "card"
       ? picker.label
-      : animCat
+      : drawer === "moment"
+        ? "Compte à rebours"
+        : animCat
         ? (surpriseAnimationCategories.find((item) => item.id === animCat)?.label ?? "Animations")
         : "Ajouter une animation";
 
@@ -445,29 +455,28 @@ export function ShareSurpriseSheet({
                     <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Ajouter une animation</Text>
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
-                  {kind === "confetti" ? null : (
-                    <Press
-                      onPress={() => setDrawer("card")}
-                      style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
-                    >
-                      <PickerIcon size={20} color={colors.surpriseBright} />
-                      <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{picker.label}</Text>
-                      <ChevronRight size={16} color={colors.surpriseBright} />
-                    </Press>
-                  )}
+                  <Press
+                    onPress={() => setDrawer("card")}
+                    style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
+                  >
+                    <PickerIcon size={20} color={colors.surpriseBright} />
+                    <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{picker.label}</Text>
+                    <ChevronRight size={16} color={colors.surpriseBright} />
+                  </Press>
                 </View>
-                <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Choisis le type de surprise</Text>
-                <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Comment veux-tu révéler ton message ?</Text>
+                <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Compose ta surprise</Text>
+                <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Tu peux tout combiner : la carte, le compte à rebours et les confettis.</Text>
                 <View style={{ gap: 8 }}>
                   {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
                     <View key={row[0]!.id} style={{ flexDirection: "row", gap: 8 }}>
                       {row.map((item) => {
                         const art = wippSrc(surpriseKindArt[item.id]);
-                        const on = kind === item.id;
+                        const on = item.id === "scratch" || (item.id === "countdown" ? Boolean(opts.countdown) : confetti);
+                        const note = item.id === "countdown" && opts.countdown ? momentLabel(opts.countdown) : item.id === "confetti" && confetti ? "Activés" : null;
                         return (
                           <Press
                             key={item.id}
-                            onPress={() => chooseKind(item.id)}
+                            onPress={() => pressTile(item.id)}
                             style={{
                               flex: 1,
                               minWidth: 0,
@@ -480,8 +489,15 @@ export function ShareSurpriseSheet({
                               overflow: "hidden",
                             }}
                           >
-                            <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, alignItems: "center", justifyContent: "center" }}>
-                              <item.Icon size={16} color={colors.surpriseBright} />
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                              <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "transparent", alignItems: "center", justifyContent: "center" }}>
+                                <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
+                              </View>
+                              {note ? (
+                                <Text style={{ flex: 1, fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }} numberOfLines={1}>
+                                  {note}
+                                </Text>
+                              ) : null}
                             </View>
                             {art ? <Image source={art} style={{ width: "100%", height: 64, alignSelf: "center" }} contentFit="contain" /> : null}
                             <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }} numberOfLines={1}>
@@ -575,7 +591,25 @@ export function ShareSurpriseSheet({
                   })}
                 </View>
               ) : null}
-              {kind === "countdown" && opts.countdown ? <CountdownPicker value={opts.countdown} onChange={(countdown) => setOpts({ countdown })} /> : null}
+            </>
+          ) : drawer === "moment" ? (
+            <>
+              {opts.countdown ? <CountdownPicker value={opts.countdown} onChange={(countdown) => setOpts({ countdown })} /> : null}
+              <Press
+                onPress={() => {
+                  setOpts({});
+                  setDrawer(null);
+                }}
+                style={{ marginTop: 22, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Sans compte à rebours</Text>
+              </Press>
+              <Press
+                onPress={() => setDrawer(null)}
+                style={{ marginTop: 10, height: 44, borderRadius: 999, backgroundColor: colors.surpriseGold, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: colors.surpriseInk, fontFamily: "Inter_600SemiBold" }}>Valider</Text>
+              </Press>
             </>
           ) : (
             <>

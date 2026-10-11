@@ -61,7 +61,7 @@ import { isServerChatId, toServerChatId } from "../lib/messaging/sync";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
 import { isSeedDemoChat } from "../lib/seed";
 import { stickerById, stickerLabel, stickersInPack } from "../lib/stickers";
-import type { Surprise } from "../lib/surprise";
+import { parseSurpriseKind, surpriseKindWire, type Surprise } from "../lib/surprise";
 import { storyRing, storySegments } from "../lib/story-status";
 import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors, fgA, fixed, whiteA } from "../theme";
@@ -72,13 +72,12 @@ const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"))
 const NO_MESSAGES: Message[] = [];
 
 function surpriseFromMessage(m: Message): Surprise {
-  const kind = (["scratch", "countdown", "gift", "confetti"] as const).includes(m.scratchCardId as never)
-    ? (m.scratchCardId as Surprise["surpriseType"])
-    : "scratch";
+  const kind = parseSurpriseKind(m.scratchCardId);
   return {
     id: m.id,
     message: m.text ?? "",
-    surpriseType: kind,
+    surpriseType: kind.surpriseType,
+    confetti: kind.confetti,
     designId: m.scratchDesign ?? "heart",
     animationId: m.effectId ?? null,
     surpriseOptions: m.duration ? { countdown: { seconds: m.duration } } : {},
@@ -1267,7 +1266,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
             type: "scratch",
             text: surprise.message,
             scratchDesign: surprise.designId ?? "heart",
-            scratchCardId: surprise.surpriseType,
+            scratchCardId: surpriseKindWire(surprise),
             effectId: surprise.animationId ?? undefined,
             duration: surprise.surpriseOptions.countdown?.seconds,
           })

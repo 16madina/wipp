@@ -26,8 +26,6 @@ export function SwipeableBubble({
     armed.value = false;
   }, [armed, tx]);
 
-  if (!enabled) return <>{children}</>;
-
   const fireHaptic = () => haptic("select");
   const fireReply = () => onReply();
 
@@ -58,6 +56,9 @@ export function SwipeableBubble({
     opacity: interpolate(tx.value, [8, THRESHOLD], [0, 1], Extrapolation.CLAMP),
     transform: [{ scale: interpolate(tx.value, [0, THRESHOLD], [0.6, 1], Extrapolation.CLAMP) }],
   }));
+
+  // After every hook: a message can turn into a surprise (or be deleted) while it is on screen.
+  if (!enabled) return <>{children}</>;
 
   return (
     <GestureDetector gesture={pan}>

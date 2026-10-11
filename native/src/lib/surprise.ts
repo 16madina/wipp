@@ -17,7 +17,22 @@ export type Surprise = {
   sentAt?: number;
   /** Already opened once on this phone. */
   opened?: boolean;
+  /** A confetti rain falls when the message is revealed. */
+  confetti?: boolean;
 };
+
+const KIND_IDS: SurpriseType[] = ["scratch", "countdown", "gift", "confetti"];
+/**
+ * What travels in the message: the base kind, plus « +confetti » when the rain is on. The lock (countdown)
+ * travels apart, as a number of seconds — so one surprise can be a card, locked, with confetti.
+ */
+export const surpriseKindWire = (surprise: Pick<Surprise, "surpriseType" | "confetti">) =>
+  surprise.confetti && surprise.surpriseType !== "confetti" ? `${surprise.surpriseType}+confetti` : surprise.surpriseType;
+export function parseSurpriseKind(wire: string | undefined | null): { surpriseType: SurpriseType; confetti: boolean } {
+  const parts = (wire ?? "scratch").split("+");
+  const base = KIND_IDS.includes(parts[0] as SurpriseType) ? (parts[0] as SurpriseType) : "scratch";
+  return { surpriseType: base, confetti: base === "confetti" || parts.includes("confetti") };
+}
 
 export type SurpriseDesignItem = { id: string; label: string; mark: string; art?: string };
 export type SurpriseEnter = "bottom" | "left" | "right" | "pop";
