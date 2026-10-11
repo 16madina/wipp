@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
 import { RotateCcw } from "lucide-react-native";
 import { wippSrc } from "../lib/assets";
-import { findDesign, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
+import { CONFETTI_ANIMATION_ID, CONFETTI_MS, countdownText, findDesign, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
 import { colors } from "../theme";
 import { Press } from "./ui";
 import { ScratchFoil } from "./ScratchFoil";
@@ -36,10 +36,16 @@ const MOTIFS: Record<string, string> = {
 
 type Phase = "sealed" | "scratch" | "open";
 
-export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surprise: Surprise; demo?: boolean; onReveal?: () => void; onPlayAnimation?: (id: string) => void }) {
+export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { surprise: Surprise; demo?: boolean; onReveal?: () => void; onPlayAnimation?: (id: string) => void }) {
   const scratch = surprise.surpriseType === "scratch";
-  const [phase, setPhase] = useState<Phase>("sealed");
-  const [left, setLeft] = useState(surprise.surpriseOptions.countdown?.seconds ?? 10);
+  const confetti = surprise.surpriseType === "confetti";
+  // Confetti has no parcel: the message is there at once. Already seen: no second rain when the chat reopens.
+  const [phase, setPhase] = useState<Phase>(confetti ? "open" : "sealed");
+  // Countdown on the real clock, from the moment the message was sent (the preview unlocks after 5 s).
+  const unlockAt = useRef(
+    demo || !surprise.sentAt ? Date.now() + (demo ? 5 : (surprise.surpriseOptions.countdown?.seconds ?? 0)) * 1000 : surprise.sentAt + (surprise.surpriseOptions.countdown?.seconds ?? 0) * 1000,
+  ).current;
+  const [left, setLeft] = useState(() => (surprise.surpriseType === "countdown" ? Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000)) : 0));
   const [playing, setPlaying] = useState(false);
   const [playKey, setPlayKey] = useState(0);
   const started = useRef(false);
@@ -64,11 +70,14 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
   const [round, setRound] = useState(0);
 
   function playChosenAnimation() {
-    if (!surprise.animationId || started.current) return;
+    if (started.current) return;
+    if (confetti) onPlayAnimation?.(CONFETTI_ANIMATION_ID);
+    if (!surprise.animationId) return;
     started.current = true;
+    // After the confetti rain, the animation the sender picked.
     revealTimer.current = setTimeout(() => {
       playAnimation();
-    }, SURPRISE_REVEAL_PAUSE_MS);
+    }, confetti ? CONFETTI_MS : SURPRISE_REVEAL_PAUSE_MS);
   }
 
   function playAnimation() {
@@ -87,15 +96,23 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
     playChosenAnimation();
   }
 
+  // The parcel stays locked until the time is up; then the person opens it herself.
   useEffect(() => {
-    if (surprise.surpriseType !== "countdown" || phase === "open") return;
-    if (left <= 0) {
-      showMessage();
-      return;
-    }
-    const id = setTimeout(() => setLeft((n) => n - 1), 1000);
+    if (surprise.surpriseType !== "countdown" || phase === "open" || left <= 0) return;
+    const id = setTimeout(() => setLeft(Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000))), 1000);
     return () => clearTimeout(id);
-  }, [left, phase, surprise.surpriseType]);
+  }, [left, phase, surprise.surpriseType, unlockAt]);
+
+  // Confetti: the rain falls the first time the message is seen.
+  useEffect(() => {
+    if (!confetti || surprise.opened) return;
+    const id = setTimeout(() => {
+      onReveal?.();
+      playChosenAnimation();
+    }, 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   return (
@@ -137,14 +154,10 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
           <GiftParcel
             kindLabel={KIND_LABEL[surprise.surpriseType]}
             footer={
-              surprise.surpriseType === "countdown"
-                ? left >= 3600
-                  ? `Dans ${Math.floor(left / 3600)}:${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`
-                  : `Dans ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`
-                : "Touche pour ouvrir"
+              surprise.surpriseType === "countdown" && left > 0 ? `S’ouvre dans ${countdownText(left)}` : "Touche pour ouvrir"
             }
             onPress={() => {
-              if (surprise.surpriseType === "countdown") return;
+              if (surprise.surpriseType === "countdown" && left > 0) return;
               if (scratch) {
                 setBox(null);
                 setFoilReady(false);
@@ -165,7 +178,8 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
               setFoilReady(false);
               setRound((n) => n + 1);
               setPhase("scratch");
-            } else setPhase("sealed");
+            } else if (confetti) playChosenAnimation();
+            else setPhase("sealed");
           }}
           accessibilityLabel="Revoir la surprise"
           style={{ marginTop: 6, paddingHorizontal: 14, height: 30, borderRadius: 999, borderWidth: 1, borderColor: colors.surpriseGold, flexDirection: "row", alignItems: "center", gap: 6 }}

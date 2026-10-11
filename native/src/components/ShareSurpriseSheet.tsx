@@ -27,7 +27,6 @@ import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import {
   animationCollections,
-  countdownChoices,
   defaultDesign,
   defaultOptions,
   designPicker,
@@ -43,6 +42,7 @@ import {
 import { useWippStore } from "../lib/store";
 import { colors, layout, whiteA } from "../theme";
 import { SurpriseReveal } from "./SurpriseReveal";
+import { CountdownPicker } from "./CountdownPicker";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
 import { gifProviderConfigured } from "../lib/gifs";
@@ -59,9 +59,8 @@ const CONTENT = [
 
 const KINDS = [
   { id: "scratch" as const, title: "Message à gratter", description: "Cache ton message. Il devra le gratter pour le découvrir.", Icon: Sparkles },
-  { id: "countdown" as const, title: "Compte à rebours", description: "Ton message se dévoile après un certain temps.", Icon: Clock3 },
-  { id: "gift" as const, title: "Message cadeau", description: "Un joli paquet à ouvrir pour découvrir ton message.", Icon: Gift },
-  { id: "confetti" as const, title: "Confettis", description: "Ton message s’affiche avec une animation spéciale.", Icon: PartyPopper },
+  { id: "countdown" as const, title: "Compte à rebours", description: "Un paquet verrouillé jusqu’au moment choisi.", Icon: Clock3 },
+  { id: "confetti" as const, title: "Confettis", description: "Ton message s’affiche sous une pluie de confettis.", Icon: PartyPopper },
 ];
 
 const TONES = ["Tendre", "Drôle", "Poétique", "Enthousiaste", "Sobre"] as const;
@@ -221,7 +220,11 @@ export function ShareSurpriseSheet({
       surpriseType: kind,
       designId: design,
       animationId: animation,
-      surpriseOptions: opts,
+      // A chosen date becomes a wait counted from now, the moment it is sent.
+      surpriseOptions:
+        kind === "countdown" && opts.countdown?.at
+          ? { countdown: { seconds: Math.max(60, Math.round((opts.countdown.at - Date.now()) / 1000)) } }
+          : opts,
       mine: true,
       time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
     };
@@ -442,14 +445,16 @@ export function ShareSurpriseSheet({
                     <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Ajouter une animation</Text>
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
-                  <Press
-                    onPress={() => setDrawer("card")}
-                    style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
-                  >
-                    <PickerIcon size={20} color={colors.surpriseBright} />
-                    <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{picker.label}</Text>
-                    <ChevronRight size={16} color={colors.surpriseBright} />
-                  </Press>
+                  {kind === "confetti" ? null : (
+                    <Press
+                      onPress={() => setDrawer("card")}
+                      style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
+                    >
+                      <PickerIcon size={20} color={colors.surpriseBright} />
+                      <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{picker.label}</Text>
+                      <ChevronRight size={16} color={colors.surpriseBright} />
+                    </Press>
+                  )}
                 </View>
                 <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Choisis le type de surprise</Text>
                 <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Comment veux-tu révéler ton message ?</Text>
@@ -569,34 +574,8 @@ export function ShareSurpriseSheet({
                     );
                   })}
                 </View>
-              ) : (
-                <Text style={{ color: colors.muted }}>Les styles arrivent bientôt.</Text>
-              )}
-              {kind === "countdown" ? (
-                <View style={{ marginTop: 16 }}>
-                  <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 8 }}>Durée</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                    {countdownChoices.map((choice) => (
-                      <Press
-                        key={choice.seconds}
-                        onPress={() => setOpts({ countdown: { seconds: choice.seconds } })}
-                        style={{
-                          width: "47%",
-                          height: 56,
-                          borderRadius: 8,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: opts.countdown?.seconds === choice.seconds ? "#485160" : "#303746",
-                          borderWidth: 1,
-                          borderColor: opts.countdown?.seconds === choice.seconds ? colors.surpriseGold : colors.hair,
-                        }}
-                      >
-                        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{choice.label}</Text>
-                      </Press>
-                    ))}
-                  </View>
-                </View>
               ) : null}
+              {kind === "countdown" && opts.countdown ? <CountdownPicker value={opts.countdown} onChange={(countdown) => setOpts({ countdown })} /> : null}
             </>
           ) : (
             <>

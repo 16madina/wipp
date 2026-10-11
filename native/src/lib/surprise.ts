@@ -2,7 +2,8 @@ import { Clock3, Gift, Images, PartyPopper, type LucideIcon } from "lucide-react
 import { ANIM_MS } from "../generated/anim-durations";
 
 export type SurpriseType = "scratch" | "countdown" | "gift" | "confetti";
-export type SurpriseOptions = { countdown?: { seconds: number } };
+/** `seconds` after the message was sent; `at` (a chosen date) is turned into seconds when the surprise is sent. */
+export type SurpriseOptions = { countdown?: { seconds: number; at?: number } };
 export type Surprise = {
   id: string;
   message: string;
@@ -12,6 +13,10 @@ export type Surprise = {
   surpriseOptions: SurpriseOptions;
   time: string;
   mine: boolean;
+  /** When the message was sent: a countdown runs on the real clock from there, app open or not. */
+  sentAt?: number;
+  /** Already opened once on this phone. */
+  opened?: boolean;
 };
 
 export type SurpriseDesignItem = { id: string; label: string; mark: string; art?: string };
@@ -38,7 +43,7 @@ export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: s
 
 export const designPicker: Record<SurpriseType, { label: string; icon: LucideIcon }> = {
   scratch: { label: "Choisir la carte à gratter", icon: Images },
-  countdown: { label: "Choisir le compte à rebours", icon: Clock3 },
+  countdown: { label: "Choisir le moment", icon: Clock3 },
   gift: { label: "Choisir le cadeau", icon: Gift },
   confetti: { label: "Choisir les confettis", icon: PartyPopper },
 };
@@ -72,11 +77,25 @@ export const surpriseDesigns: Record<SurpriseType, SurpriseDesignItem[]> = {
 };
 
 export const countdownChoices = [
-  { seconds: 10, label: "10 secondes" },
   { seconds: 60, label: "1 minute" },
-  { seconds: 300, label: "5 minutes" },
   { seconds: 3600, label: "1 heure" },
+  { seconds: 86_400, label: "24 heures" },
 ];
+
+/** Built-in full-screen confetti rain (not a file): played by SurpriseAnimOverlay. */
+export const CONFETTI_ANIMATION_ID = "wipp-confetti";
+export const CONFETTI_MS = 2600;
+
+/** « 2 j 03:15:00 », « 1:05:09 », « 0:42 ». */
+export function countdownText(seconds: number) {
+  const s = Math.max(0, Math.ceil(seconds));
+  const d = Math.floor(s / 86_400);
+  const h = Math.floor((s % 86_400) / 3600);
+  const two = (n: number) => String(n).padStart(2, "0");
+  const tail = `${two(Math.floor((s % 3600) / 60))}:${two(s % 60)}`;
+  if (d > 0) return `${d} j ${two(h)}:${tail}`;
+  return h > 0 ? `${h}:${tail}` : `${Math.floor(s / 60)}:${two(s % 60)}`;
+}
 
 const clip = (id: string, label: string): SurpriseAnimationItem => ({
   id,

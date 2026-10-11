@@ -1,3 +1,5 @@
+import { ConfettiBurst } from "./ConfettiBurst";
+import { CONFETTI_ANIMATION_ID } from "../lib/surprise";
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
@@ -96,6 +98,7 @@ export function SurpriseAnimOverlay({
     };
   }, [item?.id, playKey, opacity, scale, src, reduceMotion, shown, centered, width, height]);
 
+  if (animationId === CONFETTI_ANIMATION_ID) return <ConfettiBurst key={playKey} onDone={onDone} />;
   if (!item || !src) return null;
   // Only real animations go full screen; a still picture keeps its small frame.
   const full = centered && Boolean(item.anim) && !reduceMotion;

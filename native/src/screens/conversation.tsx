@@ -84,6 +84,8 @@ function surpriseFromMessage(m: Message): Surprise {
     surpriseOptions: m.duration ? { countdown: { seconds: m.duration } } : {},
     time: "",
     mine: m.fromId === "me",
+    sentAt: m.createdAt,
+    opened: Boolean(m.revealedAt),
   };
 }
 
