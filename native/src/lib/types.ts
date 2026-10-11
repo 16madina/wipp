@@ -226,7 +226,7 @@ export type Screen =
   | { name: "global-search" }
   | { name: "new-group" }
   | { name: "my-groups" }
-  | { name: "new-story" }
+  | { name: "new-story"; shared?: { kind: "image" | "video"; uri: string; mime: string } | { kind: "text"; text: string } }
   | { name: "live-code" }
   | { name: "one-time-qr" }
   | { name: "introduce"; toUserId: string }
