@@ -361,7 +361,9 @@ export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
 ];
 
 /** Only real animations are offered: a still picture never appears in the picker. */
-const moving = (items: SurpriseAnimationItem[]) => items.filter((item) => Boolean(item.anim));
+// Withdrawn from the picker (poor background); kept in the lists so surprises already sent still play.
+const retired = new Set(["amour-pluie-cristal", "amour-bisous", "amour-buee", "amour-fusion"]);
+const moving = (items: SurpriseAnimationItem[]) => items.filter((item) => Boolean(item.anim) && !retired.has(item.id));
 
 // The old still pictures (day_*, love_*, night_*) stay in `surpriseAnimations`, so surprises already sent
 // with them still show — they are just no longer offered.
