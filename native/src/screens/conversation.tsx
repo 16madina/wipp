@@ -66,7 +66,7 @@ import { storyRing, storySegments } from "../lib/story-status";
 import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors, fgA, fixed, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
-import { useScratching } from "../lib/scratch-state";
+import { setScratching, useScratching } from "../lib/scratch-state";
 
 const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"));
 const NO_MESSAGES: Message[] = [];
@@ -357,6 +357,10 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const [jumpId, setJumpId] = useState<string | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
   const scratching = useScratching();
+  // A conversation always opens scrollable, even if a scratch was cut short somewhere else.
+  useEffect(() => {
+    setScratching(false);
+  }, [chatId]);
   const seenMoment = useRef<string | null>(null);
 
   function playMoment(id: string) {

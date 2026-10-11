@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Asset } from "expo-asset";
-import { writeAsStringAsync } from "expo-file-system/legacy";
+import { cacheDirectory, copyAsync, getInfoAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { Animated, Easing, Platform, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
@@ -71,17 +71,23 @@ function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: bo
     void asset.downloadAsync().then(async () => {
       if (!live) return;
       const uri = asset.localUri ?? asset.uri;
-      if (!uri) return;
-      const clean = uri.split("?")[0] ?? uri;
-      const slash = clean.lastIndexOf("/");
-      const folder = slash >= 0 ? clean.slice(0, slash + 1) : clean;
-      const file = slash >= 0 ? clean.slice(slash + 1) : clean;
-      const htmlUri = `${folder}wipp-clip-${file}.html`;
+      if (!uri || !cacheDirectory) return;
+      // In the installed app the clip sits inside the app itself, where nothing can be written. The player
+      // page and a copy of the clip go side by side in the cache folder instead (the web view may only
+      // read one folder), otherwise the page is never created and the sticker stays on its first image.
+      const folder = `${cacheDirectory}wipp-clips/`;
+      await makeDirectoryAsync(folder, { intermediates: true }).catch(() => undefined);
+      const file = `${(asset.hash || (uri.split("?")[0] ?? uri).split("/").pop() || "clip").replace(/[^a-zA-Z0-9]/g, "")}.${asset.type || "mp4"}`;
+      const info = await getInfoAsync(folder + file);
+      if (!info.exists) await copyAsync({ from: uri, to: folder + file });
+      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}.html`;
       await writeAsStringAsync(htmlUri, clipHtml(file, loop) + CLIP_SCRIPT(loop));
       if (!live) return;
       setDir(folder);
       setPage(htmlUri);
-    }).catch(() => undefined);
+    }).catch((err) => {
+      void import("../lib/crash-log").then(({ logAppError }) => logAppError(err, false, "sticker clip"));
+    });
     return () => {
       live = false;
     };
@@ -89,9 +95,11 @@ function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: bo
   if (!page || !dir) return null;
   return (
     <WebView
+      onError={(e) => void import("../lib/crash-log").then(({ logAppError }) => logAppError(new Error(`sticker clip webview: ${e.nativeEvent.description}`), false, "sticker"))}
       originWhitelist={["*"]}
       source={{ uri: page }}
       allowingReadAccessToURL={dir}
+      allowFileAccess
       style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
       containerStyle={{ backgroundColor: "transparent" }}
       opaque={false}
@@ -101,7 +109,12 @@ function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: bo
       mediaPlaybackRequiresUserAction={false}
       pointerEvents="none"
       androidLayerType="hardware"
-      onMessage={() => ready.current()}
+      onMessage={(e) => {
+        const data = e.nativeEvent.data;
+        if (data === "ready") ready.current();
+        // Anything else is the player saying why it cannot play: kept in the phone's error journal.
+        else void import("../lib/crash-log").then(({ logAppError }) => logAppError(new Error(`sticker clip: ${String(data).slice(0, 200)}`), false, "sticker"));
+      }}
     />
   );
 }
@@ -110,14 +123,18 @@ function CLIP_SCRIPT(loop?: boolean) {
   return `
 const v=document.getElementById('v'); const c=document.getElementById('c');
 const ctx=c.getContext('2d',{willReadFrequently:true});
-let sent=false;
+let sent=false, told=false;
+function tell(m){ if(told) return; told=true; try{ window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('error '+m); }catch(e){} }
+window.onerror=function(m){ tell(String(m)); };
 function fit(){ const w=window.innerWidth,h=window.innerHeight; if(w<2||h<2) return false; const d=Math.min(2,window.devicePixelRatio||1); const W=Math.round(w*d),H=Math.round(h*d); if(c.width!==W||c.height!==H){ c.width=W; c.height=H; } return true; }
 function key(px){ const p=px.data; for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
  if(g>48&&lead>14&&g>(r+b)*0.42){ const spill=Math.min(1,lead/36); p[i+3]=Math.round(p[i+3]*Math.max(0,1-spill*1.35)); }
  else if(g>r&&g>b&&lead>6){ p[i+1]=maxRB+Math.round(lead*0.25); } } }
-function frame(){ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } requestAnimationFrame(frame); }
+function frame(){ try{ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } }catch(e){ tell('draw '+(e&&e.message||e)); return; } requestAnimationFrame(frame); }
 v.playbackRate=${loop ? "0.92" : "1"};
-v.addEventListener('loadeddata',()=>{ v.play(); });
+v.addEventListener('loadeddata',()=>{ const p=v.play(); if(p&&p.catch) p.catch(function(e){ tell('play '+(e&&e.name||e)); }); });
+v.addEventListener('error',()=>{ tell('video '+(v.error&&v.error.code)); });
+setTimeout(()=>{ if(!sent) tell('late ready='+v.readyState+' paused='+v.paused+' net='+v.networkState+' size='+window.innerWidth+'x'+window.innerHeight+' t='+v.currentTime); },4000);
 ${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=3.05) v.pause(); });"}
 requestAnimationFrame(frame);
 </script></body></html>`;

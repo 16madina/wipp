@@ -379,6 +379,20 @@ type StoreSlice = {
   identity?: KeyBundle | null;
 };
 
+/**
+ * The server only knows « Message chiffré » for the last message. When this phone has already decrypted
+ * that same message, keep its real preview — otherwise the whole list flashes back to « Message chiffré »
+ * and decrypts again each time the Chats tab is opened.
+ */
+function previewAfterSync(server: string | undefined, serverLastAt: number | undefined, prev: { preview?: string; lastAt: number } | undefined) {
+  const known = prev?.preview ?? "";
+  if (!server) return known;
+  const serverLocked = /chiffré|encrypted/i.test(server);
+  const knownReal = Boolean(known) && !/chiffré|encrypted/i.test(known);
+  const nothingNewer = !serverLastAt || !prev || serverLastAt <= prev.lastAt + 1500;
+  return serverLocked && knownReal && nothingNewer ? known : server;
+}
+
 export function mergeServerChatsIntoState(
   state: StoreSlice,
   serverChats: WippChatSummary[],
@@ -417,7 +431,7 @@ export function mergeServerChatsIntoState(
         groupSettings: sc.groupSettings ?? prev?.groupSettings,
         participantIds: memberIds,
         adminIds: (sc.adminIds ?? []).map((id) => (meServerId && id === meServerId ? "me" : `srvuser:${id}`)),
-        preview: sc.preview || prev?.preview || "",
+        preview: previewAfterSync(sc.preview, sc.lastAt, prev),
         lastAt: sc.lastAt || prev?.lastAt || Date.now(),
         unread: sc.manuallyUnreadAt ? Math.max(1, sc.unread ?? 0) : (sc.unread ?? prev?.unread ?? 0),
         pinned: Boolean(sc.pinnedAt),
@@ -439,7 +453,7 @@ export function mergeServerChatsIntoState(
       id: localId,
       type: "dm",
       participantIds: ["me", user.id],
-      preview: sc.preview || prev?.preview || "",
+      preview: previewAfterSync(sc.preview, sc.lastAt, prev),
       lastAt: sc.lastAt || prev?.lastAt || Date.now(),
       unread: sc.manuallyUnreadAt ? Math.max(1, sc.unread ?? 0) : (sc.unread ?? prev?.unread ?? 0),
       pinned: vault ? Boolean(prev?.pinned) : Boolean(sc.pinnedAt),
