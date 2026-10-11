@@ -646,6 +646,8 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
   }
 
   const dateValue = starts;
+  // « Maintenant » stays lit while the chosen start is within a few minutes of now.
+  const startsNow = Boolean(starts) && Math.abs(starts!.getTime() - Date.now()) < 5 * 60_000;
   const startT = starts ? `${String(starts.getHours()).padStart(2, "0")}:${String(starts.getMinutes()).padStart(2, "0")}` : "";
   const endT = ends ? `${String(ends.getHours()).padStart(2, "0")}:${String(ends.getMinutes()).padStart(2, "0")}` : "";
   const atTime = (day: Date, t: string) => {
@@ -742,7 +744,22 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={row}>
             <View style={iconBox}><CalendarDays size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
-              <Text style={rowTitle}>Date et heure *</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={rowTitle}>Date et heure *</Text>
+                {/* Start right away: today, at this very minute. */}
+                <Press
+                  onPress={() => {
+                    const now = new Date();
+                    now.setSeconds(0, 0);
+                    setStarts(now);
+                    setEnds(null);
+                  }}
+                  accessibilityLabel="Commencer maintenant"
+                  style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: startsNow ? colors.accent : whiteA(0.06) }}
+                >
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: startsNow ? colors.accentFg : colors.fg }}>Maintenant</Text>
+                </Press>
+              </View>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Press onPress={() => setPicking("start")} style={[box, { flex: 1.2, flexDirection: "row", alignItems: "center", gap: 8 }]}>
                   <CalendarDays size={16} color={colors.muted} />
