@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
 import { RotateCcw } from "lucide-react-native";
 import { wippSrc } from "../lib/assets";
-import { findDesign, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
+import { CONFETTI_ANIMATION_ID, CONFETTI_MS, countdownText, findDesign, SURPRISE_REVEAL_PAUSE_MS, type Surprise } from "../lib/surprise";
 import { colors } from "../theme";
 import { Press } from "./ui";
 import { ScratchFoil } from "./ScratchFoil";
@@ -36,10 +36,18 @@ const MOTIFS: Record<string, string> = {
 
 type Phase = "sealed" | "scratch" | "open";
 
-export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surprise: Surprise; demo?: boolean; onReveal?: () => void; onPlayAnimation?: (id: string) => void }) {
+export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { surprise: Surprise; demo?: boolean; onReveal?: () => void; onPlayAnimation?: (id: string) => void }) {
   const scratch = surprise.surpriseType === "scratch";
+  const confetti = Boolean(surprise.confetti) || surprise.surpriseType === "confetti";
+  // Any surprise can be locked: the parcel then only opens once the chosen moment has come.
+  const lockSeconds = surprise.surpriseOptions.countdown?.seconds ?? 0;
   const [phase, setPhase] = useState<Phase>("sealed");
-  const [left, setLeft] = useState(surprise.surpriseOptions.countdown?.seconds ?? 10);
+  // Countdown on the real clock, from the moment the message was sent (the preview unlocks after 5 s).
+  const unlockAt = useRef(
+    demo || !surprise.sentAt ? Date.now() + (demo ? Math.min(lockSeconds, 5) : lockSeconds) * 1000 : surprise.sentAt + lockSeconds * 1000,
+  ).current;
+  const [left, setLeft] = useState(() => (lockSeconds > 0 ? Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000)) : 0));
+  const locked = lockSeconds > 0 && left > 0;
   const [playing, setPlaying] = useState(false);
   const [playKey, setPlayKey] = useState(0);
   const started = useRef(false);
@@ -64,11 +72,14 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
   const [round, setRound] = useState(0);
 
   function playChosenAnimation() {
-    if (!surprise.animationId || started.current) return;
+    if (started.current) return;
+    if (confetti) onPlayAnimation?.(CONFETTI_ANIMATION_ID);
+    if (!surprise.animationId) return;
     started.current = true;
+    // After the confetti rain, the animation the sender picked.
     revealTimer.current = setTimeout(() => {
       playAnimation();
-    }, SURPRISE_REVEAL_PAUSE_MS);
+    }, confetti ? CONFETTI_MS : SURPRISE_REVEAL_PAUSE_MS);
   }
 
   function playAnimation() {
@@ -87,15 +98,12 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
     playChosenAnimation();
   }
 
+  // The parcel stays locked until the time is up; then the person opens it herself.
   useEffect(() => {
-    if (surprise.surpriseType !== "countdown" || phase === "open") return;
-    if (left <= 0) {
-      showMessage();
-      return;
-    }
-    const id = setTimeout(() => setLeft((n) => n - 1), 1000);
+    if (!locked) return;
+    const id = setTimeout(() => setLeft(Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000))), 1000);
     return () => clearTimeout(id);
-  }, [left, phase, surprise.surpriseType]);
+  }, [left, locked, unlockAt]);
 
 
   return (
@@ -124,7 +132,7 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
               {surprise.message}
             </Text>
             {phase === "open" ? (
-              <Text style={{ marginTop: 6, fontSize: 10, color: "rgba(10,11,16,0.7)" }}>✨ Surprise découverte</Text>
+              <Text style={{ marginTop: 6, fontSize: 10, color: "rgba(10,11,16,0.7)" }}>Surprise découverte</Text>
             ) : null}
           </View>
         ) : null}
@@ -136,15 +144,12 @@ export function SurpriseReveal({ surprise, onReveal, onPlayAnimation }: { surpri
         {phase === "sealed" ? (
           <GiftParcel
             kindLabel={KIND_LABEL[surprise.surpriseType]}
+            locked={locked}
             footer={
-              surprise.surpriseType === "countdown"
-                ? left >= 3600
-                  ? `Dans ${Math.floor(left / 3600)}:${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`
-                  : `Dans ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`
-                : "Touche pour ouvrir"
+              locked ? `S’ouvre dans ${countdownText(left)}` : "Touche pour ouvrir"
             }
             onPress={() => {
-              if (surprise.surpriseType === "countdown") return;
+              if (locked) return;
               if (scratch) {
                 setBox(null);
                 setFoilReady(false);

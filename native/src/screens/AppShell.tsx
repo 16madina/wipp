@@ -256,7 +256,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "my-groups":
       return <MyGroupsScreen />;
     case "new-story":
-      return <NewStoryScreen />;
+      return <NewStoryScreen shared={screen.shared} />;
     case "live-code":
       return <LiveCodeScreen />;
     case "one-time-qr":

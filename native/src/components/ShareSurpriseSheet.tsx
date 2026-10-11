@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import { Animated, Dimensions, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -16,7 +17,10 @@ import {
   MapPin,
   PartyPopper,
   Smile,
-  Sparkles,
+  Clapperboard,
+  PenLine,
+  Send,
+  Ticket,
   UserRound,
   WandSparkles,
   X,
@@ -26,12 +30,12 @@ import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import {
   animationCollections,
-  countdownChoices,
   defaultDesign,
   defaultOptions,
   designPicker,
   findAnimation,
   surpriseAnimationCategories,
+  eventGroups,
   surpriseDesigns,
   surpriseKindArt,
   type Surprise,
@@ -41,6 +45,7 @@ import {
 import { useWippStore } from "../lib/store";
 import { colors, layout, whiteA } from "../theme";
 import { SurpriseReveal } from "./SurpriseReveal";
+import { CountdownPicker } from "./CountdownPicker";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
 import { gifProviderConfigured } from "../lib/gifs";
@@ -55,17 +60,22 @@ const CONTENT = [
   { label: "Contact", icon: UserRound },
 ] as const;
 
+/** « Dans 1 heure », « Ce soir à minuit » or « lun. 12 oct. à 08:00 », shown on the tile once chosen. */
+function momentLabel(c: NonNullable<SurpriseOptions["countdown"]>) {
+  if (c.at) return new Date(c.at).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return c.seconds >= 86_400 ? "Dans 24 heures" : c.seconds >= 3600 ? "Dans 1 heure" : "Dans 1 minute";
+}
+
 const KINDS = [
-  { id: "scratch" as const, title: "Message à gratter", description: "Cache ton message. Il devra le gratter pour le découvrir.", Icon: Sparkles },
-  { id: "countdown" as const, title: "Compte à rebours", description: "Ton message se dévoile après un certain temps.", Icon: Clock3 },
-  { id: "gift" as const, title: "Message cadeau", description: "Un joli paquet à ouvrir pour découvrir ton message.", Icon: Gift },
-  { id: "confetti" as const, title: "Confettis", description: "Ton message s’affiche avec une animation spéciale.", Icon: PartyPopper },
+  { id: "scratch" as const, title: "Carte à gratter", description: "Ton message est caché sous la carte. Touche pour la choisir.", Icon: Ticket },
+  { id: "countdown" as const, title: "Compte à rebours", description: "Le paquet reste verrouillé jusqu’au moment choisi.", Icon: Clock3 },
+  { id: "confetti" as const, title: "Confettis", description: "Une pluie de confettis quand le message apparaît.", Icon: PartyPopper },
 ];
 
 const TONES = ["Tendre", "Drôle", "Poétique", "Enthousiaste", "Sobre"] as const;
 
 type Stage = "share" | "compose" | "contacts";
-type Drawer = "animation" | "card" | null;
+type Drawer = "animation" | "card" | "moment" | null;
 
 function RightDrawer({
   visible,
@@ -148,12 +158,16 @@ export function ShareSurpriseSheet({
   const contacts = Object.values(users).filter((u) => u?.connected);
   const [stage, setStage] = useState<Stage>(initialStage);
   const [secret, setSecret] = useState("");
-  const [kind, setKind] = useState<SurpriseType>("scratch");
+  const kind: SurpriseType = "scratch";
   const [design, setDesign] = useState<string | null>(defaultDesign("scratch"));
   const [opts, setOpts] = useState<SurpriseOptions>(defaultOptions("scratch"));
+  // One surprise = a card to scratch, with a countdown lock and/or confetti on top.
+  const [confetti, setConfetti] = useState(false);
   const [animation, setAnimation] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [animCat, setAnimCat] = useState<string | null>(null);
+  // Événements: the open celebration tab (declared here, before any early return).
+  const [eventTab, setEventTab] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
   const [previewPlay, setPreviewPlay] = useState<{ id: string; n: number } | null>(null);
   const previewSequence = useRef(0);
@@ -201,13 +215,13 @@ export function ShareSurpriseSheet({
     close();
   }
 
-  function chooseKind(id: SurpriseType) {
-    if (id !== kind) {
-      setKind(id);
-      setDesign(defaultDesign(id));
-      setOpts(defaultOptions(id));
-    }
+  function pressTile(id: SurpriseType) {
     haptic("select");
+    if (id === "confetti") setConfetti((on) => !on);
+    else if (id === "countdown") {
+      if (!opts.countdown) setOpts(defaultOptions("countdown"));
+      setDrawer("moment");
+    } else setDrawer("card");
   }
 
   function draft(): Surprise {
@@ -217,18 +231,28 @@ export function ShareSurpriseSheet({
       surpriseType: kind,
       designId: design,
       animationId: animation,
-      surpriseOptions: opts,
+      // A chosen date becomes a wait counted from now, the moment it is sent.
+      surpriseOptions: opts.countdown?.at
+        ? { countdown: { seconds: Math.max(60, Math.round((opts.countdown.at - Date.now()) / 1000)) } }
+        : opts,
+      confetti,
       mine: true,
       time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
     };
   }
 
   if (!open) return null;
-  const animItems = animCat ? (animationCollections[animCat] ?? []) : surpriseAnimationCategories;
+  // Événements: one tab per celebration (only those that already have animations).
+  const catItems = animCat ? (animationCollections[animCat] ?? []) : [];
+  const tabs = animCat === "evenements" ? eventGroups.filter((g) => catItems.some((item) => item.group === g.id)) : [];
+  const activeTab = tabs.length ? (tabs.find((g) => g.id === eventTab)?.id ?? tabs[0].id) : null;
+  const animItems = animCat ? (activeTab ? catItems.filter((item) => item.group === activeTab) : catItems) : surpriseAnimationCategories;
   const drawerTitle =
     drawer === "card"
       ? picker.label
-      : animCat
+      : drawer === "moment"
+        ? "Compte à rebours"
+        : animCat
         ? (surpriseAnimationCategories.find((item) => item.id === animCat)?.label ?? "Animations")
         : "Ajouter une animation";
 
@@ -300,8 +324,7 @@ export function ShareSurpriseSheet({
                 {gift ? <Image source={gift} style={{ width: 100, height: 100 }} contentFit="contain" /> : <Gift size={48} color={colors.accent} />}
                 <View style={{ flex: 1, paddingHorizontal: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>Surprise</Text>
-                    <Sparkles size={18} color={colors.surpriseGold} />
+                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>WIPP Surprise</Text>
                   </View>
                   <Text style={{ marginTop: 4, fontSize: 11, color: colors.shareSubtitle }}>Transforme tes messages en expériences.</Text>
                 </View>
@@ -348,8 +371,7 @@ export function ShareSurpriseSheet({
                   </Press>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Gift size={22} color={colors.surpriseBright} />
-                    <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>Surprise</Text>
-                    <Sparkles size={20} color={colors.surpriseBright} />
+                    <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>WIPP Surprise</Text>
                   </View>
                   <Text style={{ fontSize: 12, color: colors.surpriseSecondary }}>Transforme tes messages en expériences.</Text>
                 </View>
@@ -368,8 +390,8 @@ export function ShareSurpriseSheet({
                       onPress={() => setAssist((v) => !v)}
                       style={{ borderRadius: 999, backgroundColor: colors.accent, paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 4 }}
                     >
-                      <WandSparkles size={14} color={colors.accentFg} />
-                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Assistant ✧</Text>
+                      <PenLine size={14} color={colors.accentFg} />
+                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Assistant</Text>
                     </Press>
                   </View>
                   <Text style={{ textAlign: "right", fontSize: 11, color: colors.surpriseSecondary }}>
@@ -430,7 +452,7 @@ export function ShareSurpriseSheet({
                     }}
                     style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
                   >
-                    <WandSparkles size={20} color={colors.surpriseBright} />
+                    <Clapperboard size={20} color={colors.surpriseBright} />
                     <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Ajouter une animation</Text>
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
@@ -443,40 +465,78 @@ export function ShareSurpriseSheet({
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
                 </View>
-                <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Choisis le type de surprise</Text>
-                <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Comment veux-tu révéler ton message ?</Text>
+                <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Compose ta surprise</Text>
+                <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Tu peux tout combiner : la carte, le compte à rebours et les confettis.</Text>
                 <View style={{ gap: 8 }}>
                   {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
                     <View key={row[0]!.id} style={{ flexDirection: "row", gap: 8 }}>
                       {row.map((item) => {
                         const art = wippSrc(surpriseKindArt[item.id]);
-                        const on = kind === item.id;
+                        const on = item.id === "scratch" || (item.id === "countdown" ? Boolean(opts.countdown) : confetti);
+                        const note = item.id === "countdown" && opts.countdown ? momentLabel(opts.countdown) : item.id === "confetti" && confetti ? "Activés" : null;
                         return (
                           <Press
                             key={item.id}
-                            onPress={() => chooseKind(item.id)}
+                            onPress={() => pressTile(item.id)}
                             style={{
                               flex: 1,
                               minWidth: 0,
-                              minHeight: 168,
+                              // Confettis sits alone on its row: a low band, so « Envoyer » stays on screen.
+                              height: row.length === 1 ? 76 : 150,
                               borderRadius: 12,
-                              padding: 10,
                               backgroundColor: colors.shareTile,
-                              borderWidth: on ? 1.5 : 1,
+                              borderWidth: on ? 2 : 1,
                               borderColor: on ? colors.surpriseGold : colors.shareTileBorder,
                               overflow: "hidden",
                             }}
                           >
-                            <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, alignItems: "center", justifyContent: "center" }}>
-                              <item.Icon size={16} color={colors.surpriseBright} />
-                            </View>
-                            {art ? <Image source={art} style={{ width: "100%", height: 64, alignSelf: "center" }} contentFit="contain" /> : null}
-                            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }} numberOfLines={1}>
-                              {item.title}
-                            </Text>
-                            <Text style={{ marginTop: 2, fontSize: 11, color: colors.surpriseSecondary }} numberOfLines={2}>
-                              {item.description}
-                            </Text>
+                            {/* The picture fills the whole tile; the text sits on a dark fade at the bottom. */}
+                            {art ? <Image source={art} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} contentFit="cover" /> : null}
+                            {row.length === 1 ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} /> : null}
+                            <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.25)", "rgba(0,0,0,0)", "rgba(0,0,0,0.8)", "rgba(0,0,0,0.94)"]} locations={[0, 0.3, 0.62, 1]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+                            {row.length === 1 ? (
+                              <View style={{ flex: 1, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                                <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                                  <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
+                                </View>
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }} numberOfLines={1}>
+                                    {item.title}
+                                  </Text>
+                                  <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.82)" }} numberOfLines={1}>
+                                    {item.description}
+                                  </Text>
+                                </View>
+                                {note ? (
+                                  <View style={{ paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center" }}>
+                                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }}>{note}</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            ) : (
+                              <View style={{ flex: 1, padding: 10, justifyContent: "space-between" }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                                    <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
+                                  </View>
+                                  {note ? (
+                                    <View style={{ flexShrink: 1, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center" }}>
+                                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }} numberOfLines={1}>
+                                        {note}
+                                      </Text>
+                                    </View>
+                                  ) : null}
+                                </View>
+                                <View>
+                                  <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }} numberOfLines={1}>
+                                    {item.title}
+                                  </Text>
+                                  <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.82)" }} numberOfLines={2}>
+                                    {item.description}
+                                  </Text>
+                                </View>
+                              </View>
+                            )}
                           </Press>
                         );
                       })}
@@ -514,7 +574,7 @@ export function ShareSurpriseSheet({
                   }}
                 >
                   <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: secret.trim() ? colors.accentFg : colors.muted }}>Envoyer la surprise</Text>
-                  <Sparkles size={18} color={secret.trim() ? colors.accentFg : colors.muted} />
+                  <Send size={18} color={secret.trim() ? colors.accentFg : colors.muted} />
                 </Press>
               </ScrollView>
             </View>
@@ -561,38 +621,52 @@ export function ShareSurpriseSheet({
                     );
                   })}
                 </View>
-              ) : (
-                <Text style={{ color: colors.muted }}>Les styles arrivent bientôt.</Text>
-              )}
-              {kind === "countdown" ? (
-                <View style={{ marginTop: 16 }}>
-                  <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 8 }}>Durée</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                    {countdownChoices.map((choice) => (
-                      <Press
-                        key={choice.seconds}
-                        onPress={() => setOpts({ countdown: { seconds: choice.seconds } })}
-                        style={{
-                          width: "47%",
-                          height: 56,
-                          borderRadius: 8,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: opts.countdown?.seconds === choice.seconds ? "#485160" : "#303746",
-                          borderWidth: 1,
-                          borderColor: opts.countdown?.seconds === choice.seconds ? colors.surpriseGold : colors.hair,
-                        }}
-                      >
-                        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{choice.label}</Text>
-                      </Press>
-                    ))}
-                  </View>
-                </View>
               ) : null}
+            </>
+          ) : drawer === "moment" ? (
+            <>
+              {opts.countdown ? <CountdownPicker value={opts.countdown} onChange={(countdown) => setOpts({ countdown })} /> : null}
+              <Press
+                onPress={() => {
+                  setOpts({});
+                  setDrawer(null);
+                }}
+                style={{ marginTop: 22, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Sans compte à rebours</Text>
+              </Press>
+              <Press
+                onPress={() => setDrawer(null)}
+                style={{ marginTop: 10, height: 44, borderRadius: 999, backgroundColor: colors.surpriseGold, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: colors.surpriseInk, fontFamily: "Inter_600SemiBold" }}>Valider</Text>
+              </Press>
             </>
           ) : (
             <>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                {tabs.length ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: "100%" }} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+                    {tabs.map((g) => {
+                      const on = g.id === activeTab;
+                      return (
+                        <Press
+                          key={g.id}
+                          accessibilityLabel={g.label}
+                          onPress={() => setEventTab(g.id)}
+                          style={{ paddingHorizontal: 14, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.surpriseGold : "#303746", borderWidth: 1, borderColor: on ? colors.surpriseGold : colors.hair }}
+                        >
+                          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: on ? "#0b1220" : colors.fg }}>{g.label}</Text>
+                        </Press>
+                      );
+                    })}
+                  </ScrollView>
+                ) : null}
+                {animCat && !animItems.length ? (
+                  <Text style={{ width: "100%", paddingVertical: 28, textAlign: "center", color: colors.muted, fontSize: 14, lineHeight: 20 }}>
+                    Les animations de cette catégorie arrivent bientôt.
+                  </Text>
+                ) : null}
                 {animItems.map((item) => {
                   const art = wippSrc(item.art);
                   const on = animation === item.id;
@@ -622,8 +696,19 @@ export function ShareSurpriseSheet({
                         alignItems: "center",
                       }}
                     >
-                      {art ? <Image source={art} style={{ width: "100%", height: "78%" }} contentFit="contain" /> : null}
-                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{item.label}</Text>
+                      {!animCat ? (
+                        // Category tile: the picture fills the whole frame, the name sits over it at the bottom.
+                        <>
+                          {art ? <Image source={art} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} contentFit="cover" /> : null}
+                          <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.78)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" }} />
+                          <Text numberOfLines={1} style={{ position: "absolute", left: 8, right: 8, bottom: 8, textAlign: "center", fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" }}>{item.label}</Text>
+                        </>
+                      ) : (
+                        <>
+                          {art ? <Image source={art} style={{ width: "100%", height: "78%" }} contentFit="contain" /> : null}
+                          <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{item.label}</Text>
+                        </>
+                      )}
                       {hasCollection ? <ChevronRight size={16} color={colors.surpriseBright} style={{ position: "absolute", right: 8, top: 8 }} /> : null}
                     </Press>
                   );
@@ -653,7 +738,7 @@ export function ShareSurpriseSheet({
                   <X size={22} color={colors.fg} />
                 </Press>
               </View>
-              <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>Surprise ✨</Text>
+              <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>WIPP Surprise</Text>
               <View style={{ marginTop: 12, alignItems: "center" }}>
                 <SurpriseReveal demo surprise={draft()} onPlayAnimation={(id) => setPreviewPlay({ id, n: ++previewSequence.current })} />
               </View>

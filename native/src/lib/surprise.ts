@@ -1,7 +1,9 @@
 import { Clock3, Gift, Images, PartyPopper, type LucideIcon } from "lucide-react-native";
+import { ANIM_MS } from "../generated/anim-durations";
 
 export type SurpriseType = "scratch" | "countdown" | "gift" | "confetti";
-export type SurpriseOptions = { countdown?: { seconds: number } };
+/** `seconds` after the message was sent; `at` (a chosen date) is turned into seconds when the surprise is sent. */
+export type SurpriseOptions = { countdown?: { seconds: number; at?: number } };
 export type Surprise = {
   id: string;
   message: string;
@@ -11,7 +13,26 @@ export type Surprise = {
   surpriseOptions: SurpriseOptions;
   time: string;
   mine: boolean;
+  /** When the message was sent: a countdown runs on the real clock from there, app open or not. */
+  sentAt?: number;
+  /** Already opened once on this phone. */
+  opened?: boolean;
+  /** A confetti rain falls when the message is revealed. */
+  confetti?: boolean;
 };
+
+const KIND_IDS: SurpriseType[] = ["scratch", "countdown", "gift", "confetti"];
+/**
+ * What travels in the message: the base kind, plus « +confetti » when the rain is on. The lock (countdown)
+ * travels apart, as a number of seconds — so one surprise can be a card, locked, with confetti.
+ */
+export const surpriseKindWire = (surprise: Pick<Surprise, "surpriseType" | "confetti">) =>
+  surprise.confetti && surprise.surpriseType !== "confetti" ? `${surprise.surpriseType}+confetti` : surprise.surpriseType;
+export function parseSurpriseKind(wire: string | undefined | null): { surpriseType: SurpriseType; confetti: boolean } {
+  const parts = (wire ?? "scratch").split("+");
+  const base = KIND_IDS.includes(parts[0] as SurpriseType) ? (parts[0] as SurpriseType) : "scratch";
+  return { surpriseType: base, confetti: base === "confetti" || parts.includes("confetti") };
+}
 
 export type SurpriseDesignItem = { id: string; label: string; mark: string; art?: string };
 export type SurpriseEnter = "bottom" | "left" | "right" | "pop";
@@ -25,12 +46,19 @@ export type SurpriseAnimationItem = {
   durationMs?: number;
   /** Soundtrack played with the animation (can be muted). */
   sound?: string;
+  /** Tab inside a category (Événements: halloween, noel…). */
+  group?: string;
+  /**
+   * The clip opens on a sheet (wrapping paper…) that must hide the whole screen: `w`/`h` are the part of
+   * the frame it takes; the clip starts zoomed on it, then eases back to its normal size after `ms`.
+   */
+  opening?: { w: number; h: number; ms: number };
 };
 export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: string };
 
 export const designPicker: Record<SurpriseType, { label: string; icon: LucideIcon }> = {
   scratch: { label: "Choisir la carte à gratter", icon: Images },
-  countdown: { label: "Choisir le compte à rebours", icon: Clock3 },
+  countdown: { label: "Choisir le moment", icon: Clock3 },
   gift: { label: "Choisir le cadeau", icon: Gift },
   confetti: { label: "Choisir les confettis", icon: PartyPopper },
 };
@@ -64,11 +92,25 @@ export const surpriseDesigns: Record<SurpriseType, SurpriseDesignItem[]> = {
 };
 
 export const countdownChoices = [
-  { seconds: 10, label: "10 secondes" },
   { seconds: 60, label: "1 minute" },
-  { seconds: 300, label: "5 minutes" },
   { seconds: 3600, label: "1 heure" },
+  { seconds: 86_400, label: "24 heures" },
 ];
+
+/** Built-in full-screen confetti rain (not a file): played by SurpriseAnimOverlay. */
+export const CONFETTI_ANIMATION_ID = "wipp-confetti";
+export const CONFETTI_MS = 2600;
+
+/** « 2 j 03:15:00 », « 1:05:09 », « 0:42 ». */
+export function countdownText(seconds: number) {
+  const s = Math.max(0, Math.ceil(seconds));
+  const d = Math.floor(s / 86_400);
+  const h = Math.floor((s % 86_400) / 3600);
+  const two = (n: number) => String(n).padStart(2, "0");
+  const tail = `${two(Math.floor((s % 3600) / 60))}:${two(s % 60)}`;
+  if (d > 0) return `${d} j ${two(h)}:${tail}`;
+  return h > 0 ? `${h}:${tail}` : `${Math.floor(s / 60)}:${two(s % 60)}`;
+}
 
 const clip = (id: string, label: string): SurpriseAnimationItem => ({
   id,
@@ -77,7 +119,7 @@ const clip = (id: string, label: string): SurpriseAnimationItem => ({
   anim: `fx/surprise/anims/${id}.webp`,
   sound: `fx/surprise/anims/${id}.m4a`,
   enter: "pop",
-  durationMs: 10_000,
+  durationMs: ANIM_MS[id] ?? 10_000,
 });
 
 export const amourAnimations: SurpriseAnimationItem[] = [
@@ -95,7 +137,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
     art: "fx/surprise/anims/amour-pluie-cristal-poster.png",
     anim: "fx/surprise/anims/amour-pluie-cristal.webp",
     enter: "pop",
-    durationMs: 7042,
+    durationMs: ANIM_MS["amour-pluie-cristal"],
   },
   {
     id: "amour-fusion",
@@ -103,7 +145,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
     art: "fx/surprise/anims/amour-fusion-poster.png",
     anim: "fx/surprise/anims/amour-fusion.webp",
     enter: "pop",
-    durationMs: 6200,
+    durationMs: ANIM_MS["amour-fusion"],
   },
   {
     id: "amour-bisous",
@@ -111,7 +153,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
     art: "fx/surprise/anims/amour-bisous-poster.png",
     anim: "fx/surprise/anims/amour-bisous.webp",
     enter: "bottom",
-    durationMs: 3200,
+    durationMs: ANIM_MS["amour-bisous"],
   },
   { id: "amour-monstre", label: "Petit monstre", art: "fx/surprise/anims/amour-monstre.png", enter: "pop" },
   { id: "love-hearts", label: "Cœurs", art: "fx/love/love_hearts.png", enter: "bottom" },
@@ -124,6 +166,16 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   { id: "love-rain", label: "Pluie de cœurs", art: "fx/love/love_rain.png" },
   { id: "love-teddy", label: "Ourson", art: "fx/love/love_teddy.png" },
   { id: "love-toast", label: "Toast", art: "fx/love/love_toast.png" },
+  clip("amour-moitie", "Ma moitié"),
+  clip("amour-cle", "La clé de mon cœur"),
+  clip("amour-pingouin", "Mon préféré"),
+  clip("amour-folie", "À la folie"),
+  clip("amour-ampoule", "Tu illumines ma vie"),
+  clip("amour-planer", "Tu me fais planer"),
+  clip("amour-aimants", "Inséparables"),
+  clip("amour-bague", "Pour toujours"),
+  clip("amour-pigeon", "Je t’aime"),
+  clip("amour-maison", "Mon chez-moi, c’est toi"),
 ];
 
 const journeeAnimations: SurpriseAnimationItem[] = [
@@ -158,9 +210,19 @@ const anniversaireAnimations: SurpriseAnimationItem[] = [
   clip("anniversaire-ballons", "Ballons"),
   clip("anniversaire-cupcake", "Cupcake"),
   clip("anniversaire-feux", "Feu d’artifice"),
-  clip("anniversaire-dechirure", "Surprise"),
+  { ...clip("anniversaire-dechirure", "Surprise"), opening: { w: 179 / 270, h: 351 / 480, ms: 4200 } },
   clip("anniversaire-ecran", "Écran brisé"),
   clip("anniversaire-ecran-2", "Écran brisé 2"),
+  clip("anniversaire-voeu", "Fais un vœu"),
+  clip("anniversaire-pinata", "Piñata"),
+  clip("anniversaire-surprise", "Petit chiot"),
+  clip("anniversaire-dj", "C’est ta journée"),
+  clip("anniversaire-dino", "Joyeux anniv’"),
+  clip("anniversaire-hourra", "Hip hip hip, hourra"),
+  clip("anniversaire-tortue", "Toujours aussi jeune"),
+  clip("anniversaire-fanfare", "Happy Birthday"),
+  clip("anniversaire-genie", "Que tous tes vœux se réalisent"),
+  clip("anniversaire-fusee", "Bonne fête !"),
 ];
 
 const retablissementAnimations: SurpriseAnimationItem[] = [
@@ -171,6 +233,16 @@ const retablissementAnimations: SurpriseAnimationItem[] = [
   clip("retablissement-coeur", "Cœur pansé"),
   clip("retablissement-cadre", "Pousse"),
   clip("retablissement-bulle", "Bulle"),
+  clip("retab-ours", "Guéris vite"),
+  clip("retab-microbes", "Bye bye microbes"),
+  clip("retab-tournesol", "Remets-toi vite"),
+  clip("retab-soupe", "Prends soin de toi"),
+  clip("retab-vitamines", "Plein d’énergie"),
+  clip("retab-couverture", "Repose-toi bien"),
+  clip("retab-pansement", "Courage !"),
+  clip("retab-the", "Un petit remontant"),
+  clip("retab-calin", "Gros câlin"),
+  clip("retab-thermo", "Get well soon"),
 ];
 
 const nuitAnimations: SurpriseAnimationItem[] = [
@@ -187,35 +259,171 @@ const nuitAnimations: SurpriseAnimationItem[] = [
   { id: "night-window", label: "Fenêtre", art: "fx/nuit/night_window.png" },
 ];
 
+const amitieAnimations: SurpriseAnimationItem[] = [
+  clip("amitie-puzzle", "On se complète"),
+  clip("amitie-heros", "Mon héros"),
+  clip("amitie-loin", "Loin des yeux"),
+  clip("amitie-meilleurs-amis", "Meilleurs amis"),
+  clip("amitie-calin", "Gros câlin"),
+  clip("amitie-parapluie", "Toujours là pour toi"),
+  clip("amitie-telephone", "Tu me manques"),
+  clip("amitie-soiree", "Soirée entre amis"),
+  clip("amitie-bracelet", "Amis pour la vie"),
+  clip("amitie-ballons", "Merci d’être là"),
+];
+
+const voyageAnimations: SurpriseAnimationItem[] = [
+  clip("voyage-valise", "Bon voyage"),
+  clip("voyage-passeport", "C’est parti"),
+  clip("voyage-vacances", "Bonnes vacances"),
+  clip("voyage-route", "Bonne route"),
+  clip("voyage-montgolfiere", "Profite bien"),
+  clip("voyage-globe", "Où que tu sois"),
+  clip("voyage-carte", "Je pense à toi"),
+  clip("voyage-train", "Rentre bien"),
+  clip("voyage-aventure", "À l’aventure"),
+  clip("voyage-arrivee", "Bonne arrivée"),
+];
+
+/** Bonne nuit: real animations (Grok videos), added as they are made. */
+const nuitClips: SurpriseAnimationItem[] = [
+  clip("nuit-mouton", "Mouton"),
+  clip("nuit-ours", "Beaux rêves"),
+  clip("nuit-etoile", "Douce nuit"),
+  clip("nuit-hibou", "Hibou"),
+  clip("nuit-chaton", "Dors bien"),
+  clip("nuit-reveil", "À demain"),
+  clip("nuit-peche", "Pêche aux étoiles"),
+  clip("nuit-tisane", "Tisane"),
+  clip("nuit-nuage", "Au lit !"),
+  clip("nuit-lune", "Lune et étoiles"),
+];
+
+const beauteAnimations: SurpriseAnimationItem[] = [
+  clip("beaute-rouge", "Tu es magnifique"),
+  clip("beaute-miroir", "La plus belle, c’est toi"),
+  clip("beaute-couronne", "Reine du jour"),
+  clip("beaute-vernis", "Trop stylée"),
+  clip("beaute-parfum", "Tu rayonnes"),
+  clip("beaute-classe", "Quelle classe"),
+  clip("beaute-spa", "Prends soin de toi"),
+  clip("beaute-talons", "Sublime"),
+  clip("beaute-papillon", "Tu es unique"),
+  clip("beaute-look", "Wow, ce look"),
+];
+
+/** Événements: filled as the seasonal animations are made (Halloween, Saint-Valentin, Noël…). */
+/** Tabs of the « Événements » category, in display order. A tab only shows once it has animations. */
+export const eventGroups: { id: string; label: string }[] = [
+  { id: "halloween", label: "Halloween" },
+  { id: "noel", label: "Noël" },
+  { id: "nouvel-an", label: "Bonne année" },
+  { id: "saint-valentin", label: "Saint-Valentin" },
+  { id: "paques", label: "Pâques" },
+  { id: "fete-meres", label: "Fête des mères" },
+  { id: "fete-peres", label: "Fête des pères" },
+  { id: "action-de-grace", label: "Action de grâce" },
+  { id: "aid", label: "Aïd" },
+  { id: "felicitations", label: "Félicitations" },
+];
+const eventClip = (group: string, id: string, label: string): SurpriseAnimationItem => ({ ...clip(id, label), group });
+const evenementsAnimations: SurpriseAnimationItem[] = [
+  eventClip("halloween", "event-halloween", "Citrouille"),
+  eventClip("halloween", "event-halloween-sorciere", "Sorcière"),
+  eventClip("halloween", "event-halloween-araignee", "Araignée"),
+  eventClip("halloween", "event-halloween-monstre", "Petit monstre"),
+  eventClip("halloween", "event-halloween-chaudron", "Chaudron"),
+  eventClip("halloween", "event-halloween-fantomes", "Fantômes"),
+  eventClip("halloween", "event-halloween-vampire", "Vampire"),
+  eventClip("halloween", "event-halloween-momie", "Momie"),
+  eventClip("halloween", "event-halloween-bonbons", "Bonbons"),
+  eventClip("halloween", "event-halloween-squelette", "Squelette"),
+  eventClip("noel", "event-noel", "Sapin"),
+  eventClip("noel", "event-noel-renne", "Merry Christmas"),
+  eventClip("noel", "event-noel-pere", "Ho ho ho !"),
+  eventClip("noel", "event-noel-bonhomme", "Joyeux Noël"),
+  eventClip("noel", "event-noel-epices", "Miam, c’est Noël"),
+  eventClip("noel", "event-noel-lutins", "Joyeuses fêtes"),
+  eventClip("noel", "event-noel-chiot", "Surprise de Noël"),
+  eventClip("noel", "event-noel-luge", "Vive le vent"),
+  eventClip("noel", "event-noel-souris", "Petit Papa Noël"),
+  eventClip("noel", "event-noel-etoile", "Paix et joie"),
+  eventClip("nouvel-an", "event-nouvel-an", "Champagne"),
+  eventClip("nouvel-an", "event-nouvel-an-horloge", "Bonne année"),
+  eventClip("nouvel-an", "event-nouvel-an-feux", "Happy New Year"),
+  eventClip("nouvel-an", "event-nouvel-an-resolutions", "Bonnes résolutions"),
+  eventClip("nouvel-an", "event-nouvel-an-decompte", "3, 2, 1… Bonne année !"),
+  eventClip("nouvel-an", "event-nouvel-an-calendrier", "Nouveau départ"),
+  eventClip("nouvel-an", "event-nouvel-an-cotillons", "Que la fête commence"),
+  eventClip("nouvel-an", "event-nouvel-an-chance", "Santé, bonheur, prospérité"),
+  eventClip("nouvel-an", "event-nouvel-an-coq", "Une belle année commence"),
+  eventClip("nouvel-an", "event-nouvel-an-hibou", "Meilleurs vœux"),
+  eventClip("saint-valentin", "event-saint-valentin", "Cupidon"),
+  eventClip("saint-valentin", "event-saint-valentin-chocolats", "Sois ma Valentine"),
+  eventClip("saint-valentin", "event-saint-valentin-herisson", "Joyeuse Saint-Valentin"),
+  eventClip("saint-valentin", "event-saint-valentin-lettre", "Be my Valentine"),
+  eventClip("saint-valentin", "event-saint-valentin-flamants", "Toi + moi"),
+  eventClip("saint-valentin", "event-saint-valentin-grenouille", "Je craque pour toi"),
+  eventClip("saint-valentin", "event-saint-valentin-fraise", "Tu me fais fondre"),
+  eventClip("saint-valentin", "event-saint-valentin-robot", "Mon cœur bat pour toi"),
+  eventClip("saint-valentin", "event-saint-valentin-bonbons", "XOXO"),
+  eventClip("saint-valentin", "event-saint-valentin-ourson", "Mon Valentin"),
+  eventClip("paques", "event-paques", "Poussin"),
+  eventClip("fete-meres", "event-fete-meres", "Bouquet géant"),
+  eventClip("fete-peres", "event-fete-peres", "Trophée"),
+  eventClip("action-de-grace", "event-action-de-grace", "Dinde"),
+  eventClip("aid", "event-aid", "Lanternes"),
+  eventClip("felicitations", "event-felicitations", "Diplôme"),
+];
+
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
-  { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/bonjour-bonne-journee-poster.png", collection: "bonjour" },
+  { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/cat-bonjour.jpg", collection: "bonjour" },
   {
     id: "anniversaire",
     label: "Anniversaire",
-    art: "fx/surprise/anims/anniversaire-gateau-poster.png",
+    art: "fx/surprise/anims/cat-anniversaire.jpg",
     collection: "anniversaire",
   },
-  { id: "amour", label: "Amour", art: "fx/surprise/anims/animation-amour.jpg", collection: "amour" },
+  { id: "amour", label: "Amour", art: "fx/surprise/anims/cat-amour.jpg", collection: "amour" },
   {
     id: "bon-retablissement",
     label: "Bon rétablissement",
-    art: "fx/surprise/anims/retablissement-bouquet-poster.png",
+    art: "fx/surprise/anims/cat-retablissement.jpg",
     collection: "bon-retablissement",
   },
-  { id: "beaute", label: "Beauté", art: "fx/surprise/anims/animation-beaute.jpg" },
-  { id: "bonne-journee", label: "Bonne journée", art: "fx/surprise/anims/animation-journee.jpg", collection: "bonne-journee" },
-  { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/animation-nuit.jpg", collection: "bonne-nuit" },
-  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/animation-voyage.jpg" },
-  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/animation-amitie.jpg" },
+  { id: "beaute", label: "Beauté", art: "fx/surprise/anims/cat-beaute.jpg", collection: "beaute" },
+  // Fêtes et temps forts de l'année (Halloween, Saint-Valentin, Noël, Action de grâce…).
+  { id: "evenements", label: "Événements", art: "fx/surprise/anims/cat-evenements.jpg", collection: "evenements" },
+  { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/cat-nuit.jpg", collection: "bonne-nuit" },
+  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/cat-voyage.jpg", collection: "voyage" },
+  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg", collection: "amitie" },
 ];
 
+/** Only real animations are offered: a still picture never appears in the picker. */
+// Withdrawn from the picker (poor background); kept in the lists so surprises already sent still play.
+const retired = new Set([
+  "amour-pluie-cristal",
+  "amour-bisous",
+  "amour-buee",
+  "amour-fusion",
+  "anniversaire-ecran",
+  "anniversaire-ecran-2",
+  "anniversaire-ballons",
+]);
+const moving = (items: SurpriseAnimationItem[]) => items.filter((item) => Boolean(item.anim) && !retired.has(item.id));
+
+// The old still pictures (day_*, love_*, night_*) stay in `surpriseAnimations`, so surprises already sent
+// with them still show — they are just no longer offered.
 export const animationCollections: Record<string, SurpriseAnimationItem[]> = {
-  bonjour: bonjourAnimations,
-  anniversaire: anniversaireAnimations,
-  amour: amourAnimations,
-  "bon-retablissement": retablissementAnimations,
-  "bonne-journee": journeeAnimations,
-  "bonne-nuit": nuitAnimations,
+  bonjour: moving(bonjourAnimations),
+  anniversaire: moving(anniversaireAnimations),
+  amour: moving(amourAnimations),
+  "bon-retablissement": moving(retablissementAnimations),
+  evenements: moving(evenementsAnimations),
+  "bonne-nuit": moving(nuitClips),
+  voyage: moving(voyageAnimations),
+  amitie: moving(amitieAnimations),
+  beaute: moving(beauteAnimations),
 };
 
 export const surpriseKindArt: Record<SurpriseType, string> = {
@@ -232,6 +440,11 @@ export const surpriseAnimations: SurpriseAnimationItem[] = [
   ...retablissementAnimations,
   ...journeeAnimations,
   ...nuitAnimations,
+  ...nuitClips,
+  ...evenementsAnimations,
+  ...amitieAnimations,
+  ...voyageAnimations,
+  ...beauteAnimations,
   ...surpriseAnimationCategories.filter((item) => !item.collection),
 ];
 

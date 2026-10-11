@@ -1,5 +1,9 @@
 # WIPP — Build Android sur Windows (instructions pour Claude sur Windows)
 
+> **À LIRE EN PREMIER (11 octobre 2026) : `ETAPE-E-VERSION-8-ANDROID.md`.** Il décrit le build
+> **versionCode 8**, ce qui a changé et les tests à faire. Les mentions « versionCode 6 » plus bas datent
+> d'une version précédente ; les règles absolues, elles, restent valables.
+
 Tu es Claude sur le PC Windows de l'utilisatrice. Ton rôle : **récupérer le dernier `main`,
 préparer le projet et produire l'AAB Android signé** avec Android Studio, puis faire un rapport.
 Ne change pas l'architecture du projet. Suis ces étapes dans l'ordre.

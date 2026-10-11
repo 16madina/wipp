@@ -49,11 +49,14 @@ const AUDIENCE_LABEL = {
   only_me: "Moi seul",
 } as const;
 
-export function NewStoryScreen() {
+/** `shared`: content coming from another app (share menu) — the composer opens with it already in place. */
+export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video"; uri: string; mime: string } | { kind: "text"; text: string } }) {
   const pop = useWippStore((s) => s.pop);
   const insets = useSafeAreaInsets();
-  const [phase, setPhase] = useState<Phase>({ name: "gallery" });
-  const [text, setText] = useState("");
+  const [phase, setPhase] = useState<Phase>(() =>
+    !shared ? { name: "gallery" } : shared.kind === "text" ? { name: "text" } : { name: "edit", uri: shared.uri, kind: shared.kind, mime: shared.mime },
+  );
+  const [text, setText] = useState(shared?.kind === "text" ? shared.text.slice(0, 500) : "");
   const [audience, setAudience] = useState<"contacts" | "only_me" | "close">("contacts");
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [error, setError] = useState("");

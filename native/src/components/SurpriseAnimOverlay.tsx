@@ -1,3 +1,5 @@
+import { ConfettiBurst } from "./ConfettiBurst";
+import { CONFETTI_ANIMATION_ID } from "../lib/surprise";
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
@@ -6,7 +8,11 @@ import { animSoundOn, setAnimSound, useAnimSound } from "../lib/anim-sound";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
 
-/** Transparent artwork floats over the chat without intercepting touches. */
+/**
+ * Transparent artwork floats over the chat without intercepting touches.
+ * Full-screen play (« centered »): the animation takes the WHOLE width of the screen and is never cropped,
+ * so its text always stays readable; phones are taller than the 9:16 clips, the rest stays transparent.
+ */
 export function SurpriseAnimOverlay({
   animationId,
   playKey = 0,
@@ -34,16 +40,31 @@ export function SurpriseAnimOverlay({
   const done = useRef(onDone);
   const soundRef = useRef<() => void>(() => undefined);
   const soundOn = useAnimSound();
+  // The countdown starts when the picture is really on screen (not while it downloads), and the fade-out
+  // ends BEFORE the file loops — an animation must never be seen starting a second time.
+  const [shown, setShown] = useState(0);
   done.current = onDone;
 
   useEffect(() => {
     if (!item || !src) return;
-    const hold = reduceMotion ? 1400 : Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
+    const animated = Boolean(item.anim) && !reduceMotion;
+    // Still loading: wait for onDisplay (4 s at most, then go on anyway).
+    if (animated && shown !== playKey + 1) {
+      const giveUp = setTimeout(() => setShown(playKey + 1), 4000);
+      return () => clearTimeout(giveUp);
+    }
+    const length = Math.max(1400, item.durationMs ?? SURPRISE_ANIMATION_MS);
+    const hold = reduceMotion ? 1400 : animated ? Math.max(1000, length - 480) : length;
     opacity.setValue(0);
-    scale.setValue(reduceMotion ? 1 : 0.82);
+    // A clip that opens on a sheet starts zoomed so the sheet hides the whole screen, then eases back.
+    const fitW = Math.min(width, (height * 9) / 16);
+    const zoom = centered && animated && item.opening ? Math.max(width / (item.opening.w * fitW), height / (item.opening.h * fitW * (16 / 9))) : 1;
+    scale.setValue(zoom > 1 ? zoom : reduceMotion ? 1 : 0.82);
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 220, useNativeDriver: true }),
+      zoom > 1
+        ? Animated.sequence([Animated.delay(item.opening?.ms ?? 0), Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true })])
+        : Animated.timing(scale, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
     const fadeAt = setTimeout(() => {
       Animated.timing(opacity, { toValue: 0, duration: 320, useNativeDriver: true }).start();
@@ -75,9 +96,12 @@ export function SurpriseAnimOverlay({
       opacity.stopAnimation();
       scale.stopAnimation();
     };
-  }, [item?.id, playKey, opacity, scale, src, reduceMotion]);
+  }, [item?.id, playKey, opacity, scale, src, reduceMotion, shown, centered, width, height]);
 
+  if (animationId === CONFETTI_ANIMATION_ID) return <ConfettiBurst key={playKey} onDone={onDone} />;
   if (!item || !src) return null;
+  // Only real animations go full screen; a still picture keeps its small frame.
+  const full = centered && Boolean(item.anim) && !reduceMotion;
 
   return (
     <View pointerEvents="box-none" style={centered ? [StyleSheet.absoluteFillObject, { zIndex: 30, alignItems: "center", justifyContent: "center" }] : { marginTop: 8, width: "100%", alignItems: "center" }}>
@@ -93,7 +117,7 @@ export function SurpriseAnimOverlay({
           {soundOn ? <Volume2 size={20} color="#fff" /> : <VolumeX size={20} color="#fff" />}
         </Pressable>
       ) : null}
-      <Animated.View pointerEvents="none" style={{ width: centered ? Math.min(width - 32, 360) : 200, height: centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
+      <Animated.View pointerEvents="none" style={{ width: full ? "100%" : centered ? Math.min(width - 32, 360) : 200, height: full ? "100%" : centered ? Math.min(height * 0.72, 640) : 280, backgroundColor: "transparent", opacity, transform: [{ scale }] }}>
         <Image
           ref={img}
           key={`${item.id}:${playKey}`}
@@ -106,6 +130,7 @@ export function SurpriseAnimOverlay({
           cachePolicy="memory-disk"
           recyclingKey={`${item.id}:${playKey}`}
           onDisplay={() => {
+            setShown(playKey + 1);
             if (Platform.OS !== "web" && !reduceMotion) void img.current?.startAnimating();
           }}
         />

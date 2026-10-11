@@ -8,7 +8,7 @@ import { Press } from "./ui";
  * Small glossy 3D-looking gift box: it floats and gives a little shake now and then,
  * with the kind of surprise written underneath.
  */
-export function GiftParcel({ onPress, kindLabel, footer }: { onPress: () => void; kindLabel?: string; footer?: string }) {
+export function GiftParcel({ onPress, kindLabel, footer, locked }: { onPress: () => void; kindLabel?: string; footer?: string; locked?: boolean }) {
   const bob = useRef(new Animated.Value(0)).current;
   const shake = useRef(new Animated.Value(0)).current;
 
@@ -40,7 +40,7 @@ export function GiftParcel({ onPress, kindLabel, footer }: { onPress: () => void
   const shadow = bob.interpolate({ inputRange: [0, 1], outputRange: [1, 0.75] });
 
   return (
-    <Press onPress={onPress} style={{ flex: 1, backgroundColor: "#100c08" }} accessibilityLabel={`Surprise${kindLabel ? ` : ${kindLabel}` : ""}`}>
+    <Press onPress={onPress} style={{ flex: 1, backgroundColor: "#100c08" }} accessibilityLabel={`Surprise${kindLabel ? ` : ${kindLabel}` : ""}${locked ? ", verrouillée" : ""}`}>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 }}>
         <Animated.View style={{ transform: [{ translateY: floatY }, { rotate }], alignItems: "center" }}>
           <Animated.View style={{ transform: [{ translateY: lidY }] }}>
@@ -78,12 +78,21 @@ export function GiftParcel({ onPress, kindLabel, footer }: { onPress: () => void
             <Rect x={12} y={0} width={14} height={46} rx={5} fill="rgba(255,255,255,0.18)" />
             <Rect x={36} y={0} width={12} height={46} fill="url(#ribbon)" />
             <Rect x={12} y={0} width={60} height={5} fill="rgba(0,0,0,0.18)" />
+            {locked ? (
+              <>
+                {/* Padlock on the ribbon: the parcel cannot be opened yet. */}
+                <Path d="M35 22 v-5 a7 7 0 0 1 14 0 v5" stroke="#F2F2F5" strokeWidth={3.2} fill="none" strokeLinecap="round" />
+                <Rect x={30} y={21} width={24} height={19} rx={4} fill="#1B1E27" stroke="#F5C94F" strokeWidth={1.6} />
+                <Ellipse cx={42} cy={29} rx={2.6} ry={2.6} fill="#F5C94F" />
+                <Rect x={41} y={30} width={2} height={5.5} rx={1} fill="#F5C94F" />
+              </>
+            ) : null}
           </Svg>
         </Animated.View>
         <Animated.View style={{ marginTop: 2, width: 46, height: 5, borderRadius: 23, backgroundColor: "rgba(245,201,79,0.10)", transform: [{ scaleX: shadow }] }} />
         <Text style={{ marginTop: 4, fontFamily: "GreatVibes_400Regular", fontSize: 28, lineHeight: 32, color: colors.surpriseBright }}>Surprise</Text>
         {kindLabel ? <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.surprisePaper }}>{kindLabel}</Text> : null}
-        {footer ? <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,240,210,0.6)" }}>{footer}</Text> : null}
+        {footer ? <Text style={{ marginTop: 2, fontSize: 11, fontFamily: locked ? "Inter_600SemiBold" : undefined, color: locked ? "#F5C94F" : "rgba(255,240,210,0.6)" }}>{footer}</Text> : null}
       </View>
     </Press>
   );
