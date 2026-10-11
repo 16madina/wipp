@@ -17,7 +17,10 @@ import {
   MapPin,
   PartyPopper,
   Smile,
-  Sparkles,
+  Clapperboard,
+  PenLine,
+  Send,
+  Ticket,
   UserRound,
   WandSparkles,
   X,
@@ -64,7 +67,7 @@ function momentLabel(c: NonNullable<SurpriseOptions["countdown"]>) {
 }
 
 const KINDS = [
-  { id: "scratch" as const, title: "Carte à gratter", description: "Ton message est caché sous la carte. Touche pour la choisir.", Icon: Sparkles },
+  { id: "scratch" as const, title: "Carte à gratter", description: "Ton message est caché sous la carte. Touche pour la choisir.", Icon: Ticket },
   { id: "countdown" as const, title: "Compte à rebours", description: "Le paquet reste verrouillé jusqu’au moment choisi.", Icon: Clock3 },
   { id: "confetti" as const, title: "Confettis", description: "Une pluie de confettis quand le message apparaît.", Icon: PartyPopper },
 ];
@@ -387,8 +390,8 @@ export function ShareSurpriseSheet({
                       onPress={() => setAssist((v) => !v)}
                       style={{ borderRadius: 999, backgroundColor: colors.accent, paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 4 }}
                     >
-                      <WandSparkles size={14} color={colors.accentFg} />
-                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Assistant ✧</Text>
+                      <PenLine size={14} color={colors.accentFg} />
+                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Assistant</Text>
                     </Press>
                   </View>
                   <Text style={{ textAlign: "right", fontSize: 11, color: colors.surpriseSecondary }}>
@@ -449,7 +452,7 @@ export function ShareSurpriseSheet({
                     }}
                     style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
                   >
-                    <WandSparkles size={20} color={colors.surpriseBright} />
+                    <Clapperboard size={20} color={colors.surpriseBright} />
                     <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Ajouter une animation</Text>
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
@@ -478,7 +481,8 @@ export function ShareSurpriseSheet({
                             style={{
                               flex: 1,
                               minWidth: 0,
-                              height: 168,
+                              // Confettis sits alone on its row: a low band, so « Envoyer » stays on screen.
+                              height: row.length === 1 ? 76 : 150,
                               borderRadius: 12,
                               backgroundColor: colors.shareTile,
                               borderWidth: on ? 2 : 1,
@@ -488,29 +492,51 @@ export function ShareSurpriseSheet({
                           >
                             {/* The picture fills the whole tile; the text sits on a dark fade at the bottom. */}
                             {art ? <Image source={art} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} contentFit="cover" /> : null}
+                            {row.length === 1 ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} /> : null}
                             <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.25)", "rgba(0,0,0,0)", "rgba(0,0,0,0.8)", "rgba(0,0,0,0.94)"]} locations={[0, 0.3, 0.62, 1]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-                            <View style={{ flex: 1, padding: 10, justifyContent: "space-between" }}>
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            {row.length === 1 ? (
+                              <View style={{ flex: 1, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
                                 <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
                                   <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
                                 </View>
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }} numberOfLines={1}>
+                                    {item.title}
+                                  </Text>
+                                  <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.82)" }} numberOfLines={1}>
+                                    {item.description}
+                                  </Text>
+                                </View>
                                 {note ? (
-                                  <View style={{ flexShrink: 1, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center" }}>
-                                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }} numberOfLines={1}>
-                                      {note}
-                                    </Text>
+                                  <View style={{ paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center" }}>
+                                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }}>{note}</Text>
                                   </View>
                                 ) : null}
                               </View>
-                              <View>
-                                <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }} numberOfLines={1}>
-                                  {item.title}
-                                </Text>
-                                <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.82)" }} numberOfLines={2}>
-                                  {item.description}
-                                </Text>
+                            ) : (
+                              <View style={{ flex: 1, padding: 10, justifyContent: "space-between" }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: on ? colors.surpriseGold : "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                                    <item.Icon size={16} color={on ? colors.surpriseInk : colors.surpriseBright} />
+                                  </View>
+                                  {note ? (
+                                    <View style={{ flexShrink: 1, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center" }}>
+                                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }} numberOfLines={1}>
+                                        {note}
+                                      </Text>
+                                    </View>
+                                  ) : null}
+                                </View>
+                                <View>
+                                  <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" }} numberOfLines={1}>
+                                    {item.title}
+                                  </Text>
+                                  <Text style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.82)" }} numberOfLines={2}>
+                                    {item.description}
+                                  </Text>
+                                </View>
                               </View>
-                            </View>
+                            )}
                           </Press>
                         );
                       })}
@@ -548,7 +574,7 @@ export function ShareSurpriseSheet({
                   }}
                 >
                   <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: secret.trim() ? colors.accentFg : colors.muted }}>Envoyer la surprise</Text>
-                  <Sparkles size={18} color={secret.trim() ? colors.accentFg : colors.muted} />
+                  <Send size={18} color={secret.trim() ? colors.accentFg : colors.muted} />
                 </Press>
               </ScrollView>
             </View>

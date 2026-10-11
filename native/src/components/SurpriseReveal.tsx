@@ -132,7 +132,7 @@ export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { 
               {surprise.message}
             </Text>
             {phase === "open" ? (
-              <Text style={{ marginTop: 6, fontSize: 10, color: "rgba(10,11,16,0.7)" }}>✨ Surprise découverte</Text>
+              <Text style={{ marginTop: 6, fontSize: 10, color: "rgba(10,11,16,0.7)" }}>Surprise découverte</Text>
             ) : null}
           </View>
         ) : null}
