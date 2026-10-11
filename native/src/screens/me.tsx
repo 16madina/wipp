@@ -33,8 +33,7 @@ import {
   UserPlus,
   Store,
   Sun,
-  Check,
-} from "lucide-react-native";
+  Check, Star } from "lucide-react-native";
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
 import { WippBadge } from "../components/WippBadge";
@@ -84,6 +83,9 @@ import { EventCard } from "../components/event-parts";
 import { wippSrc } from "../lib/assets";
 
 /** Personal phrase: a readable handwritten script, slightly slanted. */
+
+/** « Noter WIPP » : the review page of the store this phone uses (WIPP Messenger on the App Store, com.wipp.app on Google Play). */
+const RATE_URL = Platform.OS === "ios" ? "https://apps.apple.com/app/id6815072465?action=write-review" : "https://play.google.com/store/apps/details?id=com.wipp.app";
 
 export function MeScreen() {
   const t = useT();
@@ -260,6 +262,7 @@ export function MeScreen() {
         <View style={{ marginTop: 16 }}>
           <Section title={t("devicesHelp")}>
             <Row icon={<HelpCircle size={16} color={colors.fg} />} label={t("help")} onPress={() => push({ name: "help" })} />
+            <Row icon={<Star size={16} color={colors.fg} />} label={t("rateWipp")} onPress={() => void Linking.openURL(RATE_URL).catch(() => undefined)} />
             <Row icon={<FileText size={16} color={colors.fg} />} label={t("termsOfUse")} onPress={() => push({ name: "legal", doc: "terms" })} />
             <Row icon={<Shield size={16} color={colors.fg} />} label={t("privacyPolicy")} onPress={() => push({ name: "legal", doc: "privacy" })} />
             <Row icon={<BadgeCheck size={16} color={colors.fg} />} label="18 ans et plus" onPress={() => push({ name: "legal", doc: "age" })} />
