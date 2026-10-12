@@ -21,7 +21,12 @@ export function callKeepAvailable() {
   return keep != null && Platform.OS !== "web";
 }
 
-export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (callId: string) => void) {
+/** `onStart`: a WIPP call was touched in the iPhone's Recents — call that person back (`handle` is « @username »). */
+export async function setupCallKeep(
+  onAnswer: (callId: string) => void,
+  onEnd: (callId: string) => void,
+  onStart?: (handle: string, video: boolean) => void,
+) {
   // CallKit does not run on the iOS simulator: it reports every call as ended,
   // which the app turned into an automatic "decline". Use the in-app screen there.
   if (Platform.OS === "web" || keep || !Device.isDevice) return;
@@ -55,6 +60,12 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
         },
       },
     });
+    type StartData = { handle?: string; video?: boolean; callUUID?: string };
+    const start = (data: StartData) => {
+      // Only a tap in Recents (no callUUID): an outgoing call WIPP started itself is not ours to restart.
+      if (data?.handle && !data.callUUID) onStart?.(data.handle, Boolean(data.video));
+    };
+    (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", start);
     keep.addEventListener("answerCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) {
@@ -68,6 +79,11 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
       "didLoadWithEvents",
       (events) => {
         for (const e of events ?? []) {
+          // WIPP was closed and opened by a tap in Recents.
+          if (e.name === "RNCallKeepDidReceiveStartCallAction") {
+            start(e.data as StartData);
+            continue;
+          }
           if (e.name !== "RNCallKeepPerformAnswerCallAction" || !e.data?.callUUID) continue;
           const id = uuidToCall.get(e.data.callUUID);
           if (id) {

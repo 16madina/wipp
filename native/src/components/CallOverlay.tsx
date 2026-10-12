@@ -96,6 +96,16 @@ export function CallOverlay() {
         const live = useCallSession.getState().session;
         if (live?.callId === callId) void endCurrentCall();
       },
+      (handle, video) => {
+        // Touched in the iPhone's Recents: call that contact back, unless a call is already going on.
+        if (useCallSession.getState().session) return;
+        const st = useWippStore.getState();
+        const wanted = handle.trim().toLowerCase();
+        const user = Object.values(st.users).find((u) => u?.id?.startsWith("srvuser:") && u.username && `@${u.username}`.toLowerCase() === wanted);
+        if (!user || st.blockedIds.includes(user.id)) return;
+        if (st.stack.some((s) => s.name === "active-call")) return;
+        st.push({ name: "active-call", userId: user.id, kind: video ? "video" : "audio", dir: "out", group: false });
+      },
     );
   }, []);
 
