@@ -45,6 +45,7 @@ import {
   WgoTouchScreen,
 } from "./connect";
 import { CallOverlay } from "../components/CallOverlay";
+import { launchedForCall } from "../lib/push/android-call";
 import { ScreenErrorBoundary } from "../components/ScreenErrorBoundary";
 import { installCrashLog, noteScreen } from "../lib/crash-log";
 
@@ -306,7 +307,9 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
 }
 
 export function AppShell() {
-  const [introDone, setIntroDone] = useState(false);
+  // Started by an incoming call (phone locked, WIPP closed): no intro video, straight to the call screen.
+  const [forCall] = useState(() => launchedForCall());
+  const [introDone, setIntroDone] = useState(forCall);
   const [authReady, setAuthReady] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState(false);
   const stack = useWippStore((s) => s.stack);
@@ -493,6 +496,7 @@ export function AppShell() {
   }, [authReady, firebaseUser, hasShareIntent, top.name]);
 
   if (!introDone || !authReady) {
+    if (forCall) return <View style={{ flex: 1, backgroundColor: "#02081e" }} />;
     return <IntroSplash onDone={() => setIntroDone(true)} />;
   }
 

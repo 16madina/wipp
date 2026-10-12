@@ -13,6 +13,8 @@ import com.facebook.react.common.ReleaseLevel
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 
+import com.oney.WebRTCModule.WebRTCModuleOptions
+
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 
@@ -45,6 +47,9 @@ class MainApplication : Application(), ReactApplication {
     } catch (e: IllegalArgumentException) {
       ReleaseLevel.STABLE
     }
+    // Screen sharing in a live: Android only allows the capture while this foreground service runs
+    // (it shows the ongoing notification and keeps the share alive outside WIPP).
+    WebRTCModuleOptions.getInstance().enableMediaProjectionService = true
     loadReactNative(this)
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }

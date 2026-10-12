@@ -43,7 +43,20 @@ function withWippCallNative(config) {
     main.$["android:turnScreenOn"] = "true";
     // CallKeep: registerPhoneAccount() throws a SecurityException at startup without this service.
     const app = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
-    app.service = (app.service || []).filter((s) => !String(s.$?.["android:name"]).startsWith("io.wazo.callkeep."));
+    app.service = (app.service || []).filter((s) => {
+      const name = String(s.$?.["android:name"]);
+      return !name.startsWith("io.wazo.callkeep.") && name !== "app.notifee.core.ForegroundService";
+    });
+    // Ongoing call / screen share notification (lib/calls/android-ongoing.ts): notifee declares its service as
+    // « shortService » only, Android 14 needs the real types.
+    app.service.push({
+      $: {
+        "android:name": "app.notifee.core.ForegroundService",
+        "android:exported": "false",
+        "android:foregroundServiceType": "phoneCall|camera|microphone|mediaProjection",
+        "tools:replace": "android:foregroundServiceType",
+      },
+    });
     app.service.push(
       {
         $: {
