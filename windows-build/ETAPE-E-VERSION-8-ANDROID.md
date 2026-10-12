@@ -81,6 +81,13 @@ Ce `main` contient WIPP 1.1 (directs, partage d'écran). Le manifeste déclare
 - Panneau de stickers : la grille s'anime par petits groupes (4 images à la fois, un seul clip vidéo à la fois).
   ⚠️ À vérifier sur Android : pas de ralentissement en laissant le panneau ouvert une minute.
 
+**Ajouts du 12 octobre, déjà sur `main`** (pas dans le build iOS 6 envoyé à Apple)
+- Onglet Appels : l'historique n'est plus vidé à chaque synchronisation (`lib/store.ts`).
+- Appel vidéo sortant à deux : la caméra de l'appelant s'affiche dès la sonnerie, puis la même capture est
+  publiée à la connexion (`CallOverlay.tsx`, `CallScreen.tsx`). ⚠️ À vérifier sur Android : on se voit pendant
+  la sonnerie, pas de coupure quand l'autre décroche, la caméra s'éteint si on raccroche avant la réponse.
+- iPhone seulement : appels WIPP dans les Récents du téléphone et rappel au toucher (CallKit). Rien à faire sur Android.
+
 ## 4. Tests à faire faire à l'utilisatrice sur le Samsung
 
 1. WIPP Surprise : carte + compte à rebours 1 minute + confettis, envoyée d'un compte à l'autre, la
