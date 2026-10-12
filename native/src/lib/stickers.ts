@@ -37,12 +37,12 @@ const ELLE: StickerDef[] = [
   { id: "valide", pack: "femme", src: "/stickers/valide.webp", anim: "/stickers/valide.mp4?v=3", labelFr: "C’est validé !", labelEn: "Approved!" },
   { id: "j-arrive", pack: "femme", src: "/stickers/j-arrive.webp", anim: "/stickers/j-arrive.mp4?v=3", labelFr: "J’arrive !", labelEn: "On my way!" },
   { id: "bonne-nuit", pack: "femme", src: "/stickers/bonne-nuit.webp", anim: "/stickers/bonne-nuit.mp4?v=3", loopSoft: true, labelFr: "Bonne nuit", labelEn: "Good night" },
-  { id: "bon-matin", pack: "femme", src: "/stickers/bon-matin.webp", anim: "/stickers/bon-matin.mp4?v=3", loopSoft: true, labelFr: "Bon matin !", labelEn: "Good morning!" },
-  { id: "appelle-moi", pack: "femme", src: "/stickers/appelle-moi.webp", anim: "/stickers/appelle-moi.mp4?v=3", labelFr: "Appelle-moi !", labelEn: "Call me!" },
-  { id: "bisous", pack: "femme", src: "/stickers/bisous.webp", anim: "/stickers/bisous.mp4?v=3", loopSoft: true, labelFr: "Bisous", labelEn: "Kisses" },
-  { id: "bravo", pack: "femme", src: "/stickers/bravo.webp", anim: "/stickers/bravo.mp4?v=3", labelFr: "Bravo !", labelEn: "Bravo!" },
+  { id: "bon-matin", pack: "comique", src: "/stickers/bon-matin.webp", anim: "/stickers/bon-matin.mp4?v=3", loopSoft: true, labelFr: "Bon matin !", labelEn: "Good morning!" },
+  { id: "appelle-moi", pack: "comique", src: "/stickers/appelle-moi.webp", anim: "/stickers/appelle-moi.mp4?v=3", labelFr: "Appelle-moi !", labelEn: "Call me!" },
+  { id: "bisous", pack: "comique", src: "/stickers/bisous.webp", anim: "/stickers/bisous.mp4?v=3", loopSoft: true, labelFr: "Bisous", labelEn: "Kisses" },
+  { id: "bravo", pack: "comique", src: "/stickers/bravo.webp", anim: "/stickers/bravo.mp4?v=3", labelFr: "Bravo !", labelEn: "Bravo!" },
   { id: "laisse-tomber", pack: "femme", src: "/stickers/laisse-tomber.webp", anim: "/stickers/laisse-tomber.mp4?v=3", labelFr: "Laisse tomber !", labelEn: "Never mind!" },
-  { id: "connecte", pack: "femme", src: "/stickers/connecte.webp", anim: "/stickers/connecte.mp4?v=3", labelFr: "Connecté !", labelEn: "Connected!" },
+  { id: "connecte", pack: "comique", src: "/stickers/connecte.webp", anim: "/stickers/connecte.mp4?v=3", labelFr: "Connecté !", labelEn: "Connected!" },
 ];
 
 const LUI: StickerDef[] = [
@@ -61,7 +61,7 @@ const LUI: StickerDef[] = [
   { id: "lui-laisse-tomber", pack: "homme", src: "/stickers/lui/laisse-tomber.webp", anim: "/stickers/lui/laisse-tomber.mp4?v=1", labelFr: "Laisse tomber !", labelEn: "Never mind!" },
   { id: "lui-bravo", pack: "homme", src: "/stickers/lui/bravo.webp", anim: "/stickers/lui/bravo.mp4?v=1", labelFr: "Bravo !", labelEn: "Bravo!" },
   { id: "lui-respect", pack: "homme", src: "/stickers/lui/respect.webp", anim: "/stickers/lui/respect.mp4?v=1", labelFr: "Respect !", labelEn: "Respect!" },
-  { id: "lui-connecte", pack: "homme", src: "/stickers/lui/connecte.webp", anim: "/stickers/lui/connecte.mp4?v=1", labelFr: "Connecté !", labelEn: "Connected!" },
+  { id: "lui-connecte", pack: "comique", src: "/stickers/lui/connecte.webp", anim: "/stickers/lui/connecte.mp4?v=1", labelFr: "Connecté !", labelEn: "Connected!" },
 ];
 
 const FUN: StickerDef[] = [
