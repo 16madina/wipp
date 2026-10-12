@@ -49,13 +49,14 @@ import { useWippStore } from "../lib/store";
 import type { Listing } from "../lib/types";
 import { colors, accentA, bgA, fgA, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { tr } from "../lib/tr";
 
 const EVENT_CATS = ["Musique", "Soirée", "Affaires", "Sport", "Culture", "Food", "Communauté", "Autre"];
 const CONDITIONS: { id: NonNullable<Listing["condition"]>; label: string }[] = [
-  { id: "new", label: "Neuf" },
-  { id: "like_new", label: "Comme neuf" },
-  { id: "good", label: "Bon état" },
-  { id: "used", label: "Usagé" },
+  { id: "new", get label() { return tr("Neuf"); } },
+  { id: "like_new", get label() { return tr("Comme neuf"); } },
+  { id: "good", get label() { return tr("Bon état"); } },
+  { id: "used", get label() { return tr("Usagé"); } },
 ];
 
 const CURRENCIES = ["CAD", "EUR", "USD", "XOF"];
@@ -77,7 +78,7 @@ function readPrice(label: string) {
 async function pickImages(multiple: boolean) {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
-    Alert.alert("Photos", "Autorise l’accès aux photos pour illustrer ta publication.");
+    Alert.alert(tr("Photos"), tr("Autorise l’accès aux photos pour illustrer ta publication."));
     return [];
   }
   const res = await ImagePicker.launchImageLibraryAsync({
@@ -139,19 +140,19 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
 
   async function publish() {
     if (!photos.length) {
-      setError("Ajoute au moins une photo.");
+      setError(tr("Ajoute au moins une photo."));
       return;
     }
     if (!title.trim() || !category) {
-      setError("Le titre et la catégorie sont requis.");
+      setError(tr("Le titre et la catégorie sont requis."));
       return;
     }
     if (!city.trim()) {
-      setError("Indique la ville (ou choisis une adresse).");
+      setError(tr("Indique la ville (ou choisis une adresse)."));
       return;
     }
     if (mode === "sale" && !amount.trim()) {
-      setError("Indique le prix, ou choisis « À donner » ou « Échange ».");
+      setError(tr("Indique le prix, ou choisis « À donner » ou « Échange »."));
       return;
     }
     setBusy(true);
@@ -211,7 +212,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
       useWippStore.setState({ listings: await fetchListings(owner) });
       useWippStore.getState().replace({ name: "listing", listingId: savedId });
     } catch (err) {
-      setError(errorText(err, "Publication impossible."));
+      setError(errorText(err, tr("Publication impossible.")));
     } finally {
       setBusy(false);
       setStatus("");
@@ -238,16 +239,16 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
             <LinearGradient colors={[colors.bg, bgA(0.55), bgA(0)]} locations={[0.3, 0.5, 0.75]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
             <LinearGradient colors={[bgA(0), colors.bg]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
             <View style={{ position: "absolute", top: insets.top + 4, left: 6, right: 10, flexDirection: "row", alignItems: "center" }}>
-              <Press accessibilityLabel="Retour" onPress={pop} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+              <Press accessibilityLabel={tr("Retour")} onPress={pop} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
                 <ChevronLeft size={26} color={colors.fg} />
               </Press>
-              <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>{listingId ? "Modifier l’annonce" : "Publier une annonce"}</Text>
+              <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>{listingId ? tr("Modifier l’annonce") : tr("Publier une annonce")}</Text>
             </View>
             <View style={{ position: "absolute", left: 18, bottom: 16, width: "60%" }}>
               <Text style={{ color: colors.fg, fontSize: 29, lineHeight: 32, fontFamily: "Inter_800ExtraBold" }}>
-                Vends, achète,{"\n"}<Text style={{ color: colors.accent }}>trouve plus</Text>
+                {tr("Vends, achète,")}{"\n"}<Text style={{ color: colors.accent }}>{tr("trouve plus")}</Text>
               </Text>
-              <Text style={{ marginTop: 6, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>Publie ton annonce et touche la communauté WIPP près de toi.</Text>
+              <Text style={{ marginTop: 6, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>{tr("Publie ton annonce et touche la communauté WIPP près de toi.")}</Text>
             </View>
           </View>
 
@@ -255,8 +256,8 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
             <View style={iconBox}><ImageIcon size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 10 }}>
               <View>
-                <Text style={rowTitle}>Photos de l’annonce{star}</Text>
-                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Ajoute jusqu’à 8 photos · la 1re est la couverture</Text>
+                <Text style={rowTitle}>{tr("Photos de l’annonce")}{star}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{tr("Ajoute jusqu’à 8 photos · la 1re est la couverture")}</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {photos.length < 8 ? (
@@ -264,18 +265,18 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                     <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                       <Plus size={16} color={colors.accentFg} />
                     </View>
-                    <Text style={{ color: colors.fg, fontSize: 11, textAlign: "center" }}>Ajouter des photos</Text>
+                    <Text style={{ color: colors.fg, fontSize: 11, textAlign: "center" }}>{tr("Ajouter des photos")}</Text>
                   </Press>
                 ) : null}
                 {photos.map((photo, index) => (
                   <View key={`${photo.uri}-${index}`} style={{ width: 84, height: 84, borderRadius: 14, overflow: "hidden", borderWidth: index === 0 ? 2 : 0, borderColor: colors.accent }}>
                     <Image source={{ uri: photo.uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                    <Press accessibilityLabel="Retirer" onPress={() => setPhotos((items) => items.filter((_, k) => k !== index))} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}>
+                    <Press accessibilityLabel={tr("Retirer")} onPress={() => setPhotos((items) => items.filter((_, k) => k !== index))} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}>
                       <X size={13} color="#fff" />
                     </Press>
                     {index > 0 ? (
-                      <Press accessibilityLabel="Mettre en couverture" onPress={() => setPhotos((items) => [items[index], ...items.filter((_, k) => k !== index)])} style={{ position: "absolute", left: 4, bottom: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.6)" }}>
-                        <Text style={{ color: "#fff", fontSize: 10 }}>Couverture</Text>
+                      <Press accessibilityLabel={tr("Mettre en couverture")} onPress={() => setPhotos((items) => [items[index], ...items.filter((_, k) => k !== index)])} style={{ position: "absolute", left: 4, bottom: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.6)" }}>
+                        <Text style={{ color: "#fff", fontSize: 10 }}>{tr("Couverture")}</Text>
                       </Press>
                     ) : null}
                   </View>
@@ -292,9 +293,9 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
           <View style={row}>
             <View style={iconBox}><Type size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
-              <Text style={rowTitle}>Titre de l’annonce{star}</Text>
+              <Text style={rowTitle}>{tr("Titre de l’annonce")}{star}</Text>
               <View style={[box, { flexDirection: "row", alignItems: "center" }]}>
-                <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 100))} placeholder="Ex. iPhone 14 Pro en excellent état" placeholderTextColor={colors.muted} style={inputStyle} />
+                <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 100))} placeholder={tr("Ex. iPhone 14 Pro en excellent état")} placeholderTextColor={colors.muted} style={inputStyle} />
                 <Text style={{ color: colors.muted, fontSize: 11 }}>{title.length}/100</Text>
               </View>
             </View>
@@ -303,9 +304,9 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
           <View style={row}>
             <View style={iconBox}><AlignLeft size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
-              <Text style={rowTitle}>Description</Text>
+              <Text style={rowTitle}>{tr("Description")}</Text>
               <View style={box}>
-                <TextInput value={description} onChangeText={(v) => setDescription(v.slice(0, 500))} placeholder="Décris ton article en détail : état, caractéristiques, raisons de vente…" placeholderTextColor={colors.muted} multiline style={[inputStyle, { minHeight: 70, textAlignVertical: "top" }]} />
+                <TextInput value={description} onChangeText={(v) => setDescription(v.slice(0, 500))} placeholder={tr("Décris ton article en détail : état, caractéristiques, raisons de vente…")} placeholderTextColor={colors.muted} multiline style={[inputStyle, { minHeight: 70, textAlignVertical: "top" }]} />
                 <Text style={{ alignSelf: "flex-end", color: colors.muted, fontSize: 11, marginBottom: 6 }}>{description.length}/500</Text>
               </View>
             </View>
@@ -314,7 +315,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
           <View style={row}>
             <View style={iconBox}><LayoutGrid size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 10 }}>
-              <Text style={rowTitle}>Catégorie{star}</Text>
+              <Text style={rowTitle}>{tr("Catégorie")}{star}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {LISTING_CATEGORIES.map((c) => {
                   const Icon = CAT_ICON[c.id] ?? MoreHorizontal;
@@ -329,7 +330,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
               </View>
               {showCondition ? (
                 <>
-                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>État</Text>
+                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>{tr("État")}</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     {CONDITIONS.map((c) => (
                       <Press key={c.id} onPress={() => setCondition(condition === c.id ? "" : c.id)} style={[pill(condition === c.id), { height: 36 }]}>
@@ -345,7 +346,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
           <View style={row}>
             <View style={iconBox}><CircleDollarSign size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 10 }}>
-              <Text style={rowTitle}>Prix{star}</Text>
+              <Text style={rowTitle}>{tr("Prix")}{star}</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {([["sale", "À vendre", Tag], ["give", "À donner", Gift], ["swap", "Échange", ArrowLeftRight]] as const).map(([id, label, Icon]) => (
                   <Press key={id} onPress={() => setMode(id)} style={[pill(mode === id), { flex: 1, height: 60, flexDirection: "column", justifyContent: "center", gap: 4, paddingHorizontal: 4 }]}>
@@ -358,14 +359,14 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                 <>
                   <View style={[box, { flexDirection: "row", alignItems: "center", gap: 8 }]}>
                     <Text style={{ color: colors.muted, fontSize: 16 }}>$</Text>
-                    <TextInput value={amount} onChangeText={setAmount} placeholder={`Prix (${currency})`} placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
+                    <TextInput value={amount} onChangeText={setAmount} placeholder={tr("Prix ({0})", currency)} placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
                     <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: whiteA(0.12) }}>
                       <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{currency}</Text>
                       <ChevronDown size={14} color={colors.muted} />
                     </Press>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <Text style={{ flex: 1, color: colors.fg }}>Prix négociable</Text>
+                    <Text style={{ flex: 1, color: colors.fg }}>{tr("Prix négociable")}</Text>
                     <Toggle value={negotiable} onChange={setNegotiable} />
                   </View>
                 </>
@@ -376,7 +377,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
           <View style={row}>
             <View style={iconBox}><MapPin size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
-              <Text style={rowTitle}>Lieu{star}</Text>
+              <Text style={rowTitle}>{tr("Lieu")}{star}</Text>
               <Press onPress={() => setCountryOpen(true)} style={[box, { flexDirection: "row", alignItems: "center", gap: 10 }]}>
                 <FlagImage id={listingCountry.id} size={14} />
                 <Text style={{ flex: 1, color: colors.fg, fontSize: 14 }}>{listingCountry.fr}</Text>
@@ -392,7 +393,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                     const { getMyPosition, reverseGeocode } = await import("../lib/geo");
                     const pos = await getMyPosition();
                     if (!pos) {
-                      setError("Position indisponible. Autorise la localisation, ou tape ta ville.");
+                      setError(tr("Position indisponible. Autorise la localisation, ou tape ta ville."));
                       return;
                     }
                     setCoords(pos);
@@ -406,32 +407,32 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
                 style={[box, { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: accentA(0.5), backgroundColor: "transparent" }]}
               >
                 <LocateFixed size={18} color={colors.accent} />
-                <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{locating ? "Localisation…" : coords ? "Position enregistrée ✓" : "Utiliser ma position"}</Text>
+                <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{locating ? tr("Localisation…") : coords ? tr("Position enregistrée ✓") : tr("Utiliser ma position")}</Text>
               </Press>
               <View style={box}>
-                <TextInput value={city} onChangeText={setCity} placeholder="Ville *" placeholderTextColor={colors.muted} style={inputStyle} />
+                <TextInput value={city} onChangeText={setCity} placeholder={tr("Ville *")} placeholderTextColor={colors.muted} style={inputStyle} />
               </View>
-              <Text style={{ color: colors.muted, fontSize: 11 }}>Seuls la ville et le quartier sont affichés, jamais ton adresse exacte.</Text>
+              <Text style={{ color: colors.muted, fontSize: 11 }}>{tr("Seuls la ville et le quartier sont affichés, jamais ton adresse exacte.")}</Text>
             </View>
           </View>
 
           <View style={row}>
             <View style={iconBox}><Phone size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 10 }}>
-              <Text style={rowTitle}>Préférences de contact</Text>
+              <Text style={rowTitle}>{tr("Préférences de contact")}</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Press onPress={() => setContactMode("wipp")} style={[pill(contactMode === "wipp"), { flex: 1, height: 56 }]}>
                   <MessageCircle size={18} color={contactMode === "wipp" ? colors.accentFg : colors.fg} />
                   <View>
-                    <Text style={pillText(contactMode === "wipp")}>Chat WIPP</Text>
-                    <Text style={{ fontSize: 10, color: contactMode === "wipp" ? colors.accentFg : colors.muted }}>Recommandé (anonyme)</Text>
+                    <Text style={pillText(contactMode === "wipp")}>{tr("Chat WIPP")}</Text>
+                    <Text style={{ fontSize: 10, color: contactMode === "wipp" ? colors.accentFg : colors.muted }}>{tr("Recommandé (anonyme)")}</Text>
                   </View>
                 </Press>
                 <Press onPress={() => setContactMode("phone")} style={[pill(contactMode === "phone"), { flex: 1, height: 56 }]}>
                   <Phone size={18} color={contactMode === "phone" ? colors.accentFg : colors.fg} />
                   <View>
-                    <Text style={pillText(contactMode === "phone")}>Téléphone</Text>
-                    <Text style={{ fontSize: 10, color: contactMode === "phone" ? colors.accentFg : colors.muted }}>Afficher mon numéro</Text>
+                    <Text style={pillText(contactMode === "phone")}>{tr("Téléphone")}</Text>
+                    <Text style={{ fontSize: 10, color: contactMode === "phone" ? colors.accentFg : colors.muted }}>{tr("Afficher mon numéro")}</Text>
                   </View>
                 </Press>
               </View>
@@ -441,21 +442,21 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
           <View style={row}>
             <View style={iconBox}><SlidersHorizontal size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 12 }}>
-              <Text style={rowTitle}>Options</Text>
+              <Text style={rowTitle}>{tr("Options")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Pin size={18} color={colors.accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.fg }}>Mettre en avant mon annonce</Text>
-                  <Text style={{ color: colors.muted, fontSize: 11 }}>En haut des résultats pendant 7 jours · une annonce à la fois</Text>
+                  <Text style={{ color: colors.fg }}>{tr("Mettre en avant mon annonce")}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 11 }}>{tr("En haut des résultats pendant 7 jours · une annonce à la fois")}</Text>
                 </View>
                 <Toggle value={boost} onChange={setBoost} />
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Clock size={18} color={colors.accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.fg }}>Programmer la publication</Text>
+                  <Text style={{ color: colors.fg }}>{tr("Programmer la publication")}</Text>
                   <Text style={{ color: publishAt ? colors.accent : colors.muted, fontSize: 11 }}>
-                    {publishAt ? `Visible le ${dayLabel(publishAt)} à ${String(publishAt.getHours()).padStart(2, "0")}:${String(publishAt.getMinutes()).padStart(2, "0")}` : "Choisir une date et une heure"}
+                    {publishAt ? tr("Visible le {0} à {1}:{2}", dayLabel(publishAt), String(publishAt.getHours()).padStart(2, "0"), String(publishAt.getMinutes()).padStart(2, "0")) : tr("Choisir une date et une heure")}
                   </Text>
                 </View>
                 <Toggle value={Boolean(publishAt)} onChange={(on) => (on ? setScheduling("day") : setPublishAt(null))} />
@@ -467,7 +468,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         <View style={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
           {error ? <Text style={{ color: colors.danger, marginBottom: 8, textAlign: "center" }}>{error}</Text> : null}
           <Press disabled={busy} onPress={() => void publish()} style={{ height: 56, borderRadius: 18, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, opacity: busy ? 0.7 : 1 }}>
-            <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{busy ? "Publication…" : listingId ? "Enregistrer" : "Publier mon annonce"}</Text>
+            <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{busy ? tr("Publication…") : listingId ? tr("Enregistrer") : tr("Publier mon annonce")}</Text>
             {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
           </Press>
         </View>
@@ -489,7 +490,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         start={publishAt ? `${String(publishAt.getHours()).padStart(2, "0")}:${String(publishAt.getMinutes()).padStart(2, "0")}` : "09:00"}
         end=""
         single
-        title="Heure de publication"
+        title={tr("Heure de publication")}
         onClose={() => setScheduling(null)}
         onSave={(a) => {
           if (publishAt) {
@@ -497,7 +498,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
             const next = new Date(publishAt);
             next.setHours(h || 0, m || 0, 0, 0);
             if (next.getTime() <= Date.now()) {
-              setError("Choisis une date et une heure dans le futur.");
+              setError(tr("Choisis une date et une heure dans le futur."));
               setPublishAt(null);
             } else setPublishAt(next);
           }
@@ -560,23 +561,23 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
 
   async function publish() {
     if (!title.trim()) {
-      setError("Le nom de l’événement est requis.");
+      setError(tr("Le nom de l’événement est requis."));
       return;
     }
     if (!starts || Number.isNaN(starts.getTime())) {
-      setError("Choisis la date et l’heure de début.");
+      setError(tr("Choisis la date et l’heure de début."));
       return;
     }
     if (!wippLive && !online && !city.trim()) {
-      setError("Indique la ville pour un événement en personne.");
+      setError(tr("Indique la ville pour un événement en personne."));
       return;
     }
     if (ends && starts && ends.getTime() < starts.getTime()) {
-      setError("La fin ne peut pas être avant le début.");
+      setError(tr("La fin ne peut pas être avant le début."));
       return;
     }
     if (!wippLive && !free && !amount.trim()) {
-      setError("Indique le prix de l’événement payant.");
+      setError(tr("Indique le prix de l’événement payant."));
       return;
     }
     setBusy(true);
@@ -638,7 +639,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
       useWippStore.setState({ lifestyle: await fetchEvents(owner) });
       useWippStore.getState().replace({ name: "lifestyle", itemId: savedId });
     } catch (err) {
-      setError(errorText(err, "Publication impossible."));
+      setError(errorText(err, tr("Publication impossible.")));
     } finally {
       setBusy(false);
       setStatus("");
@@ -672,14 +673,14 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <Image source={eventHero} style={{ position: "absolute", right: 0, top: 0, width: "62%", height: "100%" }} contentFit="cover" />
             <LinearGradient colors={[colors.bg, bgA(0.6), bgA(0)]} locations={[0.35, 0.55, 0.8]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
             <LinearGradient colors={[bgA(0), colors.bg]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40 }} />
-            <Press accessibilityLabel="Retour" onPress={pop} style={{ position: "absolute", top: insets.top + 4, left: 10, width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+            <Press accessibilityLabel={tr("Retour")} onPress={pop} style={{ position: "absolute", top: insets.top + 4, left: 10, width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
               <ChevronLeft size={26} color={colors.fg} />
             </Press>
             <View style={{ position: "absolute", left: 18, bottom: 18, width: "62%" }}>
               <Text style={{ color: colors.fg, fontSize: 30, lineHeight: 33, fontFamily: "Inter_800ExtraBold" }}>
-                {eventId ? "Modifier l’" : "Créer un\n"}<Text style={{ color: colors.accent }}>événement</Text>
+                {eventId ? tr("Modifier l’") : tr("Créer un\n")}<Text style={{ color: colors.accent }}>{tr("événement")}</Text>
               </Text>
-              <Text style={{ marginTop: 8, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>Partage ton événement sur WIPP et rassemble ta communauté.</Text>
+              <Text style={{ marginTop: 8, color: fgA(0.8), fontSize: 13, lineHeight: 18 }}>{tr("Partage ton événement sur WIPP et rassemble ta communauté.")}</Text>
             </View>
           </View>
 
@@ -706,14 +707,14 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={[row, { alignItems: "center" }]}>
             <View style={iconBox}><ImageIcon size={20} color={colors.accent} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={rowTitle}>Photo de l’événement</Text>
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Ajoute une image attrayante</Text>
+              <Text style={rowTitle}>{tr("Photo de l’événement")}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{tr("Ajoute une image attrayante")}</Text>
             </View>
             <Press onPress={() => void addCover()} style={{ width: 130, height: 76, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: whiteA(0.3), overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
               {cover ? <Image source={{ uri: cover.uri }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : (
                 <>
                   <ImagePlus size={22} color={colors.fg} />
-                  <Text style={{ marginTop: 4, color: colors.fg, fontSize: 12 }}>Ajouter une photo</Text>
+                  <Text style={{ marginTop: 4, color: colors.fg, fontSize: 12 }}>{tr("Ajouter une photo")}</Text>
                 </>
               )}
             </Press>
@@ -722,9 +723,9 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={row}>
             <View style={iconBox}><Type size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
-              <Text style={rowTitle}>Titre de l’événement *</Text>
+              <Text style={rowTitle}>{tr("Titre de l’événement *")}</Text>
               <View style={[box, { flexDirection: "row", alignItems: "center" }]}>
-                <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 100))} placeholder="Ex. Soirée Afrobeats" placeholderTextColor={colors.muted} style={inputStyle} />
+                <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 100))} placeholder={tr("Ex. Soirée Afrobeats")} placeholderTextColor={colors.muted} style={inputStyle} />
                 <Text style={{ color: colors.muted, fontSize: 11 }}>{title.length}/100</Text>
               </View>
             </View>
@@ -733,9 +734,9 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={row}>
             <View style={iconBox}><AlignLeft size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
-              <Text style={rowTitle}>Description</Text>
+              <Text style={rowTitle}>{tr("Description")}</Text>
               <View style={box}>
-                <TextInput value={summary} onChangeText={(v) => setSummary(v.slice(0, 500))} placeholder="Parle de ton événement : programme, artistes, pour qui…" placeholderTextColor={colors.muted} multiline style={[inputStyle, { minHeight: 64, textAlignVertical: "top" }]} />
+                <TextInput value={summary} onChangeText={(v) => setSummary(v.slice(0, 500))} placeholder={tr("Parle de ton événement : programme, artistes, pour qui…")} placeholderTextColor={colors.muted} multiline style={[inputStyle, { minHeight: 64, textAlignVertical: "top" }]} />
                 <Text style={{ alignSelf: "flex-end", color: colors.muted, fontSize: 11, marginBottom: 6 }}>{summary.length}/500</Text>
               </View>
             </View>
@@ -745,7 +746,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <View style={iconBox}><CalendarDays size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={rowTitle}>Date et heure *</Text>
+                <Text style={rowTitle}>{tr("Date et heure *")}</Text>
                 {/* Start right away: today, at this very minute. */}
                 <Press
                   onPress={() => {
@@ -754,21 +755,21 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                     setStarts(now);
                     setEnds(null);
                   }}
-                  accessibilityLabel="Commencer maintenant"
+                  accessibilityLabel={tr("Commencer maintenant")}
                   style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: startsNow ? colors.accent : whiteA(0.06) }}
                 >
-                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: startsNow ? colors.accentFg : colors.fg }}>Maintenant</Text>
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: startsNow ? colors.accentFg : colors.fg }}>{tr("Maintenant")}</Text>
                 </Press>
               </View>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Press onPress={() => setPicking("start")} style={[box, { flex: 1.2, flexDirection: "row", alignItems: "center", gap: 8 }]}>
                   <CalendarDays size={16} color={colors.muted} />
-                  <Text numberOfLines={1} style={{ flex: 1, color: dateValue ? colors.fg : colors.muted, fontSize: 14 }}>{dateValue ? dayLabel(dateValue) : "Date"}</Text>
+                  <Text numberOfLines={1} style={{ flex: 1, color: dateValue ? colors.fg : colors.muted, fontSize: 14 }}>{dateValue ? dayLabel(dateValue) : tr("Date")}</Text>
                   <ChevronDown size={16} color={colors.muted} />
                 </Press>
                 <Press disabled={!dateValue} onPress={() => setPicking("end")} style={[box, { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, opacity: dateValue ? 1 : 0.5 }]}>
                   <Clock size={16} color={colors.muted} />
-                  <Text numberOfLines={1} style={{ flex: 1, color: dateValue ? colors.fg : colors.muted, fontSize: 14 }}>{dateValue ? `${startT}${endT ? `–${endT}` : ""}` : "Heure"}</Text>
+                  <Text numberOfLines={1} style={{ flex: 1, color: dateValue ? colors.fg : colors.muted, fontSize: 14 }}>{dateValue ? `${startT}${endT ? `–${endT}` : ""}` : tr("Heure")}</Text>
                   <ChevronDown size={16} color={colors.muted} />
                 </Press>
               </View>
@@ -779,7 +780,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <View style={row}>
               <View style={iconBox}><Users size={20} color={colors.accent} /></View>
               <View style={{ flex: 1, gap: 10 }}>
-                <Text style={rowTitle}>Direct sur WIPP</Text>
+                <Text style={rowTitle}>{tr("Direct sur WIPP")}</Text>
                 <View style={{ flexDirection: "row", gap: 6 }}>
                   {([["public", "Public"], ["private", "Privé (sur invitation)"]] as const).map(([id, label]) => (
                     <Press key={id} onPress={() => setVisibility(id)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: visibility === id ? colors.accent : whiteA(0.06) }}>
@@ -787,20 +788,20 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                     </Press>
                   ))}
                 </View>
-                <Text style={{ color: colors.muted, fontSize: 12 }}>Durée prévue</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Durée prévue")}</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                   {[30, 60, 90, 120, 180].map((m) => (
                     <Press key={m} onPress={() => setDurationMin(m)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: durationMin === m ? colors.accent : whiteA(0.06) }}>
-                      <Text style={{ fontSize: 12, color: durationMin === m ? colors.accentFg : colors.fg }}>{m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h 30` : `${m / 60} h`}</Text>
+                      <Text style={{ fontSize: 12, color: durationMin === m ? colors.accentFg : colors.fg }}>{m < 60 ? `${m} min` : m % 60 ? tr("{0} h 30", Math.floor(m / 60)) : `${m / 60} h`}</Text>
                     </Press>
                   ))}
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Text style={{ flex: 1, color: colors.fg, fontSize: 13 }}>Afficher le nombre d’inscrits</Text>
+                  <Text style={{ flex: 1, color: colors.fg, fontSize: 13 }}>{tr("Afficher le nombre d’inscrits")}</Text>
                   <Toggle value={showRegistered} onChange={setShowRegistered} />
                 </View>
                 <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 15 }}>
-                  Gratuit · jusqu’à 100 spectateurs · aucun enregistrement. {visibility === "private" ? "Tu inviteras tes contacts depuis la fiche de l’événement." : "Visible par tous dans Événements."}
+                  {tr("Gratuit · jusqu’à 100 spectateurs · aucun enregistrement.")} {visibility === "private" ? tr("Tu inviteras tes contacts depuis la fiche de l’événement.") : tr("Visible par tous dans Événements.")}
                 </Text>
               </View>
             </View>
@@ -811,7 +812,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <View style={iconBox}><MapPin size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={rowTitle}>Lieu *</Text>
+                <Text style={rowTitle}>{tr("Lieu *")}</Text>
                 <View style={{ flexDirection: "row", gap: 6 }}>
                   {[["place", "En personne"], ["online", "En ligne"]].map(([id, label]) => (
                     <Press key={id} onPress={() => setOnline(id === "online")} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: (id === "online") === online ? colors.accent : whiteA(0.06) }}>
@@ -822,12 +823,12 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               </View>
               {online ? (
                 <View style={box}>
-                  <TextInput value={link} onChangeText={setLink} placeholder="Lien (Zoom, YouTube, Instagram…)" placeholderTextColor={colors.muted} keyboardType="url" autoCapitalize="none" style={inputStyle} />
+                  <TextInput value={link} onChangeText={setLink} placeholder={tr("Lien (Zoom, YouTube, Instagram…)")} placeholderTextColor={colors.muted} keyboardType="url" autoCapitalize="none" style={inputStyle} />
                 </View>
               ) : (
                 <>
                   <View style={box}>
-                    <TextInput value={venue} onChangeText={setVenue} placeholder="Nom du lieu (salle, bar, parc…)" placeholderTextColor={colors.muted} style={inputStyle} />
+                    <TextInput value={venue} onChangeText={setVenue} placeholder={tr("Nom du lieu (salle, bar, parc…)")} placeholderTextColor={colors.muted} style={inputStyle} />
                   </View>
                   <Press onPress={() => setCountryOpen(true)} style={[box, { flexDirection: "row", alignItems: "center", gap: 10 }]}>
                     <FlagImage id={eventCountry.id} size={14} />
@@ -836,7 +837,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
                   </Press>
                   <AddressField country={eventCountry} value={address} onChange={(v) => setAddress(v ?? "")} onPickCity={setCity} onPickCoords={(lat, lng) => setCoords({ lat, lng })} />
                   <View style={box}>
-                    <TextInput value={city} onChangeText={setCity} placeholder="Ville *" placeholderTextColor={colors.muted} style={inputStyle} />
+                    <TextInput value={city} onChangeText={setCity} placeholder={tr("Ville *")} placeholderTextColor={colors.muted} style={inputStyle} />
                   </View>
                 </>
               )}
@@ -847,7 +848,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           {wippLive ? null : (
           <View style={[row, { alignItems: "center" }]}>
             <View style={iconBox}><Ticket size={20} color={colors.accent} /></View>
-            <Text style={[rowTitle, { flex: 1 }]}>Type</Text>
+            <Text style={[rowTitle, { flex: 1 }]}>{tr("Type")}</Text>
             {[[true, "Gratuit"], [false, "Payant"]].map(([val, label]) => (
               <Press key={String(label)} onPress={() => setFree(val as boolean)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, height: 42, borderRadius: 12, borderWidth: 1.5, borderColor: free === val ? colors.accent : whiteA(0.15) }}>
                 <Text style={{ color: free === val ? colors.accent : colors.fg, fontFamily: "Inter_600SemiBold" }}>{label as string}</Text>
@@ -862,7 +863,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={row}>
             <View style={iconBox}><LayoutGrid size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 10 }}>
-              <Text style={rowTitle}>Catégorie</Text>
+              <Text style={rowTitle}>{tr("Catégorie")}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {EVENT_CATS.map((c) => (
                   <Press key={c} onPress={() => setCategory(category === c ? "" : c)} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: category === c ? colors.accent : "transparent", borderWidth: 1, borderColor: category === c ? colors.accent : whiteA(0.18) }}>
@@ -877,15 +878,15 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
             <View style={row}>
               <View style={iconBox}><CircleDollarSign size={20} color={colors.accent} /></View>
               <View style={{ flex: 1, gap: 8 }}>
-                <Text style={rowTitle}>Prix du billet *</Text>
+                <Text style={rowTitle}>{tr("Prix du billet *")}</Text>
                 <View style={[box, { flexDirection: "row", alignItems: "center", gap: 8 }]}>
-                  <TextInput value={amount} onChangeText={setAmount} placeholder="Ex. 25" placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
+                  <TextInput value={amount} onChangeText={setAmount} placeholder={tr("Ex. 25")} placeholderTextColor={colors.muted} keyboardType="decimal-pad" style={inputStyle} />
                   <Press onPress={() => setCurrency(CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length])} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: whiteA(0.12) }}>
                     <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{currency}</Text>
                     <ChevronDown size={14} color={colors.muted} />
                   </Press>
                 </View>
-                <Text style={{ color: colors.muted, fontSize: 11 }}>WIPP n’encaisse pas les billets : le prix est une information. Ajoute ton lien de billetterie ci-dessous si tu en as un.</Text>
+                <Text style={{ color: colors.muted, fontSize: 11 }}>{tr("WIPP n’encaisse pas les billets : le prix est une information. Ajoute ton lien de billetterie ci-dessous si tu en as un.")}</Text>
               </View>
             </View>
           )}
@@ -893,24 +894,24 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={row}>
             <View style={iconBox}><Settings size={20} color={colors.accent} /></View>
             <View style={{ flex: 1, gap: 10 }}>
-              <Text style={rowTitle}>Paramètres avancés</Text>
+              <Text style={rowTitle}>{tr("Paramètres avancés")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Users size={18} color={colors.accent} />
-                <Text style={{ flex: 1, color: colors.fg }}>Limiter le nombre de places</Text>
+                <Text style={{ flex: 1, color: colors.fg }}>{tr("Limiter le nombre de places")}</Text>
                 <Toggle value={limitOn} onChange={setLimitOn} />
               </View>
               {limitOn ? (
                 <View style={box}>
-                  <TextInput value={limit} onChangeText={(v) => setLimit(v.replace(/\D/g, ""))} placeholder="Nombre de places" placeholderTextColor={colors.muted} keyboardType="number-pad" style={inputStyle} />
+                  <TextInput value={limit} onChangeText={(v) => setLimit(v.replace(/\D/g, ""))} placeholder={tr("Nombre de places")} placeholderTextColor={colors.muted} keyboardType="number-pad" style={inputStyle} />
                 </View>
               ) : null}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Text style={{ width: 18, textAlign: "center", color: colors.accent, fontFamily: "Inter_700Bold", fontSize: 11 }}>18</Text>
-                <Text style={{ flex: 1, color: colors.fg }}>Événement 18+</Text>
+                <Text style={{ flex: 1, color: colors.fg }}>{tr("Événement 18+")}</Text>
                 <Toggle value={adultOnly} onChange={setAdultOnly} />
               </View>
               <View style={box}>
-                <TextInput value={access} onChangeText={setAccess} placeholder={free ? "Précision : entrée libre, code vestimentaire…" : "Lien de billetterie ou précision"} placeholderTextColor={colors.muted} style={inputStyle} />
+                <TextInput value={access} onChangeText={setAccess} placeholder={free ? tr("Précision : entrée libre, code vestimentaire…") : tr("Lien de billetterie ou précision")} placeholderTextColor={colors.muted} style={inputStyle} />
               </View>
             </View>
           </View>
@@ -919,7 +920,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
         <View style={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12) }}>
           {error ? <Text style={{ color: colors.danger, marginBottom: 8, textAlign: "center" }}>{error}</Text> : null}
           <Press disabled={busy} onPress={() => void publish()} style={{ height: 56, borderRadius: 18, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, opacity: busy ? 0.7 : 1 }}>
-            <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{busy ? "Publication…" : eventId ? "Enregistrer" : "Publier mon événement"}</Text>
+            <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{busy ? tr("Publication…") : eventId ? tr("Enregistrer") : tr("Publier mon événement")}</Text>
             {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
           </Press>
         </View>

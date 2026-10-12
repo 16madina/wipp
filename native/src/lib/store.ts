@@ -1,4 +1,5 @@
 import { Alert, AppState } from "react-native";
+import { saveLanguage } from "./language-pref";
 import { create } from "zustand";
 import type {
   CallLog,
@@ -408,7 +409,10 @@ let inboxSyncTicket = 0;
 export const useWippStore = create<Store>((set, get) => ({
   language: "fr",
   ...fresh(),
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) => {
+    saveLanguage(language);
+    set({ language });
+  },
   setNotif: (key, value) => {
     set((s) => {
       const notifs = { ...s.notifs, [key]: value };

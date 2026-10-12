@@ -7,6 +7,7 @@ import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField }
 import { wippApi } from "../lib/proximity/wipp-session";
 import { useWippStore } from "../lib/store";
 import { colors, accentA, whiteA } from "../theme";
+import { tr } from "../lib/tr";
 
 type Role = "admin" | "moderator" | null;
 type AdminUser = {
@@ -56,7 +57,7 @@ function when(ms: number) {
 }
 
 function fail(err: unknown) {
-  Alert.alert("Admin", (err as Error)?.message || "Action impossible");
+  Alert.alert(tr("Admin"), (err as Error)?.message || tr("Action impossible"));
 }
 
 /** Shown in "Moi" only for admins / moderators. */
@@ -99,10 +100,10 @@ export function AdminScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={role === "moderator" ? "Modération" : "Admin panel"} onBack={pop} />
+        <Header title={role === "moderator" ? tr("Modération") : tr("Admin panel")} onBack={pop} />
       </GlassHeader>
       {!role ? (
-        <Empty title="Accès réservé" body="Cet espace est réservé à l’administration de WIPP." />
+        <Empty title={tr("Accès réservé")} body={tr("Cet espace est réservé à l’administration de WIPP.")} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 14 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -133,7 +134,7 @@ function StatsTab() {
   useEffect(() => {
     void api<Record<string, number>>("overview").then(setS).catch(fail);
   }, []);
-  if (!s) return <Text style={{ color: colors.muted }}>Chargement…</Text>;
+  if (!s) return <Text style={{ color: colors.muted }}>{tr("Chargement…")}</Text>;
   return (
     <View style={{ gap: 14 }}>
       <StatsGrid s={s} />
@@ -156,8 +157,8 @@ function AdminPhoneCard() {
   }, []);
   return (
     <Card>
-      <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>📱 Ton numéro admin</Text>
-      <Text style={{ color: colors.muted, fontSize: 12 }}>Le numéro de connexion de ce compte administrateur.</Text>
+      <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("📱 Ton numéro admin")}</Text>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Le numéro de connexion de ce compte administrateur.")}</Text>
       <TextInput
         value={phone}
         onChangeText={setPhone}
@@ -167,14 +168,14 @@ function AdminPhoneCard() {
         style={{ height: 44, borderRadius: 12, backgroundColor: whiteA(0.06), paddingHorizontal: 12, color: colors.fg }}
       />
       <Btn
-        label="Enregistrer le numéro"
+        label={tr("Enregistrer le numéro")}
         variant="secondary"
         disabled={!phone.trim() || phone.replace(/\s/g, "") === (saved ?? "")}
         onPress={() =>
           void api<{ phone: string | null }>("phone", { phone }, "PUT")
             .then((r) => {
               setSaved(r.phone);
-              Alert.alert("Admin", "Numéro enregistré.");
+              Alert.alert(tr("Admin"), tr("Numéro enregistré."));
             })
             .catch(fail)
         }
@@ -219,20 +220,20 @@ function MessagesTab() {
       .then((r) => setRows(r.messages))
       .catch(fail);
   }, []);
-  if (!rows) return <Text style={{ color: colors.muted }}>Chargement…</Text>;
-  if (!rows.length) return <Empty title="Aucun message" />;
+  if (!rows) return <Text style={{ color: colors.muted }}>{tr("Chargement…")}</Text>;
+  if (!rows.length) return <Empty title={tr("Aucun message")} />;
   return (
     <View style={{ gap: 8 }}>
       <Text style={{ color: colors.muted, fontSize: 12 }}>
-        Les 50 derniers messages. Les conversations privées sont chiffrées de bout en bout : leur contenu n’est pas lisible, même par l’admin. Pour un message signalé, utilise « Signalements ».
+        {tr("Les 50 derniers messages. Les conversations privées sont chiffrées de bout en bout : leur contenu n’est pas lisible, même par l’admin. Pour un message signalé, utilise « Signalements ».")}
       </Text>
       {rows.map((m) => (
         <View key={m.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.hair }}>
           <Text style={{ color: colors.fg }}>
-            @{m.username} · <Text style={{ color: colors.muted }}>{m.preview || "Message"}</Text>
+            @{m.username} · <Text style={{ color: colors.muted }}>{m.preview || tr("Message")}</Text>
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
-            {when(m.createdAt)} · conversation {m.chatId.slice(0, 10)}…
+            {when(m.createdAt)} {tr("· conversation")} {m.chatId.slice(0, 10)}…
           </Text>
         </View>
       ))}
@@ -254,10 +255,10 @@ function ReferrersTab() {
       });
   }, []);
   if (!rows) return <ActivityIndicator color={colors.accent} />;
-  if (!rows.length) return <Empty title="Aucun parrain" body="Personne n’a encore été invité avec un code." />;
+  if (!rows.length) return <Empty title={tr("Aucun parrain")} body={tr("Personne n’a encore été invité avec un code.")} />;
   return (
     <View style={{ gap: 8 }}>
-      <Text style={{ color: colors.muted, fontSize: 12 }}>Invités = ont entré le code · Actifs = en contact avec le parrain · 30 j = devenus actifs ce mois-ci (20 max).</Text>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Invités = ont entré le code · Actifs = en contact avec le parrain · 30 j = devenus actifs ce mois-ci (20 max).")}</Text>
       {rows.map((r) => {
         const suspect = r.invited >= 5 && r.active / Math.max(1, r.invited) < 0.3;
         return (
@@ -267,9 +268,9 @@ function ReferrersTab() {
                 <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{r.displayName}</Text>
                 <WippBadge badge={r.badge} size={14} />
               </View>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>@{r.username}{suspect ? " · ⚠️ à vérifier" : ""}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>@{r.username}{suspect ? tr(" · ⚠️ à vérifier") : ""}</Text>
             </View>
-            <Text style={{ color: colors.fg, fontSize: 12, textAlign: "right" }}>{r.invited} invités{"\n"}{r.active} actifs · {r.month} / 30 j</Text>
+            <Text style={{ color: colors.fg, fontSize: 12, textAlign: "right" }}>{r.invited} {tr("invités")}{"\n"}{r.active} {tr("actifs ·")} {r.month} {tr("/ 30 j")}</Text>
           </View>
         );
       })}
@@ -296,13 +297,13 @@ function UsersTab({ role }: { role: Role }) {
       .then(() => {
         setPicked(null);
         setReason("");
-        Alert.alert("Admin", done);
+        Alert.alert(tr("Admin"), done);
         load();
       })
       .catch(fail);
   return (
     <View style={{ gap: 10 }}>
-      <SearchField value={q} onChangeText={setQ} placeholder="Nom ou @pseudo" />
+      <SearchField value={q} onChangeText={setQ} placeholder={tr("Nom ou @pseudo")} />
       {users.map((u) => (
         <Press key={u.id} onPress={() => setPicked(u)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}>
           <Avatar user={{ id: u.id, displayName: u.displayName, username: u.username, avatar: u.avatarUrl ?? "", firstName: u.displayName, lastName: "", bio: "", online: false, connected: false, city: "" }} size={42} />
@@ -310,38 +311,38 @@ function UsersTab({ role }: { role: Role }) {
             <Text numberOfLines={1} style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{u.displayName}</Text>
             <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>
               @{u.username}
-              {u.phone ? ` · ${u.phone}` : ""} · inscrit le {new Date(u.createdAt).toLocaleDateString("fr-FR")}
+              {u.phone ? ` · ${u.phone}` : ""} {tr("· inscrit le")} {new Date(u.createdAt).toLocaleDateString("fr-FR")}
             </Text>
           </View>
           <WippBadge badge={u.badge} size={14} />
           {u.suspendedAt ? <Badge text="Suspendu" tone="danger" /> : u.role !== "user" ? <Badge text={u.role === "admin" ? "Admin" : "Modérateur"} tone="accent" /> : null}
         </Press>
       ))}
-      {!users.length ? <Text style={{ color: colors.muted }}>Aucun utilisateur.</Text> : null}
+      {!users.length ? <Text style={{ color: colors.muted }}>{tr("Aucun utilisateur.")}</Text> : null}
       <Sheet open={Boolean(picked)} title={picked ? `@${picked.username}` : ""} onClose={() => setPicked(null)}>
         {picked ? (
           <View style={{ gap: 10 }}>
             <Text style={{ color: colors.muted }}>
-              {picked.displayName} · {picked.role === "admin" ? "Administrateur" : picked.role === "moderator" ? "Modérateur" : "Utilisateur"}
-              {picked.suspendedAt ? ` · suspendu le ${when(picked.suspendedAt)}${picked.suspendedReason ? ` (${picked.suspendedReason})` : ""}` : ""}
+              {picked.displayName} · {picked.role === "admin" ? tr("Administrateur") : picked.role === "moderator" ? tr("Modérateur") : tr("Utilisateur")}
+              {picked.suspendedAt ? tr(" · suspendu le {0}{1}", when(picked.suspendedAt), picked.suspendedReason ? ` (${picked.suspendedReason})` : "") : ""}
             </Text>
             {role === "admin" ? (
               picked.badge === "gold" ? (
                 <Btn
-                  label="Retirer la certification (badge doré)"
+                  label={tr("Retirer la certification (badge doré)")}
                   variant="secondary"
                   onPress={() =>
                     void wippApi("rewards/certify", { method: "POST", body: JSON.stringify({ profileId: picked.id, on: false }) })
-                      .then(() => { setPicked(null); Alert.alert("Admin", "Certification retirée."); load(); })
+                      .then(() => { setPicked(null); Alert.alert(tr("Admin"), tr("Certification retirée.")); load(); })
                       .catch(fail)
                   }
                 />
               ) : (
                 <Btn
-                  label="✅ Certifier (badge doré)"
+                  label={tr("✅ Certifier (badge doré)")}
                   onPress={() =>
                     void wippApi("rewards/certify", { method: "POST", body: JSON.stringify({ profileId: picked.id, on: true }) })
-                      .then(() => { setPicked(null); Alert.alert("Admin", `@${picked.username} est maintenant certifié(e).`); load(); })
+                      .then(() => { setPicked(null); Alert.alert(tr("Admin"), tr("@{0} est maintenant certifié(e).", picked.username)); load(); })
                       .catch(fail)
                   }
                 />
@@ -349,29 +350,29 @@ function UsersTab({ role }: { role: Role }) {
             ) : null}
             {role === "admin" && picked.role !== "admin" ? (
               picked.role === "moderator" ? (
-                <Btn label="Retirer le rôle de modérateur" variant="secondary" onPress={() => act(`users/${picked.id}/role`, { role: "user" }, "Rôle de modérateur retiré.")} />
+                <Btn label={tr("Retirer le rôle de modérateur")} variant="secondary" onPress={() => act(`users/${picked.id}/role`, { role: "user" }, "Rôle de modérateur retiré.")} />
               ) : (
-                <Btn label="🛡️ Nommer modérateur" onPress={() => act(`users/${picked.id}/role`, { role: "moderator" }, `@${picked.username} est maintenant modérateur.`)} />
+                <Btn label={tr("🛡️ Nommer modérateur")} onPress={() => act(`users/${picked.id}/role`, { role: "moderator" }, `@${picked.username} est maintenant modérateur.`)} />
               )
             ) : null}
             {picked.role !== "admin" ? (
               picked.suspendedAt ? (
-                <Btn label="Rétablir le compte" onPress={() => act(`users/${picked.id}/suspend`, { suspend: false }, "Compte rétabli.")} />
+                <Btn label={tr("Rétablir le compte")} onPress={() => act(`users/${picked.id}/suspend`, { suspend: false }, "Compte rétabli.")} />
               ) : (
                 <>
                   <TextInput
                     value={reason}
                     onChangeText={setReason}
-                    placeholder="Motif de la suspension (facultatif)"
+                    placeholder={tr("Motif de la suspension (facultatif)")}
                     placeholderTextColor={colors.muted}
                     maxLength={300}
                     style={{ minHeight: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg }}
                   />
                   <Btn
-                    label="⛔ Suspendre le compte"
+                    label={tr("⛔ Suspendre le compte")}
                     variant="danger"
                     onPress={() =>
-                      Alert.alert("Suspendre", `Suspendre @${picked.username} ? Il ne pourra plus utiliser WIPP.`, [
+                      Alert.alert(tr("Suspendre"), tr("Suspendre @{0} ? Il ne pourra plus utiliser WIPP.", picked.username), [
                         { text: "Annuler", style: "cancel" },
                         { text: "Suspendre", style: "destructive", onPress: () => act(`users/${picked.id}/suspend`, { suspend: true, reason }, "Compte suspendu.") },
                       ])
@@ -408,16 +409,16 @@ function ReportsTab() {
   return (
     <View style={{ gap: 10 }}>
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Chip label="Ouverts" active={status === "open"} onPress={() => setStatus("open")} />
-        <Chip label="Tous" active={status === "all"} onPress={() => setStatus("all")} />
+        <Chip label={tr("Ouverts")} active={status === "open"} onPress={() => setStatus("open")} />
+        <Chip label={tr("Tous")} active={status === "all"} onPress={() => setStatus("all")} />
       </View>
-      {reports === null ? <Text style={{ color: colors.muted }}>Chargement…</Text> : null}
-      {reports?.length === 0 ? <Empty title="Aucun signalement" body="Les signalements des utilisateurs apparaîtront ici." /> : null}
+      {reports === null ? <Text style={{ color: colors.muted }}>{tr("Chargement…")}</Text> : null}
+      {reports?.length === 0 ? <Empty title={tr("Aucun signalement")} body={tr("Les signalements des utilisateurs apparaîtront ici.")} /> : null}
       {reports?.map((r) => (
         <Card key={r.id}>
-          <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold" }}>🚩 {r.reason || "Signalement"}</Text>
+          <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold" }}>🚩 {r.reason || tr("Signalement")}</Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
-            {REPORT_TYPE[r.targetType] ?? r.targetType} {r.targetUsername ? `de @${r.targetUsername}` : ""} · signalé par {r.reporter ? `@${r.reporter}` : "?"} · {when(r.createdAt)} · {REPORT_STATUS[r.status] ?? r.status}
+            {REPORT_TYPE[r.targetType] ?? r.targetType} {r.targetUsername ? tr("de @{0}", r.targetUsername) : ""} {tr("· signalé par")} {r.reporter ? `@${r.reporter}` : "?"} · {when(r.createdAt)} · {REPORT_STATUS[r.status] ?? r.status}
           </Text>
           {opened[r.id] ? (
             <View style={{ padding: 10, borderRadius: 10, backgroundColor: whiteA(0.05) }}>
@@ -427,7 +428,7 @@ function ReportsTab() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
             {r.hasContent && !opened[r.id] ? (
               <Btn
-                label="Voir le message"
+                label={tr("Voir le message")}
                 variant="secondary"
                 onPress={() =>
                   void api<{ text: string }>(`reports/${r.id}/open`, {})
@@ -440,24 +441,24 @@ function ReportsTab() {
               <>
                 {r.removable ? (
                   <Btn
-                    label="Retirer le contenu"
+                    label={tr("Retirer le contenu")}
                     variant="danger"
                     onPress={() =>
-                      Alert.alert("Retirer le contenu", `${REPORT_TYPE[r.targetType] ?? "Ce contenu"} ne sera plus visible pour personne.`, [
+                      Alert.alert(tr("Retirer le contenu"), tr("{0} ne sera plus visible pour personne.", REPORT_TYPE[r.targetType] ?? "Ce contenu"), [
                         { text: "Annuler", style: "cancel" },
                         { text: "Retirer", style: "destructive", onPress: () => void api(`reports/${r.id}/resolve`, { action: "removed" }).then(load).catch(fail) },
                       ])
                     }
                   />
                 ) : null}
-                <Btn label="Traité" onPress={() => void api(`reports/${r.id}/resolve`, { action: "resolved" }).then(load).catch(fail)} />
-                <Btn label="Classer" variant="secondary" onPress={() => void api(`reports/${r.id}/resolve`, { action: "dismissed" }).then(load).catch(fail)} />
+                <Btn label={tr("Traité")} onPress={() => void api(`reports/${r.id}/resolve`, { action: "resolved" }).then(load).catch(fail)} />
+                <Btn label={tr("Classer")} variant="secondary" onPress={() => void api(`reports/${r.id}/resolve`, { action: "dismissed" }).then(load).catch(fail)} />
                 {r.targetProfileId ? (
                   <Btn
-                    label="Suspendre le compte"
+                    label={tr("Suspendre le compte")}
                     variant="danger"
                     onPress={() =>
-                      Alert.alert("Suspendre le compte", `${r.targetUsername ? `@${r.targetUsername}` : "Ce compte"} ne pourra plus utiliser WIPP. Tu peux le rétablir dans « Suspendus ».`, [
+                      Alert.alert(tr("Suspendre le compte"), tr("{0} ne pourra plus utiliser WIPP. Tu peux le rétablir dans « Suspendus ».", r.targetUsername ? `@${r.targetUsername}` : "Ce compte"), [
                         { text: "Annuler", style: "cancel" },
                         {
                           text: "Suspendre",
@@ -489,8 +490,8 @@ function SuspendedTab() {
       .catch(fail);
   }, []);
   useEffect(load, [load]);
-  if (!users) return <Text style={{ color: colors.muted }}>Chargement…</Text>;
-  if (!users.length) return <Empty title="Aucun compte suspendu" />;
+  if (!users) return <Text style={{ color: colors.muted }}>{tr("Chargement…")}</Text>;
+  if (!users.length) return <Empty title={tr("Aucun compte suspendu")} />;
   return (
     <View style={{ gap: 10 }}>
       {users.map((u) => (
@@ -499,11 +500,11 @@ function SuspendedTab() {
             {u.displayName} · @{u.username}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
-            Suspendu le {when(u.suspendedAt)}
-            {u.by ? ` par @${u.by}` : ""}
+            {tr("Suspendu le")} {when(u.suspendedAt)}
+            {u.by ? tr(" par @{0}", u.by) : ""}
             {u.reason ? ` · ${u.reason}` : ""}
           </Text>
-          <Btn label="Rétablir le compte" variant="secondary" onPress={() => void api(`users/${u.id}/suspend`, { suspend: false }).then(load).catch(fail)} />
+          <Btn label={tr("Rétablir le compte")} variant="secondary" onPress={() => void api(`users/${u.id}/suspend`, { suspend: false }).then(load).catch(fail)} />
         </Card>
       ))}
     </View>
@@ -545,13 +546,13 @@ function PushTab() {
   const field = { borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10, color: colors.fg, fontSize: 15 } as const;
   return (
     <View style={{ gap: 12 }}>
-      <Text style={{ color: colors.muted, fontSize: 13 }}>Modèles (modifiables)</Text>
+      <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Modèles (modifiables)")}</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {templates.map((t) => (
           <Chip key={t.id} label={t.label} active={current === t.id} onPress={() => pick(t)} />
         ))}
         <Chip
-          label="+ Nouveau"
+          label={tr("+ Nouveau")}
           active={current === "new"}
           onPress={() => {
             setCurrent("new");
@@ -560,17 +561,17 @@ function PushTab() {
           }}
         />
       </View>
-      <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 80))} placeholder="Titre" placeholderTextColor={colors.muted} style={field} />
-      <TextInput value={body} onChangeText={(v) => setBody(v.slice(0, 240))} placeholder="Message" placeholderTextColor={colors.muted} multiline style={{ ...field, minHeight: 90, textAlignVertical: "top" }} />
+      <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 80))} placeholder={tr("Titre")} placeholderTextColor={colors.muted} style={field} />
+      <TextInput value={body} onChangeText={(v) => setBody(v.slice(0, 240))} placeholder={tr("Message")} placeholderTextColor={colors.muted} multiline style={{ ...field, minHeight: 90, textAlignVertical: "top" }} />
       <Text style={{ alignSelf: "flex-end", color: colors.muted, fontSize: 12 }}>{body.length}/240</Text>
       {/* Preview of what the phone shows */}
       <View style={{ borderRadius: 16, backgroundColor: whiteA(0.08), padding: 12 }}>
-        <Text style={{ color: colors.muted, fontSize: 11 }}>APERÇU · WIPP · maintenant</Text>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", marginTop: 4 }}>{title || "Titre"}</Text>
-        <Text style={{ color: colors.fg, marginTop: 2 }}>{body || "Message"}</Text>
+        <Text style={{ color: colors.muted, fontSize: 11 }}>{tr("APERÇU · WIPP · maintenant")}</Text>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", marginTop: 4 }}>{title || tr("Titre")}</Text>
+        <Text style={{ color: colors.fg, marginTop: 2 }}>{body || tr("Message")}</Text>
       </View>
       <Btn
-        label="Enregistrer le modèle"
+        label={tr("Enregistrer le modèle")}
         variant="secondary"
         disabled={!title.trim() || !body.trim()}
         onPress={() =>
@@ -578,24 +579,24 @@ function PushTab() {
             .then((saved) => {
               setTemplates((list) => (list.some((t) => t.id === saved.id) ? list.map((t) => (t.id === saved.id ? saved : t)) : [...list, saved]));
               setCurrent(saved.id);
-              Alert.alert("Admin", "Modèle enregistré.");
+              Alert.alert(tr("Admin"), tr("Modèle enregistré."));
             })
             .catch(fail)
         }
       />
-      <Text style={{ color: colors.muted, fontSize: 13, marginTop: 6 }}>Destinataires</Text>
+      <Text style={{ color: colors.muted, fontSize: 13, marginTop: 6 }}>{tr("Destinataires")}</Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Chip label="Un utilisateur" active={target === "user"} onPress={() => setTarget("user")} />
-        <Chip label="Tous les utilisateurs" active={target === "all"} onPress={() => setTarget("all")} />
+        <Chip label={tr("Un utilisateur")} active={target === "user"} onPress={() => setTarget("user")} />
+        <Chip label={tr("Tous les utilisateurs")} active={target === "all"} onPress={() => setTarget("all")} />
       </View>
       {target === "user" ? (
         <TextInput value={username} onChangeText={setUsername} placeholder="@pseudo" autoCapitalize="none" placeholderTextColor={colors.muted} style={field} />
       ) : null}
       <Btn
-        label={sending ? "Envoi…" : "Envoyer la notification"}
+        label={sending ? tr("Envoi…") : tr("Envoyer la notification")}
         disabled={sending || !title.trim() || !body.trim() || (target === "user" && !username.trim())}
         onPress={() =>
-          Alert.alert("Envoyer", target === "all" ? "Envoyer à TOUS les utilisateurs joignables ?" : `Envoyer à ${username.startsWith("@") ? username : `@${username}`} ?`, [
+          Alert.alert(tr("Envoyer"), target === "all" ? tr("Envoyer à TOUS les utilisateurs joignables ?") : tr("Envoyer à {0} ?", username.startsWith("@") ? username : `@${username}`), [
             { text: "Annuler", style: "cancel" },
             {
               text: "Envoyer",
@@ -603,7 +604,7 @@ function PushTab() {
                 setSending(true);
                 void api<{ recipients: number; delivered: number }>("push/send", { title, body, target, username })
                   .then((r) => {
-                    Alert.alert("Admin", `Envoyé : ${r.delivered} appareil(s) pour ${r.recipients} utilisateur(s).`);
+                    Alert.alert(tr("Admin"), tr("Envoyé : {0} appareil(s) pour {1} utilisateur(s).", r.delivered, r.recipients));
                     loadHistory();
                   })
                   .catch(fail)
@@ -613,12 +614,12 @@ function PushTab() {
           ])
         }
       />
-      {history.length ? <Text style={{ color: colors.muted, fontSize: 13, marginTop: 8 }}>Historique</Text> : null}
+      {history.length ? <Text style={{ color: colors.muted, fontSize: 13, marginTop: 8 }}>{tr("Historique")}</Text> : null}
       {history.map((h) => (
         <Card key={h.id}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{h.title}</Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
-            {h.target === "all" ? "Tous" : `@${h.to_user ?? "?"}`} · {h.delivered}/{h.recipients} · {when(h.createdAt)}
+            {h.target === "all" ? tr("Tous") : `@${h.to_user ?? "?"}`} · {h.delivered}/{h.recipients} · {when(h.createdAt)}
           </Text>
         </Card>
       ))}
@@ -646,8 +647,8 @@ function AuditTab() {
       .then((r) => setRows(r.audit))
       .catch(fail);
   }, []);
-  if (!rows) return <Text style={{ color: colors.muted }}>Chargement…</Text>;
-  if (!rows.length) return <Empty title="Aucune action" />;
+  if (!rows) return <Text style={{ color: colors.muted }}>{tr("Chargement…")}</Text>;
+  if (!rows.length) return <Empty title={tr("Aucune action")} />;
   return (
     <View style={{ gap: 8 }}>
       {rows.map((r) => (
@@ -657,7 +658,7 @@ function AuditTab() {
             {r.target ? ` · @${r.target}` : ""}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
-            par @{r.actor ?? "?"} · {when(r.createdAt)}
+            {tr("par @")}{r.actor ?? "?"} · {when(r.createdAt)}
           </Text>
         </View>
       ))}

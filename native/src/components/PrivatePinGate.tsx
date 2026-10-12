@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Modal, Text, TextInput, View } from "react-native";
 import { Btn, Press } from "./ui";
 import { colors } from "../theme";
+import { tr } from "../lib/tr";
 
 export function PrivatePinGate({
   visible,
@@ -47,7 +48,7 @@ export function PrivatePinGate({
           />
           <View style={{ marginTop: 16, gap: 8 }}>
             <Btn
-              label="Continuer"
+              label={tr("Continuer")}
               disabled={pin.trim().length < 4}
               onPress={() => {
                 const next = pin.trim();
@@ -56,7 +57,7 @@ export function PrivatePinGate({
               }}
             />
             <Btn
-              label="Annuler"
+              label={tr("Annuler")}
               variant="ghost"
               onPress={() => {
                 setPin("");

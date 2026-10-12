@@ -6,6 +6,7 @@ import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { colors, accentA, whiteA } from "../theme";
 import type { LiveInfo } from "../lib/event-live";
+import { tr } from "../lib/tr";
 
 /**
  * Event sheet block for a WIPP online event: register, join the live, and the organizer's tools
@@ -25,7 +26,7 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
       setLive(await getLive(eventId));
       setError("");
     } catch (err) {
-      setError(errorText(err, "Direct indisponible."));
+      setError(errorText(err, tr("Direct indisponible.")));
     }
   }, [eventId]);
   useEffect(() => {
@@ -46,7 +47,7 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
       const { fetchEvents } = await import("../lib/lot7/api");
       useWippStore.setState({ lifestyle: await fetchEvents(useWippStore.getState().serverProfileId) });
     } catch (err) {
-      Alert.alert("Événement", errorText(err, "Action impossible."));
+      Alert.alert(tr("Événement"), errorText(err, tr("Action impossible.")));
     } finally {
       setBusy(false);
     }
@@ -64,10 +65,10 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
         {live.visibility === "private" ? <Lock size={18} color={colors.accent} /> : <Radio size={18} color={colors.accent} />}
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>
-            En ligne sur WIPP · {live.state === "live" ? "EN DIRECT" : live.state === "ended" ? "Terminé" : live.state === "cancelled" ? "Annulé" : "À venir"}
+            {tr("En ligne sur WIPP ·")} {live.state === "live" ? "EN DIRECT" : live.state === "ended" ? tr("Terminé") : live.state === "cancelled" ? tr("Annulé") : tr("À venir")}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
-            {live.visibility === "private" ? "Sur invitation" : "Public"} · {live.durationMin} min · gratuit · {live.registered} inscrit{live.registered > 1 ? "s" : ""}
+            {live.visibility === "private" ? tr("Sur invitation") : tr("Public")} · {live.durationMin} {tr("min · gratuit ·")} {live.registered} inscrit{live.registered > 1 ? "s" : ""}
           </Text>
         </View>
       </View>
@@ -75,15 +76,15 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
       {live.isOwner ? (
         <>
           {live.state === "live" ? (
-            <Btn label="Rejoindre mon direct" onPress={() => push({ name: "event-live", eventId })} />
+            <Btn label={tr("Rejoindre mon direct")} onPress={() => push({ name: "event-live", eventId })} />
           ) : !closed ? (
             <Btn
-              label={busy ? "…" : "Démarrer le direct"}
+              label={busy ? "…" : tr("Démarrer le direct")}
               onPress={() => {
                 const go = () => void run(async () => (await import("../lib/event-live")).startLive(eventId), () => push({ name: "event-live", eventId }));
                 if (soon) go();
                 else
-                  Alert.alert("Démarrer maintenant ?", "L’heure prévue n’est pas encore arrivée. Les inscrits seront prévenus que c’est en direct.", [
+                  Alert.alert(tr("Démarrer maintenant ?"), tr("L’heure prévue n’est pas encore arrivée. Les inscrits seront prévenus que c’est en direct."), [
                     { text: "Annuler", style: "cancel" },
                     { text: "Démarrer", onPress: go },
                   ]);
@@ -94,7 +95,7 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Press onPress={() => setInviteOpen((v) => !v)} style={{ flex: 1, height: 44, borderRadius: 12, borderWidth: 1, borderColor: whiteA(0.15), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <UserPlus size={16} color={colors.fg} />
-                <Text style={{ color: colors.fg, fontSize: 13 }}>Inviter</Text>
+                <Text style={{ color: colors.fg, fontSize: 13 }}>{tr("Inviter")}</Text>
               </Press>
               <Press
                 onPress={() =>
@@ -105,7 +106,7 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
                 style={{ flex: 1, height: 44, borderRadius: 12, borderWidth: 1, borderColor: whiteA(0.15), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
               >
                 <Link2 size={16} color={colors.fg} />
-                <Text style={{ color: colors.fg, fontSize: 13 }}>Lien d’invitation</Text>
+                <Text style={{ color: colors.fg, fontSize: 13 }}>{tr("Lien d’invitation")}</Text>
               </Press>
             </View>
           ) : null}
@@ -116,55 +117,55 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
                 onChangeText={setNames}
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="@pseudo1 @pseudo2 …"
+                placeholder={tr("@pseudo1 @pseudo2 …")}
                 placeholderTextColor={colors.muted}
                 style={{ minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: whiteA(0.15), color: colors.fg, paddingHorizontal: 12 }}
               />
               <Btn
-                label="Envoyer les invitations"
+                label={tr("Envoyer les invitations")}
                 onPress={() => {
                   const list = names.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
                   if (!list.length) return;
                   void run(async () => (await import("../lib/event-live")).inviteToLive(eventId, list), (r) => {
                     setNames("");
                     setInviteOpen(false);
-                    Alert.alert("Invitations", r.invited ? `${r.invited} invitation${r.invited > 1 ? "s" : ""} envoyée${r.invited > 1 ? "s" : ""}.` : "Aucun nouveau compte trouvé avec ces pseudos.");
+                    Alert.alert(tr("Invitations"), r.invited ? tr("{0} invitation{1} envoyée{2}.", r.invited, r.invited > 1 ? "s" : "", r.invited > 1 ? "s" : "") : tr("Aucun nouveau compte trouvé avec ces pseudos."));
                   });
                 }}
               />
-              <Text style={{ color: colors.muted, fontSize: 11 }}>Un nouveau lien d’invitation désactive l’ancien.</Text>
+              <Text style={{ color: colors.muted, fontSize: 11 }}>{tr("Un nouveau lien d’invitation désactive l’ancien.")}</Text>
             </View>
           ) : null}
           {live.state === "scheduled" ? (
             <Press
               onPress={() =>
-                Alert.alert("Annuler l’événement", "Les inscrits ne pourront plus rejoindre le direct.", [
+                Alert.alert(tr("Annuler l’événement"), tr("Les inscrits ne pourront plus rejoindre le direct."), [
                   { text: "Retour", style: "cancel" },
                   { text: "Annuler l’événement", style: "destructive", onPress: () => void run(async () => (await import("../lib/event-live")).cancelLive(eventId)) },
                 ])
               }
               style={{ alignSelf: "center", padding: 8 }}
             >
-              <Text style={{ color: colors.danger, fontSize: 13 }}>Annuler l’événement</Text>
+              <Text style={{ color: colors.danger, fontSize: 13 }}>{tr("Annuler l’événement")}</Text>
             </Press>
           ) : null}
         </>
       ) : closed ? (
-        <Text style={{ color: colors.muted, textAlign: "center" }}>{live.state === "ended" ? "Ce direct est terminé. Il n’y a pas de rediffusion." : "Cet événement a été annulé."}</Text>
+        <Text style={{ color: colors.muted, textAlign: "center" }}>{live.state === "ended" ? tr("Ce direct est terminé. Il n’y a pas de rediffusion.") : tr("Cet événement a été annulé.")}</Text>
       ) : live.myStatus === "banned" ? (
-        <Text style={{ color: colors.muted, textAlign: "center" }}>L’organisateur t’a retiré(e) de cet événement.</Text>
+        <Text style={{ color: colors.muted, textAlign: "center" }}>{tr("L’organisateur t’a retiré(e) de cet événement.")}</Text>
       ) : (
         <>
-          {live.state === "live" ? <Btn label="Rejoindre le direct" onPress={() => push({ name: "event-live", eventId })} /> : null}
+          {live.state === "live" ? <Btn label={tr("Rejoindre le direct")} onPress={() => push({ name: "event-live", eventId })} /> : null}
           {live.myStatus === "registered" ? (
-            <Btn label={busy ? "…" : "✓ Inscrit(e) · Se désinscrire"} variant="secondary" onPress={() => void run(async () => (await import("../lib/event-live")).registerLive(eventId, false))} />
+            <Btn label={busy ? "…" : tr("✓ Inscrit(e) · Se désinscrire")} variant="secondary" onPress={() => void run(async () => (await import("../lib/event-live")).registerLive(eventId, false))} />
           ) : (
-            <Btn label={busy ? "…" : live.myStatus === "invited" ? "Accepter l’invitation" : "S’inscrire"} variant={live.state === "live" ? "secondary" : undefined} onPress={() => void run(async () => (await import("../lib/event-live")).registerLive(eventId, true))} />
+            <Btn label={busy ? "…" : live.myStatus === "invited" ? tr("Accepter l’invitation") : tr("S’inscrire")} variant={live.state === "live" ? "secondary" : undefined} onPress={() => void run(async () => (await import("../lib/event-live")).registerLive(eventId, true))} />
           )}
           {live.state === "scheduled" ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center" }}>
               <Users size={14} color={colors.muted} />
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Le bouton « Rejoindre le direct » apparaît quand l’organisateur démarre.</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Le bouton « Rejoindre le direct » apparaît quand l’organisateur démarre.")}</Text>
             </View>
           ) : null}
         </>

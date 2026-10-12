@@ -20,6 +20,7 @@ import { REPORT_REASONS, submitContentReport } from "../lib/safety";
 import type { Listing, Shop, ShopCategory } from "../lib/types";
 import { colors, layout, accentA, fgA, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { tr } from "../lib/tr";
 
 const CATS = ["all", "auto", "realty", "electronics", "fashion", "home", "jobs", "leisure", "goods"] as const;
 /** My real position (asked once); no distance is shown until it is known. */
@@ -123,7 +124,7 @@ export function ExploreScreen() {
             {searching ? t("exploreTitle") : destTitle}
           </Text>
           {hub === "listings" && !searching ? (
-            <IconBtn label="Créer une annonce" onPress={() => push({ name: "create-listing" })}>
+            <IconBtn label={tr("Créer une annonce")} onPress={() => push({ name: "create-listing" })}>
               <Plus size={24} color={colors.fg} />
             </IconBtn>
           ) : hub === "lifestyle" && !searching ? (
@@ -137,7 +138,7 @@ export function ExploreScreen() {
       </GlassHeader>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 4 }}>
-          <SearchField placeholder={hub === "shops" ? "Rechercher une entreprise ..." : t("exploreAsk")} value={q} onChangeText={setQ} />
+          <SearchField placeholder={hub === "shops" ? tr("Rechercher une entreprise ...") : t("exploreAsk")} value={q} onChangeText={setQ} />
         </View>
         {!searching && tabbed ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 12 }}>
@@ -288,7 +289,7 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
           );
         })}
       </ScrollView>
-      <Text style={{ marginTop: 8, fontSize: 13, fontFamily: "Inter_500Medium", color: colors.muted }}>Populaire</Text>
+      <Text style={{ marginTop: 8, fontSize: 13, fontFamily: "Inter_500Medium", color: colors.muted }}>{tr("Populaire")}</Text>
       {listings.slice(0, 3).map((l) => (
         <ListingRow key={l.id} listing={l} />
       ))}
@@ -308,15 +309,15 @@ function ListingRow({ listing }: { listing: Listing }) {
           {listing.boosted ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: accentA(0.15) }}>
               <Pin size={10} color={colors.accent} />
-              <Text style={{ color: colors.accent, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>En avant</Text>
+              <Text style={{ color: colors.accent, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>{tr("En avant")}</Text>
             </View>
           ) : null}
         </View>
         <Text style={{ color: colors.accent, marginTop: 2 }}>{listingPriceText(listing)}</Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>
           {[listing.city, listing.distance].filter(Boolean).join(" · ")}
-          {listing.views ? ` · ${listing.views} vue${listing.views > 1 ? "s" : ""}` : ""}
-          {listing.publishAt && listing.publishAt > Date.now() ? " · programmée" : ""}
+          {listing.views ? tr(" · {0} vue{1}", listing.views, listing.views > 1 ? "s" : "") : ""}
+          {listing.publishAt && listing.publishAt > Date.now() ? tr(" · programmée") : ""}
         </Text>
       </View>
     </Press>
@@ -358,7 +359,7 @@ function ExploreSearch({ q }: { q: string }) {
         }));
         setError("");
       } catch (err) {
-        if (!cancel) setError(errorText(err, "Recherche impossible."));
+        if (!cancel) setError(errorText(err, tr("Recherche impossible.")));
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -369,7 +370,7 @@ function ExploreSearch({ q }: { q: string }) {
   }, [q]);
   return (
     <View style={{ paddingHorizontal: 16 }}>
-      {loading ? <Empty title="Recherche…" /> : null}
+      {loading ? <Empty title={tr("Recherche…")} /> : null}
       {error ? <Empty title={error} /> : null}
       {listings.map((l) => <ListingRow key={l.id} listing={l} />)}
       {shops.map((s) => <ShopRow key={s.id} shop={s} />)}
@@ -379,7 +380,7 @@ function ExploreSearch({ q }: { q: string }) {
           <Text style={{ color: colors.muted, fontSize: 12 }}>{e.city}</Text>
         </Press>
       ))}
-      {!loading && !error && listings.length + shops.length + events.length === 0 ? <Empty title="Aucun résultat" /> : null}
+      {!loading && !error && listings.length + shops.length + events.length === 0 ? <Empty title={tr("Aucun résultat")} /> : null}
     </View>
   );
 }
@@ -399,7 +400,7 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
           setLoadError("");
         }
       } catch (err) {
-        if (!cancel) setLoadError(errorText(err, "Impossible de charger les annonces."));
+        if (!cancel) setLoadError(errorText(err, tr("Impossible de charger les annonces.")));
       }
     })();
     return () => {
@@ -413,8 +414,8 @@ function ListingsPane({ cat }: { cat: (typeof CATS)[number] }) {
       {listings.map((l) => <ListingRow key={l.id} listing={l} />)}
       {!loadError && listings.length === 0 ? (
         <View>
-          <Empty title="Aucune annonce pour le moment" />
-          <Btn label="Créer une annonce" onPress={() => push({ name: "create-listing" })} />
+          <Empty title={tr("Aucune annonce pour le moment")} />
+          <Btn label={tr("Créer une annonce")} onPress={() => push({ name: "create-listing" })} />
         </View>
       ) : null}
     </View>
@@ -442,7 +443,7 @@ function UtilitiesPane() {
         <View style={{ width: "48.5%", zIndex: 10 }}>
           <Press
             onPress={() => setPharmaMode((m) => (m ? null : "open"))}
-            accessibilityLabel="Pharmacies"
+            accessibilityLabel={tr("Pharmacies")}
             style={{ minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
           >
             <Image source={HUB_BACKGROUNDS.utilities} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
@@ -452,9 +453,9 @@ function UtilitiesPane() {
                 <Cross size={20} color={colors.accent} />
                 <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: pharmaMode ? "180deg" : "0deg" }] }} />
               </View>
-              <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Pharmacies</Text>
+              <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tr("Pharmacies")}</Text>
               <Text style={{ marginTop: 2, fontSize: 11, color: pharmaMode ? colors.accent : colors.muted }}>
-                {pharmaMode === "open" ? "Ouvertes maintenant" : pharmaMode === "h24" ? "Ouvertes 24 h/24" : "Ouvertes autour de vous"}
+                {pharmaMode === "open" ? tr("Ouvertes maintenant") : pharmaMode === "h24" ? tr("Ouvertes 24 h/24") : tr("Ouvertes autour de vous")}
               </Text>
             </View>
           </Press>
@@ -463,14 +464,14 @@ function UtilitiesPane() {
       {pharmaMode ? (
         <View style={{ marginBottom: 16, gap: 12 }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Chip label="🟢 Ouvertes maintenant" active={pharmaMode === "open"} onPress={() => setPharmaMode("open")} />
-            <Chip label="🕐 Ouvertes 24 h/24" active={pharmaMode === "h24"} onPress={() => setPharmaMode("h24")} />
+            <Chip label={tr("🟢 Ouvertes maintenant")} active={pharmaMode === "open"} onPress={() => setPharmaMode("open")} />
+            <Chip label={tr("🕐 Ouvertes 24 h/24")} active={pharmaMode === "h24"} onPress={() => setPharmaMode("h24")} />
           </View>
           <PharmacyResults mode={pharmaMode} />
         </View>
       ) : null}
       {serverConnected && services.length === 0 && shown.length === 0 ? (
-        <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center", marginTop: 12 }}>D’autres services utiles arrivent bientôt.</Text>
+        <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center", marginTop: 12 }}>{tr("D’autres services utiles arrivent bientôt.")}</Text>
       ) : null}
       {services.map((p) => (
         <View key={p.id} style={{ paddingVertical: 12 }}>
@@ -481,7 +482,7 @@ function UtilitiesPane() {
       {shown.map((p) => (
         <Press key={p.id} onPress={() => push({ name: "pharmacy", pharmacyId: p.id })} style={{ paddingVertical: 12 }}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{p.name}</Text>
-          <Text style={{ color: colors.muted, fontSize: 13 }}>{p.address}{p.onDuty ? " · De garde" : ""}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13 }}>{p.address}{p.onDuty ? tr(" · De garde") : ""}</Text>
         </Press>
       ))}
     </View>
@@ -514,7 +515,7 @@ function ShopSearch({ q }: { q: string }) {
         }));
         setError("");
       } catch (err) {
-        if (!cancel) setError(errorText(err, "Recherche impossible."));
+        if (!cancel) setError(errorText(err, tr("Recherche impossible.")));
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -555,7 +556,7 @@ function ShopSearch({ q }: { q: string }) {
           <Chip key={id} label={label} active={kind === id} onPress={() => setKind(id)} />
         ))}
       </ScrollView>
-      {loading ? <Empty title="Recherche…" /> : null}
+      {loading ? <Empty title={tr("Recherche…")} /> : null}
       {error ? <Empty title={error} /> : null}
       {showShops ? hits.map((s) => <ShopRow key={s.id} shop={s} />) : null}
       {showPeople
@@ -573,11 +574,11 @@ function ShopSearch({ q }: { q: string }) {
         ? groups.map((c) => (
             <Press key={c.id} onPress={() => useWippStore.getState().push({ name: "conversation", chatId: c.id })} style={{ paddingVertical: 10 }}>
               <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{c.name}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Groupe</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Groupe")}</Text>
             </Press>
           ))
         : null}
-      {empty ? <Empty title="Aucun résultat" /> : null}
+      {empty ? <Empty title={tr("Aucun résultat")} /> : null}
     </View>
   );
 }
@@ -605,7 +606,7 @@ function ShopRow({ shop }: { shop: Shop }) {
         <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{shopPlace(shop, t)}</Text>
       </View>
       <Press
-        accessibilityLabel={saved ? "Retirer des favoris" : "Ajouter aux favoris"}
+        accessibilityLabel={saved ? tr("Retirer des favoris") : tr("Ajouter aux favoris")}
         onPress={() => {
           void import("../lib/lot7/api").then(async ({ toggleSave }) => {
             const id = shop.handle || shop.id;
@@ -613,7 +614,7 @@ function ShopRow({ shop }: { shop: Shop }) {
             useWippStore.setState((s) => ({
               saves: saved ? s.saves.filter((x) => !(x.kind === "business" && x.id === id)) : [...s.saves, { kind: "business", id }],
             }));
-          }).catch((err) => Alert.alert("Favoris", errorText(err, "Enregistrement impossible.")));
+          }).catch((err) => Alert.alert(tr("Favoris"), errorText(err, tr("Enregistrement impossible."))));
         }}
       >
         <Heart size={18} color={saved ? colors.accent : colors.muted} fill={saved ? colors.accent : "transparent"} />
@@ -623,14 +624,14 @@ function ShopRow({ shop }: { shop: Shop }) {
 }
 
 const CATEGORY_TILES: { id: ShopCategory | "mode"; label: string; Icon: typeof Store }[] = [
-  { id: "nails", label: "Onglerie", Icon: Brush },
-  { id: "hair", label: "Coiffure", Icon: Scissors },
-  { id: "beauty", label: "Beauté", Icon: Flower2 },
-  { id: "restaurant", label: "Restaurant", Icon: Utensils },
-  { id: "mode", label: "Mode", Icon: Shirt },
-  { id: "bakery", label: "Pâtisserie", Icon: CakeSlice },
-  { id: "cafe", label: "Café", Icon: Coffee },
-  { id: "services", label: "Services", Icon: Wrench },
+  { id: "nails", get label() { return tr("Onglerie"); }, Icon: Brush },
+  { id: "hair", get label() { return tr("Coiffure"); }, Icon: Scissors },
+  { id: "beauty", get label() { return tr("Beauté"); }, Icon: Flower2 },
+  { id: "restaurant", get label() { return tr("Restaurant"); }, Icon: Utensils },
+  { id: "mode", get label() { return tr("Mode"); }, Icon: Shirt },
+  { id: "bakery", get label() { return tr("Pâtisserie"); }, Icon: CakeSlice },
+  { id: "cafe", get label() { return tr("Café"); }, Icon: Coffee },
+  { id: "services", get label() { return tr("Services"); }, Icon: Wrench },
 ];
 
 /** WIPP's own picture per category (assets/categories/…). Missing ones show the gold icon. */
@@ -662,7 +663,7 @@ function ShopsPane() {
         await refreshBusinessShops();
         setLoadError("");
       } catch (err) {
-        setLoadError(errorText(err, "Impossible de charger les entreprises."));
+        setLoadError(errorText(err, tr("Impossible de charger les entreprises.")));
       } finally {
         setLoaded(true);
       }
@@ -698,10 +699,10 @@ function ShopsPane() {
         })}
       </ScrollView>
       <View style={{ paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Entreprises à proximité</Text>
-        <Press onPress={() => setCat("all")}><Text style={{ color: colors.accent }}>Voir tout ›</Text></Press>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>{tr("Entreprises à proximité")}</Text>
+        <Press onPress={() => setCat("all")}><Text style={{ color: colors.accent }}>{tr("Voir tout ›")}</Text></Press>
       </View>
-      {!loaded ? <Empty title="Chargement…" /> : null}
+      {!loaded ? <Empty title={tr("Chargement…")} /> : null}
       {loadError ? <Empty title={loadError} /> : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
         {shown.slice(0, 8).map((s) => {
@@ -712,7 +713,7 @@ function ShopsPane() {
               {s.pinned ? (
                 <View style={{ position: "absolute", top: 8, left: 8, flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.65)", paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Pin size={11} color={colors.accent} />
-                  <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>Épinglé</Text>
+                  <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{tr("Épinglé")}</Text>
                 </View>
               ) : null}
               <Text numberOfLines={1} style={{ marginTop: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{s.name}</Text>
@@ -721,7 +722,7 @@ function ShopsPane() {
           );
         })}
       </ScrollView>
-      <Text style={{ marginTop: 22, marginBottom: 10, paddingHorizontal: 16, color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Catégories populaires</Text>
+      <Text style={{ marginTop: 22, marginBottom: 10, paddingHorizontal: 16, color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>{tr("Catégories populaires")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
         {shortcuts.map((item) => {
           const src = coverFor(item.id);
@@ -740,9 +741,9 @@ function ShopsPane() {
           );
         })}
       </ScrollView>
-      {loaded && !loadError && shown.length === 0 ? <Empty title="Aucune entreprise pour le moment" /> : null}
+      {loaded && !loadError && shown.length === 0 ? <Empty title={tr("Aucune entreprise pour le moment")} /> : null}
       <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
-        <Btn label="Créer mon entreprise" onPress={() => push({ name: "business-card" })} />
+        <Btn label={tr("Créer mon entreprise")} onPress={() => push({ name: "business-card" })} />
       </View>
     </View>
   );
@@ -799,7 +800,7 @@ function LifestylePane() {
           setLoadError("");
         }
       } catch (err) {
-        if (!cancel) setLoadError(errorText(err, "Impossible de charger les événements."));
+        if (!cancel) setLoadError(errorText(err, tr("Impossible de charger les événements.")));
       }
     };
     void load();
@@ -816,10 +817,10 @@ function LifestylePane() {
     <View style={{ paddingHorizontal: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.fg, fontSize: 28, fontFamily: "Inter_800ExtraBold" }}>Événements</Text>
-          <Text style={{ marginTop: 2, color: fgA(0.7), fontSize: 13 }}>Découvre, participe et vis des expériences sur WIPP.</Text>
+          <Text style={{ color: colors.fg, fontSize: 28, fontFamily: "Inter_800ExtraBold" }}>{tr("Événements")}</Text>
+          <Text style={{ marginTop: 2, color: fgA(0.7), fontSize: 13 }}>{tr("Découvre, participe et vis des expériences sur WIPP.")}</Text>
         </View>
-        <Press accessibilityLabel="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} style={{ width: 48, height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+        <Press accessibilityLabel={tr("Créer un événement")} onPress={() => push({ name: "create-lifestyle" })} style={{ width: 48, height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
           <CalendarPlus size={24} color={colors.accent} />
         </Press>
       </View>
@@ -828,7 +829,7 @@ function LifestylePane() {
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Rechercher un événement, une ville…"
+          placeholder={tr("Rechercher un événement, une ville…")}
           placeholderTextColor={colors.muted}
           style={{ flex: 1, color: colors.fg, fontSize: 15, ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) } as object}
         />
@@ -849,13 +850,13 @@ function LifestylePane() {
       </View>
       <View style={{ marginTop: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
         <MapPin size={18} color={colors.accent} />
-        <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{q || cat !== "Tous" ? "Résultats" : myCity ? `Événements près de toi` : "À venir"}</Text>
+        <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{q || cat !== "Tous" ? tr("Résultats") : myCity ? tr("Événements près de toi") : tr("À venir")}</Text>
       </View>
       {loadError ? <Empty title={loadError} /> : null}
       {!loadError && items.length === 0 ? (
         <View>
-          <Empty title={q || cat !== "Tous" ? "Aucun événement trouvé" : "Aucun événement à venir"} />
-          <Btn label="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} />
+          <Empty title={q || cat !== "Tous" ? tr("Aucun événement trouvé") : tr("Aucun événement à venir")} />
+          <Btn label={tr("Créer un événement")} onPress={() => push({ name: "create-lifestyle" })} />
         </View>
       ) : null}
       {items.map((e) => {
@@ -934,7 +935,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
   const ago = listing.createdAt ? timeAgo(listing.createdAt) : "";
   const openOptions = () => {
               if (mine) {
-                Alert.alert("Annonce", undefined, [
+                Alert.alert(tr("Annonce"), undefined, [
                   { text: "Modifier", onPress: () => push({ name: "create-listing", listingId: listing.id }) },
                   {
                     text: "Supprimer l’annonce",
@@ -951,11 +952,11 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                 ]);
                 return;
               }
-              Alert.alert("Annonce", undefined, [
+              Alert.alert(tr("Annonce"), undefined, [
                 {
                   text: "Signaler l’annonce",
                   onPress: () => {
-                    Alert.alert("Signaler l’annonce", undefined, [
+                    Alert.alert(tr("Signaler l’annonce"), undefined, [
                       ...REPORT_REASONS.map((reason) => ({
                         text: reason,
                         onPress: () => {
@@ -965,8 +966,8 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                             targetProfileId: listing.sellerId,
                             reason,
                           }).then(
-                            () => Alert.alert("Signalement", "Signalement envoyé."),
-                            (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                            () => Alert.alert(tr("Signalement"), tr("Signalement envoyé.")),
+                            (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
                           );
                         },
                       })),
@@ -985,7 +986,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                   text: "Bloquer cet utilisateur",
                   style: "destructive",
                   onPress: () => {
-                    Alert.alert("Bloquer", "Bloquer cette personne ?", [
+                    Alert.alert(tr("Bloquer"), tr("Bloquer cette personne ?"), [
                       { text: "Annuler", style: "cancel" },
                       {
                         text: "Bloquer",
@@ -1010,7 +1011,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
           saves: on ? s.saves.filter((x) => !(x.kind === "listing" && x.id === listing.id)) : [...s.saves, { kind: "listing", id: listing.id }],
         }));
       } catch (err) {
-        Alert.alert("Enregistrés", errorText(err, "Enregistrement impossible."));
+        Alert.alert(tr("Enregistrés"), errorText(err, tr("Enregistrement impossible.")));
       }
     });
   };
@@ -1042,15 +1043,15 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             </ScrollView>
           ) : null}
           <View style={{ position: "absolute", top: 44, left: 14, right: 14, flexDirection: "row", justifyContent: "space-between" }}>
-            <Press accessibilityLabel="Retour" onPress={pop} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+            <Press accessibilityLabel={tr("Retour")} onPress={pop} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
               <ChevronLeft size={24} color="#fff" />
             </Press>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Press accessibilityLabel="Partager" onPress={() => void Share.share({ message: `${listing.title} · ${listingPriceText(listing)} sur WIPP` })} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+              <Press accessibilityLabel={tr("Partager")} onPress={() => void Share.share({ message: `${listing.title} · ${listingPriceText(listing)} sur WIPP` })} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
                 <Share2 size={20} color="#fff" />
               </Press>
               {mine ? null : (
-                <Press accessibilityLabel="Enregistrer" onPress={toggleSaved} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+                <Press accessibilityLabel={tr("Enregistrer")} onPress={toggleSaved} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
                   <Heart size={20} color={saved ? colors.accent : "#fff"} fill={saved ? colors.accent : "transparent"} />
                 </Press>
               )}
@@ -1076,7 +1077,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             <Text style={{ color: colors.accent, fontSize: 26, fontFamily: "Inter_800ExtraBold" }}>{listingPriceText(listing).replace(/ · négociable$/, "")}</Text>
             {listing.negotiable ? (
               <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: colors.accent }}>
-                <Text style={{ color: colors.accent, fontSize: 12 }}>Négociable</Text>
+                <Text style={{ color: colors.accent, fontSize: 12 }}>{tr("Négociable")}</Text>
               </View>
             ) : null}
           </View>
@@ -1087,7 +1088,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <MapPin size={14} color={colors.muted} />
-              <Text style={{ color: colors.muted, fontSize: 12 }}>{[listing.area, listing.city].filter(Boolean).join(", ") || "Ville à préciser"}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{[listing.area, listing.city].filter(Boolean).join(", ") || tr("Ville à préciser")}</Text>
             </View>
             {myPos && listing.lat != null && listing.lng != null ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -1098,7 +1099,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             {ago ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Clock size={14} color={colors.muted} />
-                <Text style={{ color: colors.muted, fontSize: 12 }}>{listing.publishAt && listing.publishAt > Date.now() ? `Programmée ${ago.replace("il y a", "dans")}` : `Publié ${ago}`}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{listing.publishAt && listing.publishAt > Date.now() ? tr("Programmée {0}", ago.replace("il y a", "dans")) : tr("Publié {0}", ago)}</Text>
               </View>
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -1108,7 +1109,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             {listing.boosted ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: accentA(0.15) }}>
                 <Pin size={12} color={colors.accent} />
-                <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>En avant</Text>
+                <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{tr("En avant")}</Text>
               </View>
             ) : null}
           </View>
@@ -1120,7 +1121,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{seller.displayName}</Text>
               <Text style={{ color: colors.muted, fontSize: 12 }}>
-                Membre WIPP{stats?.memberSince ? ` depuis ${new Date(stats.memberSince).getFullYear()}` : ""}
+                {tr("Membre WIPP")}{stats?.memberSince ? ` depuis ${new Date(stats.memberSince).getFullYear()}` : ""}
               </Text>
               <View style={{ marginTop: 3, flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <StarsInput value={stats?.myRating ?? 0} average={stats?.rating ?? null} onRate={(n) => {
@@ -1129,18 +1130,18 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                       await rateSeller(listing.sellerId, n);
                       setStats(await listingStats(listing.id));
                     } catch (err) {
-                      Alert.alert("Note", errorText(err, "Note impossible."));
+                      Alert.alert(tr("Note"), errorText(err, tr("Note impossible.")));
                     }
                   });
                 }} />
                 <Text style={{ color: colors.fg, fontSize: 12 }}>
-                  {stats?.rating != null ? `${String(stats.rating).replace(".", ",")} (${stats.ratingCount})` : "Pas encore noté"}
-                  {stats ? ` · ${stats.sellerListings} annonce${stats.sellerListings > 1 ? "s" : ""}` : ""}
+                  {stats?.rating != null ? `${String(stats.rating).replace(".", ",")} (${stats.ratingCount})` : tr("Pas encore noté")}
+                  {stats ? tr(" · {0} annonce{1}", stats.sellerListings, stats.sellerListings > 1 ? "s" : "") : ""}
                 </Text>
               </View>
             </View>
             <Press onPress={() => push({ name: "found-profile", userId: seller.id, via: "username" })} style={{ paddingHorizontal: 12, height: 36, borderRadius: 999, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Voir le profil</Text>
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Voir le profil")}</Text>
               <ChevronRight size={14} color={colors.accent} />
             </Press>
           </View>
@@ -1150,11 +1151,11 @@ export function ListingScreen({ listingId }: { listingId: string }) {
           <View style={{ flexDirection: "row", gap: 8, marginHorizontal: 14, marginTop: 12 }}>
             <Press onPress={() => push({ name: "create-listing", listingId: listing.id })} style={action(true)}>
               <Pencil size={18} color={colors.accentFg} />
-              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Modifier</Text>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr("Modifier")}</Text>
             </Press>
             <Press onPress={openOptions} style={action(false)}>
               <MoreHorizontal size={18} color={colors.fg} />
-              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Supprimer…</Text>
+              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Supprimer…")}</Text>
             </Press>
           </View>
         ) : (
@@ -1162,32 +1163,32 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             <Press onPress={() => contact()} style={[action(true), { flexBasis: "47%" }]}>
               <MessageCircle size={18} color={colors.accentFg} />
               <View>
-                <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Chat WIPP</Text>
-                <Text style={{ color: colors.accentFg, fontSize: 11 }}>Réponse rapide</Text>
+                <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr("Chat WIPP")}</Text>
+                <Text style={{ color: colors.accentFg, fontSize: 11 }}>{tr("Réponse rapide")}</Text>
               </View>
             </Press>
             {listing.contactPhone ? (
               <Press onPress={() => void Linking.openURL(`tel:${listing.contactPhone!.replace(/\s/g, "")}`)} style={[action(false), { flexBasis: "47%" }]}>
                 <Phone size={18} color={colors.fg} />
-                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Appeler</Text>
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Appeler")}</Text>
               </Press>
             ) : null}
             {/^gratuit|^échange/i.test(listing.price.trim()) ? null : (
               <Press onPress={() => contact(`Bonjour ! Ton annonce « ${listing.title} » m’intéresse. Je te propose : `)} style={[action(false), { flexBasis: "47%" }]}>
                 <Tag size={18} color={colors.fg} />
-                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Faire une offre</Text>
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Faire une offre")}</Text>
               </Press>
             )}
             <Press onPress={toggleSaved} style={[action(false), { flexBasis: "47%" }]}>
               <Heart size={18} color={saved ? colors.accent : colors.fg} fill={saved ? colors.accent : "transparent"} />
-              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{saved ? "Enregistré" : "Enregistrer"}</Text>
+              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{saved ? tr("Enregistré") : tr("Enregistrer")}</Text>
             </Press>
           </View>
         )}
 
         <View style={card}>
-          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Description</Text>
-          <Text style={{ marginTop: 8, color: fgA(0.85), lineHeight: 21 }}>{listing.description || "Pas de description."}</Text>
+          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("Description")}</Text>
+          <Text style={{ marginTop: 8, color: fgA(0.85), lineHeight: 21 }}>{listing.description || tr("Pas de description.")}</Text>
           <View style={{ marginTop: 14, borderRadius: 12, backgroundColor: whiteA(0.04), padding: 12, gap: 8 }}>
             {specs.map(([k, v]) => (
               <View key={k} style={{ flexDirection: "row" }}>
@@ -1199,14 +1200,14 @@ export function ListingScreen({ listingId }: { listingId: string }) {
         </View>
 
         <View style={card}>
-          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 10 }}>Lieu</Text>
+          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 10 }}>{tr("Lieu")}</Text>
           {listing.lat != null && listing.lng != null ? <MiniMap lat={listing.lat} lng={listing.lng} /> : null}
           <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
             <MapPin size={18} color={colors.accent} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{[listing.area, listing.city].filter(Boolean).join(", ") || "À préciser par message"}</Text>
+              <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{[listing.area, listing.city].filter(Boolean).join(", ") || tr("À préciser par message")}</Text>
               {myPos && listing.lat != null && listing.lng != null ? (
-                <Text style={{ color: colors.muted, fontSize: 12 }}>{kmLabel(kmBetween(myPos, { lat: listing.lat, lng: listing.lng }))} de ta position</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{kmLabel(kmBetween(myPos, { lat: listing.lat, lng: listing.lng }))} {tr("de ta position")}</Text>
               ) : listing.country ? <Text style={{ color: colors.muted, fontSize: 12 }}>{listing.country}</Text> : null}
             </View>
           </View>
@@ -1220,7 +1221,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               style={{ marginTop: 12, height: 46, borderRadius: 999, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
               <Navigation size={16} color={colors.accent} />
-              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Voir sur la carte</Text>
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{tr("Voir sur la carte")}</Text>
             </Press>
           ) : null}
         </View>
@@ -1228,14 +1229,14 @@ export function ListingScreen({ listingId }: { listingId: string }) {
         {mine ? null : (
           <Press onPress={openOptions} style={[card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
             <ShieldAlert size={20} color={colors.fg} />
-            <Text style={{ flex: 1, color: colors.fg }}>Signaler ou masquer cette annonce</Text>
+            <Text style={{ flex: 1, color: colors.fg }}>{tr("Signaler ou masquer cette annonce")}</Text>
             <ChevronRight size={18} color={colors.muted} />
           </Press>
         )}
 
         {similar.length ? (
           <View style={{ marginTop: 18 }}>
-            <Text style={{ paddingHorizontal: 18, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 10 }}>Annonces similaires</Text>
+            <Text style={{ paddingHorizontal: 18, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 10 }}>{tr("Annonces similaires")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 14 }}>
               {similar.map((l) => {
                 const src = l.image ? (l.image.startsWith("http") ? { uri: l.image } : wippSrc(l.image)) : null;
@@ -1263,7 +1264,7 @@ function StarsInput({ value, average, onRate }: { value: number; average: number
   return (
     <View style={{ flexDirection: "row", gap: 1 }}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Press key={n} accessibilityLabel={`Noter ${n} sur 5`} onPress={() => onRate(n)} style={{ padding: 2 }}>
+        <Press key={n} accessibilityLabel={tr("Noter {0} sur 5", n)} onPress={() => onRate(n)} style={{ padding: 2 }}>
           <Star size={14} color={colors.accent} fill={n <= shown ? colors.accent : "transparent"} />
         </Press>
       ))}
@@ -1291,7 +1292,7 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
       <View style={{ position: "absolute", left: "50%", top: 75, marginLeft: -14, marginTop: -30 }}>
         <MapPin size={28} color={colors.accent} fill={accentA(0.35)} />
       </View>
-      <Text style={{ position: "absolute", right: 6, bottom: 4, color: "rgba(0,0,0,0.6)", fontSize: 9 }}>© OpenStreetMap</Text>
+      <Text style={{ position: "absolute", right: 6, bottom: 4, color: "rgba(0,0,0,0.6)", fontSize: 9 }}>{tr("© OpenStreetMap")}</Text>
     </View>
   );
 }
@@ -1317,7 +1318,7 @@ export function PharmacyScreen({ pharmacyId }: { pharmacyId: string }) {
       <View style={{ padding: 16 }}>
         <Text style={{ color: colors.fg }}>{p.address}</Text>
         <Text style={{ color: colors.muted, marginTop: 6 }}>{p.city} · {p.chain}</Text>
-        <Text style={{ color: colors.accent, marginTop: 8 }}>{p.onDuty ? `De garde jusqu’à ${p.until}` : p.phone}</Text>
+        <Text style={{ color: colors.accent, marginTop: 8 }}>{p.onDuty ? tr("De garde jusqu’à {0}", p.until) : p.phone}</Text>
       </View>
     </ScreenRoot>
   );
@@ -1342,11 +1343,11 @@ export function ShopScreen({ shopId }: { shopId: string }) {
           <Text style={{ marginTop: 8, color: colors.fg }}>{shop.bio}</Text>
           <Text style={{ marginTop: 8, color: colors.muted }}>{shop.hours}</Text>
           <Btn
-            label="Écrire sur WIPP"
+            label={tr("Écrire sur WIPP")}
             onPress={() => {
               if (shop.id.startsWith("business:")) {
                 void useWippStore.getState().openBusinessChat(shop.handle).catch((err) => {
-                  Alert.alert("Message", errorText(err, "Conversation impossible"));
+                  Alert.alert(tr("Message"), errorText(err, tr("Conversation impossible")));
                 });
                 return;
               }
@@ -1355,7 +1356,7 @@ export function ShopScreen({ shopId }: { shopId: string }) {
             style={{ marginTop: 20 }}
           />
           <Btn
-            label="Carte professionnelle"
+            label={tr("Carte professionnelle")}
             variant="secondary"
             onPress={() => push({ name: "business-card-view", publicId: shop.id.startsWith("business:") ? shop.handle : shop.id })}
             style={{ marginTop: 8 }}
@@ -1399,7 +1400,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
               <Text style={{ marginTop: 8, color: colors.accent }}>{eventAccessText(item)}</Text>
             </>
           )}
-          {item.hostName ? <Text style={{ marginTop: 8, color: colors.muted }}>Organisé par {item.hostName}</Text> : null}
+          {item.hostName ? <Text style={{ marginTop: 8, color: colors.muted }}>{tr("Organisé par")} {item.hostName}</Text> : null}
           <Text style={{ marginTop: 12, color: colors.fg }}>{item.details || item.note}</Text>
           {item.contact ? <Text style={{ marginTop: 8, color: colors.muted }}>{item.contact}</Text> : null}
           {item.adultOnly || item.capacity ? (
@@ -1411,11 +1412,11 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
             <EventLiveActions eventId={item.id} startsAt={item.startsAt} />
           ) : mine ? (
             <Text style={{ marginTop: 16, color: colors.fg }}>
-              {item.interestedCount ? `${item.interestedCount} personne${item.interestedCount > 1 ? "s" : ""} intéressée${item.interestedCount > 1 ? "s" : ""}` : "Personne n’est encore intéressé."}
+              {item.interestedCount ? tr("{0} personne{1} intéressée{2}", item.interestedCount, item.interestedCount > 1 ? "s" : "", item.interestedCount > 1 ? "s" : "") : tr("Personne n’est encore intéressé.")}
             </Text>
           ) : (
             <Btn
-              label={item.interestedMe ? `✓ Intéressé·e (${item.interestedCount ?? 1})` : `Je suis intéressé·e${item.interestedCount ? ` · ${item.interestedCount}` : ""}`}
+              label={item.interestedMe ? tr("✓ Intéressé·e ({0})", item.interestedCount ?? 1) : tr("Je suis intéressé·e{0}", item.interestedCount ? ` · ${item.interestedCount}` : "")}
               variant={item.interestedMe ? "secondary" : undefined}
               onPress={() => {
                 const on = !item.interestedMe;
@@ -1426,14 +1427,14 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                   ),
                 }));
                 void import("../lib/lot7/api").then(({ toggleInterest }) =>
-                  toggleInterest(item.id, on).catch((err) => Alert.alert("Événement", errorText(err, "Action impossible."))),
+                  toggleInterest(item.id, on).catch((err) => Alert.alert(tr("Événement"), errorText(err, tr("Action impossible.")))),
                 );
               }}
               style={{ marginTop: 20 }}
             />
           )}
           <Btn
-            label={saved ? "Retirer des enregistrés" : "Enregistrer"}
+            label={saved ? tr("Retirer des enregistrés") : tr("Enregistrer")}
             onPress={() => {
               const on = saved;
               void import("../lib/lot7/api").then(async ({ toggleSave }) => {
@@ -1445,7 +1446,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                       : [...s.saves, { kind: "event", id: item.id }],
                   }));
                 } catch (err) {
-                  Alert.alert("Enregistrés", errorText(err, "Enregistrement impossible."));
+                  Alert.alert(tr("Enregistrés"), errorText(err, tr("Enregistrement impossible.")));
                 }
               });
             }}
@@ -1453,12 +1454,12 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
           />
           {mine ? (
             <>
-              <Btn label="Modifier" variant="secondary" onPress={() => push({ name: "create-lifestyle", eventId: item.id })} style={{ marginTop: 8 }} />
+              <Btn label={tr("Modifier")} variant="secondary" onPress={() => push({ name: "create-lifestyle", eventId: item.id })} style={{ marginTop: 8 }} />
               <Btn
-                label="Supprimer l’événement"
+                label={tr("Supprimer l’événement")}
                 variant="secondary"
                 onPress={() => {
-                  Alert.alert("Événement", "Supprimer cet événement ?", [
+                  Alert.alert(tr("Événement"), tr("Supprimer cet événement ?"), [
                     { text: "Annuler", style: "cancel" },
                     {
                       text: "Supprimer",
@@ -1468,7 +1469,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                           await removeEvent(item.id);
                           useWippStore.setState((s) => ({ lifestyle: s.lifestyle.filter((x) => x.id !== item.id) }));
                           pop();
-                        }).catch((err) => Alert.alert("Événement", errorText(err, "Suppression impossible.")));
+                        }).catch((err) => Alert.alert(tr("Événement"), errorText(err, tr("Suppression impossible."))));
                       },
                     },
                   ]);
@@ -1479,16 +1480,16 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
           ) : null}
           {!mine ? (
             <Press
-              accessibilityLabel="Signaler l’événement"
+              accessibilityLabel={tr("Signaler l’événement")}
               onPress={() => {
-                Alert.alert("Signaler l’événement", undefined, [
+                Alert.alert(tr("Signaler l’événement"), undefined, [
                   ...REPORT_REASONS.map((reason) => ({
                     text: reason,
                     onPress: () => {
                       // Events share the listings' report queue; « event: » tells the moderators what it is.
                       void submitContentReport({ contentType: "listing", contentId: `event:${item.id}`, targetProfileId: item.hostId?.startsWith("srvuser:") ? item.hostId : null, reason }).then(
-                        () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner."),
-                        (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                        () => Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va l’examiner.")),
+                        (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
                       );
                     },
                   })),
@@ -1497,7 +1498,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
               }}
               style={{ marginTop: 18, alignSelf: "center", paddingVertical: 8, paddingHorizontal: 12 }}
             >
-              <Text style={{ color: colors.muted, fontSize: 13, textDecorationLine: "underline" }}>Signaler l’événement</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, textDecorationLine: "underline" }}>{tr("Signaler l’événement")}</Text>
             </Press>
           ) : null}
         </View>
@@ -1537,19 +1538,19 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
         <Header title={title} onBack={onBack} />
       </GlassHeader>
       <View style={{ padding: 16 }}>
-        <Field value={name} onChangeText={setName} placeholder="Titre" />
-        <Field value={desc} onChangeText={setDesc} placeholder={event ? "Description" : "Description"} />
-        <Field value={city} onChangeText={setCity} placeholder="Ville" />
-        {event ? <Field value={price} onChangeText={setPrice} placeholder="Lieu" /> : <Field value={price} onChangeText={setPrice} placeholder="Prix" />}
-        {event ? <Field value={starts} onChangeText={setStarts} placeholder="Date AAAA-MM-JJ (facultatif)" /> : null}
+        <Field value={name} onChangeText={setName} placeholder={tr("Titre")} />
+        <Field value={desc} onChangeText={setDesc} placeholder={event ? tr("Description") : tr("Description")} />
+        <Field value={city} onChangeText={setCity} placeholder={tr("Ville")} />
+        {event ? <Field value={price} onChangeText={setPrice} placeholder={tr("Lieu")} /> : <Field value={price} onChangeText={setPrice} placeholder={tr("Prix")} />}
+        {event ? <Field value={starts} onChangeText={setStarts} placeholder={tr("Date AAAA-MM-JJ (facultatif)")} /> : null}
         {error ? <Text style={{ color: colors.danger, marginTop: 8 }}>{error}</Text> : null}
         <Btn
-          label="Enregistrer"
+          label={tr("Enregistrer")}
           onPress={() => {
             void (async () => {
               if (event) {
                 if (!name.trim()) {
-                  setError("Le titre est requis.");
+                  setError(tr("Le titre est requis."));
                   return;
                 }
                 const me = await currentOwner();
@@ -1576,7 +1577,7 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
                 useWippStore.setState({ lifestyle: await fetchEvents(me) });
               } else if (title.toLowerCase().includes("annonce")) {
                 if (!name.trim() || !city.trim()) {
-                  setError("Le titre et la ville sont requis.");
+                  setError(tr("Le titre et la ville sont requis."));
                   return;
                 }
                 const me = await currentOwner();
@@ -1599,11 +1600,11 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
                 });
                 useWippStore.setState({ listings: await fetchListings(me) });
               } else {
-                setError("Les entreprises passent par la carte professionnelle.");
+                setError(tr("Les entreprises passent par la carte professionnelle."));
                 return;
               }
               onBack();
-            })().catch((err) => setError(errorText(err, "Enregistrement impossible")));
+            })().catch((err) => setError(errorText(err, tr("Enregistrement impossible"))));
           }}
           style={{ marginTop: 16 }}
         />
@@ -1614,7 +1615,7 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
 
 export function CreateShopScreen() {
   const pop = useWippStore((s) => s.pop);
-  return <CreateForm title="Créer une entreprise" onBack={pop} />;
+  return <CreateForm title={tr("Créer une entreprise")} onBack={pop} />;
 }
 
 function Missing({ onBack }: { onBack: () => void }) {
@@ -1623,7 +1624,7 @@ function Missing({ onBack }: { onBack: () => void }) {
       <GlassHeader>
         <Header title="" onBack={onBack} />
       </GlassHeader>
-      <Empty title="Introuvable" />
+      <Empty title={tr("Introuvable")} />
     </ScreenRoot>
   );
 }

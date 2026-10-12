@@ -3,12 +3,13 @@ import { Check, Globe, Lock } from "lucide-react-native";
 import { Press } from "./ui";
 import { colors } from "../theme";
 import type { GroupSettings } from "../lib/types";
+import { tr } from "../lib/tr";
 
 export const GROUP_DISAPPEAR: { label: string; ms: number }[] = [
-  { label: "Désactivés", ms: 0 },
-  { label: "24 heures", ms: 86_400_000 },
-  { label: "7 jours", ms: 7 * 86_400_000 },
-  { label: "30 jours", ms: 30 * 86_400_000 },
+  { get label() { return tr("Désactivés"); }, ms: 0 },
+  { get label() { return tr("24 heures"); }, ms: 86_400_000 },
+  { get label() { return tr("7 jours"); }, ms: 7 * 86_400_000 },
+  { get label() { return tr("30 jours"); }, ms: 30 * 86_400_000 },
 ];
 
 function Tick({ on }: { on: boolean }) {
@@ -102,30 +103,30 @@ export function GroupPermissionsEditor({
   const set = (patch: Partial<GroupSettings>) => onChange({ ...value, ...patch });
   return (
     <View>
-      <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 4 }}>Les admins peuvent toujours tout faire. Ces règles s’appliquent aux autres membres.</Text>
-      <CheckRow label="Modifier les infos du groupe" sub="Nom, photo et description." on={value.membersCanEdit} onToggle={() => set({ membersCanEdit: !value.membersCanEdit })} />
+      <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 4 }}>{tr("Les admins peuvent toujours tout faire. Ces règles s’appliquent aux autres membres.")}</Text>
+      <CheckRow label={tr("Modifier les infos du groupe")} sub={tr("Nom, photo et description.")} on={value.membersCanEdit} onToggle={() => set({ membersCanEdit: !value.membersCanEdit })} />
       <CheckRow
-        label="Envoyer des messages"
-        sub={value.membersCanSend ? "Tout le monde peut écrire." : "Seuls les admins écrivent (groupe d’annonces)."}
+        label={tr("Envoyer des messages")}
+        sub={value.membersCanSend ? tr("Tout le monde peut écrire.") : tr("Seuls les admins écrivent (groupe d’annonces).")}
         on={value.membersCanSend}
         onToggle={() => set({ membersCanSend: !value.membersCanSend })}
       />
-      <CheckRow label="Ajouter de nouveaux membres" sub="Parmi leurs contacts WIPP." on={value.membersCanAdd} onToggle={() => set({ membersCanAdd: !value.membersCanAdd })} />
+      <CheckRow label={tr("Ajouter de nouveaux membres")} sub={tr("Parmi leurs contacts WIPP.")} on={value.membersCanAdd} onToggle={() => set({ membersCanAdd: !value.membersCanAdd })} />
       <CheckRow
-        label="Inviter par lien"
-        sub={value.visibility === "public" ? "Créer et partager le lien d’invitation." : "Disponible seulement pour un groupe Public."}
+        label={tr("Inviter par lien")}
+        sub={value.visibility === "public" ? tr("Créer et partager le lien d’invitation.") : tr("Disponible seulement pour un groupe Public.")}
         on={value.visibility === "public" && value.membersCanInvite}
         disabled={value.visibility !== "public"}
         onToggle={() => set({ membersCanInvite: !value.membersCanInvite })}
       />
       <CheckRow
-        label="Approuver les nouveaux membres"
-        sub={value.approveNewMembers ? "Un admin valide chaque arrivée (par lien ou ajoutée par un membre)." : "Les nouveaux membres rejoignent directement."}
+        label={tr("Approuver les nouveaux membres")}
+        sub={value.approveNewMembers ? tr("Un admin valide chaque arrivée (par lien ou ajoutée par un membre).") : tr("Les nouveaux membres rejoignent directement.")}
         on={value.approveNewMembers}
         onToggle={() => set({ approveNewMembers: !value.approveNewMembers })}
       />
-      <Text style={{ marginTop: 16, marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Messages éphémères</Text>
-      <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 8 }}>Les nouveaux messages disparaissent après la durée choisie.</Text>
+      <Text style={{ marginTop: 16, marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Messages éphémères")}</Text>
+      <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 8 }}>{tr("Les nouveaux messages disparaissent après la durée choisie.")}</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {GROUP_DISAPPEAR.map((o) => {
           const on = disappearMs === o.ms;

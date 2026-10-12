@@ -7,6 +7,7 @@ import { palettes } from "../theme";
 /** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
 const colors = palettes.dark;
 import { openWippLink } from "../lib/deep-links";
+import { tr } from "../lib/tr";
 
 export function LiveScanner({
   onFallback,
@@ -57,7 +58,7 @@ export function LiveScanner({
           <View pointerEvents="none" style={{ position: "absolute", top: 24, right: 24, bottom: 24, left: 24, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,216,77,0.8)" }} />
           <View pointerEvents="none" style={{ position: "absolute", left: 32, right: 32, top: "50%", height: 2, backgroundColor: "rgba(255,216,77,0.8)" }} />
           <View style={{ position: "absolute", left: 0, right: 0, bottom: 8, alignItems: "center" }}>
-            <Btn label="Fermer" variant="secondary" onPress={() => setLive(false)} style={{ height: 36, paddingHorizontal: 16 }} />
+            <Btn label={tr("Fermer")} variant="secondary" onPress={() => setLive(false)} style={{ height: 36, paddingHorizontal: 16 }} />
           </View>
         </View>
       ) : fail ? (
@@ -65,21 +66,21 @@ export function LiveScanner({
           <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.paper }}>{fail}</Text>
           <View style={{ marginTop: 8, flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <Btn label="Rechercher par @username" variant="secondary" onPress={() => onFallback?.("search")} />
+              <Btn label={tr("Rechercher par @username")} variant="secondary" onPress={() => onFallback?.("search")} />
             </View>
             <View style={{ flex: 1 }}>
-              <Btn label="Afficher mon QR" variant="secondary" onPress={() => onFallback?.("my-qr")} />
+              <Btn label={tr("Afficher mon QR")} variant="secondary" onPress={() => onFallback?.("my-qr")} />
             </View>
           </View>
-          <Btn label="Réessayer" onPress={() => void start()} style={{ marginTop: 8, alignSelf: "stretch" }} />
+          <Btn label={tr("Réessayer")} onPress={() => void start()} style={{ marginTop: 8, alignSelf: "stretch" }} />
         </View>
       ) : (
         <View style={{ alignItems: "center" }}>
-          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.paper }}>Autoriser la caméra</Text>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{tr("Autoriser la caméra")}</Text>
           <Text style={{ marginTop: 4, fontSize: 12, color: "rgba(247,249,252,0.6)", textAlign: "center" }}>
-            WIPP utilise la caméra pour scanner les QR codes.
+            {tr("WIPP utilise la caméra pour scanner les QR codes.")}
           </Text>
-          <Btn label="Continuer" onPress={() => void start()} style={{ marginTop: 8, alignSelf: "stretch" }} />
+          <Btn label={tr("Continuer")} onPress={() => void start()} style={{ marginTop: 8, alignSelf: "stretch" }} />
         </View>
       )}
     </View>

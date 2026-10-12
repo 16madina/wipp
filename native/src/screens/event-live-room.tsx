@@ -23,6 +23,7 @@ import { errorText } from "../lib/error-fr";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
 import type { LiveToken } from "../lib/event-live";
+import { tr } from "../lib/tr";
 
 const colors = palettes.dark;
 const logoGold = require("../../assets/auth/wipp-logo-gold.png");
@@ -36,13 +37,13 @@ function streamURL(track: { mediaStream?: unknown } | null | undefined) {
 
 /** Standard reactions for now; WIPP animations will replace them (same codes). */
 export const LIVE_REACTIONS = [
-  { code: "clap", emoji: "👏", label: "Applaudir" },
-  { code: "love", emoji: "❤️", label: "J’adore" },
-  { code: "like", emoji: "👍", label: "J’aime" },
-  { code: "dislike", emoji: "👎", label: "Je n’aime pas" },
-  { code: "laugh", emoji: "😂", label: "Rire" },
-  { code: "wow", emoji: "😮", label: "Surprise" },
-  { code: "fire", emoji: "🔥", label: "Excellent" },
+  { code: "clap", emoji: "👏", get label() { return tr("Applaudir"); } },
+  { code: "love", emoji: "❤️", get label() { return tr("J’adore"); } },
+  { code: "like", emoji: "👍", get label() { return tr("J’aime"); } },
+  { code: "dislike", emoji: "👎", get label() { return tr("Je n’aime pas"); } },
+  { code: "laugh", emoji: "😂", get label() { return tr("Rire"); } },
+  { code: "wow", emoji: "😮", get label() { return tr("Surprise"); } },
+  { code: "fire", emoji: "🔥", get label() { return tr("Excellent"); } },
 ] as const;
 const EMOJI = Object.fromEntries(LIVE_REACTIONS.map((r) => [r.code, r.emoji])) as Record<string, string>;
 
@@ -328,7 +329,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         if (tok.role === "organizer" || tok.role === "speaker") askToPublish(room);
       } catch (err) {
         if (!cancelled) {
-          setFailNote(errorText(err, "Impossible de rejoindre le direct."));
+          setFailNote(errorText(err, tr("Impossible de rejoindre le direct.")));
           setPhase("failed");
         }
       }
@@ -347,7 +348,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
   /** Camera and microphone only after an explicit yes. */
   function askToPublish(room: Room) {
-    Alert.alert("Passer à l’antenne", "Activer ta caméra et ton micro pour le direct ?", [
+    Alert.alert(tr("Passer à l’antenne"), tr("Activer ta caméra et ton micro pour le direct ?"), [
       { text: "Plus tard", style: "cancel" },
       {
         text: "Activer",
@@ -367,7 +368,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
               camWanted.current = true;
               micWanted.current = true;
             } catch {
-              Alert.alert("Direct", "Autorise la caméra et le micro pour WIPP dans les réglages du téléphone.");
+              Alert.alert(tr("Direct"), tr("Autorise la caméra et le micro pour WIPP dans les réglages du téléphone."));
             }
           })();
         },
@@ -458,7 +459,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       await room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(payload)), { reliable: true, topic: "wipp-live" });
       return true;
     } catch {
-      Alert.alert("Direct", "Envoi impossible pour le moment.");
+      Alert.alert(tr("Direct"), tr("Envoi impossible pour le moment."));
       return false;
     }
   }
@@ -467,7 +468,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     const text = draft.trim().slice(0, COMMENT_MAX);
     if (!text || phase !== "connected") return;
     if (!settings.commentsOn && !isOrganizer) {
-      Alert.alert("Direct", "L’organisateur a désactivé les commentaires.");
+      Alert.alert(tr("Direct"), tr("L’organisateur a désactivé les commentaires."));
       return;
     }
     if (Date.now() - lastComment.current < COMMENT_GAP_MS) return;
@@ -479,7 +480,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       await postLiveComment(eventId, text);
     } catch (err) {
       setDraft(text);
-      Alert.alert("Direct", errorText(err, "Commentaire non envoyé."));
+      Alert.alert(tr("Direct"), errorText(err, tr("Commentaire non envoyé.")));
     }
   }
 
@@ -511,13 +512,13 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
   function report(pid: string, contentId: string) {
     void import("../lib/safety").then(({ REPORT_REASONS, submitContentReport }) => {
-      Alert.alert("Signaler", undefined, [
+      Alert.alert(tr("Signaler"), undefined, [
         ...REPORT_REASONS.map((reason) => ({
           text: reason,
           onPress: () => {
             void submitContentReport({ contentType: "profile", contentId: `live:${eventId}:${contentId}`, targetProfileId: pid, reason }).then(
-              () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner."),
-              (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+              () => Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va l’examiner.")),
+              (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
             );
           },
         })),
@@ -527,7 +528,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   }
 
   function exclude(identity: string, name: string) {
-    Alert.alert("Exclure", `Exclure ${name} de ce direct ? Cette personne ne pourra plus revenir.`, [
+    Alert.alert(tr("Exclure"), tr("Exclure {0} de ce direct ? Cette personne ne pourra plus revenir.", name), [
       { text: "Annuler", style: "cancel" },
       {
         text: "Exclure",
@@ -536,7 +537,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
           void import("../lib/event-live")
             .then(({ banFromLive }) => banFromLive(eventId, identity))
             .then(() => setComments((cur) => cur.filter((x) => x.identity !== identity)))
-            .catch((err) => Alert.alert("Direct", errorText(err, "Exclusion impossible.")));
+            .catch((err) => Alert.alert(tr("Direct"), errorText(err, tr("Exclusion impossible."))));
         },
       },
     ]);
@@ -550,7 +551,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       await setLiveSettings(eventId, { [key]: next[key] });
     } catch (err) {
       setSettings(settings);
-      Alert.alert("Direct", errorText(err, "Réglage impossible."));
+      Alert.alert(tr("Direct"), errorText(err, tr("Réglage impossible.")));
     }
   }
 
@@ -609,7 +610,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       st.setStage(await stageAction(eventId, body));
       return true;
     } catch (err) {
-      Alert.alert("Scène", errorText(err, "Action impossible."));
+      Alert.alert(tr("Scène"), errorText(err, tr("Action impossible.")));
       return false;
     }
   }
@@ -624,7 +625,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       return;
     }
     if (endedRef.current || phase !== "connected") return;
-    Alert.alert("Tu n’es plus sur scène", "L’organisateur t’a retiré(e) de la scène. Ton micro et ta caméra sont coupés ; tu restes dans le direct comme spectateur.");
+    Alert.alert(tr("Tu n’es plus sur scène"), tr("L’organisateur t’a retiré(e) de la scène. Ton micro et ta caméra sont coupés ; tu restes dans le direct comme spectateur."));
   }, [role]);
 
   /** Tap a comment: answer its author (« @Nom » at the start of the comment, shown in colour). */
@@ -659,7 +660,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   }
 
   function leaveStageSelf() {
-    Alert.alert("Quitter la scène", "Ton micro et ta caméra seront coupés. Tu restes dans le direct comme spectateur.", [
+    Alert.alert(tr("Quitter la scène"), tr("Ton micro et ta caméra seront coupés. Tu restes dans le direct comme spectateur."), [
       { text: "Rester", style: "cancel" },
       {
         text: "Quitter la scène",
@@ -684,7 +685,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     const featured = st.stage?.featured === t.identity;
     // Two on stage: the split screen already shows both big, so « Mettre en avant » is not offered.
     const canFeature = featured || tiles.length > 2;
-    Alert.alert(t.name, "Intervenant sur scène", [
+    Alert.alert(t.name, tr("Intervenant sur scène"), [
       ...(canFeature ? [{ text: featured ? "Revenir à la grille" : "Mettre en avant", onPress: () => void stage({ action: "feature", identity: featured ? null : t.identity }) }] : []),
       { text: info?.micRevoked ? "Rendre le micro" : "Couper le micro", onPress: () => void stage({ action: "media", pid, micRevoked: !info?.micRevoked }) },
       { text: info?.camRevoked ? "Rendre la caméra" : "Couper la caméra", onPress: () => void stage({ action: "media", pid, camRevoked: !info?.camRevoked }) },
@@ -692,7 +693,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         text: "Retirer de la scène",
         style: "destructive",
         onPress: () =>
-          Alert.alert("Retirer de la scène", `${t.name} redeviendra spectateur. Son micro et sa caméra seront coupés.`, [
+          Alert.alert(tr("Retirer de la scène"), tr("{0} redeviendra spectateur. Son micro et sa caméra seront coupés.", t.name), [
             { text: "Annuler", style: "cancel" },
             { text: "Retirer", style: "destructive", onPress: () => void stage({ action: "leave", pid }) },
           ]),
@@ -704,12 +705,12 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   /** Host: explain, then the iOS system sheet (« Démarrer la diffusion »), then publish the screen. */
   function startScreenShare() {
     if (Platform.OS !== "ios" && Platform.OS !== "android") {
-      Alert.alert("Partage d’écran", "Le partage d’écran fonctionne dans l’app WIPP sur iPhone et Android.");
+      Alert.alert(tr("Partage d’écran"), tr("Le partage d’écran fonctionne dans l’app WIPP sur iPhone et Android."));
       return;
     }
     Alert.alert(
-      "Partager ton écran",
-      "Tout ce qui s’affiche sur ton écran sera visible par les spectateurs : présentation, site, app… et aussi tes notifications. Pense à activer « Ne pas déranger ». Rien n’est enregistré.",
+      tr("Partager ton écran"),
+      tr("Tout ce qui s’affiche sur ton écran sera visible par les spectateurs : présentation, site, app… et aussi tes notifications. Pense à activer « Ne pas déranger ». Rien n’est enregistré."),
       [
         { text: "Annuler", style: "cancel" },
         {
@@ -733,7 +734,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 void keepShareSharp(room);
                 void stopShareIfNoPicture(room);
               } catch (err) {
-                Alert.alert("Partage d’écran", errorText(err, "Le partage d’écran n’a pas pu démarrer. Tu peux réessayer, le direct continue."));
+                Alert.alert(tr("Partage d’écran"), errorText(err, tr("Le partage d’écran n’a pas pu démarrer. Tu peux réessayer, le direct continue.")));
               }
             })();
           },
@@ -806,8 +807,8 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       wasSharing.current = false;
       await endMyShare(room);
       Alert.alert(
-        "Partage d’écran",
-        "Ton écran n’a pas pu être envoyé. Une autre application enregistre peut-être l’écran (enregistreur d’écran). Arrête-la, puis relance le partage. Le direct continue.",
+        tr("Partage d’écran"),
+        tr("Ton écran n’a pas pu être envoyé. Une autre application enregistre peut-être l’écran (enregistreur d’écran). Arrête-la, puis relance le partage. Le direct continue."),
       );
     } catch {
       /* no statistics: leave the share as it is */
@@ -882,7 +883,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       await moderateLiveQuestion(eventId, q.id, action);
       void qa.reload();
     } catch (err) {
-      Alert.alert("Question", errorText(err, "Action impossible."));
+      Alert.alert(tr("Question"), errorText(err, tr("Action impossible.")));
     }
   }
 
@@ -894,15 +895,15 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       const { moderateLiveQuestion } = await import("../lib/event-live");
       if (cur) await moderateLiveQuestion(eventId, cur.id, "done");
       if (next) await moderateLiveQuestion(eventId, next.id, "show");
-      else Alert.alert("Questions", "Il n’y a plus de question en attente.");
+      else Alert.alert(tr("Questions"), tr("Il n’y a plus de question en attente."));
       void qa.reload();
     } catch (err) {
-      Alert.alert("Question", errorText(err, "Action impossible."));
+      Alert.alert(tr("Question"), errorText(err, tr("Action impossible.")));
     }
   }
 
   function endForAll() {
-    Alert.alert("Terminer le direct", "Terminer la conférence pour tout le monde ?", [
+    Alert.alert(tr("Terminer le direct"), tr("Terminer la conférence pour tout le monde ?"), [
       { text: "Annuler", style: "cancel" },
       {
         text: "Terminer",
@@ -915,7 +916,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
               setPhase("ended");
               void roomRef.current?.disconnect();
             })
-            .catch((err) => Alert.alert("Direct", errorText(err, "Impossible de terminer.")));
+            .catch((err) => Alert.alert(tr("Direct"), errorText(err, tr("Impossible de terminer."))));
         },
       },
     ]);
@@ -953,8 +954,8 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     }
     void import("../lib/calls/android-ongoing").then((m) =>
       m.showOngoing({
-        title: "Partage d’écran en cours",
-        body: "Les spectateurs de ton direct WIPP voient ton écran.",
+        title: tr("Partage d’écran en cours"),
+        body: tr("Les spectateurs de ton direct WIPP voient ton écran."),
         stopLabel: "Arrêter le partage",
         onStop: () => void stopScreenShare(),
         camera: true,
@@ -968,7 +969,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   function reportLive() {
     const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
     if (!host) {
-      Alert.alert("Signalement", "Le direct n’est pas encore chargé. Réessaie dans un instant.");
+      Alert.alert(tr("Signalement"), tr("Le direct n’est pas encore chargé. Réessaie dans un instant."));
       return;
     }
     setSheet("none");
@@ -979,7 +980,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   function blockHost() {
     const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
     if (!host) return;
-    Alert.alert("Bloquer l’organisateur", "Tu quitteras ce direct. Cette personne ne pourra plus te contacter et tu ne verras plus ses contenus.", [
+    Alert.alert(tr("Bloquer l’organisateur"), tr("Tu quitteras ce direct. Cette personne ne pourra plus te contacter et tu ne verras plus ses contenus."), [
       { text: "Annuler", style: "cancel" },
       {
         text: "Bloquer",
@@ -987,7 +988,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         onPress: () => {
           void import("../lib/connections").then(({ blockProfile }) => blockProfile(host)).then((ok) => {
             if (!ok) {
-              Alert.alert("Blocage", "Le blocage n’a pas pu être enregistré. Réessaie.");
+              Alert.alert(tr("Blocage"), tr("Le blocage n’a pas pu être enregistré. Réessaie."));
               return;
             }
             setSheet("none");
@@ -1014,7 +1015,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
   function leave() {
     if (isOrganizer && phase === "connected") {
-      Alert.alert("Quitter", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
+      Alert.alert(tr("Quitter"), tr("Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas."), [
         { text: "Rester", style: "cancel" },
         { text: "Quitter sans terminer", onPress: () => pop() },
         { text: "Terminer pour tous", style: "destructive", onPress: endForAll },
@@ -1067,7 +1068,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         onOpen={() => useWippStore.getState().push({ name: "event-live", eventId })}
         onClose={() => {
           if (isOrganizer) {
-            Alert.alert("Quitter le direct", "Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas.", [
+            Alert.alert(tr("Quitter le direct"), tr("Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas."), [
               { text: "Rester", style: "cancel" },
               { text: "Quitter sans terminer", onPress: () => useLiveSession.getState().clear() },
             ]);
@@ -1112,16 +1113,16 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15, lineHeight: 21 }}>
             {phase === "connecting"
-              ? "Connexion au direct…"
+              ? tr("Connexion au direct…")
               : phase === "failed"
                 ? failNote
                 : publisher && !camOn
-                    ? "Ta caméra est éteinte. Active-la pour passer à l’antenne."
-                    : "L’organisateur va bientôt apparaître."}
+                    ? tr("Ta caméra est éteinte. Active-la pour passer à l’antenne.")
+                    : tr("L’organisateur va bientôt apparaître.")}
           </Text>
           {publisher && !camOn && phase === "connected" ? (
             <Press onPress={() => roomRef.current && askToPublish(roomRef.current)} style={{ marginTop: 16, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.accent }}>
-              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Activer caméra et micro</Text>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr("Activer caméra et micro")}</Text>
             </Press>
           ) : null}
         </View>
@@ -1140,12 +1141,12 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
           </View>
         ) : null}
         {settings.qaMode ? (
-          <Press accessibilityLabel="Questions-réponses" onPress={() => setSheet("questions")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(212,160,23,0.9)" }}>
+          <Press accessibilityLabel={tr("Questions-réponses")} onPress={() => setSheet("questions")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(212,160,23,0.9)" }}>
             <HelpCircle size={12} color="#0b1220" />
             <Text style={{ color: "#0b1220", fontSize: 10, fontFamily: "Inter_700Bold" }}>Q&R</Text>
           </Press>
         ) : null}
-        <Press accessibilityLabel="Participants" onPress={() => setSheet("people")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.45)" }}>
+        <Press accessibilityLabel={tr("Participants")} onPress={() => setSheet("people")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.45)" }}>
           <Eye size={13} color="#fff" />
           <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{viewers}</Text>
         </Press>
@@ -1156,23 +1157,23 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         ) : (
           <View style={{ flex: 1 }} />
         )}
-        <Press accessibilityLabel="Réduire le direct" onPress={minimize} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+        <Press accessibilityLabel={tr("Réduire le direct")} onPress={minimize} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           <Minimize2 size={19} color="#fff" />
         </Press>
         {screen && !screen.local && screen.url && shareLandscape ? (
-          <Press accessibilityLabel={shareLandscape ? "Plein écran paysage" : "Plein écran"} onPress={() => setScreenFull(true)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Press accessibilityLabel={shareLandscape ? tr("Plein écran paysage") : tr("Plein écran")} onPress={() => setScreenFull(true)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <Maximize2 size={19} color="#d4a017" />
           </Press>
         ) : null}
         {isOrganizer && tiles.length >= 3 ? (
-          <Press accessibilityLabel="Disposition de la scène" onPress={() => setSheet("layout")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Press accessibilityLabel={tr("Disposition de la scène")} onPress={() => setSheet("layout")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <LayoutGrid size={20} color="#d4a017" />
           </Press>
         ) : null}
-        <Press accessibilityLabel="Options" onPress={() => setSheet("options")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+        <Press accessibilityLabel={tr("Options")} onPress={() => setSheet("options")} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           <MoreHorizontal size={22} color="#fff" />
         </Press>
-        <Press accessibilityLabel="Quitter le direct" onPress={leave} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+        <Press accessibilityLabel={tr("Quitter le direct")} onPress={leave} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           <X size={22} color="#fff" />
         </Press>
       </View>
@@ -1184,7 +1185,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       {phase === "reconnecting" ? (
         <View style={{ position: "absolute", top: insets.top + 72, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.6)" }}>
           <RefreshCw size={13} color="#fff" />
-          <Text style={{ color: "#fff", fontSize: 12 }}>Reconnexion…</Text>
+          <Text style={{ color: "#fff", fontSize: 12 }}>{tr("Reconnexion…")}</Text>
         </View>
       ) : null}
 
@@ -1224,7 +1225,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       {hostGone && !isOrganizer ? (
         <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: 24, right: 24, alignItems: "center" }}>
           <View style={{ paddingHorizontal: 18, paddingVertical: 14, borderRadius: 18, backgroundColor: "rgba(6,10,24,0.9)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)" }}>
-            <Text style={{ color: "#fff", fontSize: 15, textAlign: "center", fontFamily: "Inter_700Bold" }}>L’organisateur a perdu la connexion</Text>
+            <Text style={{ color: "#fff", fontSize: 15, textAlign: "center", fontFamily: "Inter_700Bold" }}>{tr("L’organisateur a perdu la connexion")}</Text>
             <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.75)", fontSize: 13, textAlign: "center", lineHeight: 18 }}>
               {(() => {
                 const left = Math.max(0, Math.ceil((hostGone.since + hostGone.graceMs - nowTick) / 1000));
@@ -1283,7 +1284,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
               style={{ alignSelf: "center", marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, height: 42, borderRadius: 21, backgroundColor: "#d4a017", shadowColor: "#d4a017", shadowOpacity: 0.6, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 }}
             >
               <HelpCircle size={18} color="#0b1220" />
-              <Text style={{ color: "#0b1220", fontSize: 15, fontFamily: "Inter_700Bold" }}>Poser une question</Text>
+              <Text style={{ color: "#0b1220", fontSize: 15, fontFamily: "Inter_700Bold" }}>{tr("Poser une question")}</Text>
             </Press>
           ) : null}
           {settings.commentsOn || isOrganizer ? (
@@ -1292,7 +1293,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 ref={inputRef}
                 value={draft}
                 onChangeText={(v) => setDraft(v.slice(0, COMMENT_MAX))}
-                placeholder="Écrire un commentaire…"
+                placeholder={tr("Écrire un commentaire…")}
                 placeholderTextColor="rgba(255,255,255,0.55)"
                 returnKeyType="send"
                 onFocus={() => setTyping(true)}
@@ -1300,20 +1301,20 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 onSubmitEditing={() => void sendComment()}
                 style={{ flex: 1, color: "#fff", fontSize: 14 }}
               />
-              <Press accessibilityLabel="Envoyer" onPress={() => void sendComment()} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+              <Press accessibilityLabel={tr("Envoyer")} onPress={() => void sendComment()} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
                 <Send size={18} color={colors.accent} />
               </Press>
             </View>
           ) : (
-            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", paddingVertical: 10 }}>Les commentaires sont désactivés.</Text>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", paddingVertical: 10 }}>{tr("Les commentaires sont désactivés.")}</Text>
           )}
           <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-around" }}>
-            <BarButton label="Réagir" onPress={() => setSheet(sheet === "reactions" ? "none" : "reactions")} disabled={!settings.reactionsOn && !isOrganizer}>
+            <BarButton label={tr("Réagir")} onPress={() => setSheet(sheet === "reactions" ? "none" : "reactions")} disabled={!settings.reactionsOn && !isOrganizer}>
               <Heart size={20} color="#ff4d6d" fill="#ff4d6d" />
             </BarButton>
             {publisher ? (
               <>
-                <BarButton label={micOn ? "Micro" : "Micro coupé"} onPress={() => {
+                <BarButton label={micOn ? tr("Micro") : tr("Micro coupé")} onPress={() => {
                   const room = roomRef.current;
                   if (!room) return;
                   void room.localParticipant.setMicrophoneEnabled(!micOn).then(() => {
@@ -1323,7 +1324,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 }}>
                   {micOn ? <Mic size={20} color="#fff" /> : <MicOff size={20} color="#ff6b6b" />}
                 </BarButton>
-                <BarButton label={camOn ? "Caméra" : "Caméra off"} onPress={() => {
+                <BarButton label={camOn ? tr("Caméra") : tr("Caméra off")} onPress={() => {
                   const room = roomRef.current;
                   if (!room) return;
                   void room.localParticipant.setCameraEnabled(!camOn).then(() => {
@@ -1336,7 +1337,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
               </>
             ) : (
               <BarButton
-                label={st.stage?.me.handRaised ? "Main levée" : "Lever la main"}
+                label={st.stage?.me.handRaised ? tr("Main levée") : tr("Lever la main")}
                 highlight={Boolean(st.stage?.me.handRaised)}
                 onPress={() => void stage({ action: "hand", up: !st.stage?.me.handRaised })}
               >
@@ -1344,7 +1345,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
               </BarButton>
             )}
             <BarButton
-              label="Questions"
+              label={tr("Questions")}
               badge={(qa.data?.questions ?? []).filter((q) => q.status === "pending").length}
               highlight={settings.qaMode}
               onPress={() => {
@@ -1355,10 +1356,10 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
             >
               <HelpCircle size={20} color={settings.qaMode ? "#d4a017" : "#fff"} />
             </BarButton>
-            <BarButton label="Participants" onPress={() => setSheet("people")}>
+            <BarButton label={tr("Participants")} onPress={() => setSheet("people")}>
               <Users size={20} color="#fff" />
             </BarButton>
-            <BarButton label="Plus" badge={isOrganizer ? st.stage?.hands.length : undefined} onPress={() => setSheet("options")}>
+            <BarButton label={tr("Plus")} badge={isOrganizer ? st.stage?.hands.length : undefined} onPress={() => setSheet("options")}>
               <MoreHorizontal size={20} color="#fff" />
             </BarButton>
           </View>
@@ -1389,7 +1390,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
       {/* Participants */}
       {sheet === "people" ? (
-        <Sheet onClose={() => setSheet("none")} title={`Participants (${people.length})`}>
+        <Sheet onClose={() => setSheet("none")} title={tr("Participants ({0})", people.length)}>
           <FlatList
             data={ordered}
             keyExtractor={(p) => p.identity}
@@ -1412,13 +1413,13 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{item.name}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>{item.role === "organizer" ? "Organisateur" : item.role === "speaker" ? "Intervenant" : "Spectateur"}</Text>
+                  <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>{item.role === "organizer" ? tr("Organisateur") : item.role === "speaker" ? tr("Intervenant") : tr("Spectateur")}</Text>
                 </View>
                 {item.identity !== roomRef.current?.localParticipant.identity && (isOrganizer || item.pid) ? <Flag size={16} color="rgba(255,255,255,0.4)" /> : null}
               </Pressable>
             )}
           />
-          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 8 }}>Appui long sur une personne pour {isOrganizer ? "l’exclure ou la signaler" : "la signaler"}.</Text>
+          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 8 }}>{tr("Appui long sur une personne pour")} {isOrganizer ? tr("l’exclure ou la signaler") : tr("la signaler")}.</Text>
         </Sheet>
       ) : null}
 
@@ -1441,7 +1442,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       ) : null}
 
       {sheet === "layout" && isOrganizer ? (
-        <Sheet onClose={() => setSheet("none")} title="Disposition de la scène">
+        <Sheet onClose={() => setSheet("none")} title={tr("Disposition de la scène")}>
           <View style={{ flexDirection: "row", gap: 10, paddingVertical: 6 }}>
             {(
               [
@@ -1463,13 +1464,13 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
               </Press>
             ))}
           </View>
-          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 6 }}>Tous les spectateurs voient la même disposition.</Text>
+          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 6 }}>{tr("Tous les spectateurs voient la même disposition.")}</Text>
         </Sheet>
       ) : null}
 
       {/* Options */}
       {sheet === "options" ? (
-        <Sheet onClose={() => setSheet("none")} title={isOrganizer ? "Options organisateur" : "Options"}>
+        <Sheet onClose={() => setSheet("none")} title={isOrganizer ? tr("Options organisateur") : tr("Options")}>
           <ScrollView>
             {isOrganizer ? (
               <>
@@ -1482,11 +1483,11 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                   style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}
                 >
                   <MonitorUp size={18} color="#d4a017" />
-                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>{screen?.local ? "Arrêter le partage d’écran" : "Partager l’écran"}</Text>
+                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>{screen?.local ? tr("Arrêter le partage d’écran") : tr("Partager l’écran")}</Text>
                 </Press>
                 <Press onPress={() => setSheet("stage")} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                   <Hand size={18} color="#d4a017" />
-                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>Scène et demandes de parole</Text>
+                  <Text style={{ flex: 1, marginLeft: 10, color: "#fff", fontSize: 15 }}>{tr("Scène et demandes de parole")}</Text>
                   {st.stage?.hands.length ? (
                     <View style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
                       <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>{st.stage.hands.length}</Text>
@@ -1494,12 +1495,12 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                   ) : null}
                 </Press>
                 <OptionRow
-                  label="Mode interactif (jusqu’à 5 sur scène)"
+                  label={tr("Mode interactif (jusqu’à 5 sur scène)")}
                   value={st.stage?.mode === "interactive"}
                   onPress={() => {
                     const next = st.stage?.mode === "interactive" ? "conference" : "interactive";
                     if (next === "conference" && st.stage?.speakers.length) {
-                      Alert.alert("Mode Conférence", "Les intervenants redescendront parmi les spectateurs.", [
+                      Alert.alert(tr("Mode Conférence"), tr("Les intervenants redescendront parmi les spectateurs."), [
                         { text: "Annuler", style: "cancel" },
                         { text: "Continuer", onPress: () => void stage({ action: "mode", mode: next }) },
                       ]);
@@ -1507,15 +1508,15 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                   }}
                 />
                 <Press onPress={flipCamera} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
-                  <Text style={{ color: "#fff", fontSize: 15 }}>Retourner la caméra</Text>
+                  <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Retourner la caméra")}</Text>
                 </Press>
-                <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
-                <OptionRow label="Commentaires" value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
-                <OptionRow label="Réactions" value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
-                <OptionRow label="Questions ouvertes" value={settings.questionsOn} onPress={() => void toggleSetting("questionsOn")} />
-                <OptionRow label="Lancer les questions-réponses" value={settings.qaMode} onPress={() => void toggleSetting("qaMode")} />
+                <OptionRow label={tr("Afficher les commentaires")} value={showComments} onPress={() => setShowComments((v) => !v)} />
+                <OptionRow label={tr("Commentaires")} value={settings.commentsOn} onPress={() => void toggleSetting("commentsOn")} />
+                <OptionRow label={tr("Réactions")} value={settings.reactionsOn} onPress={() => void toggleSetting("reactionsOn")} />
+                <OptionRow label={tr("Questions ouvertes")} value={settings.questionsOn} onPress={() => void toggleSetting("questionsOn")} />
+                <OptionRow label={tr("Lancer les questions-réponses")} value={settings.qaMode} onPress={() => void toggleSetting("qaMode")} />
                 <Press onPress={endForAll} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Terminer la conférence pour tous</Text>
+                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>{tr("Terminer la conférence pour tous")}</Text>
                 </Press>
               </>
             ) : (
@@ -1523,24 +1524,24 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 {role === "speaker" ? (
                   <>
                     <Press onPress={flipCamera} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
-                      <Text style={{ color: "#fff", fontSize: 15 }}>Retourner la caméra</Text>
+                      <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Retourner la caméra")}</Text>
                     </Press>
                     <Press onPress={leaveStageSelf} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                       <LogOut size={17} color="#ff6b6b" />
-                      <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Quitter la scène</Text>
+                      <Text style={{ color: "#ff6b6b", fontSize: 15 }}>{tr("Quitter la scène")}</Text>
                     </Press>
                   </>
                 ) : null}
-                <OptionRow label="Afficher les commentaires" value={showComments} onPress={() => setShowComments((v) => !v)} />
-                <Press accessibilityLabel="Signaler ce direct" onPress={reportLive} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                <OptionRow label={tr("Afficher les commentaires")} value={showComments} onPress={() => setShowComments((v) => !v)} />
+                <Press accessibilityLabel={tr("Signaler ce direct")} onPress={reportLive} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
                   <Flag size={17} color="#ff6b6b" />
-                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Signaler ce direct</Text>
+                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>{tr("Signaler ce direct")}</Text>
                 </Press>
-                <Press accessibilityLabel="Bloquer l’organisateur" onPress={blockHost} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
-                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>Bloquer l’organisateur</Text>
+                <Press accessibilityLabel={tr("Bloquer l’organisateur")} onPress={blockHost} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#ff6b6b", fontSize: 15 }}>{tr("Bloquer l’organisateur")}</Text>
                 </Press>
                 <Press onPress={() => pop()} style={{ marginTop: 18, height: 48, borderRadius: 14, backgroundColor: "#e5383b", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>Quitter le direct</Text>
+                  <Text style={{ color: "#fff", fontFamily: "Inter_700Bold" }}>{tr("Quitter le direct")}</Text>
                 </Press>
               </>
             )}
@@ -1582,11 +1583,11 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   const insets = useSafeAreaInsets();
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
-      <Press accessibilityLabel="Fermer" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }} />
+      <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }} />
       <View style={{ maxHeight: "70%", paddingHorizontal: 18, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 16), borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: "#0b0f1a", borderTopWidth: 1, borderColor: "rgba(212,160,23,0.35)" }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
           <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>{title}</Text>
-          <Press accessibilityLabel="Fermer" onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <X size={20} color="#fff" />
           </Press>
         </View>
@@ -1651,7 +1652,7 @@ function QaAnnounce({ n }: { n: number }) {
   return (
     <Animated.View pointerEvents="none" style={{ position: "absolute", top: "38%", left: 24, right: 24, alignItems: "center", opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }}>
       <View style={{ paddingHorizontal: 22, paddingVertical: 16, borderRadius: 20, backgroundColor: "rgba(6,10,24,0.86)", borderWidth: 1, borderColor: "rgba(212,160,23,0.8)" }}>
-        <Text style={{ color: "#fff", fontSize: 19, textAlign: "center", fontFamily: "Inter_700Bold" }}>🎤 C’est le moment de vos questions !</Text>
+        <Text style={{ color: "#fff", fontSize: 19, textAlign: "center", fontFamily: "Inter_700Bold" }}>{tr("🎤 C’est le moment de vos questions !")}</Text>
       </View>
     </Animated.View>
   );
@@ -1680,7 +1681,7 @@ function ClapWave({ wave }: { wave: number }) {
       }}
     >
       <Text style={{ fontSize: 44 }}>👏👏👏</Text>
-      <Text style={{ marginTop: 4, color: "#fff", fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 6 }}>Applaudissements !</Text>
+      <Text style={{ marginTop: 4, color: "#fff", fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 6 }}>{tr("Applaudissements !")}</Text>
     </Animated.View>
   );
 }

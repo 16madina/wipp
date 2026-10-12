@@ -49,6 +49,7 @@ import { CountdownPicker } from "./CountdownPicker";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
 import { gifProviderConfigured } from "../lib/gifs";
+import { tr } from "../lib/tr";
 
 const CONTENT = [
   { label: "Galerie", icon: Images },
@@ -67,9 +68,9 @@ function momentLabel(c: NonNullable<SurpriseOptions["countdown"]>) {
 }
 
 const KINDS = [
-  { id: "scratch" as const, title: "Carte à gratter", description: "Ton message est caché sous la carte. Touche pour la choisir.", Icon: Ticket },
-  { id: "countdown" as const, title: "Compte à rebours", description: "Le paquet reste verrouillé jusqu’au moment choisi.", Icon: Clock3 },
-  { id: "confetti" as const, title: "Confettis", description: "Une pluie de confettis quand le message apparaît.", Icon: PartyPopper },
+  { id: "scratch" as const, get title() { return tr("Carte à gratter"); }, get description() { return tr("Ton message est caché sous la carte. Touche pour la choisir."); }, Icon: Ticket },
+  { id: "countdown" as const, get title() { return tr("Compte à rebours"); }, get description() { return tr("Le paquet reste verrouillé jusqu’au moment choisi."); }, Icon: Clock3 },
+  { id: "confetti" as const, get title() { return tr("Confettis"); }, get description() { return tr("Une pluie de confettis quand le message apparaît."); }, Icon: PartyPopper },
 ];
 
 const TONES = ["Tendre", "Drôle", "Poétique", "Enthousiaste", "Sobre"] as const;
@@ -275,8 +276,8 @@ export function ShareSurpriseSheet({
             <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
               <View style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: compact ? 22 : 27, fontFamily: "Inter_700Bold", color: colors.fg }}>Partager</Text>
-                  <Text style={{ marginTop: 4, fontSize: 13, color: colors.shareSubtitle }}>Envoyez du contenu ou créez une surprise.</Text>
+                  <Text style={{ fontSize: compact ? 22 : 27, fontFamily: "Inter_700Bold", color: colors.fg }}>{tr("Partager")}</Text>
+                  <Text style={{ marginTop: 4, fontSize: 13, color: colors.shareSubtitle }}>{tr("Envoyez du contenu ou créez une surprise.")}</Text>
                 </View>
                 <Press onPress={close} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: whiteA(0.1), alignItems: "center", justifyContent: "center" }}>
                   <X size={22} color={colors.fg} />
@@ -300,7 +301,7 @@ export function ShareSurpriseSheet({
                     }}
                   >
                     <Icon size={34} color={colors.surpriseGold} strokeWidth={1.8} fill={label === "Localisation" || label === "Contact" ? colors.surpriseGold : "none"} />
-                    <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{label}</Text>
+                    <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tr(label)}</Text>
                   </Press>
                 ))}
               </View>
@@ -324,9 +325,9 @@ export function ShareSurpriseSheet({
                 {gift ? <Image source={gift} style={{ width: 100, height: 100 }} contentFit="contain" /> : <Gift size={48} color={colors.accent} />}
                 <View style={{ flex: 1, paddingHorizontal: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>WIPP Surprise</Text>
+                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>{tr("WIPP Surprise")}</Text>
                   </View>
-                  <Text style={{ marginTop: 4, fontSize: 11, color: colors.shareSubtitle }}>Transforme tes messages en expériences.</Text>
+                  <Text style={{ marginTop: 4, fontSize: 11, color: colors.shareSubtitle }}>{tr("Transforme tes messages en expériences.")}</Text>
                 </View>
                 <ChevronRight size={25} color={colors.surpriseGold} />
               </Press>
@@ -336,7 +337,7 @@ export function ShareSurpriseSheet({
           {stage === "contacts" ? (
             <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>Contact</Text>
+                <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>{tr("Contact")}</Text>
                 <Press onPress={() => setStage("share")}>
                   <X size={22} color={colors.fg} />
                 </Press>
@@ -371,16 +372,16 @@ export function ShareSurpriseSheet({
                   </Press>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Gift size={22} color={colors.surpriseBright} />
-                    <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>WIPP Surprise</Text>
+                    <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg }}>{tr("WIPP Surprise")}</Text>
                   </View>
-                  <Text style={{ fontSize: 12, color: colors.surpriseSecondary }}>Transforme tes messages en expériences.</Text>
+                  <Text style={{ fontSize: 12, color: colors.surpriseSecondary }}>{tr("Transforme tes messages en expériences.")}</Text>
                 </View>
                 <View style={{ marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.surpriseBright, backgroundColor: colors.navy, padding: 12 }}>
                   <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
                     <TextInput
                       value={secret}
                       onChangeText={setSecret}
-                      placeholder="Écris ton message..."
+                      placeholder={tr("Écris ton message...")}
                       placeholderTextColor={colors.surpriseSecondary}
                       maxLength={layout.surpriseMessageLimit}
                       multiline
@@ -391,7 +392,7 @@ export function ShareSurpriseSheet({
                       style={{ borderRadius: 999, backgroundColor: colors.accent, paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 4 }}
                     >
                       <PenLine size={14} color={colors.accentFg} />
-                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Assistant</Text>
+                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>{tr("Assistant")}</Text>
                     </Press>
                   </View>
                   <Text style={{ textAlign: "right", fontSize: 11, color: colors.surpriseSecondary }}>
@@ -400,11 +401,11 @@ export function ShareSurpriseSheet({
                 </View>
                 {assist ? (
                   <View style={{ marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.surpriseLine, backgroundColor: colors.surpriseInk, padding: 12 }}>
-                    <Text style={{ color: colors.surpriseGold, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>Assistant surprise</Text>
+                    <Text style={{ color: colors.surpriseGold, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>{tr("Assistant surprise")}</Text>
                     <TextInput
                       value={occasion}
                       onChangeText={setOccasion}
-                      placeholder="L'occasion… ex. anniversaire de Deena"
+                      placeholder={tr("L'occasion… ex. anniversaire de Deena")}
                       placeholderTextColor={colors.muted}
                       style={{ borderRadius: 8, backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 10, color: colors.fg }}
                     />
@@ -440,7 +441,7 @@ export function ShareSurpriseSheet({
                       }}
                       style={{ marginTop: 10, height: 40, borderRadius: 999, backgroundColor: colors.surpriseGold, alignItems: "center", justifyContent: "center" }}
                     >
-                      <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.surpriseInk }}>Générer le message</Text>
+                      <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.surpriseInk }}>{tr("Générer le message")}</Text>
                     </Press>
                   </View>
                 ) : null}
@@ -453,7 +454,7 @@ export function ShareSurpriseSheet({
                     style={{ flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: colors.shareTile, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
                   >
                     <Clapperboard size={20} color={colors.surpriseBright} />
-                    <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Ajouter une animation</Text>
+                    <Text style={{ flex: 1, fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tr("Ajouter une animation")}</Text>
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
                   <Press
@@ -465,8 +466,8 @@ export function ShareSurpriseSheet({
                     <ChevronRight size={16} color={colors.surpriseBright} />
                   </Press>
                 </View>
-                <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>Compose ta surprise</Text>
-                <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>Tu peux tout combiner : la carte, le compte à rebours et les confettis.</Text>
+                <Text style={{ marginTop: 12, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.fg }}>{tr("Compose ta surprise")}</Text>
+                <Text style={{ fontSize: 12, color: colors.surpriseSecondary, marginBottom: 8 }}>{tr("Tu peux tout combiner : la carte, le compte à rebours et les confettis.")}</Text>
                 <View style={{ gap: 8 }}>
                   {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
                     <View key={row[0]!.id} style={{ flexDirection: "row", gap: 8 }}>
@@ -546,7 +547,7 @@ export function ShareSurpriseSheet({
                 {selectedAnim ? (
                   <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
                     {wippSrc(selectedAnim.art) ? <Image source={wippSrc(selectedAnim.art)} style={{ width: 32, height: 32, borderRadius: 16 }} contentFit="cover" /> : null}
-                    <Text style={{ color: colors.surpriseBright, fontSize: 12 }}>Animation : {selectedAnim.label}</Text>
+                    <Text style={{ color: colors.surpriseBright, fontSize: 12 }}>{tr("Animation :")} {selectedAnim.label}</Text>
                   </View>
                 ) : null}
                 <Press
@@ -554,7 +555,7 @@ export function ShareSurpriseSheet({
                   style={{ marginTop: 10, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.surpriseLine, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
                   <Eye size={18} color={colors.surpriseBright} />
-                  <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }}>Aperçu</Text>
+                  <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.surpriseBright }}>{tr("Aperçu")}</Text>
                 </Press>
                 <Press
                   onPress={() => {
@@ -573,7 +574,7 @@ export function ShareSurpriseSheet({
                     gap: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: secret.trim() ? colors.accentFg : colors.muted }}>Envoyer la surprise</Text>
+                  <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: secret.trim() ? colors.accentFg : colors.muted }}>{tr("Envoyer la surprise")}</Text>
                   <Send size={18} color={secret.trim() ? colors.accentFg : colors.muted} />
                 </Press>
               </ScrollView>
@@ -633,13 +634,13 @@ export function ShareSurpriseSheet({
                 }}
                 style={{ marginTop: 22, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
               >
-                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Sans compte à rebours</Text>
+                <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Sans compte à rebours")}</Text>
               </Press>
               <Press
                 onPress={() => setDrawer(null)}
                 style={{ marginTop: 10, height: 44, borderRadius: 999, backgroundColor: colors.surpriseGold, alignItems: "center", justifyContent: "center" }}
               >
-                <Text style={{ color: colors.surpriseInk, fontFamily: "Inter_600SemiBold" }}>Valider</Text>
+                <Text style={{ color: colors.surpriseInk, fontFamily: "Inter_600SemiBold" }}>{tr("Valider")}</Text>
               </Press>
             </>
           ) : (
@@ -664,7 +665,7 @@ export function ShareSurpriseSheet({
                 ) : null}
                 {animCat && !animItems.length ? (
                   <Text style={{ width: "100%", paddingVertical: 28, textAlign: "center", color: colors.muted, fontSize: 14, lineHeight: 20 }}>
-                    Les animations de cette catégorie arrivent bientôt.
+                    {tr("Les animations de cette catégorie arrivent bientôt.")}
                   </Text>
                 ) : null}
                 {animItems.map((item) => {
@@ -722,7 +723,7 @@ export function ShareSurpriseSheet({
                   }}
                   style={{ marginTop: 16, alignItems: "center" }}
                 >
-                  <Text style={{ color: colors.muted }}>Retirer l’animation</Text>
+                  <Text style={{ color: colors.muted }}>{tr("Retirer l’animation")}</Text>
                 </Press>
               ) : null}
             </>
@@ -738,12 +739,12 @@ export function ShareSurpriseSheet({
                   <X size={22} color={colors.fg} />
                 </Press>
               </View>
-              <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>WIPP Surprise</Text>
+              <Text style={{ marginTop: 8, textAlign: "center", fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg }}>{tr("WIPP Surprise")}</Text>
               <View style={{ marginTop: 12, alignItems: "center" }}>
                 <SurpriseReveal demo surprise={draft()} onPlayAnimation={(id) => setPreviewPlay({ id, n: ++previewSequence.current })} />
               </View>
               <Press onPress={() => setPreview(false)} style={{ marginTop: 16, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: colors.surpriseBright, fontFamily: "Inter_600SemiBold" }}>Retour à ma surprise</Text>
+                <Text style={{ color: colors.surpriseBright, fontFamily: "Inter_600SemiBold" }}>{tr("Retour à ma surprise")}</Text>
               </Press>
             </View>
           </View>

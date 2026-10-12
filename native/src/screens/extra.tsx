@@ -27,6 +27,7 @@ import { shareWippPublic } from "../lib/share-public";
 import { GROUP_DISAPPEAR, GroupPermissionsEditor, GroupVisibilityPicker } from "../components/GroupPermissions";
 import { Sheet } from "../components/card-editor-parts";
 import { DEFAULT_GROUP_SETTINGS, type GroupSettings } from "../lib/types";
+import { tr } from "../lib/tr";
 
 export { NewStoryScreen } from "./story-composer";
 
@@ -241,7 +242,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
 
   function askDelete() {
     if (!story || !mine) return;
-    Alert.alert("Supprimer cette story ?", undefined, [
+    Alert.alert(tr("Supprimer cette story ?"), undefined, [
       { text: "Annuler", style: "cancel" },
       { text: "Supprimer", style: "destructive", onPress: () => void confirmDelete(story.id) },
     ]);
@@ -251,7 +252,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
     const { deleteServerStory } = await import("../lib/lot7/api");
     const result = await deleteServerStory(id);
     if (result !== "ok") {
-      Alert.alert("WIPP", "Suppression impossible.");
+      Alert.alert("WIPP", tr("Suppression impossible."));
       return;
     }
     const mineLeft = (group?.items ?? []).filter((item) => item.id !== id);
@@ -402,20 +403,20 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
       </View>
       {story.id.startsWith("sty_") ? (
         <Press
-          accessibilityLabel="Options de la story"
+          accessibilityLabel={tr("Options de la story")}
           onPress={() => {
             if (mine) {
-              Alert.alert("Story", undefined, [
+              Alert.alert(tr("Story"), undefined, [
                 { text: "Supprimer la story", style: "destructive", onPress: askDelete },
                 { text: "Annuler", style: "cancel" },
               ]);
               return;
             }
-            Alert.alert("Story", undefined, [
+            Alert.alert(tr("Story"), undefined, [
               {
                 text: "Signaler la story",
                 onPress: () => {
-                  Alert.alert("Signaler la story", undefined, [
+                  Alert.alert(tr("Signaler la story"), undefined, [
                     ...REPORT_REASONS.map((reason) => ({
                       text: reason,
                       onPress: () => {
@@ -429,7 +430,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
                           reason,
                         }).then(
                           () =>
-                            Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va l’examiner. Cette story ne s’affichera plus pour toi.\n\nVeux-tu aussi bloquer cette personne ?", [
+                            Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va l’examiner. Cette story ne s’affichera plus pour toi.\n\nVeux-tu aussi bloquer cette personne ?"), [
                               { text: "Non", style: "cancel" },
                               {
                                 text: "Bloquer",
@@ -440,7 +441,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
                                 },
                               },
                             ]),
-                          (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                          (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
                         );
                       },
                     })),
@@ -459,7 +460,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
                 text: "Bloquer cet utilisateur",
                 style: "destructive" as const,
                 onPress: () => {
-                  Alert.alert("Bloquer", "Bloquer cet utilisateur ?", [
+                  Alert.alert(tr("Bloquer"), tr("Bloquer cet utilisateur ?"), [
                     { text: "Annuler", style: "cancel" },
                     {
                       text: "Bloquer",
@@ -480,8 +481,8 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
           <MoreHorizontal size={22} color="#fff" />
         </Press>
       ) : null}
-      <Press accessibilityLabel="Story suivante" onPress={() => onSide(1)} style={{ position: "absolute", top: 120, bottom: 120, right: 0, width: "50%", zIndex: 2 }} />
-      <Press accessibilityLabel="Story précédente" onPress={() => onSide(-1)} style={{ position: "absolute", top: 120, bottom: 120, left: 0, width: "50%", zIndex: 2 }} />
+      <Press accessibilityLabel={tr("Story suivante")} onPress={() => onSide(1)} style={{ position: "absolute", top: 120, bottom: 120, right: 0, width: "50%", zIndex: 2 }} />
+      <Press accessibilityLabel={tr("Story précédente")} onPress={() => onSide(-1)} style={{ position: "absolute", top: 120, bottom: 120, left: 0, width: "50%", zIndex: 2 }} />
       {burst ? (
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: "38%", alignItems: "center", zIndex: 6 }}>
           {burst === "like" ? <Heart size={110} color="#ff3b5c" fill="#ff3b5c" /> : <WippSticker id={burst} size={120} />}
@@ -489,7 +490,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
       ) : null}
       <View style={{ position: "absolute", left: 12, right: 12, bottom: kb ? kb + 10 : 28, zIndex: 5, gap: 8 }}>
         {mine && story.id.startsWith("sty_") ? (
-          <Press accessibilityLabel="Vues" onPress={() => setViewsOpen(true)} style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8 }}>
+          <Press accessibilityLabel={tr("Vues")} onPress={() => setViewsOpen(true)} style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8 }}>
             <Eye size={18} color="#fff" />
             <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{viewCount}</Text>
           </Press>
@@ -501,16 +502,16 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
               onChangeText={setReply}
               onFocus={() => { setComposing(true); setTray(null); }}
               onBlur={() => setComposing(false)}
-              placeholder="Répondre à la story…"
+              placeholder={tr("Répondre à la story…")}
               placeholderTextColor="rgba(255,255,255,0.55)"
               returnKeyType="send"
               onSubmitEditing={() => void sendReply()}
               style={{ flex: 1, height: 44, borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)", color: "#fff", paddingHorizontal: 16 }}
             />
-            <Press accessibilityLabel="Wippmoji" onPress={() => { Keyboard.dismiss(); setComposing(false); setTray((current) => (current ? null : "all")); }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+            <Press accessibilityLabel={tr("Wippmoji")} onPress={() => { Keyboard.dismiss(); setComposing(false); setTray((current) => (current ? null : "all")); }} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
               <Smile size={22} color={colors.accent} />
             </Press>
-            <Press accessibilityLabel="Aimer la story" onPress={() => void sendLike()} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+            <Press accessibilityLabel={tr("Aimer la story")} onPress={() => void sendLike()} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
               <Heart size={22} color={liked.has(story.id) ? "#ff3b5c" : "#fff"} fill={liked.has(story.id) ? "#ff3b5c" : "transparent"} />
             </Press>
           </View>
@@ -526,11 +527,11 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
       ) : null}
       {tray && !mine ? (
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 8, justifyContent: "flex-end" }}>
-          <Press accessibilityLabel="Fermer les Wippmojis" onPress={() => setTray(null)} style={{ flex: 1 }} />
+          <Press accessibilityLabel={tr("Fermer les Wippmojis")} onPress={() => setTray(null)} style={{ flex: 1 }} />
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24, overflow: "hidden" }}>
             <StickerTray
               onPick={(sticker) => void sendMoji(sticker.id)}
-              onSurprise={() => Alert.alert("WIPP", "Les surprises s’envoient depuis la conversation.")}
+              onSurprise={() => Alert.alert("WIPP", tr("Les surprises s’envoient depuis la conversation."))}
             />
           </View>
         </View>
@@ -539,9 +540,9 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 0, zIndex: 8, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <Press onPress={() => setViewsOpen(false)} style={{ flex: 1 }} />
           <View style={{ maxHeight: "62%", backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24 }}>
-            <Text style={{ padding: 16, color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Vues</Text>
+            <Text style={{ padding: 16, color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>{tr("Vues")}</Text>
             <ScrollView>
-              {viewers.length === 0 ? <Text style={{ paddingHorizontal: 16, color: colors.muted }}>Aucune vue</Text> : null}
+              {viewers.length === 0 ? <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{tr("Aucune vue")}</Text> : null}
               {viewers.map((viewer) => (
                 <View key={`${viewer.username}-${viewer.viewedAt}`} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
                   <Avatar user={{ displayName: viewer.displayName, firstName: viewer.displayName }} size={40} />
@@ -662,7 +663,7 @@ export function NewGroupFlow() {
       const asset = res.canceled ? null : res.assets?.[0];
       if (asset?.uri) setPhoto({ uri: asset.uri, mime: asset.mimeType ?? undefined });
     } catch {
-      Alert.alert("Photo du groupe", "Impossible d’ouvrir tes photos.");
+      Alert.alert(tr("Photo du groupe"), tr("Impossible d’ouvrir tes photos."));
     }
   }
 
@@ -679,13 +680,13 @@ export function NewGroupFlow() {
         if (avatar || description.trim()) await api.updateGroupInfo(id, { description: description.trim() || null, avatar }, { quiet: true });
         await api.setGroupSettings(id, { ...settings, disappearMs }, { quiet: true });
       } catch {
-        Alert.alert("Groupe", "Le groupe est créé, mais une partie des réglages n’a pas pu être enregistrée. Tu peux les reprendre dans Infos du groupe.");
+        Alert.alert(tr("Groupe"), tr("Le groupe est créé, mais une partie des réglages n’a pas pu être enregistrée. Tu peux les reprendre dans Infos du groupe."));
       }
       await useWippStore.getState().syncServerInbox();
       setCreated(localId);
       setStep(3);
     } catch (err) {
-      Alert.alert("Groupe", errorText(err, "Création impossible pour le moment."));
+      Alert.alert(tr("Groupe"), errorText(err, tr("Création impossible pour le moment.")));
     } finally {
       setBusy(false);
     }
@@ -696,7 +697,7 @@ export function NewGroupFlow() {
   const label = (text: string, optional?: boolean) => (
     <Text style={{ marginTop: 18, marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
       {text}
-      {optional ? <Text style={{ color: colors.muted, fontFamily: "Inter_400Regular" }}> (optionnelle)</Text> : null}
+      {optional ? <Text style={{ color: colors.muted, fontFamily: "Inter_400Regular" }}> {tr("(optionnelle)")}</Text> : null}
     </Text>
   );
   const field = { borderRadius: 14, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14, fontSize: 15, borderWidth: 1, borderColor: colors.hair } as const;
@@ -704,17 +705,17 @@ export function NewGroupFlow() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Créer un groupe" onBack={back} />
+        <Header title={tr("Créer un groupe")} onBack={back} />
         <GroupStepper step={step} />
       </GlassHeader>
 
       {step === 0 ? (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
           <Press
-            accessibilityLabel={photo ? "Changer la photo du groupe" : "Ajouter une photo de groupe"}
+            accessibilityLabel={photo ? tr("Changer la photo du groupe") : tr("Ajouter une photo de groupe")}
             onPress={() =>
               photo
-                ? Alert.alert("Photo du groupe", undefined, [
+                ? Alert.alert(tr("Photo du groupe"), undefined, [
                     { text: "Changer la photo", onPress: () => void pickPhoto() },
                     { text: "Retirer la photo", style: "destructive", onPress: () => setPhoto(null) },
                     { text: "Annuler", style: "cancel" },
@@ -734,14 +735,14 @@ export function NewGroupFlow() {
           </Press>
 
           {label("Nom du groupe")}
-          <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 50))} placeholder="Ex. Famille, Équipe, Masterclass…" placeholderTextColor={colors.muted} style={{ ...field, height: 50 }} />
+          <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 50))} placeholder={tr("Ex. Famille, Équipe, Masterclass…")} placeholderTextColor={colors.muted} style={{ ...field, height: 50 }} />
           {counter(name.length, 50)}
 
           {label("Description", true)}
           <TextInput
             value={description}
             onChangeText={(v) => setDescription(v.slice(0, 200))}
-            placeholder="Parlez de votre groupe…"
+            placeholder={tr("Parlez de votre groupe…")}
             placeholderTextColor={colors.muted}
             multiline
             style={{ ...field, minHeight: 92, paddingTop: 12, textAlignVertical: "top" }}
@@ -751,7 +752,7 @@ export function NewGroupFlow() {
           {label("Catégorie", true)}
           <Press onPress={() => setCategoryOpen(true)} style={{ ...field, height: 50, flexDirection: "row", alignItems: "center", gap: 10 }}>
             <LayoutGrid size={18} color={colors.fg} />
-            <Text style={{ flex: 1, color: settings.category ? colors.fg : colors.muted, fontSize: 15 }}>{settings.category ?? "Choisir une catégorie"}</Text>
+            <Text style={{ flex: 1, color: settings.category ? colors.fg : colors.muted, fontSize: 15 }}>{settings.category ?? tr("Choisir une catégorie")}</Text>
             <ChevronRight size={18} color={colors.muted} />
           </Press>
 
@@ -768,13 +769,13 @@ export function NewGroupFlow() {
           <View style={{ paddingHorizontal: 16 }}>
             <View style={{ ...field, height: 48, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 999 }}>
               <Search size={18} color={colors.muted} />
-              <TextInput value={q} onChangeText={setQ} placeholder="Rechercher des contacts…" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15 }} />
+              <TextInput value={q} onChangeText={setQ} placeholder={tr("Rechercher des contacts…")} placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15 }} />
             </View>
           </View>
           {picked.length ? (
             <>
               <Text style={{ marginTop: 18, marginHorizontal: 16, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
-                Membres sélectionnés <Text style={{ color: colors.muted }}>({picked.length})</Text>
+                {tr("Membres sélectionnés")} <Text style={{ color: colors.muted }}>({picked.length})</Text>
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingTop: 12 }}>
                 {picked.map((id) => {
@@ -794,9 +795,9 @@ export function NewGroupFlow() {
               </ScrollView>
             </>
           ) : null}
-          <Text style={{ marginTop: 18, marginBottom: 4, marginHorizontal: 16, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Inviter des contacts</Text>
+          <Text style={{ marginTop: 18, marginBottom: 4, marginHorizontal: 16, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Inviter des contacts")}</Text>
           {shown.length === 0 ? (
-            <Text style={{ marginHorizontal: 16, marginTop: 8, color: colors.muted }}>{q ? "Aucun contact trouvé." : settings.visibility === "public" ? "Tu n’as pas encore de contacts WIPP. Tu pourras inviter avec le lien une fois le groupe créé." : "Tu n’as pas encore de contacts WIPP. Tu pourras ajouter des membres plus tard depuis les infos du groupe."}</Text>
+            <Text style={{ marginHorizontal: 16, marginTop: 8, color: colors.muted }}>{q ? tr("Aucun contact trouvé.") : settings.visibility === "public" ? tr("Tu n’as pas encore de contacts WIPP. Tu pourras inviter avec le lien une fois le groupe créé.") : tr("Tu n’as pas encore de contacts WIPP. Tu pourras ajouter des membres plus tard depuis les infos du groupe.")}</Text>
           ) : (
             shown.map((u) => {
               const on = picked.includes(u.id);
@@ -819,8 +820,8 @@ export function NewGroupFlow() {
 
       {step === 2 ? (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
-          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Autorisations du groupe</Text>
-          <Text style={{ marginTop: 4, marginBottom: 6, color: colors.muted, fontSize: 13 }}>Ce que les membres peuvent faire. Modifiable à tout moment dans Infos du groupe.</Text>
+          <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("Autorisations du groupe")}</Text>
+          <Text style={{ marginTop: 4, marginBottom: 6, color: colors.muted, fontSize: 13 }}>{tr("Ce que les membres peuvent faire. Modifiable à tout moment dans Infos du groupe.")}</Text>
           <GroupPermissionsEditor value={settings} onChange={setSettings} disappearMs={disappearMs} onDisappear={setDisappearMs} />
         </ScrollView>
       ) : null}
@@ -833,36 +834,36 @@ export function NewGroupFlow() {
             </View>
           </View>
           <Text style={{ marginTop: 16, fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{name.trim()}</Text>
-          <Text style={{ marginTop: 6, color: colors.success, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>✓ Groupe créé</Text>
+          <Text style={{ marginTop: 6, color: colors.success, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("✓ Groupe créé")}</Text>
           <Text style={{ marginTop: 8, color: colors.muted, fontSize: 13, textAlign: "center" }}>
-            {settings.visibility === "public" ? "Public" : "Privé"} · {picked.length + 1} membre{picked.length ? "s" : ""}
+            {settings.visibility === "public" ? tr("Public") : tr("Privé")} · {picked.length + 1} membre{picked.length ? "s" : ""}
             {settings.category ? ` · ${settings.category}` : ""}
-            {disappearMs ? ` · messages éphémères (${GROUP_DISAPPEAR.find((o) => o.ms === disappearMs)?.label})` : ""}
+            {disappearMs ? tr(" · messages éphémères ({0})", GROUP_DISAPPEAR.find((o) => o.ms === disappearMs)?.label) : ""}
           </Text>
-          <Text style={{ marginTop: 6, color: colors.muted, fontSize: 12, textAlign: "center" }}>Messages chiffrés de bout en bout</Text>
+          <Text style={{ marginTop: 6, color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Messages chiffrés de bout en bout")}</Text>
         </ScrollView>
       ) : null}
 
       <View style={{ position: "absolute", left: 16, right: 16, bottom: 28, gap: 10 }}>
-        {step === 0 ? <Btn label="Suivant →" disabled={!name.trim()} onPress={() => setStep(1)} /> : null}
-        {step === 1 ? <Btn label={picked.length ? "Suivant →" : "Continuer sans membre →"} onPress={() => setStep(2)} /> : null}
-        {step === 2 ? <Btn label={busy ? "Création…" : "Créer le groupe"} disabled={busy} onPress={() => void create()} /> : null}
+        {step === 0 ? <Btn label={tr("Suivant →")} disabled={!name.trim()} onPress={() => setStep(1)} /> : null}
+        {step === 1 ? <Btn label={picked.length ? tr("Suivant →") : tr("Continuer sans membre →")} onPress={() => setStep(2)} /> : null}
+        {step === 2 ? <Btn label={busy ? tr("Création…") : tr("Créer le groupe")} disabled={busy} onPress={() => void create()} /> : null}
         {step === 3 && created ? (
           <>
             <Btn
-              label="Ouvrir le groupe"
+              label={tr("Ouvrir le groupe")}
               onPress={() =>
                 useWippStore.setState((st) => ({
                   stack: [...st.stack.filter((sc) => sc.name !== "new-group" && sc.name !== "new-chat"), { name: "conversation", chatId: created }],
                 }))
               }
             />
-            {settings.visibility === "public" ? <Btn label="Partager un lien d’invitation" variant="secondary" onPress={() => push({ name: "group-qr", chatId: created })} /> : null}
+            {settings.visibility === "public" ? <Btn label={tr("Partager un lien d’invitation")} variant="secondary" onPress={() => push({ name: "group-qr", chatId: created })} /> : null}
           </>
         ) : null}
       </View>
 
-      <Sheet open={categoryOpen} title="Catégorie" onClose={() => setCategoryOpen(false)}>
+      <Sheet open={categoryOpen} title={tr("Catégorie")} onClose={() => setCategoryOpen(false)}>
         {[null, ...GROUP_CATEGORIES].map((c) => {
           const on = settings.category === c;
           return (
@@ -874,7 +875,7 @@ export function NewGroupFlow() {
               }}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13 }}
             >
-              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : c ? colors.fg : colors.muted }}>{c ?? "Aucune catégorie"}</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : c ? colors.fg : colors.muted }}>{c ?? tr("Aucune catégorie")}</Text>
               {on ? <Check size={18} color={colors.accent} /> : null}
             </Press>
           );
@@ -892,30 +893,30 @@ export function GroupInfoFull({ chatId }: { chatId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={chat?.name ?? "Groupe"} onBack={pop} />
+        <Header title={chat?.name ?? tr("Groupe")} onBack={pop} />
       </GlassHeader>
       <ScrollView>
         <Text style={{ padding: 16, color: colors.muted }}>{chat?.description ?? `${chat?.participantIds.length ?? 0} membres`}</Text>
         {chat?.participantIds.map((id) => (
           <Press key={id} onPress={() => id !== "me" && push({ name: "found-profile", userId: id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12 }}>
             <Avatar user={id === "me" ? useWippStore.getState().me : users[id]} size={40} />
-            <Text style={{ color: colors.fg }}>{id === "me" ? "Toi" : users[id]?.displayName}</Text>
+            <Text style={{ color: colors.fg }}>{id === "me" ? tr("Toi") : users[id]?.displayName}</Text>
           </Press>
         ))}
         {chat?.id.startsWith("srv:") && (chat.adminIds ?? []).includes("me") ? (
           <View style={{ paddingHorizontal: 16 }}>
             {chat.participantIds.filter((id) => id !== "me").map((id) => (
               <View key={id} style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
-                <Btn label="Admin" onPress={() => void import("../lib/lot7/api").then(({ setGroupAdmin }) => setGroupAdmin(chat.id.slice(4), id, !(chat.adminIds ?? []).includes(id)).then(() => useWippStore.getState().syncServerInbox()))} />
-                <Btn label="Retirer" onPress={() => void import("../lib/lot7/api").then(({ removeGroupMember }) => removeGroupMember(chat.id.slice(4), id).then(() => useWippStore.getState().syncServerInbox()))} />
+                <Btn label={tr("Admin")} onPress={() => void import("../lib/lot7/api").then(({ setGroupAdmin }) => setGroupAdmin(chat.id.slice(4), id, !(chat.adminIds ?? []).includes(id)).then(() => useWippStore.getState().syncServerInbox()))} />
+                <Btn label={tr("Retirer")} onPress={() => void import("../lib/lot7/api").then(({ removeGroupMember }) => removeGroupMember(chat.id.slice(4), id).then(() => useWippStore.getState().syncServerInbox()))} />
               </View>
             ))}
           </View>
         ) : null}
-        <Btn label="QR du groupe" onPress={() => push({ name: "group-qr", chatId })} style={{ margin: 16 }} />
+        <Btn label={tr("QR du groupe")} onPress={() => push({ name: "group-qr", chatId })} style={{ margin: 16 }} />
         {chat?.id.startsWith("srv:") ? (
           <Btn
-            label="Quitter le groupe"
+            label={tr("Quitter le groupe")}
             onPress={() => {
               void import("../lib/lot7/api").then(async ({ leaveServerGroup }) => {
                 await leaveServerGroup(chat.id.slice(4));
@@ -967,20 +968,20 @@ export function GroupAddMembersScreen({ chatId }: { chatId: string }) {
     }
     await useWippStore.getState().syncServerInbox();
     setBusy(false);
-    if (problems.length) Alert.alert("Ajouter des membres", problems.join("\n"));
+    if (problems.length) Alert.alert(tr("Ajouter des membres"), problems.join("\n"));
     pop();
   }
 
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Ajouter des membres" onBack={pop} />
+        <Header title={tr("Ajouter des membres")} onBack={pop} />
       </GlassHeader>
       <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Rechercher un contact"
+          placeholder={tr("Rechercher un contact")}
           placeholderTextColor={colors.muted}
           style={{ height: 44, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14 }}
         />
@@ -990,11 +991,11 @@ export function GroupAddMembersScreen({ chatId }: { chatId: string }) {
           <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }}>
             <Users size={20} color={colors.accent} />
           </View>
-          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>Inviter via un lien ou un QR</Text>
+          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>{tr("Inviter via un lien ou un QR")}</Text>
         </Press>
         {contacts.length === 0 ? (
           <Text style={{ marginTop: 16, color: colors.muted, textAlign: "center" }}>
-            {q ? "Aucun contact trouvé." : "Tous tes contacts WIPP sont déjà dans ce groupe, ou tu n’as pas encore de contacts."}
+            {q ? tr("Aucun contact trouvé.") : tr("Tous tes contacts WIPP sont déjà dans ce groupe, ou tu n’as pas encore de contacts.")}
           </Text>
         ) : (
           contacts.map((u) => {
@@ -1020,7 +1021,7 @@ export function GroupAddMembersScreen({ chatId }: { chatId: string }) {
       </ScrollView>
       {picked.length ? (
         <View style={{ position: "absolute", left: 16, right: 16, bottom: 28 }}>
-          <Btn label={busy ? "Ajout…" : `Ajouter ${picked.length} membre${picked.length > 1 ? "s" : ""}`} disabled={busy} onPress={() => void add()} />
+          <Btn label={busy ? tr("Ajout…") : tr("Ajouter {0} membre{1}", picked.length, picked.length > 1 ? "s" : "")} disabled={busy} onPress={() => void add()} />
         </View>
       ) : null}
     </ScreenRoot>
@@ -1043,7 +1044,7 @@ export function GroupSettingsScreen({ chatId }: { chatId: string }) {
       await useWippStore.getState().syncServerInbox();
       pop();
     } catch (err) {
-      Alert.alert("Autorisations", String((err as Error)?.message ?? "").includes("forbidden") ? "Seuls les admins peuvent modifier ces réglages." : "Enregistrement impossible pour le moment.");
+      Alert.alert(tr("Autorisations"), String((err as Error)?.message ?? "").includes("forbidden") ? tr("Seuls les admins peuvent modifier ces réglages.") : tr("Enregistrement impossible pour le moment."));
     } finally {
       setBusy(false);
     }
@@ -1052,22 +1053,22 @@ export function GroupSettingsScreen({ chatId }: { chatId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Autorisations du groupe" onBack={pop} />
+        <Header title={tr("Autorisations du groupe")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-        <Text style={{ marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Visibilité</Text>
+        <Text style={{ marginBottom: 8, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Visibilité")}</Text>
         <GroupVisibilityPicker
           value={settings.visibility}
           onChange={(v) => setSettings((s) => ({ ...s, visibility: v, membersCanInvite: v === "public" ? s.membersCanInvite : false }))}
         />
         {chat?.groupSettings?.visibility === "public" && settings.visibility === "private" ? (
-          <Text style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>En passant en Privé, tous les liens d’invitation existants cesseront de fonctionner.</Text>
+          <Text style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>{tr("En passant en Privé, tous les liens d’invitation existants cesseront de fonctionner.")}</Text>
         ) : null}
-        <Text style={{ marginTop: 22, marginBottom: 4, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Ce que les membres peuvent faire</Text>
+        <Text style={{ marginTop: 22, marginBottom: 4, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Ce que les membres peuvent faire")}</Text>
         <GroupPermissionsEditor value={settings} onChange={setSettings} disappearMs={disappearMs} onDisappear={setDisappearMs} />
       </ScrollView>
       <View style={{ position: "absolute", left: 16, right: 16, bottom: 28 }}>
-        <Btn label={busy ? "Enregistrement…" : "Enregistrer"} disabled={busy} onPress={() => void save()} />
+        <Btn label={busy ? tr("Enregistrement…") : tr("Enregistrer")} disabled={busy} onPress={() => void save()} />
       </View>
     </ScreenRoot>
   );
@@ -1091,20 +1092,20 @@ export function GroupJoinRequestsScreen({ chatId }: { chatId: string }) {
       setItems((list) => (list ?? []).filter((r) => r.profileId !== profileId));
       if (approve) void useWippStore.getState().syncServerInbox();
     } catch {
-      Alert.alert("Demandes", "Action impossible pour le moment.");
+      Alert.alert(tr("Demandes"), tr("Action impossible pour le moment."));
     }
   }
 
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Demandes d’adhésion" onBack={pop} />
+        <Header title={tr("Demandes d’adhésion")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         {items === null ? (
-          <Text style={{ color: colors.muted }}>Chargement…</Text>
+          <Text style={{ color: colors.muted }}>{tr("Chargement…")}</Text>
         ) : items.length === 0 ? (
-          <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>Aucune demande en attente.</Text>
+          <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>{tr("Aucune demande en attente.")}</Text>
         ) : (
           items.map((r) => (
             <View key={r.profileId} style={{ padding: 14, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}>
@@ -1114,16 +1115,16 @@ export function GroupJoinRequestsScreen({ chatId }: { chatId: string }) {
                   <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{r.displayName}</Text>
                   <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{r.username}</Text>
                   <Text style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>
-                    {r.via === "link" ? "Via le lien d’invitation" : `Ajouté par ${r.invitedBy ?? "un membre"}`}
+                    {r.via === "link" ? tr("Via le lien d’invitation") : tr("Ajouté par {0}", r.invitedBy ?? "un membre")}
                   </Text>
                 </View>
               </View>
               <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Btn label="Approuver" onPress={() => void decide(r.profileId, true)} />
+                  <Btn label={tr("Approuver")} onPress={() => void decide(r.profileId, true)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Btn label="Refuser" variant="secondary" onPress={() => void decide(r.profileId, false)} />
+                  <Btn label={tr("Refuser")} variant="secondary" onPress={() => void decide(r.profileId, false)} />
                 </View>
               </View>
             </View>
@@ -1179,7 +1180,7 @@ export function GroupQrScreen({ chatId }: { chatId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Lien d’invitation" onBack={pop} />
+        <Header title={tr("Lien d’invitation")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ alignItems: "center", padding: 24, paddingBottom: 40 }}>
         <Text style={{ fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{chat?.name}</Text>
@@ -1190,22 +1191,22 @@ export function GroupQrScreen({ chatId }: { chatId: string }) {
             </View>
             <Text selectable style={{ marginTop: 12, fontSize: 13, color: colors.muted, textAlign: "center" }}>{link.replace(/^https:\/\//, "").slice(0, 34)}…</Text>
             <Text style={{ marginTop: 8, fontSize: 12, color: colors.muted, textAlign: "center", maxWidth: 300 }}>
-              Toute personne qui a ce lien peut rejoindre le groupe (valable 7 jours, 50 utilisations).
+              {tr("Toute personne qui a ce lien peut rejoindre le groupe (valable 7 jours, 50 utilisations).")}
             </Text>
             <View style={{ width: "100%", gap: 8, marginTop: 20 }}>
               <Btn
-                label={copied ? "Lien copié ✓" : "Copier le lien"}
+                label={copied ? tr("Lien copié ✓") : tr("Copier le lien")}
                 onPress={() => {
                   void import("expo-clipboard").then((C) => C.setStringAsync(link)).then(() => setCopied(true));
                 }}
               />
-              <Btn label="Partager le lien" variant="secondary" onPress={() => void shareWippPublic(`Rejoins « ${chat?.name ?? "notre groupe"} » sur WIPP : ${link}`)} />
+              <Btn label={tr("Partager le lien")} variant="secondary" onPress={() => void shareWippPublic(`Rejoins « ${chat?.name ?? "notre groupe"} » sur WIPP : ${link}`)} />
               {isAdmin ? (
                 <Btn
-                  label="Réinitialiser le lien"
+                  label={tr("Réinitialiser le lien")}
                   variant="danger"
                   onPress={() =>
-                    Alert.alert("Réinitialiser le lien", "L’ancien lien et l’ancien QR ne fonctionneront plus.", [
+                    Alert.alert(tr("Réinitialiser le lien"), tr("L’ancien lien et l’ancien QR ne fonctionneront plus."), [
                       { text: "Annuler", style: "cancel" },
                       { text: "Réinitialiser", style: "destructive", onPress: () => void create(true) },
                     ])
@@ -1217,12 +1218,12 @@ export function GroupQrScreen({ chatId }: { chatId: string }) {
         ) : (
           <Text style={{ marginTop: 24, color: state === "loading" ? colors.muted : colors.danger, textAlign: "center", maxWidth: 300 }}>
             {state === "loading"
-              ? "Création du lien…"
+              ? tr("Création du lien…")
               : state === "forbidden"
-                ? "Seuls les admins du groupe peuvent créer un lien d’invitation."
+                ? tr("Seuls les admins du groupe peuvent créer un lien d’invitation.")
                 : state === "closed"
-                  ? "Les invitations par lien sont désactivées pour ce groupe."
-                  : "Lien indisponible pour le moment."}
+                  ? tr("Les invitations par lien sont désactivées pour ce groupe.")
+                  : tr("Lien indisponible pour le moment.")}
           </Text>
         )}
       </ScrollView>
@@ -1266,30 +1267,30 @@ export function GroupInviteScreen({ token }: { token: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Invitation" onBack={pop} />
+        <Header title={tr("Invitation")} onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 24, alignItems: "center" }}>
         <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }}>
           <Users size={40} color={colors.accent} />
         </View>
-        <Text style={{ marginTop: 14, fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{info?.name ?? (info ? "Groupe WIPP" : "…")}</Text>
+        <Text style={{ marginTop: 14, fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{info?.name ?? (info ? tr("Groupe WIPP") : "…")}</Text>
         {info?.members ? <Text style={{ marginTop: 4, color: colors.muted }}>{info.members} membre{info.members > 1 ? "s" : ""}</Text> : null}
         {result ? (
           <Text style={{ marginTop: 18, color: result === "pending" ? colors.fg : colors.danger, textAlign: "center", lineHeight: 20 }}>
-            {result === "pending" ? "✓ Demande envoyée. Un admin du groupe doit l’approuver ; tu verras le groupe dès qu’il aura accepté." : GROUP_FR[result] ?? GROUP_FR.error}
+            {result === "pending" ? tr("✓ Demande envoyée. Un admin du groupe doit l’approuver ; tu verras le groupe dès qu’il aura accepté.") : GROUP_FR[result] ?? GROUP_FR.error}
           </Text>
         ) : info && !usable ? (
           <Text style={{ marginTop: 18, color: colors.danger, textAlign: "center" }}>{GROUP_FR[info.status] ?? GROUP_FR.error}</Text>
         ) : null}
         {usable && !result ? (
           <Btn
-            label={busy ? "…" : info?.status === "already_member" ? "Ouvrir le groupe" : "Rejoindre le groupe"}
+            label={busy ? "…" : info?.status === "already_member" ? tr("Ouvrir le groupe") : tr("Rejoindre le groupe")}
             disabled={busy}
             onPress={() => void join()}
             style={{ marginTop: 22, alignSelf: "stretch" }}
           />
         ) : null}
-        {result === "pending" ? <Btn label="Fermer" variant="secondary" onPress={pop} style={{ marginTop: 18, alignSelf: "stretch" }} /> : null}
+        {result === "pending" ? <Btn label={tr("Fermer")} variant="secondary" onPress={pop} style={{ marginTop: 18, alignSelf: "stretch" }} /> : null}
       </View>
     </ScreenRoot>
   );
@@ -1519,23 +1520,23 @@ export function OneTimeQrScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="QR unique" onBack={pop} />
+        <Header title={tr("QR unique")} onBack={pop} />
       </GlassHeader>
       <View style={{ alignItems: "center", padding: 24 }}>
         {expired ? (
           <>
-            <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>QR expiré</Text>
-            <Btn label="Générer un nouveau QR" onPress={() => void issue()} style={{ marginTop: 16, alignSelf: "stretch" }} />
+            <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>{tr("QR expiré")}</Text>
+            <Btn label={tr("Générer un nouveau QR")} onPress={() => void issue()} style={{ marginTop: 16, alignSelf: "stretch" }} />
           </>
         ) : temp ? (
           <>
             <QrCard value={tempQr(temp.token)} size={200} />
             <Text style={{ marginTop: 12, color: colors.accent }}>
-              Expire dans {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
+              {tr("Expire dans")} {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
             </Text>
           </>
         ) : (
-          <Text style={{ color: colors.muted }}>{err ?? "Génération…"}</Text>
+          <Text style={{ color: colors.muted }}>{err ?? tr("Génération…")}</Text>
         )}
       </View>
     </ScreenRoot>
@@ -1549,12 +1550,12 @@ export function IntroduceScreen({ toUserId }: { toUserId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Présenter" onBack={pop} />
+        <Header title={tr("Présenter")} onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 16, gap: 12 }}>
-        <Text style={{ color: colors.fg }}>Présenter {user?.displayName}</Text>
-        <TextInput value={note} onChangeText={setNote} placeholder="Note" placeholderTextColor={colors.muted} returnKeyType="done" blurOnSubmit onSubmitEditing={() => Keyboard.dismiss()} style={{ height: 80, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, padding: 12 }} />
-        <Btn label="Envoyer" onPress={pop} />
+        <Text style={{ color: colors.fg }}>{tr("Présenter")} {user?.displayName}</Text>
+        <TextInput value={note} onChangeText={setNote} placeholder={tr("Note")} placeholderTextColor={colors.muted} returnKeyType="done" blurOnSubmit onSubmitEditing={() => Keyboard.dismiss()} style={{ height: 80, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, padding: 12 }} />
+        <Btn label={tr("Envoyer")} onPress={pop} />
       </View>
     </ScreenRoot>
   );
@@ -1567,12 +1568,12 @@ export function IntroDetailScreen({ introId }: { introId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Présentation" onBack={pop} />
+        <Header title={tr("Présentation")} onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 16 }}>
         <Text style={{ color: colors.fg }}>{intro?.note}</Text>
-        <Text style={{ marginTop: 8, color: colors.muted }}>Par {from?.displayName}</Text>
-        <Btn label="Accepter" onPress={pop} style={{ marginTop: 20 }} />
+        <Text style={{ marginTop: 8, color: colors.muted }}>{tr("Par")} {from?.displayName}</Text>
+        <Btn label={tr("Accepter")} onPress={pop} style={{ marginTop: 20 }} />
       </View>
     </ScreenRoot>
   );

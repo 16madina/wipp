@@ -3,6 +3,7 @@ import { ActivityIndicator, Button, Modal, SafeAreaView, StyleSheet, Text, View 
 import { setRecaptchaVerifier } from "../lib/firebase-phone";
 import { FIREBASE_WEB_CONFIG } from "../lib/firebase-config";
 import { FirebaseRecaptcha } from "./FirebaseRecaptcha";
+import { tr } from "../lib/tr";
 
 export type RecaptchaVerifierHandle = {
   type: "recaptcha";
@@ -76,9 +77,9 @@ export const FirebaseRecaptchaVerifierModal = forwardRef<RecaptchaVerifierHandle
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => fail("Annulé")}>
         <SafeAreaView style={styles.modal}>
           <View style={styles.header}>
-            <Text style={styles.title}>Vérification</Text>
+            <Text style={styles.title}>{tr("Vérification")}</Text>
             <View style={styles.cancel}>
-              <Button title="Annuler" onPress={() => fail("Annulé")} />
+              <Button title={tr("Annuler")} onPress={() => fail("Annulé")} />
             </View>
           </View>
           <View style={styles.content}>

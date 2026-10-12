@@ -27,6 +27,7 @@ const colors = palettes.dark;
 import { formatDuration } from "../lib/format";
 import { useT, useWippStore } from "../lib/store";
 import { acceptCurrentCall, declineCurrentCall, upgradeToVideo, useCallSession, type CallPhase, type CallSession } from "../lib/calls/session";
+import { tr } from "../lib/tr";
 
 const BG_TOP = "#070B16";
 const BG_BOTTOM = "#02040A";
@@ -359,7 +360,7 @@ export function CallScreen({
     void import("expo-notifications")
       .then((N) =>
         N.scheduleNotificationAsync({
-          content: { title: "WIPP", body: `Rappeler ${peer.displayName}`, data: { type: "remind_call", userId: session.userId } },
+          content: { title: "WIPP", body: tr("Rappeler {0}", peer.displayName), data: { type: "remind_call", userId: session.userId } },
           trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 15 * 60 },
         }),
       )
@@ -450,7 +451,7 @@ export function CallScreen({
       {videoLive && remoteVid && !localVid && !mosaic ? (
         <View style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.35)", backgroundColor: "rgba(0,0,0,0.75)", alignItems: "center", justifyContent: "center", gap: 6, padding: 8 }}>
           <VideoOff size={22} color={GOLD} />
-          <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>Ta caméra est éteinte</Text>
+          <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>{tr("Ta caméra est éteinte")}</Text>
         </View>
       ) : null}
 

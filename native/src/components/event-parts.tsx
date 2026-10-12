@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Clock, Heart, MapPin, Navigation } from "luc
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { colors, accentA, fgA, whiteA } from "../theme";
+import { tr } from "../lib/tr";
 
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const MONTHS_SHORT = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
@@ -47,7 +48,7 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
   const canPrev = month > new Date(today.getFullYear(), today.getMonth(), 1);
   return (
-    <BottomSheet open={open} title="Date de l’événement" onClose={onClose}>
+    <BottomSheet open={open} title={tr("Date de l’événement")} onClose={onClose}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <Press disabled={!canPrev} onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={{ padding: 8, opacity: canPrev ? 1 : 0.3 }}>
           <ChevronLeft size={22} color={colors.fg} />
@@ -106,7 +107,7 @@ export function TimeSheet({ open, start, end, single, title = "Heure", onClose, 
       >
         {(allowNone ? ["", ...TIMES] : TIMES).map((t) => (
           <Press key={t || "none"} onPress={() => set(t)} style={{ height: ROW, alignItems: "center", justifyContent: "center", backgroundColor: value === t ? accentA(0.18) : "transparent" }}>
-            <Text style={{ color: value === t ? colors.accent : colors.fg, fontSize: 16, fontFamily: value === t ? "Inter_600SemiBold" : undefined }}>{t || "Pas de fin"}</Text>
+            <Text style={{ color: value === t ? colors.accent : colors.fg, fontSize: 16, fontFamily: value === t ? "Inter_600SemiBold" : undefined }}>{t || tr("Pas de fin")}</Text>
           </Press>
         ))}
       </ScrollView>
@@ -116,18 +117,18 @@ export function TimeSheet({ open, start, end, single, title = "Heure", onClose, 
     <BottomSheet open={open} title={title} onClose={onClose}>
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{single ? "Heure de publication" : "Début"}</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{single ? tr("Heure de publication") : tr("Début")}</Text>
           {column(a, setA, false)}
         </View>
         {single ? null : (
           <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Fin (facultative)</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{tr("Fin (facultative)")}</Text>
             {column(b, setB, true)}
           </View>
         )}
       </View>
       <Press onPress={() => onSave(a, b)} style={{ marginTop: 16, height: 50, borderRadius: 14, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 16 }}>Valider</Text>
+        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 16 }}>{tr("Valider")}</Text>
       </Press>
     </BottomSheet>
   );
@@ -188,7 +189,7 @@ export function EventCard({
           </View>
         )}
         {onSave ? (
-          <Press accessibilityLabel="Enregistrer" onPress={onSave} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+          <Press accessibilityLabel={tr("Enregistrer")} onPress={onSave} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
             <Heart size={18} color={saved ? colors.accent : colors.fg} fill={saved ? colors.accent : "transparent"} />
           </Press>
         ) : null}
@@ -209,7 +210,7 @@ export function EventCard({
             ) : null}
           </View>
           <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
-            {interested.label ?? `${interested.count} intéressé${interested.count > 1 ? "s" : ""}`}
+            {interested.label ?? tr("{0} intéressé{1}", interested.count, interested.count > 1 ? "s" : "")}
           </Text>
         </View>
       ) : null}
@@ -225,7 +226,7 @@ export function EventCard({
           ) : null}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 }}>
             <MapPin size={14} color={colors.accent} />
-            <Text numberOfLines={1} style={{ color: live ? colors.accent : colors.fg, fontSize: 12, fontFamily: live ? "Inter_600SemiBold" : undefined }}>{live ? "En ligne sur WIPP" : online ? "En ligne" : city || "Lieu à préciser"}</Text>
+            <Text numberOfLines={1} style={{ color: live ? colors.accent : colors.fg, fontSize: 12, fontFamily: live ? "Inter_600SemiBold" : undefined }}>{live ? tr("En ligne sur WIPP") : online ? tr("En ligne") : city || tr("Lieu à préciser")}</Text>
           </View>
           {distance ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

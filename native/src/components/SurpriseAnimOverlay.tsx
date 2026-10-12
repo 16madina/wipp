@@ -7,6 +7,7 @@ import { Volume2, VolumeX } from "lucide-react-native";
 import { animSoundOn, setAnimSound, useAnimSound } from "../lib/anim-sound";
 import { wippSrc } from "../lib/assets";
 import { findAnimation, SURPRISE_ANIMATION_MS } from "../lib/surprise";
+import { tr } from "../lib/tr";
 
 /**
  * Transparent artwork floats over the chat without intercepting touches.
@@ -107,7 +108,7 @@ export function SurpriseAnimOverlay({
     <View pointerEvents="box-none" style={centered ? [StyleSheet.absoluteFillObject, { zIndex: 30, alignItems: "center", justifyContent: "center" }] : { marginTop: 8, width: "100%", alignItems: "center" }}>
       {item.sound && centered ? (
         <Pressable
-          accessibilityLabel={soundOn ? "Couper le son des animations" : "Activer le son des animations"}
+          accessibilityLabel={soundOn ? tr("Couper le son des animations") : tr("Activer le son des animations")}
           onPress={() => {
             if (soundOn) soundRef.current();
             setAnimSound(!soundOn);

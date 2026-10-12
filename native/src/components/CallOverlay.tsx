@@ -23,6 +23,7 @@ import { isSystemRinging } from "../lib/calls/callkeep";
 import { hideOngoing, showOngoing } from "../lib/calls/android-ongoing";
 import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
+import { tr } from "../lib/tr";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -216,7 +217,7 @@ export function CallOverlay() {
       return;
     }
     void showOngoing({
-      title: session.kind === "video" ? "Appel vidéo WIPP en cours" : "Appel WIPP en cours",
+      title: session.kind === "video" ? tr("Appel vidéo WIPP en cours") : tr("Appel WIPP en cours"),
       body: session.displayName,
       stopLabel: "Raccrocher",
       onStop: () => void endCurrentCall(),
@@ -310,7 +311,7 @@ export function CallOverlay() {
     void (async () => {
       const mic = await Audio.requestPermissionsAsync();
       if (!mic.granted) {
-        patch({ phase: "failed", note: "Micro refusé." });
+        patch({ phase: "failed", note: tr("Micro refusé.") });
         return;
       }
       const { AudioSession, AndroidAudioTypePresets } = await import("@livekit/react-native");
@@ -328,7 +329,7 @@ export function CallOverlay() {
         void setGroupState(session.callId, "joined");
       }
     })().catch(() => {
-      if (!cancelled) patch({ phase: "failed", note: "Connexion média impossible." });
+      if (!cancelled) patch({ phase: "failed", note: tr("Connexion média impossible.") });
     });
     return () => {
       cancelled = true;
@@ -392,7 +393,7 @@ export function CallOverlay() {
       if (want) {
         const cam = await Camera.requestCameraPermissionsAsync();
         if (!cam.granted) {
-          patch({ camOff: true, note: "Caméra refusée. L’audio continue." });
+          patch({ camOff: true, note: tr("Caméra refusée. L’audio continue.") });
           return;
         }
       }

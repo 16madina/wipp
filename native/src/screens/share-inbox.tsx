@@ -13,6 +13,7 @@ import { chatPeer, isChatSealed, isPrivateChat, useWippStore } from "../lib/stor
 import { startUpload } from "../lib/messaging/send-media";
 import { colors } from "../theme";
 import { errorText } from "../lib/error-fr";
+import { tr } from "../lib/tr";
 
 function titleOf(
   chat: ReturnType<typeof useWippStore.getState>["chats"][number],
@@ -68,7 +69,7 @@ function Grid({ drafts }: { drafts: ShareDraft[] }) {
             ) : (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ color: "#fff", fontSize: 26 }}>▶</Text>
-                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>Vidéo</Text>
+                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>{tr("Vidéo")}</Text>
               </View>
             )}
           </View>
@@ -119,7 +120,7 @@ export function ShareInboxScreen() {
         setSkipped(next.skipped);
       },
       (err) => {
-        if (live) setError(errorText(err, "Contenu impossible à lire."));
+        if (live) setError(errorText(err, tr("Contenu impossible à lire.")));
       },
     );
     return () => {
@@ -198,7 +199,7 @@ export function ShareInboxScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Partager sur WIPP" onBack={cancel} />
+        <Header title={tr("Partager sur WIPP")} onBack={cancel} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
         <View style={{ borderRadius: 16, backgroundColor: colors.navy, padding: 10, minHeight: 72, justifyContent: "center", borderWidth: 1, borderColor: colors.hair }}>
@@ -208,20 +209,20 @@ export function ShareInboxScreen() {
             ) : drafts[0] ? (
               <Preview draft={drafts[0]} />
             ) : (
-              <Text style={{ color: colors.muted }}>Rien à partager.</Text>
+              <Text style={{ color: colors.muted }}>{tr("Rien à partager.")}</Text>
             )
           ) : error ? (
             <Text style={{ color: colors.danger }}>{error}</Text>
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, justifyContent: "center" }}>
               <ActivityIndicator color={colors.accent} />
-              <Text style={{ color: colors.muted }}>Préparation du contenu…</Text>
+              <Text style={{ color: colors.muted }}>{tr("Préparation du contenu…")}</Text>
             </View>
           )}
           {drafts && (drafts.length > 1 || skipped) ? (
             <Text style={{ marginTop: 8, color: colors.muted, fontSize: 12 }}>
-              {drafts.length > 1 ? `${drafts.length} éléments` : ""}
-              {skipped ? `${drafts.length > 1 ? " · " : ""}${skipped} ignoré${skipped > 1 ? "s" : ""} (format non pris en charge, trop lourd ou plus de 10)` : ""}
+              {drafts.length > 1 ? tr("{0} éléments", drafts.length) : ""}
+              {skipped ? tr("{0}{1} ignoré{2} (format non pris en charge, trop lourd ou plus de 10)", drafts.length > 1 ? " · " : "", skipped, skipped > 1 ? "s" : "") : ""}
             </Text>
           ) : null}
         </View>
@@ -229,7 +230,7 @@ export function ShareInboxScreen() {
         {drafts?.length === 1 ? (
           <Press
             onPress={toStory}
-            accessibilityLabel="Publier dans ma story"
+            accessibilityLabel={tr("Publier dans ma story")}
             style={{ marginTop: 14, height: 68, borderRadius: 16, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.accent }}
           >
             <View>
@@ -239,16 +240,16 @@ export function ShareInboxScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Ma story</Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Visible 24 h par tes contacts</Text>
+              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Ma story")}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Visible 24 h par tes contacts")}</Text>
             </View>
-            <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Publier</Text>
+            <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Publier")}</Text>
           </Press>
         ) : null}
 
         {recent.length ? (
           <>
-            <Text style={sectionTitle}>Récents</Text>
+            <Text style={sectionTitle}>{tr("Récents")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingRight: 8 }}>
               {recent.map((chat) => {
                 const peer = chat.type === "group" ? undefined : chatPeer(chat, users);
@@ -273,13 +274,13 @@ export function ShareInboxScreen() {
           </>
         ) : null}
 
-        <Text style={sectionTitle}>Toutes les conversations</Text>
+        <Text style={sectionTitle}>{tr("Toutes les conversations")}</Text>
         <View style={{ height: 46, borderRadius: 23, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Search size={18} color={colors.muted} />
-          <TextInput value={q} onChangeText={setQ} placeholder="Rechercher" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15 }} />
+          <TextInput value={q} onChangeText={setQ} placeholder={tr("Rechercher")} placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15 }} />
         </View>
         {rows.length === 0 ? (
-          <Text style={{ marginTop: 20, color: colors.muted, textAlign: "center" }}>{q.trim() ? "Aucune conversation à ce nom." : "Aucune conversation pour l’instant."}</Text>
+          <Text style={{ marginTop: 20, color: colors.muted, textAlign: "center" }}>{q.trim() ? tr("Aucune conversation à ce nom.") : tr("Aucune conversation pour l’instant.")}</Text>
         ) : (
           <View style={{ marginTop: 10, borderRadius: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.hair, overflow: "hidden" }}>
             {rows.map((chat, index) => {
@@ -296,7 +297,7 @@ export function ShareInboxScreen() {
                     <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium" }}>
                       {titleOf(chat, users)}
                     </Text>
-                    {chat.type === "group" ? <Text style={{ color: colors.muted, fontSize: 12 }}>Groupe</Text> : null}
+                    {chat.type === "group" ? <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Groupe")}</Text> : null}
                   </View>
                   <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: on ? colors.accent : colors.muted, backgroundColor: on ? colors.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
                     {on ? <Check size={14} color={colors.accentFg} strokeWidth={3} /> : null}
@@ -306,7 +307,7 @@ export function ShareInboxScreen() {
             })}
           </View>
         )}
-        {picked.length >= MAX_TARGETS ? <Text style={{ marginTop: 10, color: colors.muted, fontSize: 12, textAlign: "center" }}>{MAX_TARGETS} conversations au maximum à la fois.</Text> : null}
+        {picked.length >= MAX_TARGETS ? <Text style={{ marginTop: 10, color: colors.muted, fontSize: 12, textAlign: "center" }}>{MAX_TARGETS} {tr("conversations au maximum à la fois.")}</Text> : null}
       </ScrollView>
       {/* The send button stays at the bottom, whatever the length of the list. */}
       <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12), borderTopWidth: 1, borderTopColor: colors.hair, backgroundColor: colors.bg }}>

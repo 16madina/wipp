@@ -5,6 +5,7 @@ import Svg, { Defs, Image as SvgImage, Mask, Path, Rect } from "react-native-svg
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { setScratching } from "../lib/scratch-state";
 import { colors } from "../theme";
+import { tr } from "../lib/tr";
 
 const BRUSH = 44;
 const CLEAR_AT = 0.5;
@@ -151,7 +152,7 @@ export function ScratchFoil({
         {hint && drawn ? (
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
             <View style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(8,6,4,0.42)" }}>
-              <Text style={{ color: colors.surprisePaper, fontFamily: "Inter_700Bold", fontSize: 14 }}>Gratte avec le doigt</Text>
+              <Text style={{ color: colors.surprisePaper, fontFamily: "Inter_700Bold", fontSize: 14 }}>{tr("Gratte avec le doigt")}</Text>
             </View>
           </View>
         ) : null}

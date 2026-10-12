@@ -135,11 +135,11 @@ export function MeScreen() {
           <View style={{ borderRadius: 16, backgroundColor: colors.navy, padding: 14, overflow: "hidden" }}>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Press
-                accessibilityLabel="Changer la photo de profil"
+                accessibilityLabel={tr("Changer la photo de profil")}
                 onPress={() => {
                   void import("../lib/profile-photo").then(({ changeProfilePhoto }) =>
                     changeProfilePhoto().catch((err) => {
-                      Alert.alert("Photo", errorText(err, "Envoi impossible"));
+                      Alert.alert(tr("Photo"), errorText(err, tr("Envoi impossible")));
                     }),
                   );
                 }}
@@ -164,7 +164,7 @@ export function MeScreen() {
               </View>
             </View>
             <Press
-              accessibilityLabel="Modifier ma phrase"
+              accessibilityLabel={tr("Modifier ma phrase")}
               onPress={() => {
                 setMottoDraft(me.motto ?? "");
                 setMottoOpen(true);
@@ -181,7 +181,7 @@ export function MeScreen() {
                   {me.motto}
                 </Text>
               ) : (
-                <Text style={{ fontFamily: MOTTO_FONT, fontSize: 20, color: accentA(0.45), textAlign: "right" }}>Ta phrase ✎</Text>
+                <Text style={{ fontFamily: MOTTO_FONT, fontSize: 20, color: accentA(0.45), textAlign: "right" }}>{tr("Ta phrase ✎")}</Text>
               )}
             </Press>
             {me.bio ? <Text style={{ marginTop: 10, fontSize: 12, color: fgA(0.8) }}>{me.bio}</Text> : null}
@@ -241,7 +241,7 @@ export function MeScreen() {
             {staffRole ? (
               <Row
                 icon={<Shield size={16} color={colors.accent} />}
-                label={staffRole === "admin" ? "Admin panel" : "Modération"}
+                label={staffRole === "admin" ? tr("Admin panel") : tr("Modération")}
                 value={staffRole === "admin" ? "Administrateur" : "Modérateur"}
                 onPress={() => push({ name: "admin" })}
               />
@@ -265,7 +265,7 @@ export function MeScreen() {
             <Row icon={<Star size={16} color={colors.fg} />} label={t("rateWipp")} onPress={() => void Linking.openURL(RATE_URL).catch(() => undefined)} />
             <Row icon={<FileText size={16} color={colors.fg} />} label={t("termsOfUse")} onPress={() => push({ name: "legal", doc: "terms" })} />
             <Row icon={<Shield size={16} color={colors.fg} />} label={t("privacyPolicy")} onPress={() => push({ name: "legal", doc: "privacy" })} />
-            <Row icon={<BadgeCheck size={16} color={colors.fg} />} label="18 ans et plus" onPress={() => push({ name: "legal", doc: "age" })} />
+            <Row icon={<BadgeCheck size={16} color={colors.fg} />} label={tr("18 ans et plus")} onPress={() => push({ name: "legal", doc: "age" })} />
             <Row
               icon={<UserPlus size={16} color={colors.fg} />}
               label={t("invite")}
@@ -279,10 +279,10 @@ export function MeScreen() {
               }
               onPress={() => push({ name: "rewards" })}
             />
-            <Row icon={<Sparkles size={16} color={colors.fg} />} label="À propos" value={aboutOpen ? undefined : t("appVersion")} onPress={() => setAboutOpen((v) => !v)} />
+            <Row icon={<Sparkles size={16} color={colors.fg} />} label={tr("À propos")} value={aboutOpen ? undefined : t("appVersion")} onPress={() => setAboutOpen((v) => !v)} />
             {aboutOpen ? (
               <Text style={{ paddingHorizontal: 16, paddingBottom: 12, fontSize: 13, color: colors.muted, lineHeight: 18 }}>
-                WIPP — messagerie et appels, 18+, sans publicité. {t("appVersion")}.{"\n"}Contact : {LEGAL_CONTACT}
+                {tr("WIPP — messagerie et appels, 18+, sans publicité.")} {t("appVersion")}.{"\n"}{tr("Contact :")} {LEGAL_CONTACT}
               </Text>
             ) : null}
           </Section>
@@ -305,19 +305,19 @@ export function MeScreen() {
           />
         </View>
       </ScrollView>
-      <Sheet open={mottoOpen} title="Ta phrase" onClose={() => setMottoOpen(false)}>
+      <Sheet open={mottoOpen} title={tr("Ta phrase")} onClose={() => setMottoOpen(false)}>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 10 }}>
-          Un petit message personnel affiché sur ton profil. {MOTTO_MAX} caractères maximum.
+          {tr("Un petit message personnel affiché sur ton profil.")} {MOTTO_MAX} {tr("caractères maximum.")}
         </Text>
         <View style={{ borderRadius: 14, backgroundColor: colors.navy, padding: 14, minHeight: 70, alignItems: "flex-end", justifyContent: "center", marginBottom: 10 }}>
           <Text style={{ fontFamily: MOTTO_FONT, fontSize: mottoSize(mottoDraft || "Good Vibes Only"), color: mottoDraft ? colors.accent : accentA(0.4), textAlign: "right", transform: [{ rotate: "-4deg" }] }}>
-            {mottoDraft || "Good Vibes Only"}
+            {mottoDraft || tr("Good Vibes Only")}
           </Text>
         </View>
         <TextInput
           value={mottoDraft}
           onChangeText={(v) => setMottoDraft(v.slice(0, MOTTO_MAX))}
-          placeholder="Ex. Good Vibes Only"
+          placeholder={tr("Ex. Good Vibes Only")}
           placeholderTextColor={colors.muted}
           maxLength={MOTTO_MAX}
           autoFocus
@@ -329,14 +329,14 @@ export function MeScreen() {
         <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
           {me.motto ? (
             <Btn
-              label="Effacer"
+              label={tr("Effacer")}
               variant="secondary"
               style={{ flex: 1 }}
               onPress={() => setMottoDraft("")}
             />
           ) : null}
           <Btn
-            label={mottoSaving ? "…" : "Enregistrer"}
+            label={mottoSaving ? "…" : tr("Enregistrer")}
             disabled={mottoSaving}
             style={{ flex: 1 }}
             onPress={() => {
@@ -344,7 +344,7 @@ export function MeScreen() {
               void import("../lib/profile-motto")
                 .then(({ saveMyMotto }) => saveMyMotto(mottoDraft))
                 .then(() => setMottoOpen(false))
-                .catch((err) => Alert.alert("Ta phrase", errorText(err, "Enregistrement impossible")))
+                .catch((err) => Alert.alert(tr("Ta phrase"), errorText(err, tr("Enregistrement impossible"))))
                 .finally(() => setMottoSaving(false));
             }}
           />
@@ -401,12 +401,12 @@ export function AccountScreen() {
     const name = displayName.replace(/\s+/g, " ").trim().slice(0, 60);
     const about = bio.trim().slice(0, 140);
     if (!name) {
-      Alert.alert(t("editProfile"), "Ton nom ne peut pas être vide.");
+      Alert.alert(t("editProfile"), tr("Ton nom ne peut pas être vide."));
       return;
     }
     const changingUser = wantedUser !== (me.username ?? "").toLowerCase();
     if (changingUser && userState !== "free") {
-      Alert.alert(t("editProfile"), userState === "taken" ? `@${wantedUser} est déjà pris. Choisis un autre pseudo.` : userState === "invalid" ? "Le @pseudo doit faire 3 à 20 caractères : lettres, chiffres ou _." : "Vérification du @pseudo en cours. Réessaie dans un instant.");
+      Alert.alert(t("editProfile"), userState === "taken" ? tr("@{0} est déjà pris. Choisis un autre pseudo.", wantedUser) : userState === "invalid" ? tr("Le @pseudo doit faire 3 à 20 caractères : lettres, chiffres ou _.") : tr("Vérification du @pseudo en cours. Réessaie dans un instant."));
       return;
     }
     setSaving(true);
@@ -433,7 +433,7 @@ export function AccountScreen() {
         })().catch(() => undefined);
       } catch (err) {
         setSaving(false);
-        Alert.alert(t("editProfile"), errorText(err, "Ton @pseudo n’a pas pu être changé. Réessaie."));
+        Alert.alert(t("editProfile"), errorText(err, tr("Ton @pseudo n’a pas pu être changé. Réessaie.")));
         return;
       }
     }
@@ -445,7 +445,7 @@ export function AccountScreen() {
       const { data, error } = await supabase.from("wipp_profiles").update({ display_name: name, bio: about }).eq("id", id).select("id");
       if (error || !data?.length) {
         setSaving(false);
-        Alert.alert(t("editProfile"), errorText(error?.message ? new Error(error.message) : null, "Ton profil n’a pas pu être enregistré. Réessaie."));
+        Alert.alert(t("editProfile"), errorText(error?.message ? new Error(error.message) : null, tr("Ton profil n’a pas pu être enregistré. Réessaie.")));
         return;
       }
     }
@@ -492,25 +492,25 @@ export function AccountScreen() {
             }}
           >
             {userState === "free"
-              ? "✓ Disponible"
+              ? tr("✓ Disponible")
               : userState === "checking"
-                ? "Vérification…"
+                ? tr("Vérification…")
                 : userState === "taken"
-                  ? "Déjà utilisé"
+                  ? tr("Déjà utilisé")
                   : userState === "invalid"
-                    ? "3 à 20 caractères : lettres, chiffres ou _"
-                    : "Vérification impossible"}
+                    ? tr("3 à 20 caractères : lettres, chiffres ou _")
+                    : tr("Vérification impossible")}
           </Text>
         ) : null}
         {userState === "free" ? (
           <Text style={{ marginTop: -6, fontSize: 12, color: colors.muted }}>
-            Ton ancien @pseudo sera libéré. Tes anciens liens et QR codes de profil ne marcheront plus.
+            {tr("Ton ancien @pseudo sera libéré. Tes anciens liens et QR codes de profil ne marcheront plus.")}
           </Text>
         ) : null}
         <Field label={t("bio")} value={bio} onChangeText={(v) => setBio(v.slice(0, 140))} />
-        <Field label="Ville" value={city} onChangeText={setCity} />
+        <Field label={tr("Ville")} value={city} onChangeText={setCity} />
         <View>
-          <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>Genre (facultatif)</Text>
+          <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>{tr("Genre (facultatif)")}</Text>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             {(
               [
@@ -523,7 +523,7 @@ export function AccountScreen() {
             ))}
           </View>
         </View>
-        <Btn label={saving ? "Enregistrement…" : "Enregistrer"} disabled={saving} onPress={() => void save()} />
+        <Btn label={saving ? tr("Enregistrement…") : tr("Enregistrer")} disabled={saving} onPress={() => void save()} />
       </ScrollView>
     </ScreenRoot>
   );
@@ -555,9 +555,9 @@ function MessagePreviewSection() {
   }, []);
   if (Platform.OS !== "ios" && Platform.OS !== "android") return null;
   return (
-    <Section title="Notifications">
+    <Section title={tr("Notifications")}>
       <Row
-        label="Aperçu des messages"
+        label={tr("Aperçu des messages")}
         trailing={
           <Toggle
             value={on}
@@ -570,8 +570,8 @@ function MessagePreviewSection() {
       />
       <Text style={{ paddingHorizontal: 16, paddingTop: 6, color: colors.muted, fontSize: 12, lineHeight: 17 }}>
         {on
-          ? "Le début du message s’affiche dans la notification. Il est déchiffré sur ce téléphone : WIPP ne peut pas le lire."
-          : "Les notifications affichent seulement « Nouveau message »."}
+          ? tr("Le début du message s’affiche dans la notification. Il est déchiffré sur ce téléphone : WIPP ne peut pas le lire.")
+          : tr("Les notifications affichent seulement « Nouveau message ».")}
       </Text>
     </Section>
   );
@@ -600,9 +600,9 @@ function TouchPermissionSection() {
   if (android ? !caps.uwbCapable : !caps.uwb) return null;
   const denied = perm === "denied";
   return (
-    <Section title="WIPP Touch">
+    <Section title={tr("WIPP Touch")}>
       <Row
-        label={android ? "Appareils à proximité" : "Interactions à proximité"}
+        label={android ? tr("Appareils à proximité") : tr("Interactions à proximité")}
         value={denied ? "Désactivées" : perm === "granted" ? "Activées" : "Demandées au premier WIPP Touch"}
         onPress={denied ? () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) : undefined}
       />
@@ -610,10 +610,10 @@ function TouchPermissionSection() {
         <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 10 }}>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
             {android
-              ? "Autorisation de proximité désactivée. WIPP Touch utilise « Appareils à proximité » pour confirmer que les deux téléphones sont réellement proches. Paramètres → Applications → WIPP → Autorisations → Appareils à proximité."
-              : "WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches. Réglages → WIPP → Interactions à proximité."}
+              ? tr("Autorisation de proximité désactivée. WIPP Touch utilise « Appareils à proximité » pour confirmer que les deux téléphones sont réellement proches. Paramètres → Applications → WIPP → Autorisations → Appareils à proximité.")
+              : tr("WIPP Touch utilise les interactions à proximité de votre iPhone pour confirmer que les deux téléphones sont réellement proches. Réglages → WIPP → Interactions à proximité.")}
           </Text>
-          <Btn label={android ? "Activer dans les réglages" : "Activer dans les réglages de l’iPhone"} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
+          <Btn label={android ? tr("Activer dans les réglages") : tr("Activer dans les réglages de l’iPhone")} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
         </View>
       ) : null}
     </Section>
@@ -649,7 +649,7 @@ export function PrivacyScreen() {
       setDraft("");
       setPending("");
       if (!existed && bioHw?.hasHardware && bioHw.enrolled) {
-        Alert.alert("WIPP Privé", "Utiliser la biométrie de cet appareil pour ouvrir WIPP Privé ?", [
+        Alert.alert(tr("WIPP Privé"), tr("Utiliser la biométrie de cet appareil pour ouvrir WIPP Privé ?"), [
           {
             text: "Plus tard",
             onPress: () => {
@@ -671,14 +671,14 @@ export function PrivacyScreen() {
         ]);
       } else {
         Alert.alert(
-          "WIPP Privé",
+          tr("WIPP Privé"),
           existed
-            ? "Le code a été modifié. Tes conversations privées sont inchangées."
-            : "Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes.",
+            ? tr("Le code a été modifié. Tes conversations privées sont inchangées.")
+            : tr("Pour ouvrir WIPP Privé, maintiens le logo WIPP pendant 3 secondes."),
         );
       }
     } catch {
-      Alert.alert("WIPP Privé", "Le code doit contenir au moins 4 caractères.");
+      Alert.alert(tr("WIPP Privé"), tr("Le code doit contenir au moins 4 caractères."));
     }
   }
 
@@ -689,7 +689,7 @@ export function PrivacyScreen() {
       <ScreenRoot>
         <GlassHeader>
           <Header
-            title="WIPP Privé"
+            title={tr("WIPP Privé")}
             onBack={() => {
               setPane("prive");
               setDraft("");
@@ -700,12 +700,12 @@ export function PrivacyScreen() {
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
             {pane === "create"
-              ? "Choisis un code WIPP Privé. Il est distinct du code PIN du téléphone."
-              : "Confirme le code WIPP Privé."}
+              ? tr("Choisis un code WIPP Privé. Il est distinct du code PIN du téléphone.")
+              : tr("Confirme le code WIPP Privé.")}
           </Text>
-          <Field label={pane === "create" ? "Nouveau code" : "Confirmer"} value={draft} onChangeText={setDraft} secureTextEntry autoCapitalize="none" />
+          <Field label={pane === "create" ? tr("Nouveau code") : tr("Confirmer")} value={draft} onChangeText={setDraft} secureTextEntry autoCapitalize="none" />
           <Btn
-            label="Continuer"
+            label={tr("Continuer")}
             disabled={draft.trim().length < 4}
             onPress={() => {
               if (pane === "create") {
@@ -715,7 +715,7 @@ export function PrivacyScreen() {
                 return;
               }
               if (draft.trim() !== pending) {
-                Alert.alert("WIPP Privé", "Les deux codes ne correspondent pas.");
+                Alert.alert(tr("WIPP Privé"), tr("Les deux codes ne correspondent pas."));
                 setDraft("");
                 setPane("create");
                 return;
@@ -732,12 +732,12 @@ export function PrivacyScreen() {
     return (
       <ScreenRoot>
         <GlassHeader>
-          <Header title="WIPP Privé" onBack={() => setPane("home")} />
+          <Header title={tr("WIPP Privé")} onBack={() => setPane("home")} />
         </GlassHeader>
         <ScrollView>
           <Section title="">
             <Row
-              label={isPrivateEnabled() ? "Modifier le code" : "Créer le code"}
+              label={isPrivateEnabled() ? tr("Modifier le code") : tr("Créer le code")}
               onPress={() => {
                 void (async () => {
                   if (isPrivateEnabled()) {
@@ -746,7 +746,7 @@ export function PrivacyScreen() {
                     const checked = await verifyPin(old);
                     if (!checked.ok) {
                       const secs = Math.max(1, Math.ceil((checked.waitMs || lastPinWaitMs()) / 1000));
-                      Alert.alert("WIPP Privé", `Code incorrect. Réessaie dans ${secs} s.`);
+                      Alert.alert(tr("WIPP Privé"), tr("Code incorrect. Réessaie dans {0} s.", secs));
                       return;
                     }
                   }
@@ -756,7 +756,7 @@ export function PrivacyScreen() {
             />
             {bioHw?.hasHardware ? (
               <Row
-                label="Biométrie"
+                label={tr("Biométrie")}
                 value={bioHw.enrolled ? (bioOn ? "Activée" : "Désactivée") : "Non configurée"}
                 trailing={
                   bioHw.enrolled ? (
@@ -778,7 +778,7 @@ export function PrivacyScreen() {
               />
             ) : null}
             <Row
-              label="Code oublié ?"
+              label={tr("Code oublié ?")}
               onPress={() => {
                 void (async () => {
                   if (await biometricAvailable()) {
@@ -788,15 +788,15 @@ export function PrivacyScreen() {
                     return;
                   }
                   Alert.alert(
-                    "Code oublié",
-                    "Sans biométrie valide, ce code ne peut pas être récupéré. Aucun SMS, e-mail ou copie serveur. Le coffre reste scellé sur cet appareil.",
+                    tr("Code oublié"),
+                    tr("Sans biométrie valide, ce code ne peut pas être récupéré. Aucun SMS, e-mail ou copie serveur. Le coffre reste scellé sur cet appareil."),
                   );
                 })();
               }}
             />
           </Section>
           <Text style={{ paddingHorizontal: 16, paddingTop: 12, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-            Espace discret. Aucun bouton WIPP Privé sur l’écran Chats. Maintiens le logo WIPP 3 secondes pour l’ouvrir.
+            {tr("Espace discret. Aucun bouton WIPP Privé sur l’écran Chats. Maintiens le logo WIPP 3 secondes pour l’ouvrir.")}
           </Text>
         </ScrollView>
         {gate}
@@ -812,8 +812,8 @@ export function PrivacyScreen() {
       <ScrollView>
         <Section title="">
           <Row label={t("nearbyVis")} onPress={() => push({ name: "nearby" })} />
-          <Row label="Code de verrouillage" value={hasLockCode() ? "Activé" : "Désactivé"} onPress={() => setPane("lock")} />
-          <Row label="WIPP Privé" value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
+          <Row label={tr("Code de verrouillage")} value={hasLockCode() ? "Activé" : "Désactivé"} onPress={() => setPane("lock")} />
+          <Row label={tr("WIPP Privé")} value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
           <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>
         <MessagePreviewSection />
@@ -902,7 +902,7 @@ export function NotificationsScreen() {
       </Section>
       {__DEV__ ? (
         <Text style={{ color: colors.muted, fontSize: 11, paddingHorizontal: 20, paddingTop: 12 }}>
-          DEV · permission {pushGranted ? "accordée" : "non accordée"}
+          {tr("DEV · permission")} {pushGranted ? tr("accordée") : tr("non accordée")}
         </Text>
       ) : null}
     </ScreenRoot>
@@ -910,9 +910,9 @@ export function NotificationsScreen() {
 }
 
 const APPEARANCE_OPTIONS: { id: AppearanceMode; label: string; sub: string }[] = [
-  { id: "dark", label: "Sombre", sub: "Noir et jaune" },
-  { id: "light", label: "Clair", sub: "Blanc et bleu" },
-  { id: "system", label: "Automatique", sub: "Comme le téléphone" },
+  { id: "dark", get label() { return tr("Sombre"); }, get sub() { return tr("Noir et jaune"); } },
+  { id: "light", get label() { return tr("Clair"); }, get sub() { return tr("Blanc et bleu"); } },
+  { id: "system", get label() { return tr("Automatique"); }, get sub() { return tr("Comme le téléphone"); } },
 ];
 
 /** Bouton ☀️/🌙 de la page Moi : bascule directement entre sombre et clair. */
@@ -922,7 +922,7 @@ function ThemeQuickToggle() {
   const light = theme === "light";
   return (
     <Press
-      accessibilityLabel={light ? "Passer en thème sombre" : "Passer en thème clair"}
+      accessibilityLabel={light ? tr("Passer en thème sombre") : tr("Passer en thème clair")}
       onPress={() => setMode(light ? "dark" : "light")}
       style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
     >
@@ -941,7 +941,7 @@ export function AppearanceScreen() {
       <GlassHeader>
         <Header title={t("appearance")} onBack={pop} />
       </GlassHeader>
-      <Section title="Thème">
+      <Section title={tr("Thème")}>
         {APPEARANCE_OPTIONS.map((o) => (
           <Row
             key={o.id}
@@ -953,7 +953,7 @@ export function AppearanceScreen() {
         ))}
       </Section>
       <Text style={{ marginHorizontal: 16, marginTop: 10, fontSize: 12, lineHeight: 17, color: colors.muted }}>
-        Les appels, la caméra et les stories restent toujours en couleurs sombres.
+        {tr("Les appels, la caméra et les stories restent toujours en couleurs sombres.")}
       </Text>
     </ScreenRoot>
   );
@@ -969,7 +969,7 @@ export function AccessibilityScreen() {
         <Header title={t("accessibility")} onBack={pop} />
       </GlassHeader>
       <Row
-        label="Retours haptiques"
+        label={tr("Retours haptiques")}
         trailing={
           <Toggle
             value={h}
@@ -1009,9 +1009,9 @@ export function DevicesScreen() {
         <Header title={t("devices")} onBack={pop} />
       </GlassHeader>
       <PendingNote label="LINKED DEVICES BACKEND — PENDING" />
-      <Row label="Cet appareil" value="WIPP" />
+      <Row label={tr("Cet appareil")} value="WIPP" />
       <Text style={{ paddingHorizontal: 16, paddingTop: 8, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-        Liste multi-appareils sécurisée non encore branchée. Aucun appareil fictif.
+        {tr("Liste multi-appareils sécurisée non encore branchée. Aucun appareil fictif.")}
       </Text>
     </ScreenRoot>
   );
@@ -1019,48 +1019,48 @@ export function DevicesScreen() {
 
 const HELP_FAQ: { q: string; a: string }[] = [
   {
-    q: "Comment ajouter quelqu’un sur WIPP ?",
-    a: "Trois façons : scanne son QR code WIPP, cherche son @pseudo, ou utilise WIPP Touch en rapprochant vos deux téléphones. Ton numéro de téléphone n’est jamais partagé.",
+    get q() { return tr("Comment ajouter quelqu’un sur WIPP ?"); },
+    get a() { return tr("Trois façons : scanne son QR code WIPP, cherche son @pseudo, ou utilise WIPP Touch en rapprochant vos deux téléphones. Ton numéro de téléphone n’est jamais partagé."); },
   },
   {
-    q: "Je ne reçois pas le code SMS",
-    a: "Vérifie le pays (l’indicatif) et ton numéro, attends 45 secondes puis touche « Renvoyer le code ». Si rien n’arrive, écris-nous depuis l’onglet Support en indiquant ton pays et ton opérateur.",
+    get q() { return tr("Je ne reçois pas le code SMS"); },
+    get a() { return tr("Vérifie le pays (l’indicatif) et ton numéro, attends 45 secondes puis touche « Renvoyer le code ». Si rien n’arrive, écris-nous depuis l’onglet Support en indiquant ton pays et ton opérateur."); },
   },
   {
-    q: "J’ai oublié mon code de verrouillage",
-    a: "Va dans Moi › Paramètres › Confidentialité › Code de verrouillage, puis touche « Code oublié ? ». WIPP te demande Face ID ou le code de ton iPhone pour confirmer que c’est toi, puis tu crées un nouveau code. Même chose pour WIPP Privé.",
+    get q() { return tr("J’ai oublié mon code de verrouillage"); },
+    get a() { return tr("Va dans Moi › Paramètres › Confidentialité › Code de verrouillage, puis touche « Code oublié ? ». WIPP te demande Face ID ou le code de ton iPhone pour confirmer que c’est toi, puis tu crées un nouveau code. Même chose pour WIPP Privé."); },
   },
   {
-    q: "Comment verrouiller une conversation ?",
-    a: "Crée d’abord ton code dans Moi › Paramètres › Confidentialité › Code de verrouillage. Ensuite, fais un appui long sur la conversation dans Chats (ou ⋯ dans la conversation) et choisis Verrouiller. Son contenu et ses notifications sont masqués.",
+    get q() { return tr("Comment verrouiller une conversation ?"); },
+    get a() { return tr("Crée d’abord ton code dans Moi › Paramètres › Confidentialité › Code de verrouillage. Ensuite, fais un appui long sur la conversation dans Chats (ou ⋯ dans la conversation) et choisis Verrouiller. Son contenu et ses notifications sont masqués."); },
   },
   {
-    q: "J’ai changé de téléphone : où sont mes anciens messages ?",
-    a: "Tes messages sont chiffrés de bout en bout avec une clé qui reste sur ton téléphone. Sur un nouveau téléphone, tes contacts, groupes et ton profil sont là, mais les anciens messages s’affichent « chiffrés pour un autre appareil ». Les nouveaux messages se lisent normalement.",
+    get q() { return tr("J’ai changé de téléphone : où sont mes anciens messages ?"); },
+    get a() { return tr("Tes messages sont chiffrés de bout en bout avec une clé qui reste sur ton téléphone. Sur un nouveau téléphone, tes contacts, groupes et ton profil sont là, mais les anciens messages s’affichent « chiffrés pour un autre appareil ». Les nouveaux messages se lisent normalement."); },
   },
   {
-    q: "Comment changer mon nom ou mon @pseudo ?",
-    a: "Moi › Modifier mon profil. Ton @pseudo peut changer s’il est disponible ; l’ancien est alors libéré et tes anciens liens ou QR code de profil ne marchent plus.",
+    get q() { return tr("Comment changer mon nom ou mon @pseudo ?"); },
+    get a() { return tr("Moi › Modifier mon profil. Ton @pseudo peut changer s’il est disponible ; l’ancien est alors libéré et tes anciens liens ou QR code de profil ne marchent plus."); },
   },
   {
-    q: "Comment créer la page de mon entreprise ?",
-    a: "Moi › Ma carte de visite. Ajoute le nom, la catégorie, la ville, une couverture, un logo, tes photos, horaires, services et réseaux sociaux. Ta page reçoit son propre QR code, différent de ton QR personnel, et les clients t’écrivent dans une conversation « Professionnel » séparée.",
+    get q() { return tr("Comment créer la page de mon entreprise ?"); },
+    get a() { return tr("Moi › Ma carte de visite. Ajoute le nom, la catégorie, la ville, une couverture, un logo, tes photos, horaires, services et réseaux sociaux. Ta page reçoit son propre QR code, différent de ton QR personnel, et les clients t’écrivent dans une conversation « Professionnel » séparée."); },
   },
   {
-    q: "Comment signaler ou bloquer quelqu’un ?",
-    a: "Dans une conversation, une story, un profil, un groupe, une annonce ou une page d’entreprise, touche ⋯ puis « Signaler » ou « Bloquer ». Un contenu signalé disparaît aussitôt pour toi, et l’équipe WIPP examine chaque signalement.",
+    get q() { return tr("Comment signaler ou bloquer quelqu’un ?"); },
+    get a() { return tr("Dans une conversation, une story, un profil, un groupe, une annonce ou une page d’entreprise, touche ⋯ puis « Signaler » ou « Bloquer ». Un contenu signalé disparaît aussitôt pour toi, et l’équipe WIPP examine chaque signalement."); },
   },
   {
-    q: "Qui peut voir mes stories ?",
-    a: "Tes contacts, ou seulement tes proches si tu choisis « Proches » au moment de publier. Une story disparaît automatiquement après la durée choisie.",
+    get q() { return tr("Qui peut voir mes stories ?"); },
+    get a() { return tr("Tes contacts, ou seulement tes proches si tu choisis « Proches » au moment de publier. Une story disparaît automatiquement après la durée choisie."); },
   },
   {
-    q: "Mes messages sont-ils privés ?",
-    a: "Oui. Messages, photos, vidéos, notes vocales et groupes sont chiffrés de bout en bout : même WIPP ne peut pas les lire. Une capture d’écran faite par l’autre personne reste possible.",
+    get q() { return tr("Mes messages sont-ils privés ?"); },
+    get a() { return tr("Oui. Messages, photos, vidéos, notes vocales et groupes sont chiffrés de bout en bout : même WIPP ne peut pas les lire. Une capture d’écran faite par l’autre personne reste possible."); },
   },
   {
-    q: "Comment supprimer mon compte ?",
-    a: "Moi › Sécurité › Supprimer mon compte. La suppression est immédiate et définitive.",
+    get q() { return tr("Comment supprimer mon compte ?"); },
+    get a() { return tr("Moi › Sécurité › Supprimer mon compte. La suppression est immédiate et définitive."); },
   },
 ];
 
@@ -1084,7 +1084,7 @@ export function HelpScreen() {
   const [text, setText] = useState("");
 
   function chooseTopic() {
-    Alert.alert("Motif", "Pourquoi nous écris-tu ?", [
+    Alert.alert(tr("Motif"), tr("Pourquoi nous écris-tu ?"), [
       ...SUPPORT_TOPICS.map((x) => ({ text: x, onPress: () => setTopic(x) })),
       { text: "Annuler", style: "cancel" as const },
     ]);
@@ -1096,7 +1096,7 @@ export function HelpScreen() {
       return;
     }
     if (text.trim().length < 10) {
-      Alert.alert("Support", "Décris ton problème en quelques mots (10 caractères minimum).");
+      Alert.alert(tr("Support"), tr("Décris ton problème en quelques mots (10 caractères minimum)."));
       return;
     }
     const subject = `[WIPP] ${topic}`;
@@ -1112,22 +1112,22 @@ export function HelpScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Support", `Aucune app e-mail n’est configurée sur ce téléphone. Écris-nous à ${LEGAL_CONTACT} avec le sujet « ${subject} ».`);
+      Alert.alert(tr("Support"), tr("Aucune app e-mail n’est configurée sur ce téléphone. Écris-nous à {0} avec le sujet « {1} ».", LEGAL_CONTACT, subject));
     }
   }
 
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Aide et support" onBack={pop} />
+        <Header title={tr("Aide et support")} onBack={pop} />
       </GlassHeader>
       <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 8 }}>
-        <Chip label="Aide" active={tab === "help"} onPress={() => setTab("help")} />
-        <Chip label="Support" active={tab === "support"} onPress={() => setTab("support")} />
+        <Chip label={tr("Aide")} active={tab === "help"} onPress={() => setTab("help")} />
+        <Chip label={tr("Support")} active={tab === "support"} onPress={() => setTab("support")} />
       </View>
       {tab === "help" ? (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 8 }}>Questions fréquentes</Text>
+          <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 8 }}>{tr("Questions fréquentes")}</Text>
           {HELP_FAQ.map((item, i) => (
             <Press
               key={item.q}
@@ -1142,30 +1142,30 @@ export function HelpScreen() {
             </Press>
           ))}
           <Press onPress={() => setTab("support")} style={{ marginTop: 20 }}>
-            <Text style={{ color: colors.accent, fontSize: 14 }}>Tu n’as pas trouvé ta réponse ? Contacte le support ›</Text>
+            <Text style={{ color: colors.accent, fontSize: 14 }}>{tr("Tu n’as pas trouvé ta réponse ? Contacte le support ›")}</Text>
           </Press>
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-            Écris à l’équipe WIPP. Nous répondons en général sous 48 heures, à l’adresse depuis laquelle tu envoies l’e-mail.
+            {tr("Écris à l’équipe WIPP. Nous répondons en général sous 48 heures, à l’adresse depuis laquelle tu envoies l’e-mail.")}
           </Text>
           <View>
-            <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>Motif</Text>
+            <Text style={{ marginBottom: 6, fontSize: 12, fontFamily: "Inter_500Medium", color: colors.muted }}>{tr("Motif")}</Text>
             <Press
               onPress={chooseTopic}
               style={{ minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.hair, backgroundColor: colors.surface, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
-              <Text style={{ color: topic ? colors.fg : colors.muted, fontSize: 15 }}>{topic ?? "Choisis un motif"}</Text>
+              <Text style={{ color: topic ? colors.fg : colors.muted, fontSize: 15 }}>{topic ?? tr("Choisis un motif")}</Text>
               <Text style={{ color: colors.muted, fontSize: 14 }}>▾</Text>
             </Press>
           </View>
-          <Field label="Décris le problème" value={text} onChangeText={(v) => setText(v.slice(0, 2000))} multiline placeholder="Que s’est-il passé ? Sur quel écran ? Depuis quand ?" />
+          <Field label={tr("Décris le problème")} value={text} onChangeText={(v) => setText(v.slice(0, 2000))} multiline placeholder={tr("Que s’est-il passé ? Sur quel écran ? Depuis quand ?")} />
           <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17 }}>
-            Ton @pseudo, le modèle de téléphone et la version de WIPP sont ajoutés automatiquement pour nous aider. N’envoie jamais ton code SMS ni ton code de verrouillage.
+            {tr("Ton @pseudo, le modèle de téléphone et la version de WIPP sont ajoutés automatiquement pour nous aider. N’envoie jamais ton code SMS ni ton code de verrouillage.")}
           </Text>
-          <Btn label="Envoyer au support" onPress={() => void send()} />
-          <Text style={{ color: colors.muted, fontSize: 12 }}>Adresse du support : {LEGAL_CONTACT}</Text>
+          <Btn label={tr("Envoyer au support")} onPress={() => void send()} />
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Adresse du support :")} {LEGAL_CONTACT}</Text>
         </ScrollView>
       )}
     </ScreenRoot>
@@ -1192,7 +1192,7 @@ export function BlockedScreen() {
         await reload();
         setLoadError("");
       } catch (e) {
-        setLoadError(errorText(e, "Impossible de charger les comptes bloqués."));
+        setLoadError(errorText(e, tr("Impossible de charger les comptes bloqués.")));
       } finally {
         setReady(true);
       }
@@ -1210,7 +1210,7 @@ export function BlockedScreen() {
       <GlassHeader>
         <Header title={t("blockedList")} onBack={pop} />
       </GlassHeader>
-      {!ready ? <Text style={{ padding: 16, color: colors.muted }}>Chargement…</Text> : null}
+      {!ready ? <Text style={{ padding: 16, color: colors.muted }}>{tr("Chargement…")}</Text> : null}
       {loadError ? <Text style={{ padding: 16, color: colors.danger }}>{loadError}</Text> : null}
       {ready && !loadError && rows.length === 0 ? <Text style={{ padding: 16, color: colors.muted }}>{t("blockedEmpty")}</Text> : null}
       {rows.map((id) => {
@@ -1223,7 +1223,7 @@ export function BlockedScreen() {
             label={label}
             value={t("unblock")}
             onPress={() => {
-              Alert.alert(t("unblock"), `Débloquer ${label} ?`, [
+              Alert.alert(t("unblock"), tr("Débloquer {0} ?", label), [
                 { text: "Annuler", style: "cancel" },
                 {
                   text: t("unblock"),
@@ -1231,13 +1231,13 @@ export function BlockedScreen() {
                     void import("../lib/connections").then(async ({ unblockProfile }) => {
                       const ok = await unblockProfile(raw);
                       if (!ok) {
-                        Alert.alert(t("unblock"), "Impossible pour le moment.");
+                        Alert.alert(t("unblock"), tr("Impossible pour le moment."));
                         return;
                       }
                       try {
                         await reload();
                       } catch (e) {
-                        setLoadError(errorText(e, "Impossible de charger les comptes bloqués."));
+                        setLoadError(errorText(e, tr("Impossible de charger les comptes bloqués.")));
                       }
                     });
                   },
@@ -1264,11 +1264,11 @@ export function DeleteAccountScreen() {
         <Header title={t("deleteAccount")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>Supprimer votre compte ?</Text>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 18 }}>{tr("Supprimer votre compte ?")}</Text>
         <Text style={{ marginTop: 12, color: colors.muted, lineHeight: 20 }}>
-          Cette action demande la suppression du profil WIPP associé à la session en cours : stories, carte professionnelle, annonces et données de compte que le serveur peut effacer. Les messages déjà reçus par d’autres personnes peuvent rester dans leur conversation. Le compte Firebase du numéro n’est pas effacé par l’application. Une page web existe, mais elle demande un mot de passe : https://wippapp.com/delete-account. Les comptes créés par téléphone peuvent aussi écrire à support@wippapp.com.
+          {tr("Cette action demande la suppression du profil WIPP associé à la session en cours : stories, carte professionnelle, annonces et données de compte que le serveur peut effacer. Les messages déjà reçus par d’autres personnes peuvent rester dans leur conversation. Le compte Firebase du numéro n’est pas effacé par l’application. Une page web existe, mais elle demande un mot de passe : https://wippapp.com/delete-account. Les comptes créés par téléphone peuvent aussi écrire à support@wippapp.com.")}
         </Text>
-        <Text style={{ marginTop: 16, color: colors.fg }}>Écris SUPPRIMER pour confirmer.</Text>
+        <Text style={{ marginTop: 16, color: colors.fg }}>{tr("Écris SUPPRIMER pour confirmer.")}</Text>
         <TextInput
           value={phrase}
           onChangeText={setPhrase}
@@ -1280,7 +1280,7 @@ export function DeleteAccountScreen() {
         />
         {error ? <Text style={{ marginTop: 12, color: colors.danger }}>{error}</Text> : null}
         <Btn
-          label={busy ? "Suppression…" : t("deleteAccountCta")}
+          label={busy ? tr("Suppression…") : t("deleteAccountCta")}
           variant="danger"
           disabled={!armed || busy}
           onPress={() => {
@@ -1292,7 +1292,7 @@ export function DeleteAccountScreen() {
               useWippStore.getState().signOut();
             })().catch((err) => {
               setBusy(false);
-              setError(errorText(err, "La suppression n’est pas encore disponible sur le serveur."));
+              setError(errorText(err, tr("La suppression n’est pas encore disponible sur le serveur.")));
             });
           }}
           style={{ marginTop: 20 }}
@@ -1322,7 +1322,7 @@ export function LegalScreen({ doc }: { doc: LegalDocId }) {
             ))}
           </View>
         ))}
-        <Text style={{ marginTop: 32, fontSize: 13, color: colors.muted }}>Contact : {LEGAL_CONTACT}</Text>
+        <Text style={{ marginTop: 32, fontSize: 13, color: colors.muted }}>{tr("Contact :")} {LEGAL_CONTACT}</Text>
       </ScrollView>
     </ScreenRoot>
   );
@@ -1359,7 +1359,7 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
           setLoadError("");
         }
       } catch (e) {
-        if (!cancelled) setLoadError(errorText(e, "Chargement impossible."));
+        if (!cancelled) setLoadError(errorText(e, tr("Chargement impossible.")));
       }
     })();
     return () => {
@@ -1382,8 +1382,8 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
           title={title}
           onBack={pop}
           right={create ? (
-            <Press onPress={create} accessibilityLabel={kind === "listings" ? "Créer une annonce" : "Créer un événement"} style={{ paddingHorizontal: 8 }}>
-              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{kind === "listings" ? "+ Annonce" : "+ Événement"}</Text>
+            <Press onPress={create} accessibilityLabel={kind === "listings" ? tr("Créer une annonce") : tr("Créer un événement")} style={{ paddingHorizontal: 8 }}>
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{kind === "listings" ? tr("+ Annonce") : tr("+ Événement")}</Text>
             </Press>
           ) : null}
         />
@@ -1412,21 +1412,21 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
         {loadError ? <Text style={{ padding: 16, color: colors.danger, fontSize: 13 }}>{loadError}</Text> : null}
         {kind === "listings" && listings.length === 0 ? (
           <View style={{ padding: 16 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Aucune annonce pour le moment</Text>
-            <Text style={{ marginTop: 6, color: colors.muted }}>Publiez votre première annonce.</Text>
-            <Btn label="Créer une annonce" onPress={() => push({ name: "create-listing" })} style={{ marginTop: 16 }} />
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Aucune annonce pour le moment")}</Text>
+            <Text style={{ marginTop: 6, color: colors.muted }}>{tr("Publiez votre première annonce.")}</Text>
+            <Btn label={tr("Créer une annonce")} onPress={() => push({ name: "create-listing" })} style={{ marginTop: 16 }} />
           </View>
         ) : null}
         {kind === "events" && events.length === 0 ? (
           <View style={{ padding: 16 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Aucun événement à venir</Text>
-            <Btn label="Créer un événement" onPress={() => push({ name: "create-lifestyle" })} style={{ marginTop: 16 }} />
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Aucun événement à venir")}</Text>
+            <Btn label={tr("Créer un événement")} onPress={() => push({ name: "create-lifestyle" })} style={{ marginTop: 16 }} />
           </View>
         ) : null}
         {kind === "saved" && !loadError && listings.length + events.length + savedShops.length === 0 ? (
           <View style={{ padding: 16 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Vous n’avez encore rien enregistré.</Text>
-            <Btn label="Explorer" onPress={() => push({ name: "explore" })} style={{ marginTop: 16 }} />
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Vous n’avez encore rien enregistré.")}</Text>
+            <Btn label={tr("Explorer")} onPress={() => push({ name: "explore" })} style={{ marginTop: 16 }} />
           </View>
         ) : null}
       </ScrollView>
@@ -1482,12 +1482,12 @@ function MyEventRow({ e, mine, onPress }: { e: import("../lib/types").LifestyleI
         </Text>
         {stats ? (
           <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 12 }}>
-            👥 {stats.attendees} participant{stats.attendees > 1 ? "s" : ""} · ❓ {stats.questions} · {stats.average != null ? `★ ${stats.average} (${stats.reviews})` : "pas encore d’avis"}
+            👥 {stats.attendees} participant{stats.attendees > 1 ? "s" : ""} · ❓ {stats.questions} · {stats.average != null ? `★ ${stats.average} (${stats.reviews})` : tr("pas encore d’avis")}
           </Text>
         ) : e.live && e.live.registered != null && !over ? (
           <Text style={{ color: colors.fg, fontSize: 12 }}>{e.live.registered} inscrit{e.live.registered > 1 ? "s" : ""}</Text>
         ) : !e.live && (e.interestedCount ?? 0) > 0 ? (
-          <Text style={{ color: colors.fg, fontSize: 12 }}>{e.interestedCount} intéressé{(e.interestedCount ?? 0) > 1 ? "s" : ""}</Text>
+          <Text style={{ color: colors.fg, fontSize: 12 }}>{e.interestedCount} {tr("intéressé")}{(e.interestedCount ?? 0) > 1 ? "s" : ""}</Text>
         ) : null}
       </View>
     </Press>
@@ -1507,9 +1507,9 @@ export function BusinessCardScreen() {
       } catch (e) {
         setCard(null);
         const status = typeof e === "object" && e && "status" in e ? Number((e as { status?: number }).status) : 0;
-        if (status === 401 || status === 403) setError("Connecte-toi pour créer ta carte professionnelle.");
-        else if (status === 404) setError("La carte professionnelle n’est pas encore disponible sur le serveur.");
-        else setError(errorText(e, "Impossible de charger la carte."));
+        if (status === 401 || status === 403) setError(tr("Connecte-toi pour créer ta carte professionnelle."));
+        else if (status === 404) setError(tr("La carte professionnelle n’est pas encore disponible sur le serveur."));
+        else setError(errorText(e, tr("Impossible de charger la carte.")));
       }
     })();
   }, []);
@@ -1609,7 +1609,7 @@ export function BusinessCardEditorScreen() {
         const { waitForFirebaseUser } = await import("../lib/firebase-phone");
         const user = await waitForFirebaseUser();
         if (!user) {
-          setError("Connecte-toi pour créer ta carte professionnelle.");
+          setError(tr("Connecte-toi pour créer ta carte professionnelle."));
           return;
         }
         const r = await getMyBusinessCard();
@@ -1649,7 +1649,7 @@ export function BusinessCardEditorScreen() {
             services: (card.services ?? []).map((x) => ({ name: x.name, photo: x.photoPath, url: x.photoUrl })),
           });
           if (card.coverUnresolved || card.logoUnresolved) {
-            setError("Une image enregistrée n’a pas pu être affichée. Tu peux la renvoyer.");
+            setError(tr("Une image enregistrée n’a pas pu être affichée. Tu peux la renvoyer."));
           }
         }
       } catch (e) {
@@ -1719,7 +1719,7 @@ export function BusinessCardEditorScreen() {
     setError("");
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setError("Accès aux photos refusé.");
+      setError(tr("Accès aux photos refusé."));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: [1, 1] });
@@ -1741,8 +1741,8 @@ export function BusinessCardEditorScreen() {
     setError("");
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setError("Accès aux photos refusé.");
-      Alert.alert("Photos", "WIPP a besoin d’accéder à tes photos pour la carte.", [
+      setError(tr("Accès aux photos refusé."));
+      Alert.alert(tr("Photos"), tr("WIPP a besoin d’accéder à tes photos pour la carte."), [
         { text: "Annuler", style: "cancel" },
         { text: "Réglages", onPress: () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) },
       ]);
@@ -1824,13 +1824,13 @@ export function BusinessCardEditorScreen() {
         }
       })();
       if (!saved?.publicId && !saved?.name) {
-        setError("Le serveur n’a pas renvoyé la carte enregistrée.");
+        setError(tr("Le serveur n’a pas renvoyé la carte enregistrée."));
         return;
       }
       // Alert.alert does nothing in a browser: on web, open the card directly.
       if (Platform.OS === "web") replace({ name: "business-card" });
       else
-        Alert.alert("Carte enregistrée", "Ta carte est enregistrée. La photo et la bannière se rechargent à l’ouverture.", [
+        Alert.alert(tr("Carte enregistrée"), tr("Ta carte est enregistrée. La photo et la bannière se rechargent à l’ouverture."), [
           { text: "Voir ma carte", onPress: () => replace({ name: "business-card" }) },
         ]);
     } catch (e) {
@@ -1855,11 +1855,11 @@ export function BusinessCardEditorScreen() {
     <ScreenRoot>
       <GlassHeader>
         <Header
-          title={hasCard ? "Modifier ma carte" : "Créer ma carte de visite"}
+          title={hasCard ? tr("Modifier ma carte") : tr("Créer ma carte de visite")}
           onBack={pop}
           right={hasCard ? (
-            <Press onPress={pop} accessibilityLabel="Aperçu">
-              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Aperçu</Text>
+            <Press onPress={pop} accessibilityLabel={tr("Aperçu")}>
+              <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{tr("Aperçu")}</Text>
             </Press>
           ) : undefined}
         />
@@ -1872,7 +1872,7 @@ export function BusinessCardEditorScreen() {
         keyboardDismissMode="interactive"
       >
         <View>
-          <Press accessibilityLabel="Bannière" onPress={() => void pick("cover")} style={{ height: 168, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+          <Press accessibilityLabel={tr("Bannière")} onPress={() => void pick("cover")} style={{ height: 168, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
             {draft.coverUrl ? <Image source={{ uri: draft.coverUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
             {uploadLabel ? (
               <Text style={{ position: "absolute", top: 8, color: colors.paper, fontSize: 13 }}>{uploadLabel}</Text>
@@ -1881,11 +1881,11 @@ export function BusinessCardEditorScreen() {
             ) : (
               <View style={{ alignItems: "center", gap: 6 }}>
                 <ImagePlus size={28} color={colors.accent} />
-                <Text style={{ color: colors.fg, fontSize: 13 }}>Ajouter une bannière</Text>
+                <Text style={{ color: colors.fg, fontSize: 13 }}>{tr("Ajouter une bannière")}</Text>
               </View>
             )}
           </Press>
-          <Press accessibilityLabel="Photo" onPress={() => void pick("logo")} style={{ marginTop: -36, marginLeft: 16, width: 84, height: 84 }}>
+          <Press accessibilityLabel={tr("Photo")} onPress={() => void pick("logo")} style={{ marginTop: -36, marginLeft: 16, width: 84, height: 84 }}>
             <View style={{ flex: 1, borderRadius: 42, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 3, borderColor: colors.ink, alignItems: "center", justifyContent: "center" }}>
               {draft.logoUrl ? (
                 <Image source={{ uri: draft.logoUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" />
@@ -1903,59 +1903,59 @@ export function BusinessCardEditorScreen() {
         </View>
         {draft.coverUrl ? (
           <Press onPress={() => { localRef.current.cover = undefined; pathRef.current.cover = null; set("coverPath", null); set("coverUrl", null); }} style={{ marginTop: 8 }}>
-            <Text style={{ color: colors.muted, fontSize: 13 }}>Retirer la bannière</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Retirer la bannière")}</Text>
           </Press>
         ) : null}
         {draft.logoUrl ? (
           <Press onPress={() => { localRef.current.logo = undefined; pathRef.current.logo = null; set("logoPath", null); set("logoUrl", null); }} style={{ marginTop: 8 }}>
-            <Text style={{ color: colors.muted, fontSize: 13 }}>Retirer la photo</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Retirer la photo")}</Text>
           </Press>
         ) : null}
         <View style={{ marginTop: 16, gap: 12 }}>
-          <Field label="Nom de l’entreprise *" value={draft.name} onChangeText={(v) => set("name", v)} />
-          <SelectField label="Catégorie *" value={draft.category} placeholder="Choisis ta catégorie" onPress={() => setCategoryOpen(true)} />
+          <Field label={tr("Nom de l’entreprise *")} value={draft.name} onChangeText={(v) => set("name", v)} />
+          <SelectField label={tr("Catégorie *")} value={draft.category} placeholder={tr("Choisis ta catégorie")} onPress={() => setCategoryOpen(true)} />
           <Field
-            label="Description"
+            label={tr("Description")}
             value={draft.description}
             onChangeText={(v) => set("description", v.slice(0, 600))}
-            placeholder="Ex. Salon de tresses à Abidjan depuis 2019. Box braids, nattes collées, perruques sur mesure. Sur rendez-vous, déplacement possible."
+            placeholder={tr("Ex. Salon de tresses à Abidjan depuis 2019. Box braids, nattes collées, perruques sur mesure. Sur rendez-vous, déplacement possible.")}
             multiline
           />
           <Text style={{ marginTop: -6, fontSize: 11, color: fgA(0.45) }}>
-            Dis ce que tu proposes, pour qui, et ce qui te rend unique. {draft.description.length}/600
+            {tr("Dis ce que tu proposes, pour qui, et ce qui te rend unique.")} {draft.description.length}/600
           </Text>
           <SelectField
-            label="Pays *"
+            label={tr("Pays *")}
             value={cardCountry.fr}
-            placeholder="Choisis un pays"
+            placeholder={tr("Choisis un pays")}
             left={<FlagImage id={cardCountry.id} />}
             onPress={() => setCountryOpen(true)}
           />
-          <Field label="Ville *" value={draft.city} onChangeText={(v) => set("city", v)} />
+          <Field label={tr("Ville *")} value={draft.city} onChangeText={(v) => set("city", v)} />
           <AddressField country={cardCountry} value={draft.address ?? ""} onChange={(v) => set("address", v)} onPickCity={(c) => set("city", c)} onPickCoords={(lat, lng) => (coordsRef.current = { lat, lng })} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Afficher l’adresse sur ma carte</Text>
+              <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{tr("Afficher l’adresse sur ma carte")}</Text>
               <Text style={{ marginTop: 3, color: colors.muted, fontSize: 12, lineHeight: 16 }}>
                 {draft.showAddress
-                  ? "Les clients voient ton adresse et peuvent venir te voir."
-                  : "Adresse masquée : seuls la ville et le pays sont visibles. Utile si tu travailles à domicile."}
+                  ? tr("Les clients voient ton adresse et peuvent venir te voir.")
+                  : tr("Adresse masquée : seuls la ville et le pays sont visibles. Utile si tu travailles à domicile.")}
               </Text>
             </View>
             <Toggle value={draft.showAddress} onChange={(v) => set("showAddress", v)} />
           </View>
-          <SelectField label="Horaires (facultatifs)" value={draft.hours} placeholder="Choisir les jours et les heures" onPress={() => setHoursOpen(true)} />
+          <SelectField label={tr("Horaires (facultatifs)")} value={draft.hours} placeholder={tr("Choisir les jours et les heures")} onPress={() => setHoursOpen(true)} />
           <DialPhoneField country={cardCountry} value={draft.businessPhone ?? ""} onChange={(v) => set("businessPhone", v)} />
-          <Text style={{ fontSize: 11, color: fgA(0.45) }}>Ton numéro personnel WIPP n’est jamais utilisé.</Text>
-          <Field label="Lien site web (optionnel)" value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
+          <Text style={{ fontSize: 11, color: fgA(0.45) }}>{tr("Ton numéro personnel WIPP n’est jamais utilisé.")}</Text>
+          <Field label={tr("Lien site web (optionnel)")} value={draft.website ?? ""} placeholder="www.monactivite.ca" keyboardType="url" autoCapitalize="none" onChangeText={(v) => set("website", v || null)} />
         </View>
-        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Étiquettes</Text>
-        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>Jusqu’à 3 mots qui décrivent ton activité (ex. Salon de coiffure, Extensions).</Text>
+        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Étiquettes")}</Text>
+        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>{tr("Jusqu’à 3 mots qui décrivent ton activité (ex. Salon de coiffure, Extensions).")}</Text>
         <View style={{ gap: 8 }}>
           {[0, 1, 2].map((i) => (
             <Field
               key={i}
-              label={`Étiquette ${i + 1}`}
+              label={tr("Étiquette {0}", i + 1)}
               value={draft.tags?.[i] ?? ""}
               placeholder={["Salon de coiffure", "Extensions", "Soins capillaires"][i]}
               onChangeText={(v) =>
@@ -1968,22 +1968,22 @@ export function BusinessCardEditorScreen() {
             />
           ))}
         </View>
-        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Réseaux sociaux</Text>
-        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>Ton nom de compte ou le lien de ta page. Les clients pourront l’ouvrir depuis ta carte.</Text>
+        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Réseaux sociaux")}</Text>
+        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>{tr("Ton nom de compte ou le lien de ta page. Les clients pourront l’ouvrir depuis ta carte.")}</Text>
         <View style={{ gap: 8 }}>
-          <Field label="Instagram" value={draft.instagram ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("instagram", v || null)} />
-          <Field label="TikTok" value={draft.tiktok ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("tiktok", v || null)} />
-          <Field label="Facebook" value={draft.facebook ?? ""} placeholder="facebook.com/monsalon" autoCapitalize="none" onChangeText={(v) => set("facebook", v || null)} />
+          <Field label={tr("Instagram")} value={draft.instagram ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("instagram", v || null)} />
+          <Field label={tr("TikTok")} value={draft.tiktok ?? ""} placeholder="@monsalon" autoCapitalize="none" onChangeText={(v) => set("tiktok", v || null)} />
+          <Field label={tr("Facebook")} value={draft.facebook ?? ""} placeholder="facebook.com/monsalon" autoCapitalize="none" onChangeText={(v) => set("facebook", v || null)} />
         </View>
-        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Nos services</Text>
-        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>Ce que tu proposes (ex. Coupes, Tresses, Coloration), avec une photo. Jusqu’à 12.</Text>
+        <Text style={{ marginTop: 20, marginBottom: 4, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Nos services")}</Text>
+        <Text style={{ marginBottom: 8, color: colors.muted, fontSize: 12 }}>{tr("Ce que tu proposes (ex. Coupes, Tresses, Coloration), avec une photo. Jusqu’à 12.")}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {draft.services.map((x, i) => (
             <View key={`${x.name}-${i}`} style={{ width: 96 }}>
               <View style={{ width: 96, height: 96, borderRadius: 14, overflow: "hidden", backgroundColor: colors.navy }}>
                 {x.url ? <Image source={{ uri: x.url }} style={{ width: 96, height: 96 }} contentFit="cover" /> : null}
                 <Press
-                  accessibilityLabel={`Retirer ${x.name}`}
+                  accessibilityLabel={tr("Retirer {0}", x.name)}
                   onPress={() => setDraft((d) => ({ ...d, services: d.services.filter((_s, k) => k !== i) }))}
                   style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}
                 >
@@ -1996,26 +1996,26 @@ export function BusinessCardEditorScreen() {
           {draft.services.length < 12 && !newService ? (
             <Press onPress={() => setNewService({ name: "", photo: null, url: null })} style={{ width: 96, height: 96, borderRadius: 14, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", gap: 4 }}>
               <Plus size={22} color={colors.accent} />
-              <Text style={{ color: colors.accent, fontSize: 12 }}>Ajouter</Text>
+              <Text style={{ color: colors.accent, fontSize: 12 }}>{tr("Ajouter")}</Text>
             </Press>
           ) : null}
         </ScrollView>
         {newService ? (
           <View style={{ marginTop: 10, padding: 12, borderRadius: 16, backgroundColor: colors.navy, flexDirection: "row", gap: 12, alignItems: "center" }}>
-            <Press onPress={() => void pickServicePhoto()} accessibilityLabel="Choisir la photo du service" style={{ width: 72, height: 72, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+            <Press onPress={() => void pickServicePhoto()} accessibilityLabel={tr("Choisir la photo du service")} style={{ width: 72, height: 72, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
               {newService.url ? <Image source={{ uri: newService.url }} style={{ width: 72, height: 72 }} contentFit="cover" /> : <ImagePlus size={22} color={colors.accent} />}
             </Press>
             <View style={{ flex: 1, gap: 8 }}>
               <TextInput
                 value={newService.name}
                 onChangeText={(v) => setNewService((cur) => (cur ? { ...cur, name: v.slice(0, 30) } : cur))}
-                placeholder="Nom du service (ex. Tresses)"
+                placeholder={tr("Nom du service (ex. Tresses)")}
                 placeholderTextColor={colors.muted}
                 style={{ height: 40, borderRadius: 10, backgroundColor: colors.surface2, paddingHorizontal: 10, color: colors.fg }}
               />
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Press onPress={() => setNewService(null)} style={{ flex: 1, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}>
-                  <Text style={{ color: colors.fg }}>Annuler</Text>
+                  <Text style={{ color: colors.fg }}>{tr("Annuler")}</Text>
                 </Press>
                 <Press
                   disabled={!newService.name.trim()}
@@ -2026,19 +2026,19 @@ export function BusinessCardEditorScreen() {
                   }}
                   style={{ flex: 1, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: newService.name.trim() ? 1 : 0.5 }}
                 >
-                  <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>Ajouter</Text>
+                  <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>{tr("Ajouter")}</Text>
                 </Press>
               </View>
             </View>
           </View>
         ) : null}
-        <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Photos de l’entreprise</Text>
+        <Text style={{ marginTop: 20, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Photos de l’entreprise")}</Text>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
           {draft.photoUrls.map((url, i) => (
             <View key={`${draft.photoPaths[i] ?? url}-${i}`} style={{ width: 96, height: 80, borderRadius: 12, overflow: "hidden", backgroundColor: colors.navy }}>
               {url ? <Image source={{ uri: url }} style={{ width: 96, height: 80 }} contentFit="cover" /> : null}
               <Press
-                accessibilityLabel="Retirer cette photo"
+                accessibilityLabel={tr("Retirer cette photo")}
                 hitSlop={6}
                 onPress={() =>
                   setDraft((d) => ({
@@ -2060,7 +2060,7 @@ export function BusinessCardEditorScreen() {
           ) : null}
         </ScrollView>
         {error ? <Text style={{ marginTop: 16, color: colors.danger, fontSize: 12 }}>{error}</Text> : null}
-        <Btn label={busy ? "Enregistrement…" : hasCard ? "Enregistrer les modifications" : "Créer ma carte de visite"} disabled={busy || !draft.name.trim() || !draft.category.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
+        <Btn label={busy ? tr("Enregistrement…") : hasCard ? tr("Enregistrer les modifications") : tr("Créer ma carte de visite")} disabled={busy || !draft.name.trim() || !draft.category.trim() || !draft.city.trim()} onPress={() => void save()} style={{ marginTop: 24 }} />
       </ScrollView>
       <WorldCountrySheet
         open={countryOpen}
@@ -2137,10 +2137,10 @@ export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
     return (
       <ScreenRoot>
         <GlassHeader>
-          <Header title="Carte professionnelle" onBack={pop} />
+          <Header title={tr("Carte professionnelle")} onBack={pop} />
         </GlassHeader>
         {card === null ? (
-          <Text style={{ padding: 24, textAlign: "center", color: colors.muted }}>Cette carte n’est pas disponible.</Text>
+          <Text style={{ padding: 24, textAlign: "center", color: colors.muted }}>{tr("Cette carte n’est pas disponible.")}</Text>
         ) : (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         )}
@@ -2163,7 +2163,7 @@ export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
         setOpening(true);
         void useWippStore.getState().openBusinessChat(card.publicId).catch((err) => {
           setOpening(false);
-          Alert.alert("Conversation", errorText(err, "Impossible d’ouvrir la conversation."));
+          Alert.alert(tr("Conversation"), errorText(err, tr("Impossible d’ouvrir la conversation.")));
         });
       }}
       onCall={card.businessPhone ? () => void Linking.openURL(`tel:${card.businessPhone}`) : undefined}
@@ -2174,3 +2174,4 @@ export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
 
 export { AdminScreen } from "./admin";
 import { useStaffRole } from "./admin";
+import { tr } from "../lib/tr";

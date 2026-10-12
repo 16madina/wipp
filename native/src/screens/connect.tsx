@@ -29,6 +29,7 @@ import { signinOtp } from "../lib/auth-api";
 import { useT, useWippStore } from "../lib/store";
 import type { ConnectionChoice, FoundVia, NearbyMode } from "../lib/types";
 import { colors, layout, accentA, fgA, whiteA } from "../theme";
+import { tr } from "../lib/tr";
 
 export function ConnectScreen() {
   const t = useT();
@@ -232,16 +233,16 @@ export function MyQrScreen() {
       const MediaLibrary = await import("expo-media-library");
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) {
-        Alert.alert("Photos", "Autorise WIPP à ajouter des photos pour enregistrer ton code QR.", [
+        Alert.alert(tr("Photos"), tr("Autorise WIPP à ajouter des photos pour enregistrer ton code QR."), [
           { text: "Annuler", style: "cancel" },
           { text: "Réglages", onPress: () => void Linking.openSettings() },
         ]);
         return;
       }
       await MediaLibrary.saveToLibraryAsync(await cardFile());
-      Alert.alert("Mon WIPP", "Ton code QR est enregistré dans tes photos.");
+      Alert.alert(tr("Mon WIPP"), tr("Ton code QR est enregistré dans tes photos."));
     } catch {
-      Alert.alert("Mon WIPP", "Enregistrement impossible pour le moment.");
+      Alert.alert(tr("Mon WIPP"), tr("Enregistrement impossible pour le moment."));
     } finally {
       setCardBusy(null);
     }
@@ -262,12 +263,12 @@ export function MyQrScreen() {
         </View>
         <Text style={{ marginTop: 12, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.paper }}>{me.displayName}</Text>
         <Text style={{ fontSize: 14, color: fgA(0.6) }}>
-          {username ? `@${username}` : usernameState === "loading" ? "Chargement du @username…" : "Compte serveur introuvable"}
+          {username ? `@${username}` : usernameState === "loading" ? tr("Chargement du @username…") : tr("Compte serveur introuvable")}
         </Text>
         {expired ? (
           <View style={{ marginTop: 20, width: "100%", alignItems: "center" }}>
-            <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>QR expiré</Text>
-            <Btn label="Générer un nouveau QR" onPress={() => setDurationOpen(true)} style={{ marginTop: 12, alignSelf: "stretch" }} />
+            <Text style={{ color: colors.danger, fontFamily: "Inter_600SemiBold" }}>{tr("QR expiré")}</Text>
+            <Btn label={tr("Générer un nouveau QR")} onPress={() => setDurationOpen(true)} style={{ marginTop: 12, alignSelf: "stretch" }} />
           </View>
         ) : qrValue ? (
           <View style={{ marginTop: 20 }}>
@@ -276,36 +277,36 @@ export function MyQrScreen() {
         ) : (
           <Text style={{ marginTop: 20, textAlign: "center", color: colors.danger, maxWidth: 280 }}>
             {usernameState === "loading"
-              ? "Je récupère le vrai @username du compte."
-              : "Ce téléphone n'est pas lié à un compte WIPP. Déconnecte-toi, puis entre avec le numéro du compte à tester."}
+              ? tr("Je récupère le vrai @username du compte.")
+              : tr("Ce téléphone n'est pas lié à un compte WIPP. Déconnecte-toi, puis entre avec le numéro du compte à tester.")}
           </Text>
         )}
         {tempErr && !temp ? <Text style={{ marginTop: 12, color: colors.danger }}>{tempErr}</Text> : null}
         {temp ? (
           <Text style={{ marginTop: 12, fontFamily: "Inter_500Medium", color: colors.accent }}>
-            Expire dans {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
+            {tr("Expire dans")} {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
           </Text>
         ) : null}
         <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: fgA(0.6), maxWidth: 280 }}>
           {temp
-            ? `QR éphémère · usage unique. La connexion durera ${durationLabel(temp.connectionMinutes ?? 1440)}.`
-            : "Ce QR ne contient ni ton numéro, ni ton e-mail."}
+            ? tr("QR éphémère · usage unique. La connexion durera {0}.", durationLabel(temp.connectionMinutes ?? 1440))
+            : tr("Ce QR ne contient ni ton numéro, ni ton e-mail.")}
         </Text>
         <Text style={{ marginTop: 4, fontSize: 12, color: fgA(0.4) }}>{link}</Text>
         <View style={{ width: "100%", marginTop: 20 }}>
           <Btn
-            label={cardBusy === "share" ? "Préparation…" : copied ? t("copied") : "Partager mon WIPP"}
+            label={cardBusy === "share" ? tr("Préparation…") : copied ? t("copied") : tr("Partager mon WIPP")}
             disabled={!username || Boolean(cardBusy)}
             onPress={() => void shareCard()}
           />
         </View>
         <View style={{ width: "100%", marginTop: 8, flexDirection: "row", gap: 8 }}>
           <View style={{ flex: 1 }}>
-            <Btn label={cardBusy === "save" ? "Enregistrement…" : "Enregistrer"} variant="secondary" disabled={!username || Boolean(cardBusy)} onPress={() => void saveCard()} />
+            <Btn label={cardBusy === "save" ? tr("Enregistrement…") : tr("Enregistrer")} variant="secondary" disabled={!username || Boolean(cardBusy)} onPress={() => void saveCard()} />
           </View>
           <View style={{ flex: 1 }}>
             <Btn
-              label={temp ? "QR permanent" : "QR éphémère"}
+              label={temp ? tr("QR permanent") : tr("QR éphémère")}
               variant="secondary"
               onPress={() => (temp ? setTemp(null) : setDurationOpen(true))}
             />
@@ -316,13 +317,13 @@ export function MyQrScreen() {
         </View>
       </ScrollView>
       {username ? <QrShareCard ref={card} value={profileQr(username)} name={me.displayName} username={username} /> : null}
-      <Sheet open={durationOpen} title="QR éphémère" onClose={() => setDurationOpen(false)}>
+      <Sheet open={durationOpen} title={tr("QR éphémère")} onClose={() => setDurationOpen(false)}>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>
-          La personne qui scanne pourra accepter une connexion éphémère. Le QR, lui, n’est valable que 75 secondes et une seule fois.
+          {tr("La personne qui scanne pourra accepter une connexion éphémère. Le QR, lui, n’est valable que 75 secondes et une seule fois.")}
         </Text>
         <ConnectionChoicePicker value={tempChoice} onChange={setTempChoice} ephemeralOnly />
         <Btn
-          label="Générer le QR"
+          label={tr("Générer le QR")}
           disabled={!tempChoice}
           style={{ marginTop: 16 }}
           onPress={() => {
@@ -352,7 +353,7 @@ export function ScannerScreen({ error }: { error?: string }) {
       // The scan window takes over: picture + moving scan line, then the profile or a clear message.
       if (uri) setPhotoUri(uri);
     } catch {
-      Alert.alert("Importer une photo", "Impossible d’ouvrir tes photos.");
+      Alert.alert(tr("Importer une photo"), tr("Impossible d’ouvrir tes photos."));
     } finally {
       setImporting(false);
     }
@@ -369,13 +370,13 @@ export function ScannerScreen({ error }: { error?: string }) {
       <Text style={{ marginTop: 8, textAlign: "center", color: fgA(0.6) }}>{t("scanSub")}</Text>
       {/* A WIPP QR received as an image (WhatsApp, Facebook, screenshot): read it from the photo. */}
       <Press
-        accessibilityLabel="Importer une photo"
+        accessibilityLabel={tr("Importer une photo")}
         disabled={importing}
         onPress={() => void scanFromPhoto()}
         style={{ alignSelf: "center", marginTop: 14, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 18, height: 44, borderRadius: 999, borderWidth: 1, borderColor: colors.hair, backgroundColor: colors.surface, opacity: importing ? 0.6 : 1 }}
       >
         <ImagePlus size={18} color={colors.accent} />
-        <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{importing ? "Lecture…" : "Importer une photo"}</Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{importing ? tr("Lecture…") : tr("Importer une photo")}</Text>
       </Press>
       <PhotoQrScan
         uri={photoUri}
@@ -389,7 +390,7 @@ export function ScannerScreen({ error }: { error?: string }) {
         <View style={{ padding: 16 }}>
           <SearchField value={q} onChangeText={setQ} placeholder="https://wippapp.com/@username" />
           <Btn
-            label="Résoudre (DEV)"
+            label={tr("Résoudre (DEV)")}
             onPress={() => void openWippLink(q, "replace")}
             style={{ marginTop: 8 }}
           />
@@ -487,10 +488,10 @@ export function NearbyScreen() {
   }, []);
 
   const modes: { v: NearbyMode; label: string }[] = [
-    { v: 15, label: "15 min" },
-    { v: 60, label: "60 min" },
-    { v: -1, label: "Jusqu’à désactivation" },
-    { v: 0, label: "Invisible" },
+    { v: 15, label: tr("15 min") },
+    { v: 60, label: tr("60 min") },
+    { v: -1, label: tr("Jusqu’à désactivation") },
+    { v: 0, label: tr("Invisible") },
   ];
 
   async function pick(v: NearbyMode) {
@@ -501,7 +502,7 @@ export function NearbyScreen() {
     setBusyMode(null);
     if (!r.ok) {
       if (r.reason === "denied") setLocDenied(true);
-      else setError(r.reason === "unavailable" ? "Position indisponible. Vérifie que la localisation est activée." : r.message || "Action impossible pour le moment.");
+      else setError(r.reason === "unavailable" ? tr("Position indisponible. Vérifie que la localisation est activée.") : r.message || tr("Action impossible pour le moment."));
     } else setLocDenied(false);
   }
 
@@ -513,7 +514,7 @@ export function NearbyScreen() {
     setSearching(false);
     if (!r.ok) {
       if (r.reason === "denied") setLocDenied(true);
-      else setError(r.reason === "unavailable" ? "Position indisponible. Vérifie que la localisation est activée." : r.message || "Recherche impossible pour le moment.");
+      else setError(r.reason === "unavailable" ? tr("Position indisponible. Vérifie que la localisation est activée.") : r.message || tr("Recherche impossible pour le moment."));
       return;
     }
     setLocDenied(false);
@@ -541,39 +542,39 @@ export function NearbyScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Personnes à proximité" onBack={pop} />
+        <Header title={tr("Personnes à proximité")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>Uniquement avec consentement. Jamais de distance ni de numéro.</Text>
+        <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Uniquement avec consentement. Jamais de distance ni de numéro.")}</Text>
 
-        <Text style={{ marginTop: 18, marginBottom: 10, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Ma visibilité</Text>
+        <Text style={{ marginTop: 18, marginBottom: 10, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Ma visibilité")}</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {modes.map((m) => (
             <Chip key={String(m.v)} label={busyMode === m.v ? "…" : m.label} active={nearby === m.v} onPress={() => void pick(m.v)} />
           ))}
         </View>
         <Text style={{ marginTop: 8, fontSize: 12, color: status ? colors.accent : colors.muted }}>
-          {status ?? "Vous êtes invisible. Vous pouvez rechercher les personnes qui ont choisi d’être visibles."}
+          {status ?? tr("Vous êtes invisible. Vous pouvez rechercher les personnes qui ont choisi d’être visibles.")}
         </Text>
 
         <View style={{ height: 1, backgroundColor: colors.hair, marginVertical: 20 }} />
 
-        <Text style={{ marginBottom: 10, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Personnes autour de moi</Text>
-        <Btn label={searching ? "Recherche…" : "🔎 Rechercher autour de moi"} disabled={searching} onPress={() => void search()} />
+        <Text style={{ marginBottom: 10, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Personnes autour de moi")}</Text>
+        <Btn label={searching ? tr("Recherche…") : tr("🔎 Rechercher autour de moi")} disabled={searching} onPress={() => void search()} />
 
         {locDenied ? (
           <View style={{ marginTop: 14, padding: 14, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Localisation désactivée pour WIPP</Text>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Localisation désactivée pour WIPP")}</Text>
             <Text style={{ marginTop: 4, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-              WIPP utilise ta position approximative, seulement pendant que tu utilises l’app, pour trouver les personnes du secteur. Elle n’est jamais montrée aux autres.
+              {tr("WIPP utilise ta position approximative, seulement pendant que tu utilises l’app, pour trouver les personnes du secteur. Elle n’est jamais montrée aux autres.")}
             </Text>
-            <Btn label="Ouvrir les réglages" variant="secondary" onPress={() => void Linking.openSettings()} style={{ marginTop: 10 }} />
+            <Btn label={tr("Ouvrir les réglages")} variant="secondary" onPress={() => void Linking.openSettings()} style={{ marginTop: 10 }} />
           </View>
         ) : null}
         {error ? <Text style={{ marginTop: 12, color: colors.danger, fontSize: 13 }}>{error}</Text> : null}
 
         {people === null ? null : people.length === 0 ? (
-          <Empty title="Personne de visible autour de toi" body="Réessaie un peu plus tard : seules les personnes qui ont choisi d’être visibles apparaissent." />
+          <Empty title={tr("Personne de visible autour de toi")} body={tr("Réessaie un peu plus tard : seules les personnes qui ont choisi d’être visibles apparaissent.")} />
         ) : (
           <View style={{ marginTop: 14, gap: 10 }}>
             {people.map((p) => {
@@ -586,12 +587,12 @@ export function NearbyScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{p.displayName}</Text>
                       <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13 }}>@{p.username}</Text>
-                      <Text style={{ marginTop: 2, color: colors.success, fontSize: 12 }}>🟢 Visible maintenant</Text>
+                      <Text style={{ marginTop: 2, color: colors.success, fontSize: 12 }}>{tr("🟢 Visible maintenant")}</Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Btn label="Voir le profil" variant="secondary" onPress={() => push({ name: "found-profile", userId: p.userId, via: "nearby" })} />
+                      <Btn label={tr("Voir le profil")} variant="secondary" onPress={() => push({ name: "found-profile", userId: p.userId, via: "nearby" })} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Btn
@@ -679,7 +680,7 @@ export function FoundProfileScreen({
         <GlassHeader>
           <Header title="" onBack={pop} />
         </GlassHeader>
-        <Empty title="Profil introuvable" />
+        <Empty title={tr("Profil introuvable")} />
       </ScreenRoot>
     );
   }
@@ -704,22 +705,22 @@ export function FoundProfileScreen({
           <View style={{ width: "100%", marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: colors.navy, borderWidth: 1, borderColor: colors.accent, gap: 10 }}>
             {offer === "accepted" ? (
               <>
-                <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>WIPP connecté ✓</Text>
+                <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>{tr("WIPP connecté ✓")}</Text>
                 <Text style={{ color: colors.muted, textAlign: "center" }}>
-                  ⏳ Contact éphémère{offerUntil ? ` jusqu’au ${new Date(offerUntil).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}` : ""}
+                  {tr("⏳ Contact éphémère")}{offerUntil ? tr(" jusqu’au {0}", new Date(offerUntil).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })) : ""}
                 </Text>
                 <Btn label={t("message")} onPress={() => openOrCreateDm(user.id)} />
               </>
             ) : (
               <>
                 <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>
-                  {user.displayName.split(" ")[0]} souhaite créer une connexion éphémère avec vous
+                  {user.displayName.split(" ")[0]} {tr("souhaite créer une connexion éphémère avec vous")}
                 </Text>
-                <Text style={{ color: colors.accent, textAlign: "center", fontFamily: "Inter_600SemiBold" }}>⏳ Durée : {durationLabel(offerMinutes ?? 1440)}</Text>
-                {offer === "error" ? <Text style={{ color: colors.danger, textAlign: "center" }}>Cette offre n’est plus valable.</Text> : null}
+                <Text style={{ color: colors.accent, textAlign: "center", fontFamily: "Inter_600SemiBold" }}>{tr("⏳ Durée :")} {durationLabel(offerMinutes ?? 1440)}</Text>
+                {offer === "error" ? <Text style={{ color: colors.danger, textAlign: "center" }}>{tr("Cette offre n’est plus valable.")}</Text> : null}
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <Btn
-                    label="Refuser"
+                    label={tr("Refuser")}
                     variant="secondary"
                     style={{ flex: 1 }}
                     disabled={offer === "busy"}
@@ -729,7 +730,7 @@ export function FoundProfileScreen({
                     }}
                   />
                   <Btn
-                    label={offer === "busy" ? "…" : "Accepter"}
+                    label={offer === "busy" ? "…" : tr("Accepter")}
                     style={{ flex: 1 }}
                     disabled={offer === "busy" || offer === "error"}
                     onPress={() => {
@@ -759,7 +760,7 @@ export function FoundProfileScreen({
               onPress={() => (connected ? openOrCreateDm(user.id) : connectWith(user.id, via))}
             />
             {!connected && !blocked ? (
-              <Btn label="Bloquer" variant="danger" onPress={() => { blockUser(user.id); pop(); }} />
+              <Btn label={tr("Bloquer")} variant="danger" onPress={() => { blockUser(user.id); pop(); }} />
             ) : null}
           </View>
         )}
@@ -770,8 +771,8 @@ export function FoundProfileScreen({
 
 const TOUCH_COPY = {
   fr: {
-    title: "Rapprochez vos téléphones",
-    sub: "Connectez-vous sans partager votre numéro.",
+    get title() { return tr("Rapprochez vos téléphones"); },
+    get sub() { return tr("Connectez-vous sans partager votre numéro."); },
     active: "WIPP Touch actif",
     ready: "Prêt à détecter un WIPP Touch",
     waitingContact: "En attente d’un contact…",
@@ -815,8 +816,8 @@ const TOUCH_COPY = {
     back: "Retour",
   },
   en: {
-    title: "Bring your phones together",
-    sub: "Connect without sharing your number.",
+    get title() { return tr("Bring your phones together"); },
+    get sub() { return tr("Connect without sharing your number."); },
     active: "WIPP Touch active",
     ready: "Ready to detect a WIPP Touch",
     waitingContact: "Waiting for a contact…",
@@ -945,10 +946,10 @@ export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
             {done ? (
               <>
                 <Text style={{ marginTop: 22, fontSize: 20, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
-                  {ph === "connected" ? `${c.connected} ✓` : `Vous êtes déjà amis avec ${name.split(" ")[0] || handle} 🤝`}
+                  {ph === "connected" ? `${c.connected} ✓` : tr("Vous êtes déjà amis avec {0} 🤝", name.split(" ")[0] || handle)}
                 </Text>
                 {ph === "connected" ? <Text style={{ marginTop: 6, color: colors.muted }}>{c.connectedSub}</Text> : null}
-                {ph === "already_connected" ? <Text style={{ marginTop: 6, color: colors.muted, textAlign: "center" }}>Vous êtes déjà connectés sur WIPP.</Text> : null}
+                {ph === "already_connected" ? <Text style={{ marginTop: 6, color: colors.muted, textAlign: "center" }}>{tr("Vous êtes déjà connectés sur WIPP.")}</Text> : null}
               </>
             ) : (
               <>
@@ -956,18 +957,18 @@ export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
                   {ph === "waiting_peer"
                     ? c.waiting
                     : ph === "choose"
-                      ? "Comment voulez-vous vous connecter ?"
+                      ? tr("Comment voulez-vous vous connecter ?")
                       : ph === "proposal_out"
-                        ? "En attente de la réponse…"
+                        ? tr("En attente de la réponse…")
                         : ph === "proposal_in"
-                          ? `${name.split(" ")[0] || handle} souhaite se connecter avec vous`
+                          ? tr("{0} souhaite se connecter avec vous", name.split(" ")[0] || handle)
                           : c.ask(name.split(" ")[0] || handle)}
                 </Text>
                 {(ph === "proposal_out" || ph === "proposal_in") && touch.proposal ? (
                   <Text style={{ marginTop: 8, color: colors.accent, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>
                     {touch.proposal.type === "ephemeral"
-                      ? `⏳ Contact éphémère · Durée : ${durationLabel(touch.proposal.minutes ?? 60)}`
-                      : "♾️ Contact permanent"}
+                      ? tr("⏳ Contact éphémère · Durée : {0}", durationLabel(touch.proposal.minutes ?? 60))
+                      : tr("♾️ Contact permanent")}
                   </Text>
                 ) : null}
                 {touch.uwbLabel === "measuring" ? <Text style={{ marginTop: 6, color: colors.muted }}>{c.uwbMeasuring}</Text> : null}
@@ -1005,20 +1006,20 @@ export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
           {ph === "choose" ? (
             <>
               <ConnectionChoicePicker value={touchChoice} onChange={setTouchChoice} />
-              <Btn label="Proposer" disabled={!touchChoice} onPress={() => touchChoice && void touch.propose(touchChoice)} />
+              <Btn label={tr("Proposer")} disabled={!touchChoice} onPress={() => touchChoice && void touch.propose(touchChoice)} />
               <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} />
             </>
           ) : null}
           {ph === "proposal_out" ? <Btn label={c.refuse} variant="secondary" onPress={() => void touch.decline()} /> : null}
           {ph === "proposal_in" ? (
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Btn label="Refuser" variant="secondary" style={{ flex: 1 }} onPress={() => void touch.answerProposal(false)} />
-              <Btn label="Accepter" style={{ flex: 1 }} onPress={() => void touch.answerProposal(true)} />
+              <Btn label={tr("Refuser")} variant="secondary" style={{ flex: 1 }} onPress={() => void touch.answerProposal(false)} />
+              <Btn label={tr("Accepter")} style={{ flex: 1 }} onPress={() => void touch.answerProposal(true)} />
             </View>
           ) : null}
           {done && peerId ? <Btn label={c.message} onPress={() => openOrCreateDm(peerId)} /> : null}
           {done && peerId ? <Btn label={t("viewProfile")} variant="secondary" onPress={() => push({ name: "found-profile", userId: peerId, via: "touch" })} /> : null}
-          {ph === "already_connected" ? <Btn label="Recommencer" variant="ghost" onPress={() => void touch.start()} /> : null}
+          {ph === "already_connected" ? <Btn label={tr("Recommencer")} variant="ghost" onPress={() => void touch.start()} /> : null}
           {ph === "uwb_denied" ? (
             <>
               <Btn label={Platform.OS === "android" ? c.openSettingsAndroid : c.openSettings} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
@@ -1081,12 +1082,12 @@ export function TouchIncomingScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="WIPP Touch" onBack={pop} />
+        <Header title={tr("WIPP Touch")} onBack={pop} />
       </GlassHeader>
       <View style={{ padding: 24, alignItems: "center" }}>
         {__DEV__ && !match ? (
           <View style={{ borderRadius: 999, backgroundColor: whiteA(0.1), paddingHorizontal: 8, paddingVertical: 4, marginBottom: 16 }}>
-            <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
+            <Text style={{ fontSize: 11, color: colors.muted }}>{tr("Démo")}</Text>
           </View>
         ) : null}
         {shown ? <Avatar user={shown} size={72} /> : null}
@@ -1131,7 +1132,7 @@ export function QrProfileScreen({ handoffKey }: { handoffKey: string }) {
   if (missing) {
     return (
       <ScreenRoot>
-        <Empty title="Profil introuvable" />
+        <Empty title={tr("Profil introuvable")} />
       </ScreenRoot>
     );
   }

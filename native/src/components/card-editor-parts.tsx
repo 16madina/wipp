@@ -6,6 +6,7 @@ import { Press } from "./ui";
 import { colors, accentA, fgA, whiteA } from "../theme";
 import { flagUri, type Country } from "../lib/countries";
 import { WORLD_COUNTRIES } from "../lib/countries-world";
+import { tr } from "../lib/tr";
 
 // Browsers add an orange focus ring to inputs on web; the field background is enough.
 const noOutline = (Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}) as object;
@@ -65,8 +66,8 @@ export function WorldCountrySheet({ open, selectedId, onClose, onPick }: { open:
     return WORLD_COUNTRIES.filter((c) => norm(c.fr).includes(n) || norm(c.en).includes(n) || c.dial.includes(n));
   }, [q]);
   return (
-    <Sheet open={open} title="Choisir un pays" onClose={onClose}>
-      <SearchBox value={q} onChange={setQ} placeholder="Rechercher un pays ou un indicatif" />
+    <Sheet open={open} title={tr("Choisir un pays")} onClose={onClose}>
+      <SearchBox value={q} onChange={setQ} placeholder={tr("Rechercher un pays ou un indicatif")} />
       <ScrollView keyboardShouldPersistTaps="handled">
         {rows.map((c) => (
           <Press
@@ -104,8 +105,8 @@ export function CategorySheet({ open, categories, selected, onClose, onPick }: {
     onClose();
   };
   return (
-    <Sheet open={open} title="Catégorie de ton activité" onClose={onClose}>
-      <SearchBox value={q} onChange={setQ} placeholder="Rechercher (ex. coiffure, traiteur…)" />
+    <Sheet open={open} title={tr("Catégorie de ton activité")} onClose={onClose}>
+      <SearchBox value={q} onChange={setQ} placeholder={tr("Rechercher (ex. coiffure, traiteur…)")} />
       <ScrollView keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
           {rows.filter((c) => c !== "Autre").map((c) => (
@@ -114,12 +115,12 @@ export function CategorySheet({ open, categories, selected, onClose, onPick }: {
             </Press>
           ))}
         </View>
-        <Text style={{ marginTop: 12, color: colors.muted, fontSize: 12 }}>Tu ne trouves pas ? Écris ta catégorie :</Text>
+        <Text style={{ marginTop: 12, color: colors.muted, fontSize: 12 }}>{tr("Tu ne trouves pas ? Écris ta catégorie :")}</Text>
         <View style={{ marginTop: 8, flexDirection: "row", gap: 8 }}>
           <TextInput
             value={custom}
             onChangeText={setCustom}
-            placeholder="Ex. Location de voitures"
+            placeholder={tr("Ex. Location de voitures")}
             placeholderTextColor={colors.muted}
             maxLength={60}
             style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg, fontSize: 15, ...noOutline }}
@@ -194,9 +195,9 @@ export function HoursSheet({
     </View>
   );
   return (
-    <Sheet open={open} title="Horaires d’ouverture" onClose={onClose}>
+    <Sheet open={open} title={tr("Horaires d’ouverture")} onClose={onClose}>
       <ScrollView keyboardShouldPersistTaps="handled">
-        <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 8 }}>Jours</Text>
+        <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 8 }}>{tr("Jours")}</Text>
         <View style={{ flexDirection: "row", gap: 6 }}>
           {DAYS.map((d, i) => (
             <Press key={d} onPress={() => toggle(i)} style={{ flex: 1, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: days.includes(i) ? colors.accent : colors.navy }}>
@@ -206,11 +207,11 @@ export function HoursSheet({
         </View>
         <View style={{ marginTop: 16, flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Ouverture</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{tr("Ouverture")}</Text>
             {column(from, setFrom)}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Fermeture</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{tr("Fermeture")}</Text>
             {column(to, setTo)}
           </View>
         </View>
@@ -220,7 +221,7 @@ export function HoursSheet({
           style={{ marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderRadius: 12, borderWidth: 1, borderColor: accentA(0.5) }}
         >
           <Clock size={16} color={colors.accent} />
-          <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Ajouter « {current || "choisis des jours"} »</Text>
+          <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{tr("Ajouter «")} {current || tr("choisis des jours")} »</Text>
         </Press>
         {lines.length ? (
           <View style={{ marginTop: 12, gap: 6 }}>
@@ -228,17 +229,17 @@ export function HoursSheet({
               <View key={`${lineLabel(l)}-${i}`} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 10, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
                 <Text style={{ color: colors.fg }}>{lineLabel(l)}</Text>
                 <Press onPress={() => setLines((x) => x.filter((_, j) => j !== i))}>
-                  <Text style={{ color: colors.muted }}>Retirer</Text>
+                  <Text style={{ color: colors.muted }}>{tr("Retirer")}</Text>
                 </Press>
               </View>
             ))}
           </View>
         ) : (
-          <Text style={{ marginTop: 10, color: colors.muted, fontSize: 12 }}>Horaires différents le week-end ? Ajoute une ligne par groupe de jours.</Text>
+          <Text style={{ marginTop: 10, color: colors.muted, fontSize: 12 }}>{tr("Horaires différents le week-end ? Ajoute une ligne par groupe de jours.")}</Text>
         )}
         <View style={{ marginTop: 16, flexDirection: "row", gap: 10 }}>
           <Press onPress={() => { onSave(null, null); onClose(); }} style={{ flex: 1, height: 48, borderRadius: 14, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: colors.fg }}>Effacer</Text>
+            <Text style={{ color: colors.fg }}>{tr("Effacer")}</Text>
           </Press>
           <Press
             onPress={() => {
@@ -249,7 +250,7 @@ export function HoursSheet({
             }}
             style={{ flex: 2, height: 48, borderRadius: 14, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}
           >
-            <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Valider</Text>
+            <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr("Valider")}</Text>
           </Press>
         </View>
       </ScrollView>
@@ -262,7 +263,7 @@ export function DialPhoneField({ country, value, onChange }: { country: Country;
   const local = value.startsWith(country.dial) ? value.slice(country.dial.length).trim() : value.replace(/^\+\d+\s*/, "");
   return (
     <View style={{ borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 12 }}>
-      <Text style={{ fontSize: 12, color: colors.muted }}>Téléphone professionnel (facultatif)</Text>
+      <Text style={{ fontSize: 12, color: colors.muted }}>{tr("Téléphone professionnel (facultatif)")}</Text>
       <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 10 }}>
         <FlagImage id={country.id} size={16} />
         <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{country.dial}</Text>
@@ -273,7 +274,7 @@ export function DialPhoneField({ country, value, onChange }: { country: Country;
             onChange(digits.trim() ? `${country.dial} ${digits.trim()}` : null);
           }}
           keyboardType="phone-pad"
-          placeholder="Numéro de l’entreprise"
+          placeholder={tr("Numéro de l’entreprise")}
           placeholderTextColor={colors.muted}
           style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0, ...noOutline }}
         />
@@ -349,7 +350,7 @@ export function AddressField({
   return (
     <View>
       <View style={{ borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 16, paddingVertical: 12 }}>
-        <Text style={{ fontSize: 12, color: colors.muted }}>Adresse (facultative)</Text>
+        <Text style={{ fontSize: 12, color: colors.muted }}>{tr("Adresse (facultative)")}</Text>
         <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <MapPin size={16} color={colors.accent} />
           <TextInput
@@ -360,7 +361,7 @@ export function AddressField({
             }}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 200)}
-            placeholder="Commence à taper l’adresse"
+            placeholder={tr("Commence à taper l’adresse")}
             placeholderTextColor={colors.muted}
             autoCorrect={false}
             style={{ flex: 1, color: colors.fg, fontSize: 15, padding: 0, ...noOutline }}
@@ -389,7 +390,7 @@ export function AddressField({
               </View>
             </Press>
           ))}
-          <Text style={{ paddingHorizontal: 14, paddingVertical: 6, color: fgA(0.35), fontSize: 10 }}>© OpenStreetMap</Text>
+          <Text style={{ paddingHorizontal: 14, paddingVertical: 6, color: fgA(0.35), fontSize: 10 }}>{tr("© OpenStreetMap")}</Text>
         </View>
       ) : null}
     </View>

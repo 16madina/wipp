@@ -10,18 +10,19 @@ import { stickersInPack, wippieStickers, type StickerDef } from "../lib/stickers
 import { colors } from "../theme";
 import { Press } from "./ui";
 import { WippSticker } from "./WippSticker";
+import { tr } from "../lib/tr";
 
 type Tab = "recent" | "moji" | "wippie" | "emo" | "pop" | "moment";
 type Wippie = "tous" | "femme" | "homme" | "comique";
 
 /** Bottom bar, left to right. `label` = search placeholder, `short` = name under the icon. */
 const TABS = [
-  { id: "recent", label: "Récents", short: "Récents", icon: Clock },
-  { id: "moji", label: "Wippmoji", short: "Wippmoji", icon: Smile },
-  { id: "wippie", label: "Wippie", short: "Wippie", icon: User },
+  { id: "recent", get label() { return tr("Récents"); }, short: "Récents", icon: Clock },
+  { id: "moji", get label() { return tr("Wippmoji"); }, short: "Wippmoji", icon: Smile },
+  { id: "wippie", get label() { return tr("Wippie"); }, short: "Wippie", icon: User },
   { id: "emo", label: "EMO", short: "EMO", icon: Drama },
-  { id: "pop", label: "WIPP Moments", short: "Moments", icon: Clapperboard },
-  { id: "moment", label: "Surprises", short: "Surprises", icon: Gift },
+  { id: "pop", get label() { return tr("WIPP Moments"); }, short: "Moments", icon: Clapperboard },
+  { id: "moment", get label() { return tr("Surprises"); }, short: "Surprises", icon: Gift },
 ] as const satisfies readonly { id: Tab; label: string; short: string; icon: unknown }[];
 
 /** Height of the bottom bar (icon + name), without its padding. */
@@ -50,10 +51,10 @@ function isMoving(s: StickerDef) {
 }
 
 const SURPRISES = [
-  { name: "Carte à gratter", hint: "Gratte pour découvrir la surprise.", big: true },
-  { name: "Confettis", hint: "Une surprise qui éclate", big: false },
-  { name: "Compte à rebours", hint: "Une surprise à attendre", big: false },
-  { name: "Secret", hint: "Un message à débloquer", big: false },
+  { name: "Carte à gratter", get hint() { return tr("Gratte pour découvrir la surprise."); }, big: true },
+  { name: "Confettis", get hint() { return tr("Une surprise qui éclate"); }, big: false },
+  { name: "Compte à rebours", get hint() { return tr("Une surprise à attendre"); }, big: false },
+  { name: "Secret", get hint() { return tr("Un message à débloquer"); }, big: false },
 ] as const;
 
 function surpriseMatches(item: (typeof SURPRISES)[number], query: string) {
@@ -65,7 +66,7 @@ function surpriseMatches(item: (typeof SURPRISES)[number], query: string) {
 function NoResult({ query }: { query: string }) {
   return (
     <View style={{ width: "100%", paddingVertical: 28, alignItems: "center" }}>
-      <Text style={{ color: colors.muted, fontSize: 14, textAlign: "center" }}>Aucun résultat pour « {query} »</Text>
+      <Text style={{ color: colors.muted, fontSize: 14, textAlign: "center" }}>{tr("Aucun résultat pour «")} {query} »</Text>
     </View>
   );
 }
@@ -74,20 +75,20 @@ function NoResult({ query }: { query: string }) {
 function StickerPreview({ sticker, size, onSend, onClose }: { sticker: StickerDef; size: number; onSend: () => void; onClose: () => void }) {
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: BAR_H + 8, zIndex: 5 }}>
-      <Press onPress={onClose} accessibilityLabel="Fermer l’aperçu" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} />
+      <Press onPress={onClose} accessibilityLabel={tr("Fermer l’aperçu")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} />
       <View pointerEvents="box-none" style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 12 }}>
         <View style={{ width: Math.min(300, size + 120), borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, paddingTop: 10, paddingBottom: 12, paddingHorizontal: 14, alignItems: "center" }}>
-          <Press onPress={onClose} accessibilityLabel="Fermer" style={{ position: "absolute", top: 6, right: 6, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+          <Press onPress={onClose} accessibilityLabel={tr("Fermer")} style={{ position: "absolute", top: 6, right: 6, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 2 }}>
             <X size={18} color={colors.muted} />
           </Press>
-          <Press onPress={onSend} accessibilityLabel={`Envoyer ${sticker.labelFr}`} style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+          <Press onPress={onSend} accessibilityLabel={tr("Envoyer {0}", sticker.labelFr)} style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
             {/* key: switching sticker restarts the animation from the start */}
             <WippSticker key={sticker.id} id={sticker.id} size={size} />
           </Press>
           <Text numberOfLines={1} style={{ marginTop: 6, color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{sticker.labelFr}</Text>
           <Press onPress={onSend} style={{ marginTop: 10, alignSelf: "stretch", height: 42, borderRadius: 999, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
             <SendHorizontal size={18} color={colors.accentFg} />
-            <Text style={{ color: colors.accentFg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Envoyer</Text>
+            <Text style={{ color: colors.accentFg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Envoyer")}</Text>
           </Press>
         </View>
       </View>
@@ -274,12 +275,12 @@ export function StickerTray({
             onBlur={() => {
               if (!q.trim()) setSearch(false);
             }}
-            placeholder={`Rechercher dans ${title}`}
+            placeholder={tr("Rechercher dans {0}", title)}
             placeholderTextColor={colors.muted}
             style={{ flex: 1, height: 36, color: colors.fg, fontSize: 15, padding: 0 }}
           />
           {q ? (
-            <Press onPress={() => setQ("")} accessibilityLabel="Effacer la recherche" hitSlop={8} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+            <Press onPress={() => setQ("")} accessibilityLabel={tr("Effacer la recherche")} hitSlop={8} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
               <X size={16} color={colors.muted} />
             </Press>
           ) : null}
@@ -287,11 +288,11 @@ export function StickerTray({
       ) : (
         <Press
           onPress={() => setSearch(true)}
-          accessibilityLabel="Rechercher"
+          accessibilityLabel={tr("Rechercher")}
           style={{ height: 36, borderRadius: 10, backgroundColor: colors.surface2, paddingHorizontal: 12, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 }}
         >
           <Search size={16} color={colors.muted} />
-          <Text style={{ fontSize: 15, color: colors.muted }}>{`Rechercher dans ${title}`}</Text>
+          <Text style={{ fontSize: 15, color: colors.muted }}>{tr("Rechercher dans {0}", title)}</Text>
         </Press>
       )}
       {tab === "wippie" ? (
@@ -315,7 +316,7 @@ export function StickerTray({
               }}
             >
               <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: wippie === id ? colors.accentFg : colors.muted }}>
-                {id === "tous" ? "Tous" : id === "femme" ? "Elle" : id === "homme" ? "Lui" : "Comique"}
+                {id === "tous" ? tr("Tous") : id === "femme" ? tr("Elle") : id === "homme" ? tr("Lui") : tr("Comique")}
               </Text>
             </Press>
           ))}

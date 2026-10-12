@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { Image } from "expo-image";
+import { tr } from "../lib/tr";
 
 export type InvisibleRing = "man" | "woman" | "other";
 
@@ -24,7 +25,7 @@ export function InvisibleAvatar({ size = 52, ring = "other" }: { size?: number; 
   const key = ring ?? "other";
   return (
     <View
-      accessibilityLabel="Utilisateur en mode Invisible"
+      accessibilityLabel={tr("Utilisateur en mode Invisible")}
       style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", backgroundColor: "#05070c" }}
     >
       <Image source={ART[key]} style={{ width: size, height: size }} contentFit="cover" />

@@ -7,6 +7,7 @@ import { haptic } from "../lib/haptics";
 import { formatVoiceTime, LIVE_BARS, useVoiceRecorder, type VoiceTake } from "../lib/voice-recorder";
 import { colors } from "../theme";
 import { Press } from "./ui";
+import { tr } from "../lib/tr";
 
 /** Slide this far left to cancel, this far up to lock (points). */
 const CANCEL_X = 110;
@@ -236,7 +237,7 @@ export function VoiceComposer({
             <Press
               onPress={() => void toggleListen()}
               disabled={!voice.canListen || pv.loading}
-              accessibilityLabel={pv.playing ? "Mettre l’écoute en pause" : "Écouter le message"}
+              accessibilityLabel={pv.playing ? tr("Mettre l’écoute en pause") : tr("Écouter le message")}
               hitSlop={6}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.navy, opacity: voice.canListen ? 1 : 0.4 }}
             >
@@ -251,7 +252,7 @@ export function VoiceComposer({
           </Text>
           <Press
             onPress={() => setViewOnce((v) => !v)}
-            accessibilityLabel={viewOnce ? "Message vocal éphémère : activé" : "Message vocal éphémère : désactivé"}
+            accessibilityLabel={viewOnce ? tr("Message vocal éphémère : activé") : tr("Message vocal éphémère : désactivé")}
             hitSlop={6}
             style={{
               width: 30,
@@ -268,16 +269,16 @@ export function VoiceComposer({
             <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: viewOnce ? colors.accentFg : colors.muted }}>1</Text>
           </Press>
         </View>
-        {viewOnce ? <Text style={{ color: colors.muted, fontSize: 12, marginTop: -6 }}>Éphémère : il pourra être écouté une seule fois.</Text> : null}
+        {viewOnce ? <Text style={{ color: colors.muted, fontSize: 12, marginTop: -6 }}>{tr("Éphémère : il pourra être écouté une seule fois.")}</Text> : null}
         {/* delete · pause / resume · send */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6 }}>
-          <Press onPress={cancel} accessibilityLabel="Supprimer le message vocal" hitSlop={8} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }}>
+          <Press onPress={cancel} accessibilityLabel={tr("Supprimer le message vocal")} hitSlop={8} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }}>
             <Trash2 size={22} color={colors.danger} />
           </Press>
           <Press
             onPress={pauseOrResume}
             disabled={voice.phase === "starting"}
-            accessibilityLabel={paused ? "Reprendre l’enregistrement" : "Mettre en pause"}
+            accessibilityLabel={paused ? tr("Reprendre l’enregistrement") : tr("Mettre en pause")}
             hitSlop={8}
             style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: paused ? colors.danger : colors.fg }}
           >
@@ -285,7 +286,7 @@ export function VoiceComposer({
           </Press>
           <Press
             onPress={() => finish(true)}
-            accessibilityLabel="Envoyer le message vocal"
+            accessibilityLabel={tr("Envoyer le message vocal")}
             hitSlop={8}
             style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent }}
           >
@@ -304,7 +305,7 @@ export function VoiceComposer({
           <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold", fontVariant: ["tabular-nums"], minWidth: 40 }}>{formatVoiceTime(voice.ms)}</Text>
           <Animated.View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, opacity: hintOpacity, transform: [{ translateX: hintX }] }}>
             <ChevronLeft size={16} color={colors.muted} />
-            <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 14 }}>Glisser pour annuler</Text>
+            <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 14 }}>{tr("Glisser pour annuler")}</Text>
           </Animated.View>
         </View>
       ) : null}
@@ -339,7 +340,7 @@ export function VoiceComposer({
           </Animated.View>
         ) : null}
         <GestureDetector gesture={gesture}>
-          <View accessibilityRole="button" accessibilityLabel="Message vocal : maintenir pour enregistrer" style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center" }}>
+          <View accessibilityRole="button" accessibilityLabel={tr("Message vocal : maintenir pour enregistrer")} style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center" }}>
             <Mic size={Math.round(size * 0.55)} color={holding ? "transparent" : colors.fg} />
           </View>
         </GestureDetector>

@@ -42,6 +42,7 @@ import { businessQr } from "../lib/qr-payload";
 import { openState, socialUrl, websiteUrl } from "../lib/business-hours";
 import { qrGrid } from "../lib/qr";
 import { colors, fgA, whiteA } from "../theme";
+import { tr } from "../lib/tr";
 
 export async function exportBusinessQr(value: string, name: string) {
   const grid = qrGrid(value);
@@ -132,10 +133,10 @@ export function EmptyBusinessCard({ onCreate, onHelp, onBack }: { onCreate: () =
         <LinearGradient pointerEvents="none" colors={["rgba(5,7,13,0)", "#05070d"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 90 }} />
       </View>
       <View style={{ position: "absolute", top: insets.top + 6, left: 8, right: 8, flexDirection: "row", justifyContent: "space-between" }}>
-        <Press accessibilityLabel="Retour" onPress={onBack} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
+        <Press accessibilityLabel={tr("Retour")} onPress={onBack} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
           <ChevronLeft size={24} color={colors.fg} />
         </Press>
-        <Press accessibilityLabel="Aide" onPress={onHelp} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
+        <Press accessibilityLabel={tr("Aide")} onPress={onHelp} style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
           <HelpCircle size={22} color={colors.fg} />
         </Press>
       </View>
@@ -143,7 +144,7 @@ export function EmptyBusinessCard({ onCreate, onHelp, onBack }: { onCreate: () =
         onPress={onCreate}
         style={{ position: "absolute", left: 22, right: 22, bottom: Math.max(insets.bottom, 16) + 8, height: 56, borderRadius: 18, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}
       >
-        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 17 }}>Créer ma carte de visite →</Text>
+        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 17 }}>{tr("Créer ma carte de visite →")}</Text>
       </Press>
     </View>
     </EdgeBack>
@@ -197,7 +198,7 @@ export function BusinessCardExperience({
       setSocial(await followCard(card.publicId, next));
     } catch (err) {
       setSocial(social);
-      Alert.alert("Abonnement", err instanceof Error ? err.message : "Réessaie dans un instant.");
+      Alert.alert(tr("Abonnement"), err instanceof Error ? err.message : tr("Réessaie dans un instant."));
     } finally {
       setFollowBusy(false);
     }
@@ -210,7 +211,7 @@ export function BusinessCardExperience({
         saves: saved ? st.saves.filter((x) => !(x.kind === "business" && x.id === card.publicId)) : [...st.saves, { kind: "business", id: card.publicId }],
       }));
     } catch {
-      Alert.alert("Enregistrer", "L’enregistrement n’a pas abouti. Réessaie.");
+      Alert.alert(tr("Enregistrer"), tr("L’enregistrement n’a pas abouti. Réessaie."));
     }
   }
   const [q, setQ] = useState("");
@@ -224,13 +225,13 @@ export function BusinessCardExperience({
         text: "Signaler l’entreprise",
         style: "destructive",
         onPress: () =>
-          Alert.alert("Signaler l’entreprise", undefined, [
+          Alert.alert(tr("Signaler l’entreprise"), undefined, [
             ...REPORT_REASONS.map((reason) => ({
               text: reason,
               onPress: () =>
                 void submitContentReport({ contentType: "business_card", contentId: card.id, targetProfileId: card.ownerProfileId, reason }).then(
-                  () => Alert.alert("Signalement envoyé", "Merci. L’équipe WIPP va examiner cette entreprise."),
-                  (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                  () => Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va examiner cette entreprise.")),
+                  (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
                 ),
             })),
             { text: "Annuler", style: "cancel" as const },
@@ -248,7 +249,7 @@ export function BusinessCardExperience({
 
   async function copyLink() {
     await Clipboard.setStringAsync(link);
-    Alert.alert("Lien copié", "Le lien de ta carte est dans le presse-papiers.");
+    Alert.alert(tr("Lien copié"), tr("Le lien de ta carte est dans le presse-papiers."));
   }
 
   if (share) {
@@ -256,11 +257,11 @@ export function BusinessCardExperience({
       <EdgeBack onBack={back}>
       <ScreenRoot>
         <GlassHeader>
-          <Header title="Partager ma carte" onBack={back} />
+          <Header title={tr("Partager ma carte")} onBack={back} />
         </GlassHeader>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 16) + 12 }} keyboardShouldPersistTaps="handled">
-          <SearchField placeholder="Rechercher un contact" value={q} onChangeText={setQ} />
+          <SearchField placeholder={tr("Rechercher un contact")} value={q} onChangeText={setQ} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingVertical: 16 }}>
             {filtered.slice(0, 8).map((c) => (
               <Press key={c.id} onPress={() => onSend(c.id)} style={{ width: 64, alignItems: "center" }}>
@@ -270,9 +271,9 @@ export function BusinessCardExperience({
             ))}
           </ScrollView>
           {[
-            { icon: Globe, title: "Copier le lien de ma carte", sub: "Le lien sera copié dans le presse-papiers", go: () => void copyLink() },
-            { icon: QrCode, title: "Partager le QR code", sub: "Envoyer mon QR en image", go: () => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", "Le partage du QR a échoué.")) },
-            { icon: Share2, title: "Partager ailleurs", sub: "WhatsApp, Instagram, etc.", go: () => void Share.share({ message: `${card.name} sur WIPP\n${link}` }) },
+            { icon: Globe, title: tr("Copier le lien de ma carte"), sub: tr("Le lien sera copié dans le presse-papiers"), go: () => void copyLink() },
+            { icon: QrCode, title: tr("Partager le QR code"), sub: tr("Envoyer mon QR en image"), go: () => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", tr("Le partage du QR a échoué."))) },
+            { icon: Share2, title: tr("Partager ailleurs"), sub: tr("WhatsApp, Instagram, etc."), go: () => void Share.share({ message: `${card.name} sur WIPP\n${link}` }) },
           ].map((row) => (
             <Press key={row.title} onPress={row.go} style={{ flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 12 }}>
               <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
@@ -284,8 +285,8 @@ export function BusinessCardExperience({
               </View>
             </Press>
           ))}
-          <Text style={{ marginTop: 18, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Récents</Text>
-          {filtered.length === 0 ? <Text style={{ color: colors.muted }}>Aucun contact WIPP pour l’instant.</Text> : null}
+          <Text style={{ marginTop: 18, marginBottom: 8, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Récents")}</Text>
+          {filtered.length === 0 ? <Text style={{ color: colors.muted }}>{tr("Aucun contact WIPP pour l’instant.")}</Text> : null}
           {filtered.map((c) => (
             <View key={`row-${c.id}`} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
               <Avatar user={{ displayName: c.name, avatar: c.avatar }} size={48} />
@@ -294,7 +295,7 @@ export function BusinessCardExperience({
                 <Text style={{ color: colors.muted, fontSize: 13 }}>@{c.username}</Text>
               </View>
               <Press onPress={() => onSend(c.id)} style={{ backgroundColor: colors.accent, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}>
-                <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>Envoyer</Text>
+                <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>{tr("Envoyer")}</Text>
               </Press>
             </View>
           ))}
@@ -326,7 +327,7 @@ export function BusinessCardExperience({
           ) : owner ? (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: card.coverUnresolved ? colors.danger : colors.muted, textAlign: "center", paddingHorizontal: 16 }}>
-                {card.coverUnresolved ? "La bannière est enregistrée, mais son affichage a échoué." : "Ajoute une photo de couverture"}
+                {card.coverUnresolved ? tr("La bannière est enregistrée, mais son affichage a échoué.") : tr("Ajoute une photo de couverture")}
               </Text>
             </View>
           ) : null}
@@ -349,7 +350,7 @@ export function BusinessCardExperience({
           <View style={{ flex: 1, paddingTop: LOGO / 2 + 10, minWidth: 0 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text numberOfLines={2} style={{ flexShrink: 1, color: colors.fg, fontSize: 24, fontFamily: "Inter_700Bold" }}>{card.name}</Text>
-              {card.verified ? <BadgeCheck size={22} color="#ffffff" fill="#1d9bf0" accessibilityLabel="Entreprise vérifiée par WIPP" /> : null}
+              {card.verified ? <BadgeCheck size={22} color="#ffffff" fill="#1d9bf0" accessibilityLabel={tr("Entreprise vérifiée par WIPP")} /> : null}
             </View>
             {card.category ? <Text style={{ marginTop: 2, color: colors.muted, fontSize: 14 }}>{card.category}</Text> : null}
           </View>
@@ -368,18 +369,18 @@ export function BusinessCardExperience({
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginTop: 16, gap: 22 }}>
           <View>
             <Text style={{ color: colors.fg, fontSize: 20, fontFamily: "Inter_700Bold" }}>{social ? formatCount(social.followers) : "–"}</Text>
-            <Text style={{ color: colors.muted, fontSize: 13 }}>Abonné{social && social.followers > 1 ? "s" : ""}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Abonné")}{social && social.followers > 1 ? "s" : ""}</Text>
           </View>
           <View>
             <Text style={{ color: colors.fg, fontSize: 20, fontFamily: "Inter_700Bold" }}>{social ? formatCount(social.photos) : String(photos.length)}</Text>
-            <Text style={{ color: colors.muted, fontSize: 13 }}>Photo{(social?.photos ?? photos.length) > 1 ? "s" : ""}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Photo")}{(social?.photos ?? photos.length) > 1 ? "s" : ""}</Text>
           </View>
           <View style={{ flex: 1 }} />
           {!owner && social && !social.owner ? (
             <Press
               onPress={() => void toggleFollow()}
               disabled={followBusy}
-              accessibilityLabel={social.following ? "Se désabonner" : "S’abonner"}
+              accessibilityLabel={social.following ? tr("Se désabonner") : tr("S’abonner")}
               style={{
                 paddingHorizontal: 18,
                 height: 40,
@@ -394,7 +395,7 @@ export function BusinessCardExperience({
               }}
             >
               {social.following ? <Check size={16} color={colors.fg} /> : <UserPlus size={16} color={colors.accent} />}
-              <Text style={{ color: social.following ? colors.fg : colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{social.following ? "Abonné" : "S’abonner"}</Text>
+              <Text style={{ color: social.following ? colors.fg : colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{social.following ? tr("Abonné") : tr("S’abonner")}</Text>
             </Press>
           ) : null}
         </View>
@@ -403,14 +404,14 @@ export function BusinessCardExperience({
         <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, marginTop: 16 }}>
           {owner ? (
             <>
-              <ActionButton primary icon={<Pencil size={18} color={colors.accentFg} />} label="Modifier" onPress={onEdit} />
-              <ActionButton icon={<Share2 size={18} color={colors.fg} />} label="Partager" onPress={() => setShare(true)} />
+              <ActionButton primary icon={<Pencil size={18} color={colors.accentFg} />} label={tr("Modifier")} onPress={onEdit} />
+              <ActionButton icon={<Share2 size={18} color={colors.fg} />} label={tr("Partager")} onPress={() => setShare(true)} />
             </>
           ) : (
             <>
-              <ActionButton primary grow icon={<MessageCircle size={17} color={colors.accentFg} />} label={opening ? "Ouverture…" : "Écrire sur WIPP"} onPress={onWrite} />
-              {onCall ? <ActionButton icon={<Phone size={16} color={colors.fg} />} label="Appeler" onPress={onCall} /> : null}
-              {onRoute ? <ActionButton icon={<MapPin size={16} color={colors.fg} />} label="Itinéraire" onPress={onRoute} /> : null}
+              <ActionButton primary grow icon={<MessageCircle size={17} color={colors.accentFg} />} label={opening ? tr("Ouverture…") : tr("Écrire sur WIPP")} onPress={onWrite} />
+              {onCall ? <ActionButton icon={<Phone size={16} color={colors.fg} />} label={tr("Appeler")} onPress={onCall} /> : null}
+              {onRoute ? <ActionButton icon={<MapPin size={16} color={colors.fg} />} label={tr("Itinéraire")} onPress={onRoute} /> : null}
             </>
           )}
         </View>
@@ -460,11 +461,11 @@ export function BusinessCardExperience({
 
         {card.description ? (
           <View style={{ marginHorizontal: 16, marginTop: 12, borderRadius: 20, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair, padding: 14 }}>
-            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>À propos</Text>
+            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>{tr("À propos")}</Text>
             <Text numberOfLines={aboutOpen ? undefined : 3} style={{ marginTop: 6, color: fgA(0.8), fontSize: 14, lineHeight: 21 }}>{card.description}</Text>
             {card.description.length > 140 ? (
               <Press onPress={() => setAboutOpen((v) => !v)} style={{ marginTop: 4 }}>
-                <Text style={{ color: colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{aboutOpen ? "Voir moins" : "Voir plus"}</Text>
+                <Text style={{ color: colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{aboutOpen ? tr("Voir moins") : tr("Voir plus")}</Text>
               </Press>
             ) : null}
           </View>
@@ -472,7 +473,7 @@ export function BusinessCardExperience({
 
         {(card.services ?? []).length ? (
           <View style={{ marginTop: 18 }}>
-            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>Nos services</Text>
+            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>{tr("Nos services")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
               {(card.services ?? []).map((x, i) => (
                 <View key={`${x.name}-${i}`} style={{ width: 132, height: 150, borderRadius: 18, overflow: "hidden", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hair }}>
@@ -487,7 +488,7 @@ export function BusinessCardExperience({
 
         {photos.length ? (
           <View style={{ marginTop: 18 }}>
-            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>Photos de l’entreprise</Text>
+            <Text style={{ color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, marginBottom: 10 }}>{tr("Photos de l’entreprise")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
               {photos.map((url) => (
                 <Image key={url} source={{ uri: url }} style={{ width: 150, height: 120, borderRadius: 16 }} contentFit="cover" />
@@ -501,10 +502,10 @@ export function BusinessCardExperience({
           <View style={{ marginHorizontal: 16, marginTop: 18, borderRadius: 20, backgroundColor: colors.surface2, padding: 14, flexDirection: "row", gap: 14, alignItems: "center" }}>
             <QrCard value={qr} size={120} pad={6} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>{owner ? "Scannez pour\ndécouvrir ma carte\nsur WIPP" : "Scannez pour\ndécouvrir cette\nentreprise sur WIPP"}</Text>
-              <Press onPress={() => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", "Le téléchargement a échoué."))} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ color: colors.fg, fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>{owner ? tr("Scannez pour\ndécouvrir ma carte\nsur WIPP") : tr("Scannez pour\ndécouvrir cette\nentreprise sur WIPP")}</Text>
+              <Press onPress={() => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", tr("Le téléchargement a échoué.")))} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Download size={16} color={colors.accent} />
-                <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Télécharger le QR</Text>
+                <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{tr("Télécharger le QR")}</Text>
               </Press>
             </View>
           </View>
@@ -513,10 +514,10 @@ export function BusinessCardExperience({
 
       {/* Floating back / more over the cover */}
       <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 6, left: 12, right: 12, flexDirection: "row", justifyContent: "space-between" }}>
-        <Press accessibilityLabel="Retour" onPress={onBack} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
+        <Press accessibilityLabel={tr("Retour")} onPress={onBack} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <ChevronLeft size={24} color="#fff" />
         </Press>
-        <Press accessibilityLabel="Partager" onPress={() => (owner ? setShare(true) : visitorMenu())} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
+        <Press accessibilityLabel={tr("Partager")} onPress={() => (owner ? setShare(true) : visitorMenu())} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <MoreHorizontal size={22} color="#fff" />
         </Press>
       </View>
@@ -529,17 +530,17 @@ export function BusinessCardExperience({
               <QrCode size={20} color={colors.accentFg} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Partager</Text>
-              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>QR · Lien</Text>
+              <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Partager")}</Text>
+              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>{tr("QR · Lien")}</Text>
             </View>
           </Press>
-          <Press onPress={() => void toggleSaved()} accessibilityLabel={saved ? "Retirer de mes entreprises" : "Enregistrer dans mes entreprises"} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: saved ? colors.accent : colors.hair }}>
+          <Press onPress={() => void toggleSaved()} accessibilityLabel={saved ? tr("Retirer de mes entreprises") : tr("Enregistrer dans mes entreprises")} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: saved ? colors.accent : colors.hair }}>
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: saved ? colors.accent : colors.navy, alignItems: "center", justifyContent: "center" }}>
               <Bookmark size={20} color={saved ? colors.accentFg : colors.fg} fill={saved ? colors.accentFg : "transparent"} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{saved ? "Enregistrée" : "Enregistrer"}</Text>
-              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>Mes entreprises</Text>
+              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{saved ? tr("Enregistrée") : tr("Enregistrer")}</Text>
+              <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>{tr("Mes entreprises")}</Text>
             </View>
           </Press>
           </View>
@@ -555,7 +556,7 @@ export function CoverCameraHint() {
     <View style={{ position: "absolute", left: 0, right: 0, bottom: 12, alignItems: "center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }}>
         <Camera size={14} color={colors.fg} />
-        <Text style={{ color: colors.fg, fontSize: 13 }}>Changer la photo de couverture</Text>
+        <Text style={{ color: colors.fg, fontSize: 13 }}>{tr("Changer la photo de couverture")}</Text>
       </View>
     </View>
   );
