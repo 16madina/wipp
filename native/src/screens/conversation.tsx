@@ -918,7 +918,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
-                <WippSticker id={m.stickerId ?? ""} size={96} still={!liveStickers.has(m.localKey ?? m.id)} />
+                <WippSticker id={m.stickerId ?? ""} size={stickerById(m.stickerId)?.pack === "moji" ? 88 : 150} still={!liveStickers.has(m.localKey ?? m.id)} />
               ) : null}
               {m.geo ? (
                 <Text style={{ color: mine ? mb.fg : colors.fg }}>

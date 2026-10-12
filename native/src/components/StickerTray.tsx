@@ -138,9 +138,9 @@ export function StickerTray({
   const title = tab === "recent" ? tr("tous les stickers") : TABS.find((item) => item.id === tab)?.label ?? tr("Stickers");
   // EMO and Moments are full scenes: 3 big cells per row.
   const scenes = tab === "pop" || tab === "emo";
-  const minCell = scenes ? 104 : tab === "moji" ? 64 : 80;
+  const minCell = scenes ? 104 : tab === "moji" ? 64 : 96;
   const cols = Math.max(scenes ? 3 : tab === "moji" ? 5 : 4, Math.floor((contentWidth - 24) / minCell));
-  const stickerSize = scenes ? 84 : tab === "moji" ? 52 : 68;
+  const stickerSize = scenes ? 84 : tab === "moji" ? 52 : 84;
   const fullH = Math.min(tablet ? 420 : 360, Math.round(height * 0.42));
   // Typing a search opens the keyboard: a shorter tray keeps the results visible above it (iPhone 12 / mini).
   const trayH = search ? Math.min(fullH, 290) : fullH;
