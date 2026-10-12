@@ -1,0 +1,26 @@
+# Nouveaux stickers animés (12 oct. 2026) — Grok, vidéo 6 s, 9:16, fond vert. id app | libellé | pack | id du post Grok
+# Conversation Grok : 8050098b-b704-4c83-8158-d21fe5e6b3e3 (tantie : conversation c5e1918d-5183-4776-82b8-113bcaeb28b2)
+fun-tantie-danse | (sans mot) tantie qui danse avec sa sandale | comique | 76ebc84b-65a4-4e38-9567-55af8de46261   (10 s)
+fun-gossip-alloco | (sans mot) copine aux gossips + alloco | comique | 7e4c32db-799f-4f0b-9ee5-ba38f848a260
+fun-sapeur | (sans mot) gars sapé | comique | ea8f51f6-5ac0-4d04-942f-a0d145ec1b40
+fun-tonton-dodo | (sans mot) tonton qui s'endort debout | comique | e384765f-a748-4211-a676-99e243d06079
+fun-bebe-boss | (sans mot) bébé chef au biberon | comique | 7689006f-8d6e-49b1-a875-1144007dce9f
+fun-mamie-doute | (sans mot) mamie pas convaincue | comique | ba2a6931-e7f6-454e-aeb4-419d293cb759
+# REJETÉ (chemise verte) : 8e624273-87ef-4050-b036-dc911a91d896
+fun-garba | (sans mot) vendeur de garba | comique | c86158f9-7e26-4368-a2e6-b26846d6e8f8
+fun-chevre-juge | (sans mot) chèvre qui juge | comique | 1b05e142-cee8-4602-bd82-b10bcd1b9010
+fun-goumin | Goumin… | comique | 8f150b3f-40d4-4b02-bd80-266d3243c468
+fun-yako | Yako | comique | 68f9532e-70c4-486d-8230-b878c01f48bb
+fun-enjailler | On va s'enjailler ! | comique | 9e7fa670-aa1f-4a99-a615-6c4bdc45299b
+fun-gbe | Gbê est mieux que drap | comique | 707fbd70-c469-4462-847e-b47529ace382
+fun-boucantier | Boucantier | comique | a377d908-1ab0-430c-a167-2bcc4c7f3a1e
+fun-kpakpato | Kpakpato | comique | aeab772d-b7ce-493d-b051-bfae67586cb6
+fun-on-dit-quoi | On dit quoi ? | comique | 4f8ce9b8-d59e-474a-867f-bfe017b7fa7e
+fun-ya-foyi | Ya foyi | comique | 0991e388-d323-450f-bcf9-1acbd058b438
+fun-moisi | Je suis moisi | comique | b9355943-6d9d-4a50-b299-91288a9fe5f5
+fun-dans-drap | Je suis dans drap | comique | e9636616-18aa-4007-80bf-c33cb80cfdf3
+fun-cest-gate | C'est gâté ! | comique | 53c74885-0179-4378-bf47-104a47bcd170
+fun-je-science | Je science… | comique | 103e51cc-5a0e-4d07-9257-200f9ae41ddc   (image non vérifiée)
+fun-ma-go | Ma go | comique | 73594208-9c3a-4dc4-b397-c00b4205c94a
+fun-mon-mogo | Mon mogo | comique | 1001bc4f-8b1f-45b4-83a3-13353df0dee1   (image non vérifiée)
+fun-sapee | Sapée ! | comique | 5b2a5699-5390-4fdc-8e23-561e4959d8ec   (image non vérifiée)

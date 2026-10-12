@@ -134,6 +134,33 @@ const FUN2: StickerDef[] = [
   { id: "fun2-je-ne-sais-pas", pack: "comique", src: "/stickers/fun2/je-ne-sais-pas.webp", anim: "/stickers/fun2/je-ne-sais-pas.mp4?v=1", labelFr: "Je ne sais pas !", labelEn: "I don’t know!" },
 ];
 
+/** Funny animated characters, with or without an Ivorian (nouchi) word. Added on 12 Oct. 2026. */
+const AFRO: StickerDef[] = [
+  { id: "afro-tantie-danse", pack: "comique", src: "/stickers/afro/tantie-danse.webp", anim: "/stickers/afro/tantie-danse.mp4?v=1", labelFr: "Tantie danse", labelEn: "Auntie dance" },
+  { id: "afro-gossip-alloco", pack: "comique", src: "/stickers/afro/gossip-alloco.webp", anim: "/stickers/afro/gossip-alloco.mp4?v=1", labelFr: "Les gossips", labelEn: "Gossip time" },
+  { id: "afro-sapeur", pack: "comique", src: "/stickers/afro/sapeur.webp", anim: "/stickers/afro/sapeur.mp4?v=1", labelFr: "Le sapeur", labelEn: "Dressed to kill" },
+  { id: "afro-tonton-dodo", pack: "comique", src: "/stickers/afro/tonton-dodo.webp", anim: "/stickers/afro/tonton-dodo.mp4?v=1", labelFr: "Tonton dort debout", labelEn: "Uncle dozing off" },
+  { id: "afro-bebe-boss", pack: "comique", src: "/stickers/afro/bebe-boss.webp", anim: "/stickers/afro/bebe-boss.mp4?v=1", labelFr: "Bébé boss", labelEn: "Baby boss" },
+  { id: "afro-mamie-doute", pack: "comique", src: "/stickers/afro/mamie-doute.webp", anim: "/stickers/afro/mamie-doute.mp4?v=1", labelFr: "Mamie doute", labelEn: "Grandma doubts it" },
+  { id: "afro-garba", pack: "comique", src: "/stickers/afro/garba.webp", anim: "/stickers/afro/garba.mp4?v=1", labelFr: "Garba !", labelEn: "Garba!" },
+  { id: "afro-chevre-juge", pack: "comique", src: "/stickers/afro/chevre-juge.webp", anim: "/stickers/afro/chevre-juge.mp4?v=1", labelFr: "La chèvre juge", labelEn: "Judging goat" },
+  { id: "afro-on-dit-quoi", pack: "comique", src: "/stickers/afro/on-dit-quoi.webp", anim: "/stickers/afro/on-dit-quoi.mp4?v=1", labelFr: "On dit quoi ?", labelEn: "On dit quoi?" },
+  { id: "afro-ya-foyi", pack: "comique", src: "/stickers/afro/ya-foyi.webp", anim: "/stickers/afro/ya-foyi.mp4?v=1", labelFr: "Ya foyi", labelEn: "Ya foyi" },
+  { id: "afro-enjailler", pack: "comique", src: "/stickers/afro/enjailler.webp", anim: "/stickers/afro/enjailler.mp4?v=1", labelFr: "On va s’enjailler !", labelEn: "On va s’enjailler!" },
+  { id: "afro-cest-gate", pack: "comique", src: "/stickers/afro/cest-gate.webp", anim: "/stickers/afro/cest-gate.mp4?v=1", labelFr: "C’est gâté !", labelEn: "C’est gâté!" },
+  { id: "afro-goumin", pack: "comique", src: "/stickers/afro/goumin.webp", anim: "/stickers/afro/goumin.mp4?v=1", labelFr: "Goumin…", labelEn: "Goumin…" },
+  { id: "afro-yako", pack: "comique", src: "/stickers/afro/yako.webp", anim: "/stickers/afro/yako.mp4?v=1", labelFr: "Yako", labelEn: "Yako" },
+  { id: "afro-moisi", pack: "comique", src: "/stickers/afro/moisi.webp", anim: "/stickers/afro/moisi.mp4?v=1", labelFr: "Je suis moisi", labelEn: "Je suis moisi" },
+  { id: "afro-dans-drap", pack: "comique", src: "/stickers/afro/dans-drap.webp", anim: "/stickers/afro/dans-drap.mp4?v=1", labelFr: "Je suis dans drap", labelEn: "Je suis dans drap" },
+  { id: "afro-je-science", pack: "comique", src: "/stickers/afro/je-science.webp", anim: "/stickers/afro/je-science.mp4?v=1", labelFr: "Je science…", labelEn: "Je science…" },
+  { id: "afro-gbe", pack: "comique", src: "/stickers/afro/gbe.webp", anim: "/stickers/afro/gbe.mp4?v=1", labelFr: "Gbê est mieux que drap", labelEn: "Gbê est mieux que drap" },
+  { id: "afro-ma-go", pack: "comique", src: "/stickers/afro/ma-go.webp", anim: "/stickers/afro/ma-go.mp4?v=1", labelFr: "Ma go", labelEn: "Ma go" },
+  { id: "afro-mon-mogo", pack: "comique", src: "/stickers/afro/mon-mogo.webp", anim: "/stickers/afro/mon-mogo.mp4?v=1", labelFr: "Mon mogo", labelEn: "Mon mogo" },
+  { id: "afro-sapee", pack: "comique", src: "/stickers/afro/sapee.webp", anim: "/stickers/afro/sapee.mp4?v=1", labelFr: "Sapée !", labelEn: "Sapée!" },
+  { id: "afro-boucantier", pack: "comique", src: "/stickers/afro/boucantier.webp", anim: "/stickers/afro/boucantier.mp4?v=1", labelFr: "Boucantier", labelEn: "Boucantier" },
+  { id: "afro-kpakpato", pack: "comique", src: "/stickers/afro/kpakpato.webp", anim: "/stickers/afro/kpakpato.mp4?v=1", labelFr: "Kpakpato", labelEn: "Kpakpato" },
+];
+
 const SIG: StickerDef[] = [
   { id: "sig-jarrive", pack: "comique", src: "/stickers/sig/sig-jarrive.png", motion: "arrive", sound: "whoosh", labelFr: "J’arrive !", labelEn: "On my way!" },
   { id: "sig-coucou", pack: "comique", src: "/stickers/sig/sig-coucou.png", motion: "coucou", labelFr: "Coucou !", labelEn: "Hey!" },
@@ -338,7 +365,7 @@ export const STICKER_PACKS = {
     labelEn: "Wippie Comique",
     // Objects drawn with the Elle / Lui sets (cup, phone, heart…) live here. The 30 « sig » stickers are withdrawn
     // from the picker (badly cut out, to be redrawn); they stay in WIPP_STICKERS so messages already sent still show.
-    stickers: [...FUN, ...FUN2].filter((s) => !WITHDRAWN.has(s.id)).concat([...ELLE, ...LUI].filter((s) => s.pack === "comique"), SCENE.filter((s) => s.pack === "comique")),
+    stickers: [...AFRO, ...FUN, ...FUN2].filter((s) => !WITHDRAWN.has(s.id)).concat([...ELLE, ...LUI].filter((s) => s.pack === "comique"), SCENE.filter((s) => s.pack === "comique")),
   },
   emo: { id: "emo" as const, labelFr: "WippEMO", labelEn: "WippEMO", stickers: EMO },
   ani: { id: "ani" as const, labelFr: "WIPP Moments", labelEn: "WIPP Moments", stickers: ANI },
@@ -346,7 +373,7 @@ export const STICKER_PACKS = {
 
 // CDN pointers are local project assets; existing assets keep their original paths.
 const resolveAsset = (url: string) => rasterPath(url);
-export const WIPP_STICKERS = [...ELLE, ...LUI, ...FUN, ...FUN2, ...SIG, ...MOJI, ...SCENE, ...ANI, ...EMO].map((row) => ({
+export const WIPP_STICKERS = [...ELLE, ...LUI, ...AFRO, ...FUN, ...FUN2, ...SIG, ...MOJI, ...SCENE, ...ANI, ...EMO].map((row) => ({
   ...row, src: resolveAsset(row.src), anim: row.anim ? resolveAsset(row.anim) : undefined,
 }));
 // Resolve the same objects in picker packs so the thumbnail and sent message match.
