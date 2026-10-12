@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, AppState, PanResponder, Platform, View, Text, useWindowDimensions } from "react-native";
-import { Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
+import { createLocalVideoTrack, Room, RoomEvent, Track, type RemoteTrack, type LocalVideoTrack } from "livekit-client";
 import { Audio } from "expo-av";
 import { Camera } from "expo-camera";
 import { Press } from "./ui";
@@ -111,7 +111,6 @@ export function CallOverlay() {
             return;
           }
           if (++tries < 40) setTimeout(attempt, 500);
-          else void import("../lib/crash-log").then(({ logAppError }) => logAppError(new Error(`rappel: abandon handle=${wanted} trouvé=${Boolean(user)} prêt=${ready} pile=${st.stack.map((x) => x.name).join(">")}`), false, "récents"));
         };
         attempt();
       },
@@ -321,6 +320,41 @@ export function CallOverlay() {
     void room.localParticipant.setMicrophoneEnabled(!session.muted);
   }, [session?.muted, session?.phase]);
 
+  // Outgoing video call: my camera starts while it rings (I see myself before the other person answers).
+  // The same capture is published once the call connects, so the camera never has to restart.
+  const previewTrack = useRef<LocalVideoTrack | null>(null);
+  const ringingVideo = session?.dir !== "in" && session?.phase === "outgoing" && session.kind === "video" && !session.group && !session.camOff;
+  useEffect(() => {
+    if (!ringingVideo || previewTrack.current) return;
+    let stale = false;
+    void (async () => {
+      const cam = await Camera.requestCameraPermissionsAsync();
+      if (!cam.granted || stale) return;
+      const track = await createLocalVideoTrack({ facingMode: useCallSession.getState().session?.facing === "environment" ? "environment" : "user" });
+      const live = useCallSession.getState().session;
+      // The call ended or was answered meanwhile: this capture is no longer wanted here.
+      if (stale || !live || live.phase !== "outgoing") {
+        if (!live || terminalPhases(live.phase)) track.stop();
+        else previewTrack.current = track;
+        return;
+      }
+      previewTrack.current = track;
+      setLocalUrl(streamURL(track));
+    })().catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [ringingVideo]);
+  // Call over before anyone answered (refused, no answer, hung up): release the camera.
+  useEffect(() => {
+    if (session && !terminalPhases(session.phase)) return;
+    const track = previewTrack.current;
+    if (!track) return;
+    previewTrack.current = null;
+    track.stop();
+    setLocalUrl(null);
+  }, [session, session?.phase]);
+
   // Camera on/off inside the same room: no reconnect, the other side gets mute/unmute events.
   useEffect(() => {
     const room = roomRef.current;
@@ -335,9 +369,16 @@ export function CallOverlay() {
           return;
         }
       }
-      const pub = await room.localParticipant.setCameraEnabled(want, {
-        facingMode: useCallSession.getState().session?.facing === "environment" ? "environment" : "user",
-      });
+      // The capture started while it was ringing becomes the published camera.
+      const ringing = previewTrack.current;
+      previewTrack.current = null;
+      if (ringing && !want) ringing.stop();
+      const pub =
+        ringing && want
+          ? await room.localParticipant.publishTrack(ringing, { source: Track.Source.Camera })
+          : await room.localParticipant.setCameraEnabled(want, {
+              facingMode: useCallSession.getState().session?.facing === "environment" ? "environment" : "user",
+            });
       if (stale) return;
       const track = pub?.track ?? room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
       setLocalUrl(want && track ? streamURL(track) : null);
