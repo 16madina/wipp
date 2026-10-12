@@ -43,7 +43,10 @@ import {
   type SurpriseType,
 } from "../lib/surprise";
 import { useWippStore } from "../lib/store";
-import { colors, layout, whiteA } from "../theme";
+import { colors as themeColors, layout, palettes, themeName, whiteA } from "../theme";
+
+// The share menu follows the chosen colour set; WIPP Surprise itself always keeps its black and gold.
+const colors = themeColors;
 import { SurpriseReveal } from "./SurpriseReveal";
 import { CountdownPicker } from "./CountdownPicker";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
@@ -91,6 +94,8 @@ function RightDrawer({
   onBack?: () => void;
   children: ReactNode;
 }) {
+  // Always on the dark surprise panel.
+  const colors = palettes.dark;
   const insets = useSafeAreaInsets();
   const width = Math.min(340, Math.round(Dimensions.get("window").width * 0.9));
   const slide = useRef(new Animated.Value(width)).current;
@@ -158,6 +163,9 @@ export function ShareSurpriseSheet({
   const users = useWippStore((s) => s.users);
   const contacts = Object.values(users).filter((u) => u?.connected);
   const [stage, setStage] = useState<Stage>(initialStage);
+  const colors = stage === "compose" ? palettes.dark : themeColors;
+  // Gold is unreadable on a light sheet: the menu icons take the accent colour there.
+  const menuGold = themeName === "light" ? themeColors.accent : themeColors.surpriseGold;
   const [secret, setSecret] = useState("");
   const kind: SurpriseType = "scratch";
   const [design, setDesign] = useState<string | null>(defaultDesign("scratch"));
@@ -300,7 +308,7 @@ export function ShareSurpriseSheet({
                       gap: 6,
                     }}
                   >
-                    <Icon size={34} color={colors.surpriseGold} strokeWidth={1.8} fill={label === "Localisation" || label === "Contact" ? colors.surpriseGold : "none"} />
+                    <Icon size={34} color={menuGold} strokeWidth={1.8} fill={label === "Localisation" || label === "Contact" ? menuGold : "none"} />
                     <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tr(label)}</Text>
                   </Press>
                 ))}
@@ -325,11 +333,11 @@ export function ShareSurpriseSheet({
                 {gift ? <Image source={gift} style={{ width: 100, height: 100 }} contentFit="contain" /> : <Gift size={48} color={colors.accent} />}
                 <View style={{ flex: 1, paddingHorizontal: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: colors.surpriseGold }}>{tr("WIPP Surprise")}</Text>
+                    <Text style={{ fontSize: 21, fontFamily: "Inter_700Bold", color: menuGold }}>{tr("WIPP Surprise")}</Text>
                   </View>
                   <Text style={{ marginTop: 4, fontSize: 11, color: colors.shareSubtitle }}>{tr("Transforme tes messages en expériences.")}</Text>
                 </View>
-                <ChevronRight size={25} color={colors.surpriseGold} />
+                <ChevronRight size={25} color={menuGold} />
               </Press>
             </View>
           ) : null}

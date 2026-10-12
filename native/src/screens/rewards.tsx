@@ -8,7 +8,7 @@ import { shareWippPublic } from "../lib/share-public";
 import { useWippStore } from "../lib/store";
 import { APP_HOST } from "../lib/utils";
 import { errorText } from "../lib/error-fr";
-import { colors } from "../theme";
+import { colors, fgA } from "../theme";
 import { tr, trLocale } from "../lib/tr";
 
 type Rewards = {
@@ -137,24 +137,24 @@ export function RewardsScreen() {
           <View style={{ borderRadius: 18, backgroundColor: colors.navy, padding: 18, gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Gift size={22} color={colors.accent} />
-              <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_600SemiBold" }}>{tr("Invite tes amis sur WIPP")}</Text>
+              <Text style={{ flex: 1, color: colors.fg, fontSize: 18, fontFamily: "Inter_600SemiBold" }}>{tr("Invite tes amis sur WIPP")}</Text>
               <WippBadge badge={data.badge} size={22} />
             </View>
-            <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 14, lineHeight: 20 }}>
+            <Text style={{ color: fgA(0.75), fontSize: 14, lineHeight: 20 }}>
               {tr("Un ami compte quand il entre ton code à l’inscription et que vous êtes en contact sur WIPP (connectés, ou un message chacun).")}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
               <Text style={{ color: colors.accent, fontSize: 34, fontFamily: "Inter_600SemiBold" }}>{data.active}</Text>
-              <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 15 }}>
+              <Text style={{ color: fgA(0.75), fontSize: 15 }}>
                 {next ? tr("/ {0} amis — prochaine : {1}", next.friends, next.label) : tr("amis — toutes les récompenses débloquées !")}
               </Text>
             </View>
-            <View style={{ height: 8, borderRadius: 99, backgroundColor: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
+            <View style={{ height: 8, borderRadius: 99, backgroundColor: fgA(0.15), overflow: "hidden" }}>
               <View style={{ width: `${Math.round(progress * 100)}%`, height: "100%", backgroundColor: colors.accent }} />
             </View>
-            <View style={{ borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", padding: 12, alignItems: "center" }}>
-              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>{tr("Ton code d’invitation")}</Text>
-              <Text selectable style={{ color: "#fff", fontSize: 22, fontFamily: "Inter_600SemiBold", marginTop: 2 }}>@{data.code}</Text>
+            <View style={{ borderRadius: 12, borderWidth: 1, borderColor: fgA(0.2), padding: 12, alignItems: "center" }}>
+              <Text style={{ color: fgA(0.6), fontSize: 12 }}>{tr("Ton code d’invitation")}</Text>
+              <Text selectable style={{ color: colors.fg, fontSize: 22, fontFamily: "Inter_600SemiBold", marginTop: 2 }}>@{data.code}</Text>
             </View>
             <Btn label={tr("Partager mon invitation")} onPress={() => void shareLink()} />
           </View>
