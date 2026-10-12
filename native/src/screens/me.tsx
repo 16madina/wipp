@@ -45,7 +45,7 @@ import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
 import { Sheet } from "../components/card-editor-parts";
 import { MOTTO_FONT, MOTTO_MAX, mottoSize } from "../lib/profile-motto";
-import { useAppearance, type AppearanceMode } from "../lib/appearance";
+import { useAppearance } from "../lib/appearance";
 import { AddressField, CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
   CARD_CATEGORIES,
@@ -76,7 +76,7 @@ import {
 import { shareWippPublic } from "../lib/share-public";
 import { APP_HOST } from "../lib/utils";
 import { isPrivateChat, useT, useWippStore } from "../lib/store";
-import { colors, layout, accentA, fgA } from "../theme";
+import { colors, layout, accentA, fgA, palettes, type SkinName } from "../theme";
 import { errorText } from "../lib/error-fr";
 import { hapticsEnabled, setHapticsEnabled } from "../lib/haptics";
 import { EventCard } from "../components/event-parts";
@@ -909,24 +909,28 @@ export function NotificationsScreen() {
   );
 }
 
-const APPEARANCE_OPTIONS: { id: AppearanceMode; label: string; sub: string }[] = [
-  { id: "dark", get label() { return tr("Sombre"); }, get sub() { return tr("Noir et jaune"); } },
-  { id: "light", get label() { return tr("Clair"); }, get sub() { return tr("Blanc et bleu"); } },
-  { id: "system", get label() { return tr("Automatique"); }, get sub() { return tr("Comme le téléphone"); } },
+/** Colour sets, in the order of the swatches. `bg` / `dot` draw the swatch (page colour + accent). */
+const SKIN_OPTIONS: { id: SkinName; label: string; bg: string; dot: string }[] = [
+  { id: "dark", get label() { return tr("Sombre doré"); }, bg: palettes.dark.navy, dot: palettes.dark.accent },
+  { id: "light", get label() { return tr("Bleu clair"); }, bg: palettes.light.card, dot: palettes.light.accent },
+  { id: "rose", get label() { return tr("Rose champagne"); }, bg: palettes.rose.card, dot: palettes.rose.accent },
+  { id: "teal", get label() { return tr("Bleu sarcelle"); }, bg: palettes.teal.card, dot: palettes.teal.accent },
+  { id: "glacier", get label() { return tr("Bleu glacier"); }, bg: palettes.glacier.navy, dot: palettes.glacier.accent },
 ];
 
-/** Bouton ☀️/🌙 de la page Moi : bascule directement entre sombre et clair. */
+/** Bouton ☀️/🌙 de la page Moi : bascule entre le sombre WIPP et la dernière couleur choisie. */
 function ThemeQuickToggle() {
-  const theme = useAppearance((s) => s.theme);
+  const skin = useAppearance((s) => s.skin);
+  const lastColor = useAppearance((s) => s.lastColor);
   const setMode = useAppearance((s) => s.setMode);
-  const light = theme === "light";
+  const onDark = skin === "dark";
   return (
     <Press
-      accessibilityLabel={light ? tr("Passer en thème sombre") : tr("Passer en thème clair")}
-      onPress={() => setMode(light ? "dark" : "light")}
+      accessibilityLabel={onDark ? tr("Passer à ma couleur") : tr("Passer en thème sombre")}
+      onPress={() => setMode(onDark ? lastColor : "dark")}
       style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
     >
-      {light ? <Moon size={20} color={colors.fg} /> : <Sun size={20} color={colors.fg} />}
+      {onDark ? <Sun size={20} color={colors.fg} /> : <Moon size={20} color={colors.fg} />}
     </Press>
   );
 }
@@ -941,16 +945,30 @@ export function AppearanceScreen() {
       <GlassHeader>
         <Header title={t("appearance")} onBack={pop} />
       </GlassHeader>
-      <Section title={tr("Thème")}>
-        {APPEARANCE_OPTIONS.map((o) => (
-          <Row
-            key={o.id}
-            label={o.label}
-            value={o.sub}
-            onPress={() => setMode(o.id)}
-            trailing={mode === o.id ? <Check size={18} color={colors.accent} /> : <View style={{ width: 18 }} />}
-          />
-        ))}
+      <Section title={tr("Couleur")}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 8, paddingVertical: 12 }}>
+          {SKIN_OPTIONS.map((o) => {
+            const on = mode === o.id;
+            return (
+              <Press key={o.id} accessibilityLabel={o.label} onPress={() => setMode(o.id)} style={{ width: "33.33%", alignItems: "center", paddingVertical: 10, gap: 8 }}>
+                <View style={{ width: 58, height: 58, borderRadius: 29, padding: 3, borderWidth: 2, borderColor: on ? colors.accent : "transparent" }}>
+                  <View style={{ flex: 1, borderRadius: 26, backgroundColor: o.bg, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: o.dot }} />
+                  </View>
+                </View>
+                <Text style={{ fontSize: 12, textAlign: "center", color: on ? colors.fg : colors.muted, fontFamily: on ? "Inter_600SemiBold" : "Inter_400Regular" }}>{o.label}</Text>
+              </Press>
+            );
+          })}
+        </View>
+      </Section>
+      <Section title="">
+        <Row
+          label={tr("Automatique")}
+          value={tr("Comme le téléphone")}
+          onPress={() => setMode("system")}
+          trailing={mode === "system" ? <Check size={18} color={colors.accent} /> : <View style={{ width: 18 }} />}
+        />
       </Section>
       <Text style={{ marginHorizontal: 16, marginTop: 10, fontSize: 12, lineHeight: 17, color: colors.muted }}>
         {tr("Les appels, la caméra et les stories restent toujours en couleurs sombres.")}

@@ -64,25 +64,26 @@ export type Palette = { [K in keyof typeof dark]: string };
 
 /** Thème clair : fond gris-blanc, cartes blanches, bleu WIPP. */
 const light: Palette = {
-  bg: "#eef2f7",
+  // Soft whites: pure white was too bright next to the pale blue background.
+  bg: "#e7ecf2",
   fg: "#0f1b2d",
   muted: "#64708a",
-  surface: "#ffffff",
-  surface2: "#f3f6fa",
-  navy: "#ffffff",
+  surface: "#f5f7fa",
+  surface2: "#ebeff5",
+  navy: "#f5f7fa",
   accent: "#1a6bd9",
   accentFg: "#ffffff",
   paper: "#0f1b2d",
   danger: "#e0344f",
   ink: "#ffffff",
   hair: "rgba(15,27,45,0.09)",
-  glass: "rgba(255,255,255,0.72)",
-  glassStrong: "rgba(250,251,253,0.9)",
-  glassCard: "rgba(255,255,255,0.92)",
+  glass: "rgba(245,247,250,0.72)",
+  glassStrong: "rgba(243,246,250,0.9)",
+  glassCard: "rgba(245,247,250,0.92)",
   bubbleMe: "#1a6bd9",
   bubbleMeFg: "#ffffff",
-  bubbleThem: "#ffffff",
-  authInput: "#ffffff",
+  bubbleThem: "#f5f7fa",
+  authInput: "#f5f7fa",
   introBg: "#020a22",
   success: "#1f9d4c",
   surpriseInk: "#0A0B10",
@@ -90,7 +91,7 @@ const light: Palette = {
   surpriseGold: "#F5C94F",
   surpriseGoldDeep: "#A87520",
   surpriseLine: "rgba(245,201,79,0.5)",
-  shareTile: "#f3f6fa",
+  shareTile: "#ebeff5",
   shareTileHighlight: "#e8f0fc",
   shareTileBorder: "rgba(26,107,217,0.18)",
   shareSubtitle: "#64708a",
@@ -106,25 +107,68 @@ const light: Palette = {
   accentLine: "rgba(26,107,217,0.35)",
   dangerSoft: "rgba(224,52,79,0.1)",
   overlay: "rgba(15,27,45,0.4)",
-  sheet: "#ffffff",
+  sheet: "#f5f7fa",
   onAccent: "#ffffff",
-  card: "#ffffff",
-  cardDim: "#ffffff",
-  panel: "#ffffff",
-  menu: "#ffffff",
-  tray: "rgba(255,255,255,0.98)",
+  card: "#f5f7fa",
+  cardDim: "#f5f7fa",
+  panel: "#f5f7fa",
+  menu: "#f5f7fa",
+  tray: "rgba(245,247,250,0.98)",
   dashed: "rgba(100,112,138,0.5)",
   scrim: "rgba(15,27,45,0.35)",
   imageVeil: "rgba(255,255,255,0.66)",
-  tabSheet: "#ffffff",
-  tabSheetRow: "#f3f6fa",
-  tabSheetTile: "#f3f6fa",
+  tabSheet: "#f5f7fa",
+  tabSheetRow: "#ebeff5",
+  tabSheetTile: "#ebeff5",
   bubbleMeMuted: "rgba(255,255,255,0.78)",
   bubbleMeAccent: "#ffffff",
 };
 
+/** Brightness of a colour set: decides the logo, the status bar, the keyboard. */
 export type ThemeName = "dark" | "light";
-export const palettes: Record<ThemeName, Palette> = { dark, light };
+
+const rgb = (hex: string) => {
+  const h = hex.replace("#", "");
+  return `${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)}`;
+};
+
+/** A light colour set: same structure as « Bleu clair », other tints. */
+function lightSkin(o: { bg: string; fg: string; muted: string; card: string; card2: string; accent: string; highlight: string; danger?: string }): Palette {
+  const f = rgb(o.fg), a = rgb(o.accent), c = rgb(o.card), d = o.danger ?? light.danger;
+  return {
+    ...light,
+    bg: o.bg, fg: o.fg, muted: o.muted, paper: o.fg, accent: o.accent, danger: d,
+    surface: o.card, navy: o.card, bubbleThem: o.card, authInput: o.card, sheet: o.card, card: o.card, cardDim: o.card, panel: o.card, menu: o.card, tabSheet: o.card,
+    surface2: o.card2, shareTile: o.card2, tabSheetRow: o.card2, tabSheetTile: o.card2,
+    hair: `rgba(${f},0.09)`, glass: `rgba(${c},0.72)`, glassStrong: `rgba(${c},0.9)`, glassCard: `rgba(${c},0.92)`, tray: `rgba(${c},0.98)`, imageVeil: `rgba(${c},0.66)`,
+    bubbleMe: o.accent, shareTileHighlight: o.highlight, shareTileBorder: `rgba(${a},0.18)`, shareSubtitle: o.muted,
+    chip: `rgba(${f},0.06)`, chipSoft: `rgba(${f},0.04)`, chipStrong: `rgba(${f},0.1)`, fgSoft: `rgba(${f},0.6)`, fgFaint: `rgba(${f},0.35)`,
+    accentSoft: `rgba(${a},0.1)`, accentLine: `rgba(${a},0.35)`, dangerSoft: `rgba(${rgb(d)},0.1)`,
+    overlay: `rgba(${f},0.4)`, scrim: `rgba(${f},0.35)`, dashed: `rgba(${rgb(o.muted)},0.5)`,
+  };
+}
+
+/** Rose champagne: warm blush cards, deep rose accent. Alerts use a frank red so they never look like a normal button. */
+const rose = lightSkin({ bg: "#f4e5e2", fg: "#2c1a21", muted: "#8b6f78", card: "#fdf5f3", card2: "#f8eae7", accent: "#d6456f", highlight: "#fbe0e6", danger: "#c62828" });
+/** Bleu sarcelle: fresh teal on a pale aqua background. */
+const teal = lightSkin({ bg: "#e0eff0", fg: "#0f2a2e", muted: "#5d7b80", card: "#f3fafa", card2: "#e6f3f3", accent: "#0e8e8c", highlight: "#d5efee" });
+
+/** Bleu glacier: the night version of the blue theme (deep navy, icy blue accent). */
+const glacier: Palette = {
+  ...dark,
+  bg: "#081321", surface: "#12233a", surface2: "#172b46", navy: "#0d1b2f", accent: "#8cc4ff", accentFg: "#0b1220", muted: "#8fa3bf",
+  glass: "rgba(13,27,47,0.55)", glassStrong: "rgba(13,27,47,0.72)", glassCard: "rgba(23,43,70,0.58)",
+  bubbleMe: "#17365c", bubbleThem: "rgba(27,45,72,0.78)", bubbleMeMuted: "#9fb3cf", bubbleMeAccent: "#8cc4ff",
+  shareTile: "#132132", shareTileHighlight: "#1a304b", shareTileBorder: "rgba(140,196,255,0.22)",
+  accentSoft: "rgba(140,196,255,0.14)", accentLine: "rgba(140,196,255,0.35)",
+  sheet: "#0d1b2f", card: "rgba(17,31,52,0.92)", cardDim: "rgba(13,27,47,0.8)", panel: "#122038", menu: "#1a2c46", tray: "rgba(17,31,52,0.98)",
+  tabSheet: "#0b1727", tabSheetRow: "#0f1d31", tabSheetTile: "#14253c", dashed: "rgba(143,163,191,0.6)",
+};
+
+/** The colour sets offered in Réglages › Apparence. « dark » stays the WIPP default. */
+export type SkinName = "dark" | "light" | "rose" | "teal" | "glacier";
+export const palettes: Record<SkinName, Palette> = { dark, light, rose, teal, glacier };
+export const skinBase: Record<SkinName, ThemeName> = { dark: "dark", light: "light", rose: "light", teal: "light", glacier: "dark" };
 
 /**
  * Palette active. Objet MUTABLE : applyTheme() le remplit, puis l'app est remontée
@@ -132,10 +176,12 @@ export const palettes: Record<ThemeName, Palette> = { dark, light };
  */
 export const colors: Palette = { ...dark };
 export let themeName: ThemeName = "dark";
+export let skinName: SkinName = "dark";
 
-export function applyTheme(name: ThemeName) {
-  themeName = name;
-  Object.assign(colors, palettes[name]);
+export function applyTheme(skin: SkinName) {
+  skinName = skin;
+  themeName = skinBase[skin];
+  Object.assign(colors, palettes[skin]);
 }
 
 /** Couleurs FIXES (identiques dans les deux thèmes) : écrans d'appel, caméra, texte sur photo/vidéo. */
@@ -166,17 +212,17 @@ export const layout = {
 
 /** Texte / traits sur le fond, avec transparence (blanc en sombre, bleu nuit en clair). */
 export function fgA(a: number) {
-  return themeName === "light" ? `rgba(15,27,45,${a})` : `rgba(247,249,252,${a})`;
+  return themeName === "light" ? `rgba(${rgb(colors.fg)},${a})` : `rgba(247,249,252,${a})`;
 }
 /** Voile clair sur fond sombre (sombre sur fond clair) : puces, séparateurs, fonds de boutons. */
 export function whiteA(a: number) {
-  return themeName === "light" ? `rgba(15,27,45,${a})` : `rgba(255,255,255,${a})`;
+  return themeName === "light" ? `rgba(${rgb(colors.fg)},${a})` : `rgba(255,255,255,${a})`;
 }
 /** Fond de page avec transparence (fondus sous les photos d'en-tête). */
 export function bgA(a: number) {
-  return themeName === "light" ? `rgba(238,242,247,${a})` : `rgba(5,7,13,${a})`;
+  return skinName === "dark" ? `rgba(5,7,13,${a})` : `rgba(${rgb(colors.bg)},${a})`;
 }
 /** Couleur d'accent avec transparence (jaune en sombre, bleu en clair). */
 export function accentA(a: number) {
-  return themeName === "light" ? `rgba(26,107,217,${a})` : `rgba(255,216,77,${a})`;
+  return `rgba(${rgb(colors.accent)},${a})`;
 }

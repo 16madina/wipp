@@ -329,7 +329,8 @@ export function AppShell() {
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
-  const theme = useAppearance((s) => s.theme);
+  // Redraw every screen when the colour set changes (two light sets share the same brightness).
+  const theme = useAppearance((s) => s.skin);
   const { hasShareIntent } = useShareIntentContext();
 
   useEffect(() => {
