@@ -212,7 +212,7 @@ function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 
             <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: small ? 10 : 12, fontFamily: "Inter_600SemiBold" }}>{t.name}</Text>
             {t.organizer && !small ? (
               <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, backgroundColor: GOLD }}>
-                <Text style={{ color: "#0b1220", fontSize: 9, fontFamily: "Inter_700Bold" }}>HOST</Text>
+                <Text style={{ color: "#0b1220", fontSize: 9, fontFamily: "Inter_700Bold" }}>{tr("HOST")}</Text>
               </View>
             ) : null}
           </View>

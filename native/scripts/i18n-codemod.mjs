@@ -106,7 +106,8 @@ for (const file of ROOTS.flatMap((r) => walk(r))) {
     JSXText(p) {
       const text = jsxText(p.node.value);
       const core = text.trim();
-      if (!human(core)) return;
+      // Text between tags is always for people, even one lowercase word (« revoir », « profil »).
+      if (core.length < 2 || !/[A-Za-zÀ-ÿ]{2}/.test(core)) return;
       add(core);
       const raw = p.node.value;
       const lead = raw.match(/^\s*/)[0], trail = raw.match(/\s*$/)[0];

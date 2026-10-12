@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { colors, themeName } from "../theme";
+import { tr } from "../lib/tr";
 
 export function WippMark({
   size = 56,
@@ -105,7 +106,7 @@ export function TouchHero({ width = 92, height = 78 }: { width?: number; height?
           leftStyle,
         ]}
       >
-        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>WIPP</Text>
+        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>{tr("WIPP")}</Text>
       </Animated.View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 2, zIndex: 2 }}>
         <View style={{ width: 4, height: 7, borderRightWidth: 1.4, borderTopWidth: 1.4, borderBottomWidth: 1.4, borderColor: colors.accent, borderTopRightRadius: 8, borderBottomRightRadius: 8 }} />
@@ -129,7 +130,7 @@ export function TouchHero({ width = 92, height = 78 }: { width?: number; height?
           rightStyle,
         ]}
       >
-        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>WIPP</Text>
+        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>{tr("WIPP")}</Text>
       </Animated.View>
     </View>
   );

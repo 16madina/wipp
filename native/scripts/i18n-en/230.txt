@@ -1,0 +1,240 @@
+230|♾️ Permanent contact
+231|Block {0}
+232|{0} will no longer be able to contact you.
+233|Report
+234|Report this profile
+235|Only the profile and the reason are sent to moderation, never your messages.
+236|Report sent.
+237|Unable to report for now.
+238|The colour of your bubbles, on this phone only.
+239|Group name
+240|Description (optional)
+241|Rules, topic of the group…
+242|Saving…
+243|Save
+244|WIPP Privé 🔒
+245|No private conversations
+246|WIPP Privé
+247|Remove from WIPP Privé?
+248|Resume the live
+249|Photos
+250|Allow WIPP to add photos to save your QR code.
+251|My WIPP
+252|Your QR code is saved in your photos.
+253|Unable to save for now.
+254|Loading the @username…
+255|Server account not found
+256|QR expired
+257|Generate a new QR
+258|Fetching the real @username of the account.
+259|This phone is not linked to a WIPP account. Sign out, then sign in with the number of the account to test.
+260|Temporary QR · single use. The connection will last {0}.
+261|This QR contains neither your number nor your email.
+262|Preparing…
+263|Share my WIPP
+264|Permanent QR
+265|Temporary QR
+266|The person who scans can accept a temporary connection. The QR itself is only valid for 75 seconds and only once.
+267|Generate the QR
+268|Import a photo
+269|Unable to open your photos.
+270|Reading…
+271|Resolve (DEV)
+272|15 min
+273|60 min
+274|Until turned off
+275|Invisible
+276|Position unavailable. Check that location is turned on.
+277|Action not possible for now.
+278|Unable to search for now.
+279|People nearby
+280|Only with consent. Never a distance or a number.
+281|My visibility
+282|You are invisible. You can search for people who chose to be visible.
+283|People around me
+284|Searching…
+285|🔎 Search around me
+286|Location is off for WIPP
+287|WIPP uses your approximate position, only while you use the app, to find people in the area. It is never shown to others.
+288|Open Settings
+289|Nobody visible around you
+290|Try again a little later: only people who chose to be visible appear.
+291|🟢 Visible now
+292|See the profile
+293|Profile not found
+294|WIPP connected ✓
+295|⏳ Temporary contact
+296| until {0}
+297|wants to create a temporary connection with you
+298|⏳ Duration:
+299|This offer is no longer valid.
+300|Accept
+301|Connect without sharing your number.
+302|Bring your phones together
+303|Connect without sharing your number.
+304|You are already friends with {0} 🤝
+305|You are already connected on WIPP.
+306|Waiting for the answer…
+307|{0} wants to connect with you
+308|⏳ Temporary contact · Duration: {0}
+309|Offer
+310|Start again
+311|See on the map
+312|Pause
+313|Listen to the voice message
+314|Go to a moment of the message
+315|Playback speed
+316|Location
+317|Position unavailable. Allow location for WIPP in Settings.
+318|Document
+319|Unable to open this document.
+320|Forwarded
+321|Voice message listened
+322|View-once voice message · tap to listen
+323|Open {0}
+324| · {0} KB
+325|Open
+326|Business card
+327|Message deleted
+328|🔒 Message encrypted for another device
+329|edited
+330|Call
+331|Camera
+332|More
+333|Pinned ·
+334|Media
+335|A customer is writing to you about {0}.
+336|This account represents a business on WIPP. You are chatting with {0}.
+337|Only admins can send messages in this group.
+338|Edit
+339|Reply
+340|Stickers
+341|Import a local GIF
+342|Forward
+343|Close
+344|View-once voice message
+345|It will disappear when you close this window.
+346|Reply
+347|Copy
+348|Unpin
+349|Pin
+350|Delete for me
+351|Delete for everyone
+352|Report the message
+353|The encrypted content is not copied. Only the message identifier and the reason are sent.
+354|Unable to report.
+355|Block this user
+356|Block this user?
+357|Search for a GIF
+358|GIF search failed.
+359|The messages of this group, including photos, videos and voice messages, are end-to-end encrypted on the members’ phones. A group key is shared only with the current members: when someone leaves the group, a new key is created and they can no longer read new messages. A new member does not see messages sent before they joined. Messages sent before encryption was turned on stay as they are.
+360|Private conversations (DMs) handled by WIPP’s E2EE system are encrypted. WIPP does not keep the private keys in a way that would let it read these messages.
+361|Applaud
+362|Love
+363|Like
+364|Dislike
+365|Laugh
+366|Surprise
+367|Excellent
+368|Unable to join the live.
+369|Go live
+370|Turn on your camera and your microphone for the live?
+371|Live
+372|Allow the camera and the microphone for WIPP in the phone’s Settings.
+373|Unable to send for now.
+374|The host turned off comments.
+375|Comment not sent.
+376|Report sent
+377|Thank you. The WIPP team will review it.
+378|Remove
+379|Remove {0} from this live? This person will not be able to come back.
+380|Unable to remove.
+381|Unable to change the setting.
+382|Stage
+383|You are no longer on stage
+384|The host removed you from the stage. Your microphone and your camera are off; you stay in the live as a viewer.
+385|Leave the stage
+386|Your microphone and your camera will be turned off. You stay in the live as a viewer.
+387|Speaker on stage
+388|Remove from the stage
+389|{0} will become a viewer again. Their microphone and camera will be turned off.
+390|Screen sharing
+391|Screen sharing works in the WIPP app on iPhone and Android.
+392|Share your screen
+393|Everything shown on your screen will be visible to viewers: presentation, website, app… and also your notifications. Remember to turn on “Do Not Disturb”. Nothing is recorded.
+394|Screen sharing could not start. You can try again, the live continues.
+395|Your screen could not be sent. Another app may be recording the screen (screen recorder). Stop it, then start sharing again. The live continues.
+396|Question
+397|Questions
+398|There are no more questions waiting.
+399|End the live
+400|End the conference for everyone?
+401|Unable to end.
+402|Screen sharing in progress
+403|The viewers of your WIPP live can see your screen.
+404|The live is not loaded yet. Try again in a moment.
+405|Block the host
+406|You will leave this live. This person will no longer be able to contact you and you will no longer see their content.
+407|Blocking
+408|The block could not be saved. Try again.
+409|Leave
+410|If you leave without ending it, the live will stop automatically in 5 minutes if you don’t come back.
+411|Leave the live
+412|Connecting to the live…
+413|Your camera is off. Turn it on to go live.
+414|The host will appear soon.
+415|Turn on camera and microphone
+416|Q&A
+417|Participants
+418|Minimize the live
+419|Landscape full screen
+420|Full screen
+421|Stage layout
+422|Options
+423|Reconnecting…
+424|The host lost the connection
+425|Ask a question
+426|Write a comment…
+427|Comments are turned off.
+428|React
+429|Mic
+430|Mic off
+431|Camera off
+432|Hand raised
+433|Raise your hand
+434|Participants ({0})
+435|Host
+436|Speaker
+437|Viewer
+438|Press and hold a person to
+439|remove or report them
+440|report them
+441|All viewers see the same layout.
+442|Host options
+443|Stop screen sharing
+444|Share the screen
+445|Stage and requests to speak
+446|Interactive mode (up to 5 on stage)
+447|Conference mode
+448|The speakers will go back among the viewers.
+449|Flip the camera
+450|Show comments
+451|Comments
+452|Reactions
+453|Open questions
+454|Start the Q&A
+455|End the conference for everyone
+456|Report this live
+457|🎤 It’s time for your questions!
+458|Applause!
+459|Create a listing
+460|Search for a business ...
+461|Popular
+462|Featured
+463| · {0} view{1}
+464| · scheduled
+465|Unable to search.
+466|No results
+467|Unable to load the listings.
+468|No listings for now
+469|Pharmacies

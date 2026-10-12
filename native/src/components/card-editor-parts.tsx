@@ -126,7 +126,7 @@ export function CategorySheet({ open, categories, selected, onClose, onPick }: {
             style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: colors.navy, paddingHorizontal: 12, color: colors.fg, fontSize: 15, ...noOutline }}
           />
           <Press disabled={!custom.trim()} onPress={() => pick(custom.trim())} style={{ height: 44, paddingHorizontal: 16, borderRadius: 12, backgroundColor: custom.trim() ? colors.accent : colors.navy, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: custom.trim() ? colors.accentFg : colors.muted, fontFamily: "Inter_600SemiBold" }}>OK</Text>
+            <Text style={{ color: custom.trim() ? colors.accentFg : colors.muted, fontFamily: "Inter_600SemiBold" }}>{tr("OK")}</Text>
           </Press>
         </View>
       </ScrollView>

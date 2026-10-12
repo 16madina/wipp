@@ -172,6 +172,34 @@ function AuthBack() {
   );
 }
 
+/** Français / English, at the top right of the first screens: the whole app follows. */
+function LangToggle() {
+  const insets = useSafeAreaInsets();
+  const language = useWippStore((s) => s.language);
+  const setLanguage = useWippStore((s) => s.setLanguage);
+  return (
+    <View style={{ position: "absolute", top: insets.top + 8, right: 12, zIndex: 60, elevation: 60, flexDirection: "row", padding: 3, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)" }}>
+      {(["fr", "en"] as const).map((id) => {
+        const on = language === id;
+        return (
+          <Pressable
+            key={id}
+            accessibilityLabel={id === "fr" ? "Français" : "English"}
+            accessibilityState={{ selected: on }}
+            hitSlop={6}
+            onPress={() => {
+              if (!on) setLanguage(id);
+            }}
+            style={{ minWidth: 40, height: 30, paddingHorizontal: 10, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#F7C52B" : "transparent" }}
+          >
+            <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: on ? "#0a0a0d" : "#fff" }}>{id.toUpperCase()}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 function Abs({
   t,
   l,
@@ -503,8 +531,43 @@ export function OnboardingScreen() {
 export function WelcomeScreen() {
   const push = useWippStore((s) => s.push);
   const replace = useWippStore((s) => s.replace);
+  const english = useWippStore((s) => s.language) === "en";
+  const win = useWindowDimensions();
   return (
     <Artwork source={authWelcome}>
+      {/* The picture carries its texts in French. In English, real texts and buttons are drawn over them. */}
+      {english ? (
+        <>
+          <Abs t={17.6} l={18} h={13.2} w={64}>
+            <View pointerEvents="none" style={{ flex: 1, borderRadius: 20, backgroundColor: "rgba(6,7,12,0.93)", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#fff", fontSize: win.width * 0.078, lineHeight: win.width * 0.092, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+                Come closer.{"\n"}Connect.{"\n"}
+                <Text style={{ color: "#F7C52B" }}>That’s WIPP.</Text>
+              </Text>
+            </View>
+          </Abs>
+          <Abs t={70.7} l={5} h={7} w={90}>
+            <View pointerEvents="none" style={{ flex: 1, borderRadius: 999, backgroundColor: "#F7C52B", alignItems: "center", justifyContent: "center", flexDirection: "row" }}>
+              <Text style={{ color: "#0a0a0d", fontSize: 17, fontFamily: "Inter_600SemiBold" }}>Create an account</Text>
+              <View style={{ position: "absolute", right: 22 }}><ArrowRight size={20} color="#0a0a0d" /></View>
+            </View>
+          </Abs>
+          <Abs t={79.3} l={5} h={7} w={90}>
+            <View pointerEvents="none" style={{ flex: 1, borderRadius: 999, backgroundColor: "#07080c", borderWidth: 1.5, borderColor: "#F7C52B", alignItems: "center", justifyContent: "center", flexDirection: "row" }}>
+              <Text style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_500Medium" }}>I already have an account</Text>
+              <View style={{ position: "absolute", right: 22 }}><ArrowRight size={20} color="#fff" /></View>
+            </View>
+          </Abs>
+          <Abs t={87.2} l={4} h={7.6} w={92}>
+            <View pointerEvents="none" style={{ flex: 1, backgroundColor: "#050609", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 20, textAlign: "center" }}>
+                By continuing, you accept the <Text style={{ color: "#F7C52B", textDecorationLine: "underline" }}>Terms of Use</Text>{"\n"}and the <Text style={{ color: "#F7C52B", textDecorationLine: "underline" }}>Privacy Policy</Text>.
+              </Text>
+            </View>
+          </Abs>
+        </>
+      ) : null}
+      <LangToggle />
       <Abs t={70.7} l={5} h={7} w={90}>
         <Pressable
           accessibilityLabel={tr("Créer un compte")}
@@ -572,6 +635,18 @@ export function PhoneEntryScreen() {
         <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </Abs>
       <AuthBack />
+      <LangToggle />
+      {/* The title is part of the picture, in French: in English it is drawn over it. */}
+      {useWippStore.getState().language === "en" ? (
+        <Abs t={14.2} l={6} h={14} w={88}>
+          <View pointerEvents="none" style={{ flex: 1, borderRadius: 20, backgroundColor: "rgba(4,7,16,0.94)", alignItems: "center", justifyContent: "center", paddingHorizontal: 10 }}>
+            <Text style={{ color: "#fff", fontSize: 24, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+              Your <Text style={{ color: "#F7C52B" }}>phone number</Text>
+            </Text>
+            <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.85)", fontSize: 15, lineHeight: 21, textAlign: "center" }}>We will send you a code by SMS{"\n"}to verify your number.</Text>
+          </View>
+        </Abs>
+      ) : null}
       <Abs t={65} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>{tr("Numéro de téléphone")}</Text>
@@ -688,11 +763,12 @@ export function LoginScreen() {
         />
       </Abs>
       <AuthBack />
+      <LangToggle />
       <Abs t={11} l={6} w={84}>
         <Image source={logoGold} style={{ width: 120, height: 52 }} contentFit="contain" contentPosition="left" />
-        <Text style={{ marginTop: 6, color: colors.accent, fontSize: 10, letterSpacing: 2, fontFamily: "Inter_600SemiBold" }}>DISCUTE · PARTAGE · DÉCOUVRE</Text>
+        <Text style={{ marginTop: 6, color: colors.accent, fontSize: 10, letterSpacing: 2, fontFamily: "Inter_600SemiBold" }}>{tr("DISCUTE · PARTAGE · DÉCOUVRE")}</Text>
         <Text style={{ marginTop: 20, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.fg, fontSize: 34, lineHeight: 38, fontFamily: "Inter_700Bold" }}>
-          {tr("Content")}{"\n"}{tr("de te")} <Text style={{ color: colors.accent }}>revoir</Text> 👋
+          {tr("Content")}{"\n"}{tr("de te")} <Text style={{ color: colors.accent }}>{tr("revoir")}</Text> 👋
         </Text>
         <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.85)", fontSize: 17, fontFamily: "Inter_500Medium" }}>{tr("Retrouve ton WIPP")}</Text>
         <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.82)", fontSize: 13, lineHeight: 19, maxWidth: 230 }}>
@@ -1178,7 +1254,7 @@ export function ProfileReferenceScreen() {
       {/* No card: the form sits in the empty space of the picture, under the mascot. */}
       <View style={{ position: "absolute", left: 0, right: 0, top: feetY + 10, bottom: Math.max(insets.bottom, 14), paddingHorizontal: 22 }}>
         <Text style={{ color: colors.fg, fontSize: 22, fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>
-          {tr("Complète ton")} <Text style={{ color: colors.accent }}>profil</Text>
+          {tr("Complète ton")} <Text style={{ color: colors.accent }}>{tr("profil")}</Text>
         </Text>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginTop: 12, marginBottom: 12 }}>

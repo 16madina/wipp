@@ -135,7 +135,7 @@ function PharmacyCard({ p, origin, duty }: { p: PharmacyPlace; origin: LatLng | 
         </Text>
         {duty ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: accentA(0.16) }}>
-            <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_700Bold" }}>🌙 DE GARDE</Text>
+            <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_700Bold" }}>{tr("🌙 DE GARDE")}</Text>
           </View>
         ) : null}
       </View>

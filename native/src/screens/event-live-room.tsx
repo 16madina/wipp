@@ -1137,7 +1137,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         {phase === "connected" || phase === "reconnecting" ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: "#e5383b" }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" }} />
-            <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>EN DIRECT</Text>
+            <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>{tr("EN DIRECT")}</Text>
           </View>
         ) : null}
         {settings.qaMode ? (

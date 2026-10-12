@@ -1,0 +1,240 @@
+960|Visible for 24 h to your contacts
+961|Publish
+962|Recent
+963|All conversations
+964|No conversation with that name.
+965|No conversations yet.
+966|conversations at most at a time.
+967|Write your story before publishing it.
+968|Publishing… 0%
+969|Publishing… {0}%
+970|Published
+971|Unable to publish
+972|The text on the video is waiting for a server update. The story was not published.
+973|The publication did not go through. Try again.
+974|Caption
+975|Choose who can see
+976|Add to my story
+977|Who can see
+978|Write your story
+979|The chosen part is not valid.
+980|Trimming this video failed.
+981|Pause
+982|Play
+983| · maximum {0} s
+984|Keep {0} seconds
+985|Preparing the video…
+986|Allow access to photos to show your camera roll. You can also take a photo.
+987|The photo library could not open.
+988|This video is not available on the iPhone yet. Try again.
+989|Albums
+990|Text
+991|Change the selection
+992|WIPP video call in progress
+993|WIPP call in progress
+994|Microphone denied.
+995|Unable to connect the media.
+996|Camera denied. Audio continues.
+997|Call {0} back
+998|Your camera is off
+999|Enter your lock code.
+1000|Choose a code of at least 4 digits, easy for you to remember. It is different from the WIPP Privé code and from the phone’s passcode.
+1001|Enter the same code a second time.
+1002|Confirm the code
+1003|The code has been changed.
+1004|Code created. To lock a conversation: ⋯ in the conversation, or press and hold the conversation in Chats.
+1005|Open with Face ID / fingerprint
+1006|No Face ID or passcode is set on this phone, so the code cannot be reset. Turn on the iPhone passcode in Settings › Face ID & Passcode, then try again.
+1007|A locked conversation stays visible in Chats, but its content and its notifications are hidden. The code is asked every time it is opened.
+1008|First create your code in Me › Settings › Privacy › Lock code.
+1009|Conversation unlocked.
+1010|Conversation locked. The code will be asked every time it is opened.
+1011|Enter your lock code to open it.
+1012|Unlock
+1013|Temporary connection ended
+1014|You are no longer contacts. The history stays visible.
+1015|Reconnect
+1016|wants to keep your connection
+1017|Switch to a permanent contact?
+1018|⏳ Temporary contact · expires in
+1019|Request sent
+1020|Keep this contact
+1021|How long do you want to stay connected?
+1022|Custom
+1023|Duration: {0}
+1024|Between 15 minutes and 30 days.
+1025|When the parcel opens
+1026|It stays locked until then, then the person taps it to open it.
+1027|In {0}
+1028|Tonight at midnight
+1029|Or choose the day and the time
+1030|This time has already passed: choose a later moment.
+1031|Will open {0}.
+1032|Live unavailable.
+1033|Online on WIPP ·
+1034|Cancelled
+1035|By invitation
+1036|min · free ·
+1037|Join my live
+1038|Start the live
+1039|Start now?
+1040|The planned time has not come yet. The people registered will be told that it is live.
+1041|Invite
+1042|@username1 @username2 …
+1043|Send the invitations
+1044|Invitations
+1045|{0} invitation{1} sent.
+1046|No new account found with these usernames.
+1047|A new invitation link turns off the old one.
+1048|Cancel the event
+1049|The people registered will no longer be able to join the live.
+1050|This live is over. There is no replay.
+1051|This event has been cancelled.
+1052|The host removed you from this event.
+1053|Join the live
+1054|✓ Registered · Unregister
+1055|Accept the invitation
+1056|Register
+1057|The “Join the live” button appears when the host starts.
+1058|Checking
+1059|Surprise{0}{1}
+1060|Video call in progress
+1061|Audio call in progress
+1062|Back to the call
+1063|Join
+1064|Add a photo (optional)
+1065|Event name
+1066|Place (optional)
+1067|Description (optional)
+1068|Choose an upcoming date and time.
+1069|Send the event
+1070|Event time
+1071|Your answer could not be saved.
+1072|Event over
+1073|See the answers · {0}
+1074|No answers yet
+1075|Nobody
+1076|Photo unavailable
+1077|Loading the photo…
+1078|Off
+1079|30 days
+1080|Admins can always do everything. These rules apply to the other members.
+1081|Edit the group info
+1082|Name, photo and description.
+1083|Send messages
+1084|Everyone can write.
+1085|Only admins write (announcement group).
+1086|Add new members
+1087|Among their WIPP contacts.
+1088|Invite by link
+1089|Create and share the invitation link.
+1090|Only available for a Public group.
+1091|Approve new members
+1092|An admin approves each arrival (by link or added by a member).
+1093|New members join directly.
+1094|New messages disappear after the chosen duration.
+1095|Report and leave
+1096|{0}Only the group and the reason are sent to moderation, never the messages.
+1097|Group reported. You left the group.
+1098|Group reported. Thank you, moderation will check.
+1099|added you to this group
+1100|Don’t want to be part of this group? You can report it and leave it.
+1101|This person is not in your contacts. If this group means nothing to you, report it and leave it.
+1102|Stay
+1103|User in Invisible mode
+1104|Review
+1105|Review not sent.
+1106|Your conference is over
+1107|The conference is over
+1108|Well done, and thank you for hosting this live!
+1109|Thank you for taking part!
+1110|Hosted by
+1111|✓ Thank you for your review!
+1112|What did you think of this conference?
+1113|{0} star{1}
+1114|Leave a comment for the host…
+1115|Edit my review
+1116|Send my review
+1117|Skip
+1118|There is no replay. See you soon on WIPP!
+1119|Back to events
+1120|Handled
+1121|Hide
+1122|Next
+1123|Question not sent.
+1124|Unable to vote.
+1125|Delete the question
+1126|It will disappear for everyone.
+1127|Close the questions
+1128|Questions from the audience
+1129|No questions for now.
+1130|No questions for now. Be the first to ask one!
+1131|Remove my vote
+1132|Support this question
+1133|Remove from the screen
+1134|Show on screen
+1135|The live is over: no more questions or votes.
+1136|✓ Question sent
+1137|Ask a question…
+1138|Questions are closed for now.
+1139|Search by @username
+1140|Show my QR
+1141|Allow the camera
+1142|WIPP uses the camera to scan QR codes.
+1143|Viewers can see your screen.
+1144|Open your presentation, a website or an app.
+1145|Loading the share…
+1146|Back to the conference
+1147|Turn your phone · pinch to zoom
+1148|Pinch with two fingers to zoom
+1149|Stop
+1150|Back to the live
+1151|Camera off
+1152|Options for {0}
+1153|The host invites you to speak.
+1154|You will then choose to turn on your microphone and your camera. (
+1155|s)
+1156|Stage ·
+1157|Back to Conference mode
+1158|All speakers will go back among the viewers. Their microphone and camera will be turned off.
+1159|Requests to speak ({0})
+1160|Pending invitations
+1161|Invitation sent…
+1162|On stage
+1163|Grid
+1164|Give the microphone back
+1165|Mute the microphone
+1166|Give the camera back
+1167|Turn off the camera
+1168|Back to the grid
+1169|Invite a participant
+1170|The stage is full
+1171|No QR code found
+1172|Choose a photo where the QR code is clearly visible and sharp.
+1173|This is your own WIPP code 🙂
+1174|Share it so others can find you. To test, import another person’s code.
+1175|Code not recognized
+1176|Unable to read
+1177|This image could not be read. Try another photo.
+1178|Analysing the QR code…
+1179|Choose another photo
+1180|Create a poll
+1181|Ask your question…
+1182|Option
+1183|Option {0}
+1184|Remove option {0}
+1185|Add an option
+1186|Two options are identical.
+1187|Multiple answers
+1188|Everyone can tick several options.
+1189|Send the poll
+1190|Poll
+1191|Your vote could not be saved.
+1192|Poll · multiple answers
+1193|{0}, {1} vote{2}{3}
+1194|See the votes · {0} participant{1}
+1195|No votes yet
+1196|Scan the code or open the link
+1197|No number, no email · Connect on WIPP
+1198|Member
+1199|Read by {0} member{1}. See the list

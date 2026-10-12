@@ -1466,7 +1466,7 @@ function MyEventRow({ e, mine, onPress }: { e: import("../lib/types").LifestyleI
         {src ? <Image source={src} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : null}
         {over ? (
           <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingVertical: 2, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center" }}>
-            <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>TERMINÉ</Text>
+            <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>{tr("TERMINÉ")}</Text>
           </View>
         ) : null}
       </View>
@@ -1482,10 +1482,10 @@ function MyEventRow({ e, mine, onPress }: { e: import("../lib/types").LifestyleI
         </Text>
         {stats ? (
           <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 12 }}>
-            👥 {stats.attendees} participant{stats.attendees > 1 ? "s" : ""} · ❓ {stats.questions} · {stats.average != null ? `★ ${stats.average} (${stats.reviews})` : tr("pas encore d’avis")}
+            👥 {stats.attendees} {tr("participant")}{stats.attendees > 1 ? "s" : ""} · ❓ {stats.questions} · {stats.average != null ? `★ ${stats.average} (${stats.reviews})` : tr("pas encore d’avis")}
           </Text>
         ) : e.live && e.live.registered != null && !over ? (
-          <Text style={{ color: colors.fg, fontSize: 12 }}>{e.live.registered} inscrit{e.live.registered > 1 ? "s" : ""}</Text>
+          <Text style={{ color: colors.fg, fontSize: 12 }}>{e.live.registered} {tr("inscrit")}{e.live.registered > 1 ? "s" : ""}</Text>
         ) : !e.live && (e.interestedCount ?? 0) > 0 ? (
           <Text style={{ color: colors.fg, fontSize: 12 }}>{e.interestedCount} {tr("intéressé")}{(e.interestedCount ?? 0) > 1 ? "s" : ""}</Text>
         ) : null}

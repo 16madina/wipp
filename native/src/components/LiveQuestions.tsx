@@ -80,7 +80,7 @@ export function SpotlightCard({
       <View style={{ padding: 14, borderRadius: 18, backgroundColor: "rgba(6,10,24,0.82)", borderWidth: 1, borderColor: "rgba(212,160,23,0.75)" }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <HelpCircle size={15} color={GOLD} />
-          <Text style={{ color: GOLD, fontSize: 11, letterSpacing: 1.2, fontFamily: "Inter_700Bold" }}>QUESTION DU PUBLIC</Text>
+          <Text style={{ color: GOLD, fontSize: 11, letterSpacing: 1.2, fontFamily: "Inter_700Bold" }}>{tr("QUESTION DU PUBLIC")}</Text>
         </View>
         <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Avatar user={{ displayName: q.name, avatar: q.avatar ?? undefined }} size={26} />

@@ -48,7 +48,7 @@ export function GroupCallBanner({ chatId }: { chatId: string }) {
             </View>
           ))}
           <Text style={{ marginLeft: 6, color: colors.muted, fontSize: 12 }}>
-            {call.participantIds.length} participant{call.participantIds.length > 1 ? "s" : ""}
+            {call.participantIds.length} {tr("participant")}{call.participantIds.length > 1 ? "s" : ""}
           </Text>
         </View>
       </View>

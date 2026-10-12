@@ -836,7 +836,7 @@ export function NewGroupFlow() {
           <Text style={{ marginTop: 16, fontSize: 22, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{name.trim()}</Text>
           <Text style={{ marginTop: 6, color: colors.success, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("✓ Groupe créé")}</Text>
           <Text style={{ marginTop: 8, color: colors.muted, fontSize: 13, textAlign: "center" }}>
-            {settings.visibility === "public" ? tr("Public") : tr("Privé")} · {picked.length + 1} membre{picked.length ? "s" : ""}
+            {settings.visibility === "public" ? tr("Public") : tr("Privé")} · {picked.length + 1} {tr("membre")}{picked.length ? "s" : ""}
             {settings.category ? ` · ${settings.category}` : ""}
             {disappearMs ? tr(" · messages éphémères ({0})", GROUP_DISAPPEAR.find((o) => o.ms === disappearMs)?.label) : ""}
           </Text>
@@ -1274,7 +1274,7 @@ export function GroupInviteScreen({ token }: { token: string }) {
           <Users size={40} color={colors.accent} />
         </View>
         <Text style={{ marginTop: 14, fontSize: 21, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{info?.name ?? (info ? tr("Groupe WIPP") : "…")}</Text>
-        {info?.members ? <Text style={{ marginTop: 4, color: colors.muted }}>{info.members} membre{info.members > 1 ? "s" : ""}</Text> : null}
+        {info?.members ? <Text style={{ marginTop: 4, color: colors.muted }}>{info.members} {tr("membre")}{info.members > 1 ? "s" : ""}</Text> : null}
         {result ? (
           <Text style={{ marginTop: 18, color: result === "pending" ? colors.fg : colors.danger, textAlign: "center", lineHeight: 20 }}>
             {result === "pending" ? tr("✓ Demande envoyée. Un admin du groupe doit l’approuver ; tu verras le groupe dès qu’il aura accepté.") : GROUP_FR[result] ?? GROUP_FR.error}

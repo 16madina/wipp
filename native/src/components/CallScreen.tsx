@@ -408,7 +408,7 @@ export function CallScreen({
           <View style={{ alignItems: "center", marginBottom: 6 }}>
             <Text numberOfLines={1} style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{peer.displayName}</Text>
             <Text style={{ color: GREY, fontSize: 13, fontVariant: ["tabular-nums"] }}>
-              {status} · {groupTiles.length} participant{groupTiles.length > 1 ? "s" : ""}
+              {status} · {groupTiles.length} {tr("participant")}{groupTiles.length > 1 ? "s" : ""}
             </Text>
           </View>
           <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} />

@@ -68,7 +68,7 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
             {tr("En ligne sur WIPP ·")} {live.state === "live" ? "EN DIRECT" : live.state === "ended" ? tr("Terminé") : live.state === "cancelled" ? tr("Annulé") : tr("À venir")}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
-            {live.visibility === "private" ? tr("Sur invitation") : tr("Public")} · {live.durationMin} {tr("min · gratuit ·")} {live.registered} inscrit{live.registered > 1 ? "s" : ""}
+            {live.visibility === "private" ? tr("Sur invitation") : tr("Public")} · {live.durationMin} {tr("min · gratuit ·")} {live.registered} {tr("inscrit")}{live.registered > 1 ? "s" : ""}
           </Text>
         </View>
       </View>

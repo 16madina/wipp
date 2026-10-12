@@ -341,7 +341,7 @@ export function CallJoinScreen({ token }: { token: string }) {
           <>
             <Avatar user={{ displayName: name, avatar: ok.owner?.avatarUrl ?? undefined }} size={96} />
             <Text style={{ marginTop: 16, color: colors.fg, fontSize: 20, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>
-              {ok.kind === "video" ? tr("Appel vidéo") : tr("Appel audio")} de {name}
+              {ok.kind === "video" ? tr("Appel vidéo") : tr("Appel audio")} {tr("de")} {name}
             </Text>
             {ok.owner?.username ? <Text style={{ marginTop: 2, color: colors.muted }}>@{ok.owner.username}</Text> : null}
             <Text style={{ marginTop: 10, color: colors.muted, fontSize: 13 }}>

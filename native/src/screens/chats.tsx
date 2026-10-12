@@ -845,7 +845,7 @@ function GroupGrid({
               </View>
               <Text numberOfLines={2} style={{ marginTop: 10, color: colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{g.name}</Text>
               <Text numberOfLines={1} style={{ marginTop: 2, color: colors.muted, fontSize: 11 }}>
-                {g.participantIds.length} membre{g.participantIds.length > 1 ? "s" : ""}
+                {g.participantIds.length} {tr("membre")}{g.participantIds.length > 1 ? "s" : ""}
               </Text>
             </Press>
           </View>
@@ -1118,7 +1118,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                 </View>
                 {group ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>
-                    {gs ? (gs.visibility === "public" ? tr("Groupe public") : tr("Groupe privé")) : tr("Groupe")} · {chat.participantIds.length} membres
+                    {gs ? (gs.visibility === "public" ? tr("Groupe public") : tr("Groupe privé")) : tr("Groupe")} · {chat.participantIds.length} {tr("membres")}
                     {gs?.category ? ` · ${gs.category}` : ""}
                   </Text>
                 ) : profile?.username ? (
@@ -1221,7 +1221,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           ) : (
             <Text style={{ marginTop: 6, fontSize: 13, color: colors.muted }}>{tr("Aucune photo ni vidéo partagée pour l’instant.")}</Text>
           )}
-          {docs ? <Text style={{ marginTop: 8, fontSize: 13, color: colors.muted }}>{docs} document{docs > 1 ? "s" : ""}</Text> : null}
+          {docs ? <Text style={{ marginTop: 8, fontSize: 13, color: colors.muted }}>{docs} {tr("document")}{docs > 1 ? "s" : ""}</Text> : null}
         </View>
 
         <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
@@ -1259,7 +1259,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
         {group ? (
           <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
             <Text style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, fontSize: 13, color: colors.muted }}>
-              {chat.participantIds.length} membre{chat.participantIds.length > 1 ? "s" : ""}
+              {chat.participantIds.length} {tr("membre")}{chat.participantIds.length > 1 ? "s" : ""}
             </Text>
             {canAdd ? <Row icon={<UserPlus size={18} color={colors.accent} />} label={tr("Ajouter des membres")} onPress={() => push({ name: "group-add", chatId })} /> : null}
             {canInvite ? <Row icon={<Link2 size={18} color={colors.accent} />} label={tr("Inviter via un lien ou un QR")} onPress={() => push({ name: "group-qr", chatId })} /> : null}

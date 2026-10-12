@@ -52,13 +52,13 @@ import { gifProviderConfigured } from "../lib/gifs";
 import { tr } from "../lib/tr";
 
 const CONTENT = [
-  { label: "Galerie", icon: Images },
-  { label: "Caméra", icon: Camera },
+  { get label() { return tr("Galerie"); }, icon: Images },
+  { get label() { return tr("Caméra"); }, icon: Camera },
   { label: "GIF", icon: WandSparkles },
-  { label: "Stickers", icon: Smile },
-  { label: "Document", icon: FileText },
-  { label: "Localisation", icon: MapPin },
-  { label: "Contact", icon: UserRound },
+  { get label() { return tr("Stickers"); }, icon: Smile },
+  { get label() { return tr("Document"); }, icon: FileText },
+  { get label() { return tr("Localisation"); }, icon: MapPin },
+  { get label() { return tr("Contact"); }, icon: UserRound },
 ] as const;
 
 /** « Dans 1 heure », « Ce soir à minuit » or « lun. 12 oct. à 08:00 », shown on the tile once chosen. */
@@ -284,7 +284,7 @@ export function ShareSurpriseSheet({
                 </Press>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {[...CONTENT.filter((c) => c.label !== "GIF" || gifProviderConfigured()), ...(showPoll ? [{ label: "Sondage", icon: BarChart3 } as const, { label: "Événement", icon: CalendarDays } as const] : [])].map(({ label, icon: Icon }) => (
+                {[...CONTENT.filter((c) => c.label !== "GIF" || gifProviderConfigured()), ...(showPoll ? [{ label: tr("Sondage"), icon: BarChart3 } as const, { label: tr("Événement"), icon: CalendarDays } as const] : [])].map(({ label, icon: Icon }) => (
                   <Press
                     key={label}
                     onPress={() => pick(label)}

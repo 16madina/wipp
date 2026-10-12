@@ -168,7 +168,7 @@ export function PollBubble({ chatId, m, users, onMe, fg, muted, accent }: { chat
               <View key={i} style={{ marginBottom: 14 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
                   <Text style={{ flex: 1, color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{o}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 13 }}>{counts[i]} vote{counts[i] > 1 ? "s" : ""}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13 }}>{counts[i]} {tr("vote")}{counts[i] > 1 ? "s" : ""}</Text>
                 </View>
                 {who.length ? (
                   who.map((v) => (

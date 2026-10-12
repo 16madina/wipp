@@ -79,7 +79,7 @@ export function ReadByFaces({ m, users, memberIds }: { m: Message; users: Record
           ) : null}
           {waiting.length ? (
             <Text style={{ color: colors.muted, fontSize: 12, marginTop: 14 }}>
-              {tr("Pas encore reçu par")} {waiting.length} membre{waiting.length > 1 ? "s" : ""}.
+              {tr("Pas encore reçu par")} {waiting.length} {tr("membre")}{waiting.length > 1 ? "s" : ""}.
             </Text>
           ) : null}
           <Text style={{ color: colors.muted, fontSize: 11, marginTop: 14, lineHeight: 15 }}>

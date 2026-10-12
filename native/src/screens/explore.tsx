@@ -1104,7 +1104,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <Eye size={14} color={colors.muted} />
-              <Text style={{ color: colors.muted, fontSize: 12 }}>{stats?.views ?? listing.views ?? 0} vue{(stats?.views ?? listing.views ?? 0) > 1 ? "s" : ""}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{stats?.views ?? listing.views ?? 0} {tr("vue")}{(stats?.views ?? listing.views ?? 0) > 1 ? "s" : ""}</Text>
             </View>
             {listing.boosted ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: accentA(0.15) }}>
