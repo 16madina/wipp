@@ -4,6 +4,7 @@
  */
 import { getSql } from "@/lib/db";
 import { listPushTokens, disablePushTokens } from "@/lib/messaging/calls";
+import { byLang, pushEn } from "@/lib/push/copy-en";
 import { sendExpoPush } from "@/lib/push/expo";
 import { sendApnsAlert, sendFcmAlert } from "@/lib/push/native";
 import { assertNoSensitivePush, sanitizePushData, type PushData } from "@/lib/push/payload";
@@ -52,33 +53,40 @@ export async function sendProfilePush(input: {
   if (!(await claimEvent(input.data.eventId))) return { sent: 0, deduped: true as const };
   const data = sanitizePushData(input.data as unknown as Record<string, unknown>);
   assertNoSensitivePush(data, input.title, input.body);
-  const tokens = await listPushTokens(input.profileId);
-  const apns = tokens.filter((t) => t.kind === "apns").map((t) => t.token);
-  // Plain "fcm" = older Android builds (system notification); "fcm-e2e" = builds that decrypt previews.
-  const fcm = tokens.filter((t) => t.kind === "fcm").map((t) => t.token);
-  const fcmE2e = tokens.filter((t) => t.kind === "fcm-e2e").map((t) => t.token);
-  // A phone that registered a native token gets it directly from Apple/Google, not twice via Expo.
-  const native = new Set<string>([...(apns.length ? ["ios"] : []), ...(fcm.length || fcmE2e.length ? ["android"] : [])]);
-  const expo = tokens
-    .filter((t) => (t.kind === "expo" || t.token.startsWith("ExponentPushToken")) && !native.has(t.platform))
-    .map((t) => t.token);
+  const all = byLang(await listPushTokens(input.profileId));
   const collapseId = input.data.eventId;
   const jobs: Promise<{ sent: number; invalid: string[] }>[] = [];
-  if (expo.length) {
-    jobs.push(
-      sendExpoPush(expo, {
-        title: input.title,
-        body: input.body,
-        data,
-        channelId: input.channelId,
-        collapseId,
-        priority: input.channelId === "calls" ? "high" : "default",
-      }).then((r) => ({ sent: r.sent, invalid: r.invalidTokens })),
-    );
+  // One pass per language: a phone set to English gets the English text.
+  for (const [lang, tokens] of [["fr", all.fr], ["en", all.en]] as const) {
+    if (!tokens.length) continue;
+    const title = lang === "en" ? pushEn(input.title) : input.title;
+    const body = lang === "en" ? pushEn(input.body) : input.body;
+    const pic = lang === "en" && input.pic?.group ? { ...input.pic, group: pushEn(input.pic.group) } : input.pic;
+    const apns = tokens.filter((t) => t.kind === "apns").map((t) => t.token);
+    // Plain "fcm" = older Android builds (system notification); "fcm-e2e" = builds that decrypt previews.
+    const fcm = tokens.filter((t) => t.kind === "fcm").map((t) => t.token);
+    const fcmE2e = tokens.filter((t) => t.kind === "fcm-e2e").map((t) => t.token);
+    // A phone that registered a native token gets it directly from Apple/Google, not twice via Expo.
+    const native = new Set<string>([...(apns.length ? ["ios"] : []), ...(fcm.length || fcmE2e.length ? ["android"] : [])]);
+    const expo = tokens
+      .filter((t) => (t.kind === "expo" || t.token.startsWith("ExponentPushToken")) && !native.has(t.platform))
+      .map((t) => t.token);
+    if (expo.length) {
+      jobs.push(
+        sendExpoPush(expo, {
+          title,
+          body,
+          data,
+          channelId: input.channelId,
+          collapseId,
+          priority: input.channelId === "calls" ? "high" : "default",
+        }).then((r) => ({ sent: r.sent, invalid: r.invalidTokens })),
+      );
+    }
+    if (apns.length) jobs.push(sendApnsAlert(apns, { title, body, data, collapseId, wenc: input.wenc, pic }));
+    if (fcm.length) jobs.push(sendFcmAlert(fcm, { title, body, data, channelId: input.channelId, collapseId }));
+    if (fcmE2e.length) jobs.push(sendFcmAlert(fcmE2e, { title, body, data, channelId: input.channelId, collapseId, wenc: input.wenc }));
   }
-  if (apns.length) jobs.push(sendApnsAlert(apns, { title: input.title, body: input.body, data, collapseId, wenc: input.wenc, pic: input.pic }));
-  if (fcm.length) jobs.push(sendFcmAlert(fcm, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId }));
-  if (fcmE2e.length) jobs.push(sendFcmAlert(fcmE2e, { title: input.title, body: input.body, data, channelId: input.channelId, collapseId, wenc: input.wenc }));
   const results = await Promise.allSettled(jobs);
   let sent = 0;
   const invalid: string[] = [];

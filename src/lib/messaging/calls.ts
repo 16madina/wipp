@@ -6,6 +6,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { sendFcmCall, sendVoipCall } from "@/lib/push/native";
 import { getSql } from "@/lib/db";
 import { sendExpoPush } from "@/lib/push/expo";
+import { byLang, pushEn } from "@/lib/push/copy-en";
 import { WippHttpError, assertNotBlocked, ensureMessagingReady } from "@/lib/messaging/server";
 
 function uid(prefix: string) {
@@ -109,7 +110,15 @@ async function expireRinging(scope?: { callId?: string; profileId?: string }) {
 }
 
 async function pushCall(profileId: string, body: string, data: Record<string, unknown>) {
-  const tokens = await listPushTokens(profileId);
+  const all = await listPushTokens(profileId);
+  // One pass per language: a phone set to English gets the English text.
+  const groups = byLang(all);
+  for (const [lang, tokens] of [["fr", groups.fr], ["en", groups.en]] as const) {
+    if (tokens.length) await pushCallTo(tokens, lang === "en" ? pushEn(body) : body, data);
+  }
+}
+
+async function pushCallTo(tokens: { token: string; platform: string; kind: string }[], body: string, data: Record<string, unknown>) {
   const expoTokens = tokens
     .filter((t) => t.kind === "expo" || t.token.startsWith("ExponentPushToken"))
     .map((t) => t.token);
@@ -204,6 +213,8 @@ export async function registerPushToken(input: {
   platform?: string;
   kind?: string;
   installationId?: string;
+  /** Language chosen in the app ("fr" / "en"): the notification text follows it. */
+  lang?: string;
 }) {
   await ensureMessagingReady();
   const token = input.token.trim();
@@ -273,6 +284,19 @@ export async function registerPushToken(input: {
             updated_at = now()
     `;
   }
+  // Language: this address and the other addresses of the same phone (calls, Android) follow it.
+  const lang = input.lang === "en" ? "en" : input.lang === "fr" ? "fr" : null;
+  if (lang) {
+    try {
+      await sql`
+        update wipp_push_tokens set lang = ${lang}
+        where profile_id = ${input.profileId}
+          and (token = ${token} or (${installationId}::text is not null and installation_id = ${installationId}))
+      `;
+    } catch {
+      /* migration 0067 not applied yet: notifications stay in French */
+    }
+  }
   return { ok: true as const };
 }
 
@@ -329,13 +353,22 @@ export async function listPushTokens(profileId: string) {
   await ensureMessagingReady();
   const sql = await getSql();
   try {
-    return await sql<{ token: string; platform: string; kind: string }>`
+    return await sql<{ token: string; platform: string; kind: string; lang?: string | null }>`
+      select token, platform, kind, lang from wipp_push_tokens
+      where profile_id = ${profileId} and disabled_at is null
+      order by updated_at desc
+    `;
+  } catch {
+    /* migration 0067 (lang) not applied yet */
+  }
+  try {
+    return await sql<{ token: string; platform: string; kind: string; lang?: string | null }>`
       select token, platform, kind from wipp_push_tokens
       where profile_id = ${profileId} and disabled_at is null
       order by updated_at desc
     `;
   } catch {
-    return sql<{ token: string; platform: string; kind: string }>`
+    return sql<{ token: string; platform: string; kind: string; lang?: string | null }>`
       select token, platform, kind from wipp_push_tokens
       where profile_id = ${profileId}
       order by updated_at desc
