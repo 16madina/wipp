@@ -303,13 +303,15 @@ const EMO: StickerDef[] = [
 
 export const STICKER_PACKS = {
   moji: { id: "moji" as const, labelFr: "Wippmoji", labelEn: "Wippmoji", stickers: [...MOJI, ...SCENE.filter((s) => s.pack === "moji")] },
-  femme: { id: "femme" as const, labelFr: "Wippie Elle", labelEn: "Wippie Elle", stickers: [...ELLE, ...SCENE.filter((s) => s.pack === "femme")] },
-  homme: { id: "homme" as const, labelFr: "Wippie Lui", labelEn: "Wippie Lui", stickers: [...LUI, ...SCENE.filter((s) => s.pack === "homme")] },
+  femme: { id: "femme" as const, labelFr: "Wippie Elle", labelEn: "Wippie Elle", stickers: [...ELLE.filter((s) => s.pack === "femme"), ...SCENE.filter((s) => s.pack === "femme")] },
+  homme: { id: "homme" as const, labelFr: "Wippie Lui", labelEn: "Wippie Lui", stickers: [...LUI.filter((s) => s.pack === "homme"), ...SCENE.filter((s) => s.pack === "homme")] },
   comique: {
     id: "comique" as const,
     labelFr: "Wippie Comique",
     labelEn: "Wippie Comique",
-    stickers: [...FUN, ...FUN2, ...SIG, ...SCENE.filter((s) => s.pack === "comique")],
+    // Objects drawn with the Elle / Lui sets (cup, phone, heart…) live here. The 30 « sig » stickers are withdrawn
+    // from the picker (badly cut out, to be redrawn); they stay in WIPP_STICKERS so messages already sent still show.
+    stickers: [...FUN, ...FUN2, ...[...ELLE, ...LUI].filter((s) => s.pack === "comique"), ...SCENE.filter((s) => s.pack === "comique")],
   },
   emo: { id: "emo" as const, labelFr: "WippEMO", labelEn: "WippEMO", stickers: EMO },
   ani: { id: "ani" as const, labelFr: "WIPP Moments", labelEn: "WIPP Moments", stickers: ANI },
