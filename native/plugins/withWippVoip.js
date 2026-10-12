@@ -11,7 +11,7 @@ const MARK = "// WIPP-VOIP";
 
 function patchAppDelegate(src) {
   if (src.includes(MARK)) return src;
-  src = src.replace("import Expo\n", `import Expo\nimport PushKit ${MARK}\nimport CallKit ${MARK}\nimport UserNotifications ${MARK}\n`);
+  src = src.replace("import Expo\n", `import Expo\nimport Intents ${MARK}\nimport PushKit ${MARK}\nimport CallKit ${MARK}\nimport UserNotifications ${MARK}\n`);
   src = src.replace(
     "  ) -> Bool {\n    let delegate = ReactNativeDelegate()",
     `  ) -> Bool {
@@ -27,7 +27,24 @@ function patchAppDelegate(src) {
   // A WIPP call touched in the iPhone Recents asks the app to call that person back.
   src = src.replace(
     "    let result = RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)",
-    "    let recents = RNCallKeep.application(application, continue: userActivity, restorationHandler: { items in restorationHandler(items as? [UIUserActivityRestoring]) })\n    let result = recents || RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)",
+    `    // WIPP-VOIP: a WIPP call touched in the iPhone Recents. When WIPP was fully closed, the call library is not
+    // ready yet and drops the request: keep it here, the app reads it once it has started.
+    var recentsHandle: String?
+    var recentsVideo = false
+    if let intent = userActivity.interaction?.intent as? INStartCallIntent {
+      recentsHandle = intent.contacts?.first?.personHandle?.value
+      recentsVideo = intent.callCapability == .videoCall
+    } else if let intent = userActivity.interaction?.intent as? INStartAudioCallIntent {
+      recentsHandle = intent.contacts?.first?.personHandle?.value
+    } else if let intent = userActivity.interaction?.intent as? INStartVideoCallIntent {
+      recentsHandle = intent.contacts?.first?.personHandle?.value
+      recentsVideo = true
+    }
+    if let handle = recentsHandle, !handle.isEmpty {
+      UserDefaults.standard.set(["handle": handle, "video": recentsVideo, "at": Date().timeIntervalSince1970], forKey: "wippRecentsCallback")
+    }
+    let recents = RNCallKeep.application(application, continue: userActivity, restorationHandler: { items in restorationHandler(items as? [UIUserActivityRestoring]) })
+    let result = recents || RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)`,
   );
   src = src.replace(
     "public class AppDelegate: ExpoAppDelegate {",
