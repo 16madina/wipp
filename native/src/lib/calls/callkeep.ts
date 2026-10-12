@@ -9,7 +9,13 @@ type Keep = {
   removeEventListener: (event: string) => void;
   setCurrentCallActive?: (uuid: string) => void;
   backToForeground?: () => void;
+  getInitialEvents?: () => Promise<{ name: string; data: Record<string, unknown> }[]>;
 };
+
+/** Short notes about the « call back from Recents » path, kept in the phone's journal while it is being tuned. */
+function note(text: string) {
+  void import("../crash-log").then(({ logAppError }) => logAppError(new Error(`rappel: ${text}`), false, "récents"));
+}
 
 let keep: Keep | null = null;
 const uuidToCall = new Map<string, string>();
@@ -61,9 +67,16 @@ export async function setupCallKeep(
       },
     });
     type StartData = { handle?: string; video?: boolean; callUUID?: string };
-    const start = (data: StartData) => {
+    let lastStart = "";
+    const start = (data: StartData, via: string) => {
+      note(`reçu (${via}) handle=${data?.handle ?? "?"} video=${String(data?.video)} uuid=${data?.callUUID ?? "-"}`);
       // Only a tap in Recents (no callUUID): an outgoing call WIPP started itself is not ours to restart.
-      if (data?.handle && !data.callUUID) onStart?.(data.handle, Boolean(data.video));
+      if (!data?.handle || data.callUUID) return;
+      // The same tap can arrive by two roads (live event and « events from before launch »).
+      const key = `${data.handle}|${Math.floor(Date.now() / 15_000)}`;
+      if (key === lastStart) return;
+      lastStart = key;
+      onStart?.(data.handle, Boolean(data.video));
     };
     keep.addEventListener("answerCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
@@ -80,7 +93,7 @@ export async function setupCallKeep(
         for (const e of events ?? []) {
           // WIPP was closed and opened by a tap in Recents.
           if (e.name === "RNCallKeepDidReceiveStartCallAction") {
-            start(e.data as StartData);
+            start(e.data as StartData, "démarrage");
             continue;
           }
           if (e.name !== "RNCallKeepPerformAnswerCallAction" || !e.data?.callUUID) continue;
@@ -93,7 +106,12 @@ export async function setupCallKeep(
       },
     );
     // Registered after « didLoadWithEvents », so a tap made while WIPP was closed is not lost.
-    (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", start);
+    (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", (data) => start(data, "direct"));
+    // WIPP fully closed, opened by a tap in Recents: the request was stored before any listener existed.
+    void keep.getInitialEvents?.().then((events) => {
+      note(`événements initiaux: ${(events ?? []).map((e) => e.name.replace("RNCallKeep", "")).join(",") || "aucun"}`);
+      for (const e of events ?? []) if (e.name === "RNCallKeepDidReceiveStartCallAction") start(e.data as StartData, "initial");
+    }).catch(() => undefined);
     keep.addEventListener("endCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) onEnd(id);

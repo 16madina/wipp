@@ -111,6 +111,7 @@ export function CallOverlay() {
             return;
           }
           if (++tries < 40) setTimeout(attempt, 500);
+          else void import("../lib/crash-log").then(({ logAppError }) => logAppError(new Error(`rappel: abandon handle=${wanted} trouvé=${Boolean(user)} prêt=${ready} pile=${st.stack.map((x) => x.name).join(">")}`), false, "récents"));
         };
         attempt();
       },
