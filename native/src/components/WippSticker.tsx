@@ -128,15 +128,18 @@ let sent=false, told=false;
 function tell(m){ if(told) return; told=true; try{ window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('error '+m); }catch(e){} }
 window.onerror=function(m){ tell(String(m)); };
 function fit(){ const w=window.innerWidth,h=window.innerHeight; if(w<2||h<2) return false; const d=Math.min(2,window.devicePixelRatio||1); const W=Math.round(w*d),H=Math.round(h*d); if(c.width!==W||c.height!==H){ c.width=W; c.height=H; } return true; }
-function key(px){ const p=px.data; for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
+let blue=null;
+// A sticker that holds green (frog, green text) is filmed on a blue background: the corner of the first image tells which.
+function key(px){ const p=px.data; if(blue===null){ blue=p[2]-Math.max(p[0],p[1])>40; }
+ for(let i=0;i<p.length;i+=4){ const r=p[i],g=blue?p[i+2]:p[i+1],b=blue?p[i+1]:p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
  if(g>48&&lead>14&&g>(r+b)*0.42){ const spill=Math.min(1,lead/36); p[i+3]=Math.round(p[i+3]*Math.max(0,1-spill*1.35)); }
- else if(g>r&&g>b&&lead>6){ p[i+1]=maxRB+Math.round(lead*0.25); } } }
+ else if(g>r&&g>b&&lead>6){ p[blue?i+2:i+1]=maxRB+Math.round(lead*0.25); } } }
 function frame(){ try{ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } }catch(e){ tell('draw '+(e&&e.message||e)); return; } requestAnimationFrame(frame); }
 v.playbackRate=${loop ? "0.92" : "1"};
 v.addEventListener('loadeddata',()=>{ const p=v.play(); if(p&&p.catch) p.catch(function(e){ tell('play '+(e&&e.name||e)); }); });
 v.addEventListener('error',()=>{ tell('video '+(v.error&&v.error.code)); });
 setTimeout(()=>{ if(!sent) tell('late ready='+v.readyState+' paused='+v.paused+' net='+v.networkState+' size='+window.innerWidth+'x'+window.innerHeight+' t='+v.currentTime); },4000);
-${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=3.05) v.pause(); });"}
+${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
 requestAnimationFrame(frame);
 </script></body></html>`;
 }
