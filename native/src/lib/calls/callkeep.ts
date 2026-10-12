@@ -1,5 +1,5 @@
 import * as Device from "expo-device";
-import { AppState, Platform } from "react-native";
+import { AppState, Platform, Settings } from "react-native";
 
 type Keep = {
   setup: (options: Record<string, unknown>) => Promise<boolean>;
@@ -107,6 +107,17 @@ export async function setupCallKeep(
     );
     // Registered after « didLoadWithEvents », so a tap made while WIPP was closed is not lost.
     (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", (data) => start(data, "direct"));
+    // WIPP fully closed, opened by a tap in Recents: the native side kept the request (the call library is
+    // not ready that early). React Native reads the phone's settings once at launch, so it is in there.
+    try {
+      const kept = Settings.get("wippRecentsCallback") as { handle?: string; video?: boolean; at?: number } | undefined;
+      if (kept?.handle && kept.at && Date.now() - kept.at * 1000 < 60_000) {
+        Settings.set({ wippRecentsCallback: { handle: "", video: false, at: 0 } });
+        start({ handle: kept.handle, video: Boolean(kept.video) }, "réglages");
+      }
+    } catch {
+      /* no stored request */
+    }
     // WIPP fully closed, opened by a tap in Recents: the request was stored before any listener existed.
     void keep.getInitialEvents?.().then((events) => {
       note(`événements initiaux: ${(events ?? []).map((e) => e.name.replace("RNCallKeep", "")).join(",") || "aucun"}`);
