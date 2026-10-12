@@ -1,0 +1,399 @@
+1359|Hang up
+1360|WIPP video call
+1361|Connected
+1362|Call ended
+1363|Declined
+1364|No answer
+1365|Busy
+1366|Connection failed
+1367|Accept call
+1368|Decline call
+1369|Mute microphone
+1370|Unmute microphone
+1371|Turn speaker on
+1372|Turn speaker off
+1373|Turn camera on
+1374|Turn camera off
+1375|Switch camera
+1376|Minimize call
+1377|Call options
+1378|Switch to video
+1379|Turn on Face ID for locked chats
+1380|Confirm it’s you to create a new code
+1381|Later
+1382|Connection request sent.
+1383|You are now permanent contacts.
+1384|{0} already asked to keep in touch: answer their request.
+1385|{0} must accept to keep in touch.
+1386|Permanent
+1387|No end date
+1388|Temporary
+1389|For a set time
+1390|⏳ Temporary contact · {0}
+1391|Today
+1392|Tomorrow
+1393|Start
+1394|Join my online event on WIPP: {0}
+1395|reCAPTCHA failed
+1396|, locked
+1397|JAN
+1398|FEB
+1399|MAR
+1400|APR
+1401|MAY
+1402|JUN
+1403|JUL
+1404|AUG
+1405|SEP
+1406|OCT
+1407|NOV
+1408|DEC
+1409|Sunday
+1410|Monday
+1411|Tuesday
+1412|Wednesday
+1413|Thursday
+1414|Friday
+1415|Saturday
+1416|Going
+1417|Maybe
+1418|No
+1419|Choose the date
+1420|At {0}
+1421|Choose the time
+1422|on
+1423|off
+1424|Only people added by the group can join. No invite link.
+1425|Anyone with the invite link can join.
+1426|Spam or scam
+1427|Harassment
+1428|Inappropriate content
+1429|I don’t know this group
+1430|Other
+1431|You are about to leave “{0}”. 
+1432|Someone
+1433|Move back to pending
+1434|Mark as answered
+1435|Ignore (hide from the audience)
+1436|Delete (abusive)
+1437|Delete
+1438|Report the author
+1439|Pending {0}
+1440|Answered {0}
+1441|All
+1442|Popular
+1443|Recent
+1444|On screen
+1445|Hidden
+1446|Pending
+1447|just now
+1448|{0} min ago
+1449|{0} h ago
+1450|Camera not allowed
+1451|Couldn’t check the QR
+1452|Screen sharing isn’t available on this device.
+1453|No raised hands.
+1454|You’re alone on stage.
+1455|, your choice
+1456|WIPP Private code
+1457|This code is different from your phone’s PIN.
+1458|Sending
+1459|Sent
+1460|Delivered
+1461|Read
+1462|Failed to send
+1463|screen {0}
+1464|In 24 hours
+1465|In 1 hour
+1466|In 1 minute
+1467|Tender
+1468|Funny
+1469|Poetic
+1470|Excited
+1471|Simple
+1472|Your secret message
+1473|Animations
+1474|A little surprise for {0}… get ready to smile 😄
+1475|For {0}, a sweet secret is waiting for you.
+1476|For {0}: a {1} message just for you.
+1477|On
+1478|all stickers
+1479|Classic
+1480|Bold
+1481|Handwritten
+1482|Typewriter
+1483|Elegant
+1484|Neon
+1485|Gift message
+1486|Opens in {0}
+1487|Tap to open
+1488|{0} on WIPP⏎{1}
+1489|Mon
+1490|Tue
+1491|Wed
+1492|Thu
+1493|Fri
+1494|Sat
+1495|Sun
+1496|Every day
+1497|January
+1498|February
+1499|March
+1500|April
+1501|May
+1502|June
+1503|July
+1504|August
+1505|September
+1506|October
+1507|November
+1508|December
+1509|Network unavailable. Your phone session stays open.
+1510|No phone session on this device.
+1511|No account for this number.
+1512|Invalid number. Check the country code and the number.
+1513|Code expired. Send a new code.
+1514|No SMS was sent. This isn’t your WIPP code (QR / 6 digits to connect with someone). Request a text, then enter the code you receive.
+1515|Wrong or expired SMS code. Use the last text you received — not your WIPP code.
+1516|Fashion & accessories
+1517|Clothing
+1518|Shoes
+1519|Jewelry & watches
+1520|Cosmetics & skincare
+1521|Braids & wigs
+1522|Barber
+1523|Makeup
+1524|Catering
+1525|Pastry & bakery
+1526|Café & bar
+1527|Grocery & food
+1528|Health & wellness
+1529|Sport & fitness
+1530|Real estate
+1531|Construction
+1532|Renovation & DIY
+1533|Plumbing & electrical
+1534|Cleaning
+1535|Transport & delivery
+1536|Auto & mechanics
+1537|Phones & electronics
+1538|IT & web
+1539|Photo & video
+1540|Events & decoration
+1541|Music & DJ
+1542|Creator / media
+1543|Education & classes
+1544|Childcare
+1545|Professional services
+1546|Legal & accounting
+1547|Travel & tourism
+1548|Home & decor
+1549|Pets
+1550|Art & crafts
+1551|Nonprofit & community
+1552|Choose an image
+1553|Session required
+1554|Couldn’t upload the image
+1555|WIPP profile not found.
+1556|Open now
+1557|Opens at {0}
+1558|Closed
+1559|Call or share in progress
+1560|WIPP calls
+1561|WIPP needs access to calls to show them on the lock screen.
+1562|WIPP call
+1563|No answer.
+1564|Call declined.
+1565|Call cancelled.
+1566|The person is busy.
+1567|Call server unavailable. The signal is ready, media is waiting for the LiveKit setup.
+1568|Call expired.
+1569|Call failed.
+1570|This call has ended.
+1571|Open the locked chat
+1572|Enter my code
+1573|Default
+1574|Blue
+1575|Violet
+1576|Pink
+1577|Green
+1578|Orange
+1579|Gold
+1580|Graphite
+1581|less than a minute
+1582|Request already pending
+1583|You are already connected
+1584|You are now connected
+1585|Too many requests today, try again tomorrow
+1586|Requests are paused with this person
+1587|Request not possible
+1588|Couldn’t send this request.
+1589|Sign in with a real account
+1590|Something went wrong
+1591|You are connected
+1592|Request declined
+1593|Request ignored
+1594|Request already handled
+1595|Request expired
+1596|Encrypted message
+1597|Invalid invitation.
+1598|Chat not found
+1599|This action isn’t available in the browser. Try from the app on your phone.
+1600|No connection. Check your network and try again.
+1601|Your session has expired. Sign in again.
+1602|You’re not allowed to do that.
+1603|File too large. Choose a lighter image.
+1604|Item not found. It may have been deleted.
+1605|That already exists.
+1606|Too many attempts. Wait a moment and try again.
+1607|The server isn’t responding. Try again in a moment.
+1608|Action cancelled.
+1609|Something went wrong. Try again.
+1610|Invalid number. For Côte d’Ivoire, enter the 10 digits with the 0, country code +225.
+1611|Firebase blocks SMS to this country. Allow Côte d’Ivoire in the SMS rules.
+1612|Firebase couldn’t deliver the SMS to this carrier. Côte d’Ivoire is already allowed. Try again in a few minutes.
+1613|Too many attempts. Try again in a moment.
+1614|Network unavailable. Try again.
+1615|Anti-robot check isn’t possible here. Open WIPP on your phone to receive the SMS.
+1616|Couldn’t send the SMS. Try again in a moment.
+1617|SMS verification isn’t ready yet. Try again.
+1618|Wrong or expired SMS code.
+1619|Yesterday
+1620|Today
+1621|online
+1622|last seen recently
+1623|last seen today at {0}
+1624|last seen yesterday at {0}
+1625|just now
+1626|Vehicles
+1627|Electronics
+1628|Home & Garden
+1629|Jobs & Services
+1630|Leisure
+1631|Category: {0}
+1632|Ends: {0}
+1633|Surprise ✨
+1634|Voice message
+1635|Sticker
+1636|Location
+1637|Link
+1638|This person is blocked.
+1639|{0} media
+1640|📷 Photo
+1641|🎥 Video
+1642|🎤 Voice message
+1643|📄 Document
+1644|Use the iPhone passcode
+1645|Couldn’t save the phrase.
+1646|Couldn’t upload the photo
+1647|The photo was uploaded, but the profile couldn’t be updated.
+1648|Incoming calls
+1649|{0} is calling you
+1650|WIPP audio call
+1651|👤 Contact
+1652|📍 Location
+1653|🔗 Link
+1654|New message
+1655|🎁 Surprise
+1656|Messages
+1657|Calls
+1658|Call ended.
+1659|Valid invitation
+1660|You joined the group
+1661|Request sent: a group admin must approve it
+1662|You’re already a member of this group
+1663|Invitation revoked
+1664|Invitation expired
+1665|Invitation full
+1666|You can’t join this group
+1667|This group doesn’t accept invitations
+1668|Group not found
+1669|This isn’t a WIPP QR
+1670|QR already used
+1671|User not found
+1672|Card not found
+1673|That’s your own QR
+1674|Nudity / sexual content
+1675|Violence
+1676|Impersonation / fake profile
+1677|Reporting isn’t available yet. The server update must be applied.
+1678|Network unavailable. Check your connection.
+1679|Connection to the WIPP server refused. Try again in a moment.
+1680|Empty response from the WIPP server.
+1681|Unreadable server response.
+1682|Server error ({0}).
+1683|This file type isn’t supported.
+1684|File not found.
+1685|A video is over 100 MB.
+1686|An image is over 16 MB.
+1687|Nothing to send.
+1688|This text is too long.
+1689|Session required to show the image.
+1690|Unreadable private image.
+1691|Couldn’t show the image.
+1692|View once
+1693|🔒 Encrypted message
+1694|Voice · {0}s
+1695|New messages will no longer disappear.
+1696|New messages will disappear after 30 days.
+1697|New messages will disappear after 7 days.
+1698|New messages will disappear after 24 hours.
+1699|Disappearing messages on.
+1700|Request
+1701|Couldn’t send the request.
+1702|Request from Nearby
+1703|wants to connect with you
+1704|You crossed paths. First name only. The chat disappears at the set time.
+1705|Temporary chat. No @ is visible. The chat disappears at the set time.
+1706|Chat ended. No access left.
+1707|The group is created, but the photo or description couldn’t be saved. You can add it again in Group info.
+1708|Couldn’t create
+1709|You can’t write to this profile.
+1710|Chat unavailable.
+1711|Choose the scratch card
+1712|Choose the moment
+1713|Choose the gift
+1714|Choose the confetti
+1715|Love
+1716|Mood
+1717|Travel
+1718|Friendship
+1719|Crew
+1720|Party
+1721|Marble
+1722|Prestige
+1723|VIP
+1724|Heart
+1725|Stars
+1726|Crown
+1727|1 minute
+1728|Rain of love
+1729|Fusion
+1730|Kisses
+1731|Little monster
+1732|Hearts
+1733|Balloons
+1734|Bouquet
+1735|Envelope
+1736|Fireworks
+1737|Gift
+1738|Petals
+1739|Rain of hearts
+1740|Teddy bear
+1741|Toast
+1742|Sun
+1743|Dawn
+1744|Bird
+1745|Butterflies
+1746|Heart cloud
+1747|Flower arch
+1748|Hummingbird
+1749|Sunflowers
+1750|Wake up
+1751|Moon
+1752|Galaxy
+1753|Lantern
+1754|Shooting stars
+1755|Sky lanterns
+1756|Sleeping bear
+1757|Cloud

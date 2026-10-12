@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { stickersInPack, stickerById } from "./stickers";
 import { useWippStore } from "./store";
 import type { StoryItem } from "./types";
@@ -19,13 +20,13 @@ export function storyCite(story: StoryItem, mode: "reply" | "reaction" | "like")
     story.type === "text"
       ? (story.text ?? "").replace(/\s+/g, " ").trim().slice(0, 80)
       : story.type === "video"
-        ? "Vidéo"
-        : "Photo";
+        ? tr("Vidéo")
+        : tr("Photo");
   return {
     id: story.id,
     kind: story.type,
     mode,
-    preview: preview || (story.type === "text" ? "Texte" : preview),
+    preview: preview || (story.type === "text" ? tr("Texte") : preview),
     bg: story.type === "text" ? story.bg : undefined,
   };
 }
@@ -33,7 +34,7 @@ export function storyCite(story: StoryItem, mode: "reply" | "reaction" | "like")
 /** Reuse the existing 1:1 chat, or the existing create-or-open path. Does not navigate. */
 export async function ensureStoryChat(userId: string) {
   const state = useWippStore.getState();
-  if (state.blockedIds.includes(userId)) throw new Error("Tu ne peux pas écrire à ce profil.");
+  if (state.blockedIds.includes(userId)) throw new Error(tr("Tu ne peux pas écrire à ce profil."));
   const existing = state.chats.find(
     (chat) =>
       chat.type === "dm" &&
@@ -45,7 +46,7 @@ export async function ensureStoryChat(userId: string) {
   );
   if (existing) return existing.id;
   const username = state.users[userId]?.username;
-  if (!username || !state.serverConnected) throw new Error("Conversation indisponible.");
+  if (!username || !state.serverConnected) throw new Error(tr("Conversation indisponible."));
   await state.ensureCrypto();
   const {
     decryptMergedMessages,

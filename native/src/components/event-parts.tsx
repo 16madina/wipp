@@ -5,18 +5,19 @@ import { ChevronLeft, ChevronRight, Clock, Heart, MapPin, Navigation } from "luc
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { colors, accentA, fgA, whiteA } from "../theme";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const MONTHS_SHORT = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
 const WEEK = ["L", "M", "M", "J", "V", "S", "D"];
+const WEEK_EN = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function hhmm(d: Date) {
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export function dayLabel(d: Date) {
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return d.toLocaleDateString(trLocale(), { day: "numeric", month: "long", year: "numeric" });
 }
 
 function BottomSheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
@@ -53,13 +54,13 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
         <Press disabled={!canPrev} onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={{ padding: 8, opacity: canPrev ? 1 : 0.3 }}>
           <ChevronLeft size={22} color={colors.fg} />
         </Press>
-        <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold", textTransform: "capitalize" }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</Text>
+        <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold", textTransform: "capitalize" }}>{tr(MONTHS[month.getMonth()]!)} {month.getFullYear()}</Text>
         <Press onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={{ padding: 8 }}>
           <ChevronRight size={22} color={colors.fg} />
         </Press>
       </View>
       <View style={{ flexDirection: "row" }}>
-        {WEEK.map((w, i) => (
+        {(trLocale() === "fr-FR" ? WEEK : WEEK_EN).map((w, i) => (
           <Text key={`${w}${i}`} style={{ flex: 1, textAlign: "center", color: colors.muted, fontSize: 12, marginBottom: 6 }}>{w}</Text>
         ))}
       </View>
@@ -85,7 +86,7 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
 const TIMES = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`);
 
 /** Start time and optional end time, by quarter hour. */
-export function TimeSheet({ open, start, end, single, title = "Heure", onClose, onSave }: { open: boolean; start: string; end: string; single?: boolean; title?: string; onClose: () => void; onSave: (start: string, end: string) => void }) {
+export function TimeSheet({ open, start, end, single, title = tr("Heure"), onClose, onSave }: { open: boolean; start: string; end: string; single?: boolean; title?: string; onClose: () => void; onSave: (start: string, end: string) => void }) {
   const [a, setA] = useState(start || "20:00");
   const [b, setB] = useState(end);
   useEffect(() => {
@@ -174,7 +175,7 @@ export function EventCard({
       {starts ? (
         <View style={{ position: "absolute", top: 0, left: 0, paddingHorizontal: 14, paddingVertical: 8, borderBottomRightRadius: 16, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center" }}>
           <Text style={{ color: colors.fg, fontSize: 26, lineHeight: 28, fontFamily: "Inter_800ExtraBold" }}>{starts.getDate()}</Text>
-          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_700Bold" }}>{MONTHS_SHORT[starts.getMonth()]}</Text>
+          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_700Bold" }}>{tr(MONTHS_SHORT[starts.getMonth()]!)}</Text>
         </View>
       ) : null}
       <View style={{ position: "absolute", top: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>

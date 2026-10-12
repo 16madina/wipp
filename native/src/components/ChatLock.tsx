@@ -27,7 +27,7 @@ export function useLockPinAsk() {
   return usePrivatePinAsk({ title: tr("Code de verrouillage"), hint: tr("Entre ton code de verrouillage."), numeric: true });
 }
 
-const waitText = () => `Code incorrect. Réessaie dans ${Math.max(1, Math.ceil(lastLockWaitMs() / 1000))} s.`;
+const waitText = () => tr("Code incorrect. Réessaie dans {0} s.", Math.max(1, Math.ceil(lastLockWaitMs() / 1000)));
 
 /** Confidentialité › Code de verrouillage : créer / modifier le code, biométrie. */
 export function ChatLockSettings({ onBack }: { onBack: () => void }) {
@@ -124,7 +124,7 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
                   value={lockBiometricOn()}
                   onChange={(v) => {
                     void (async () => {
-                      if (v && (await authenticateBiometric("Activer Face ID pour les conversations verrouillées")) !== "success") return;
+                      if (v && (await authenticateBiometric(tr("Activer Face ID pour les conversations verrouillées"))) !== "success") return;
                       await setLockBiometric(v);
                     })();
                   }}
@@ -137,7 +137,7 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
               label={tr("Code oublié ?")}
               onPress={() => {
                 void (async () => {
-                  const r = await authenticateDeviceOwner("Confirme que c’est toi pour créer un nouveau code");
+                  const r = await authenticateDeviceOwner(tr("Confirme que c’est toi pour créer un nouveau code"));
                   if (r === "success") {
                     setStep("create");
                     return;
@@ -166,8 +166,8 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
 export function toggleChatLock(chatId: string, askPin: () => Promise<string | null>) {
   if (!hasLockCode()) {
     Alert.alert(tr("Code de verrouillage"), tr("Crée d’abord ton code dans Moi › Paramètres › Confidentialité › Code de verrouillage."), [
-      { text: "Plus tard", style: "cancel" },
-      { text: "Créer le code", onPress: () => useWippStore.getState().push({ name: "privacy" }) },
+      { text: tr("Plus tard"), style: "cancel" },
+      { text: tr("Créer le code"), onPress: () => useWippStore.getState().push({ name: "privacy" }) },
     ]);
     return;
   }

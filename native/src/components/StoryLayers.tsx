@@ -1,3 +1,4 @@
+import { tr } from "../lib/tr";
 import { Platform, Text, View, type TextStyle, type ViewStyle } from "react-native";
 import type { StoryFont, StoryLayer, StoryTextLayer } from "../lib/story-overlay";
 import { WippSticker } from "./WippSticker";
@@ -7,12 +8,12 @@ export const textSizeFor = (canvasW: number) => Math.round(canvasW * 0.075);
 export const stickerSizeFor = (canvasW: number) => Math.round(canvasW * 0.32);
 
 export const FONT_LABEL: Record<StoryFont, string> = {
-  classic: "Classique",
-  strong: "Fort",
-  hand: "Manuscrit",
-  typewriter: "Machine",
-  elegant: "Élégant",
-  neon: "Néon",
+  get classic() { return tr("Classique"); },
+  get strong() { return tr("Fort"); },
+  get hand() { return tr("Manuscrit"); },
+  get typewriter() { return tr("Machine"); },
+  get elegant() { return tr("Élégant"); },
+  get neon() { return tr("Néon"); },
 };
 
 const pick = (ios: string, android: string, web: string) => (Platform.OS === "ios" ? ios : Platform.OS === "android" ? android : web);

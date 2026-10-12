@@ -36,7 +36,7 @@ function CheckRow({ label, sub, on, onToggle, disabled }: { label: string; sub?:
     <Press
       disabled={disabled}
       onPress={onToggle}
-      accessibilityLabel={`${label} : ${on ? "activé" : "désactivé"}`}
+      accessibilityLabel={`${label} : ${on ? tr("activé") : tr("désactivé")}`}
       style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: disabled ? 0.45 : 1 }}
     >
       <View style={{ flex: 1 }}>
@@ -79,8 +79,8 @@ export function GroupVisibilityPicker({ value, onChange }: { value: GroupSetting
   };
   return (
     <View style={{ gap: 10 }}>
-      {card("private", Lock, "Privé", "Seules les personnes ajoutées par le groupe peuvent rejoindre. Pas de lien d’invitation.")}
-      {card("public", Globe, "Public", "Toute personne qui a le lien d’invitation peut rejoindre.")}
+      {card("private", Lock, tr("Privé"), tr("Seules les personnes ajoutées par le groupe peuvent rejoindre. Pas de lien d’invitation."))}
+      {card("public", Globe, tr("Public"), tr("Toute personne qui a le lien d’invitation peut rejoindre."))}
     </View>
   );
 }

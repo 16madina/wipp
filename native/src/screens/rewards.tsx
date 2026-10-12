@@ -9,7 +9,7 @@ import { useWippStore } from "../lib/store";
 import { APP_HOST } from "../lib/utils";
 import { errorText } from "../lib/error-fr";
 import { colors } from "../theme";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 type Rewards = {
   code: string;
@@ -66,7 +66,7 @@ export function RewardsScreen() {
   async function shareLink() {
     if (!data) return;
     const link = `https://${APP_HOST}/@${data.code}`;
-    await shareWippPublic(`Rejoins-moi sur WIPP ! Télécharge l’app, et à l’inscription entre mon code d’invitation : @${data.code}\n${link}`);
+    await shareWippPublic(tr("Rejoins-moi sur WIPP ! Télécharge l’app, et à l’inscription entre mon code d’invitation : @{0}\n{1}", data.code, link));
   }
 
   async function sendInviteCode() {
@@ -91,8 +91,8 @@ export function RewardsScreen() {
     try {
       const r = await api<{ name: string; days: number; pinnedUntil: string | null }>("rewards/redeem", { method: "POST", body: JSON.stringify({ code }) });
       setPinCode("");
-      const until = r.pinnedUntil ? new Date(r.pinnedUntil).toLocaleDateString("fr-FR") : "";
-      Alert.alert(tr("Entreprise épinglée"), tr("« {0} » est épinglée en haut d’Explorer pendant {1} jours{2}.", r.name, r.days, until ? ` (jusqu’au ${until})` : ""));
+      const until = r.pinnedUntil ? new Date(r.pinnedUntil).toLocaleDateString(trLocale()) : "";
+      Alert.alert(tr("Entreprise épinglée"), tr("« {0} » est épinglée en haut d’Explorer pendant {1} jours{2}.", r.name, r.days, until ? tr(" (jusqu’au {0})", until) : ""));
       void load();
     } catch (err) {
       Alert.alert(tr("Code d’épinglage"), errorText(err, tr("Code impossible à utiliser.")));
@@ -103,12 +103,12 @@ export function RewardsScreen() {
 
   function pinOptions(pin: Rewards["pins"][number]) {
     Alert.alert(tr("Code {0} jours", pin.days), pin.code, [
-      { text: "Épingler mon entreprise", onPress: () => void redeem(pin.code) },
+      { text: tr("Épingler mon entreprise"), onPress: () => void redeem(pin.code) },
       {
-        text: "Offrir ce code",
-        onPress: () => void Share.share({ message: `Je t’offre ${pin.days} jours d’épinglage de ton entreprise sur WIPP ! Dans WIPP : Profil › Gagne des récompenses › J’ai un code d’épinglage, puis entre : ${pin.code}` }),
+        text: tr("Offrir ce code"),
+        onPress: () => void Share.share({ message: tr("Je t’offre {0} jours d’épinglage de ton entreprise sur WIPP ! Dans WIPP : Profil › Gagne des récompenses › J’ai un code d’épinglage, puis entre : {1}", pin.days, pin.code) }),
       },
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
     ]);
   }
 
@@ -189,7 +189,7 @@ export function RewardsScreen() {
                   <View style={{ flex: 1 }}>
                     <Text selectable style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{pin.code}</Text>
                     <Text style={{ color: colors.muted, fontSize: 12 }}>
-                      {pin.used ? tr("Utilisé{0}", pin.usedOn ? ` pour « ${pin.usedOn} »` : "") : tr("{0} jours · touche pour l’utiliser ou l’offrir", pin.days)}
+                      {pin.used ? tr("Utilisé{0}", pin.usedOn ? tr(" pour « {0} »", pin.usedOn) : "") : tr("{0} jours · touche pour l’utiliser ou l’offrir", pin.days)}
                     </Text>
                   </View>
                   {!pin.used ? <Share2 size={18} color={colors.muted} /> : null}

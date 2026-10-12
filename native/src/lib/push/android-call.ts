@@ -1,3 +1,5 @@
+import { tr } from "../tr";
+import { ensureTrLanguage } from "../language-pref";
 /**
  * Android incoming calls with WIPP closed: a high-priority FCM data message wakes a
  * background task, which shows a full-screen call notification (over the lock screen)
@@ -54,6 +56,7 @@ async function notifee() {
 export async function showIncomingCall(data: CallData) {
   ringPushAt = Date.now();
   void openFromPush(data);
+  await ensureTrLanguage();
   // WIPP is on screen: its own call screen rings, a second ringing notification would overlap it.
   if (AppState.currentState === "active") return;
   const n = await notifee();
@@ -61,7 +64,7 @@ export async function showIncomingCall(data: CallData) {
   const callId = String(data.inviteId || data.eventId);
   await n.createChannel({
     id: CHANNEL,
-    name: "Appels entrants",
+    name: tr("Appels entrants"),
     importance: AndroidImportance.HIGH,
     // The WIPP ringtone (res/raw/wipp_ring.mp3), looped: the phone rings as soon as the push arrives,
     // while WIPP is still starting.
@@ -73,8 +76,8 @@ export async function showIncomingCall(data: CallData) {
   const video = data.kind === "video";
   await n.displayNotification({
     id: callId,
-    title: `${data.callerName || "Quelqu’un"} vous appelle`,
-    body: video ? "Appel vidéo WIPP" : "Appel audio WIPP",
+    title: tr("{0} vous appelle", data.callerName || tr("Quelqu’un")),
+    body: video ? tr("Appel vidéo WIPP") : tr("Appel audio WIPP"),
     data,
     android: {
       channelId: CHANNEL,
@@ -89,8 +92,8 @@ export async function showIncomingCall(data: CallData) {
       fullScreenAction: { id: "default" },
       pressAction: { id: "default", launchActivity: "default" },
       actions: [
-        { title: "Refuser", pressAction: { id: "decline" } },
-        { title: "Accepter", pressAction: { id: "accept", launchActivity: "default" } },
+        { title: tr("Refuser"), pressAction: { id: "decline" } },
+        { title: tr("Accepter"), pressAction: { id: "accept", launchActivity: "default" } },
       ],
     },
   });

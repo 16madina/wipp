@@ -242,7 +242,7 @@ export function MeScreen() {
               <Row
                 icon={<Shield size={16} color={colors.accent} />}
                 label={staffRole === "admin" ? tr("Admin panel") : tr("Modération")}
-                value={staffRole === "admin" ? "Administrateur" : "Modérateur"}
+                value={staffRole === "admin" ? tr("Administrateur") : tr("Modérateur")}
                 onPress={() => push({ name: "admin" })}
               />
             ) : null}
@@ -298,7 +298,7 @@ export function MeScreen() {
             variant="ghost"
             onPress={() => {
               Alert.alert(t("signOut"), t("signOutConfirm"), [
-                { text: "Annuler", style: "cancel" },
+                { text: tr("Annuler"), style: "cancel" },
                 { text: t("signOut"), style: "destructive", onPress: () => useWippStore.getState().signOut() },
               ]);
             }}
@@ -514,9 +514,9 @@ export function AccountScreen() {
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             {(
               [
-                ["man", "Homme"],
-                ["woman", "Femme"],
-                ["unspecified", "Non renseigné"],
+                ["man", tr("Homme")],
+                ["woman", tr("Femme")],
+                ["unspecified", tr("Non renseigné")],
               ] as const
             ).map(([id, label]) => (
               <Chip key={id} label={label} active={gender === id} onPress={() => setGender(id)} />
@@ -603,7 +603,7 @@ function TouchPermissionSection() {
     <Section title={tr("WIPP Touch")}>
       <Row
         label={android ? tr("Appareils à proximité") : tr("Interactions à proximité")}
-        value={denied ? "Désactivées" : perm === "granted" ? "Activées" : "Demandées au premier WIPP Touch"}
+        value={denied ? tr("Désactivées") : perm === "granted" ? tr("Activées") : tr("Demandées au premier WIPP Touch")}
         onPress={denied ? () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) : undefined}
       />
       {denied ? (
@@ -651,14 +651,14 @@ export function PrivacyScreen() {
       if (!existed && bioHw?.hasHardware && bioHw.enrolled) {
         Alert.alert(tr("WIPP Privé"), tr("Utiliser la biométrie de cet appareil pour ouvrir WIPP Privé ?"), [
           {
-            text: "Plus tard",
+            text: tr("Plus tard"),
             onPress: () => {
               void setBiometricPreferred(false);
               setBioOn(false);
             },
           },
           {
-            text: "Activer",
+            text: tr("Activer"),
             onPress: () => {
               void (async () => {
                 const bio = await authenticateBiometric();
@@ -757,7 +757,7 @@ export function PrivacyScreen() {
             {bioHw?.hasHardware ? (
               <Row
                 label={tr("Biométrie")}
-                value={bioHw.enrolled ? (bioOn ? "Activée" : "Désactivée") : "Non configurée"}
+                value={bioHw.enrolled ? (bioOn ? tr("Activée") : tr("Désactivée")) : tr("Non configurée")}
                 trailing={
                   bioHw.enrolled ? (
                     <Toggle
@@ -812,8 +812,8 @@ export function PrivacyScreen() {
       <ScrollView>
         <Section title="">
           <Row label={t("nearbyVis")} onPress={() => push({ name: "nearby" })} />
-          <Row label={tr("Code de verrouillage")} value={hasLockCode() ? "Activé" : "Désactivé"} onPress={() => setPane("lock")} />
-          <Row label={tr("WIPP Privé")} value={isPrivateEnabled() ? "Activé" : "Désactivé"} onPress={() => setPane("prive")} />
+          <Row label={tr("Code de verrouillage")} value={hasLockCode() ? tr("Activé") : tr("Désactivé")} onPress={() => setPane("lock")} />
+          <Row label={tr("WIPP Privé")} value={isPrivateEnabled() ? tr("Activé") : tr("Désactivé")} onPress={() => setPane("prive")} />
           <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>
         <MessagePreviewSection />
@@ -897,7 +897,7 @@ export function NotificationsScreen() {
       ) : null}
       <Section title="">
         {rows.map(([key, label]) => (
-          <Row key={key} label={label} trailing={<Toggle value={notifs[key]} onChange={(v) => setNotif(key, v)} />} />
+          <Row key={key} label={tr(label)} trailing={<Toggle value={notifs[key]} onChange={(v) => setNotif(key, v)} />} />
         ))}
       </Section>
       {__DEV__ ? (
@@ -1085,8 +1085,8 @@ export function HelpScreen() {
 
   function chooseTopic() {
     Alert.alert(tr("Motif"), tr("Pourquoi nous écris-tu ?"), [
-      ...SUPPORT_TOPICS.map((x) => ({ text: x, onPress: () => setTopic(x) })),
-      { text: "Annuler", style: "cancel" as const },
+      ...SUPPORT_TOPICS.map((x) => ({ text: tr(x), onPress: () => setTopic(x) })),
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
@@ -1104,8 +1104,8 @@ export function HelpScreen() {
       text.trim(),
       "",
       "—",
-      `Compte : @${me.username || "?"}`,
-      `Appareil : ${Platform.OS === "ios" ? "iPhone" : Platform.OS === "android" ? "Android" : Platform.OS} ${String(Platform.Version ?? "")}`,
+      tr("Compte : @{0}", me.username || "?"),
+      tr("Appareil : {0} {1}", Platform.OS === "ios" ? "iPhone" : Platform.OS === "android" ? "Android" : Platform.OS, String(Platform.Version ?? "")),
       "App : WIPP 1.0.0",
     ].join("\n");
     const url = `mailto:${LEGAL_CONTACT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -1156,7 +1156,7 @@ export function HelpScreen() {
               onPress={chooseTopic}
               style={{ minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.hair, backgroundColor: colors.surface, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
-              <Text style={{ color: topic ? colors.fg : colors.muted, fontSize: 15 }}>{topic ?? tr("Choisis un motif")}</Text>
+              <Text style={{ color: topic ? colors.fg : colors.muted, fontSize: 15 }}>{topic ? tr(topic) : tr("Choisis un motif")}</Text>
               <Text style={{ color: colors.muted, fontSize: 14 }}>▾</Text>
             </Press>
           </View>
@@ -1216,7 +1216,7 @@ export function BlockedScreen() {
       {rows.map((id) => {
         const raw = id.startsWith("srvuser:") ? id.slice("srvuser:".length) : id;
         const user = users[id] ?? users[`srvuser:${raw}`] ?? users[raw];
-        const label = names[raw] || user?.displayName || (user?.username ? `@${user.username}` : "Profil bloqué");
+        const label = names[raw] || user?.displayName || (user?.username ? `@${user.username}` : tr("Profil bloqué"));
         return (
           <Row
             key={raw}
@@ -1224,7 +1224,7 @@ export function BlockedScreen() {
             value={t("unblock")}
             onPress={() => {
               Alert.alert(t("unblock"), tr("Débloquer {0} ?", label), [
-                { text: "Annuler", style: "cancel" },
+                { text: tr("Annuler"), style: "cancel" },
                 {
                   text: t("unblock"),
                   onPress: () => {
@@ -1369,7 +1369,7 @@ export function MyActivityScreen({ kind }: { kind: "listings" | "events" | "save
   const listings = allListings.filter((l) => (kind === "saved" ? saves.some((s) => s.kind === "listing" && s.id === l.id) : l.sellerId === "me"));
   const events = allEvents.filter((e) => (kind === "saved" ? saves.some((s) => s.kind === "event" && s.id === e.id) : e.hostId === "me"));
   const savedShops = shops.filter((s) => saves.some((x) => x.kind === "business" && (x.id === s.handle || x.id === s.id)));
-  const title = kind === "listings" ? "Mes annonces" : kind === "events" ? "Mes événements" : "Mes enregistrés";
+  const title = kind === "listings" ? tr("Mes annonces") : kind === "events" ? tr("Mes événements") : tr("Mes enregistrés");
   const create = kind === "listings"
     ? () => push({ name: "create-listing" })
     : kind === "events"
@@ -1453,11 +1453,11 @@ function MyEventRow({ e, mine, onPress }: { e: import("../lib/types").LifestyleI
   }, [e.id, e.live?.state, mine]);
   const start = e.startsAt ? new Date(e.startsAt) : null;
   const when = start && !Number.isNaN(start.getTime())
-    ? start.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + " · " + start.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    ? start.toLocaleDateString(trLocale(), { weekday: "short", day: "numeric", month: "short" }) + " · " + start.toLocaleTimeString(trLocale(), { hour: "2-digit", minute: "2-digit" })
     : "";
   const status = e.live
-    ? e.live.state === "live" ? "EN DIRECT" : e.live.state === "ended" ? "Terminé" : e.live.state === "cancelled" ? "Annulé" : "À venir"
-    : over ? "Terminé" : "À venir";
+    ? e.live.state === "live" ? "EN DIRECT" : e.live.state === "ended" ? tr("Terminé") : e.live.state === "cancelled" ? tr("Annulé") : "À venir"
+    : over ? tr("Terminé") : "À venir";
   const statusColor = status === "EN DIRECT" ? "#e5383b" : status === "À venir" ? colors.accent : "rgba(255,255,255,0.18)";
   const src = e.image ? (e.image.startsWith("http") ? { uri: e.image } : wippSrc(e.image)) : null;
   return (
@@ -1478,7 +1478,7 @@ function MyEventRow({ e, mine, onPress }: { e: import("../lib/types").LifestyleI
           </View>
         </View>
         <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>
-          {[when, e.live ? "En ligne sur WIPP" : e.isOnline ? "En ligne" : e.city].filter(Boolean).join(" · ")}
+          {[when, e.live ? tr("En ligne sur WIPP") : e.isOnline ? tr("En ligne") : e.city].filter(Boolean).join(" · ")}
         </Text>
         {stats ? (
           <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 12 }}>
@@ -1539,8 +1539,8 @@ function cardHttpStatus(e: unknown): number {
 
 function cardErrorMessage(e: unknown, fallback: string): string {
   const status = cardHttpStatus(e);
-  if (status === 401 || status === 403) return "Connecte-toi pour créer ta carte professionnelle.";
-  if (status === 404) return "La carte professionnelle n’est pas encore disponible sur le serveur.";
+  if (status === 401 || status === 403) return tr("Connecte-toi pour créer ta carte professionnelle.");
+  if (status === 404) return tr("La carte professionnelle n’est pas encore disponible sur le serveur.");
   if (e instanceof Error && e.message && e.message !== "upload") return errorText(e, fallback);
   return fallback;
 }
@@ -1653,7 +1653,7 @@ export function BusinessCardEditorScreen() {
           }
         }
       } catch (e) {
-        setError(cardErrorMessage(e, "Impossible de charger la carte."));
+        setError(cardErrorMessage(e, tr("Impossible de charger la carte.")));
         const status = cardHttpStatus(e);
         if (status === 401 || status === 403) return;
         const stored = useWippStore.getState().serverProfileId;
@@ -1682,7 +1682,7 @@ export function BusinessCardEditorScreen() {
     }
     const { waitForFirebaseUser } = await import("../lib/firebase-phone");
     const user = await waitForFirebaseUser();
-    if (!user) throw Object.assign(new Error("Connecte-toi pour créer ta carte professionnelle."), { status: 401 });
+    if (!user) throw Object.assign(new Error(tr("Connecte-toi pour créer ta carte professionnelle.")), { status: 401 });
     try {
       const r = await getMyBusinessCard();
       if (r.profileId) {
@@ -1700,7 +1700,7 @@ export function BusinessCardEditorScreen() {
   }
   async function uploadRole(role: "cover" | "logo", file: { uri: string; mime: string }, id: string) {
     const media = await uploadBusinessImageFile(id, file.uri, file.mime, role, (sent, total) => {
-      setUploadLabel(total > 0 ? `Envoi… ${Math.round((sent / total) * 100)}%` : "Envoi…");
+      setUploadLabel(total > 0 ? tr("Envoi… {0}%", Math.round((sent / total) * 100)) : tr("Envoi…"));
     });
     if (role === "cover") {
       localRef.current.cover = undefined;
@@ -1725,13 +1725,13 @@ export function BusinessCardEditorScreen() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: [1, 1] });
     const asset = res.assets?.[0];
     if (res.canceled || !asset?.uri) return;
-    setUploadLabel("Envoi…");
+    setUploadLabel(tr("Envoi…"));
     try {
       const id = await resolveProfile();
       const media = await uploadBusinessImageFile(id, asset.uri, asset.mimeType ?? "image/jpeg", "photo");
       setNewService((cur) => ({ name: cur?.name ?? "", photo: media.path, url: media.url || asset.uri }));
     } catch (e) {
-      setError(cardErrorMessage(e, "Envoi de l’image impossible. Réessaie."));
+      setError(cardErrorMessage(e, tr("Envoi de l’image impossible. Réessaie.")));
     } finally {
       setUploadLabel("");
     }
@@ -1743,8 +1743,8 @@ export function BusinessCardEditorScreen() {
     if (!perm.granted) {
       setError(tr("Accès aux photos refusé."));
       Alert.alert(tr("Photos"), tr("WIPP a besoin d’accéder à tes photos pour la carte."), [
-        { text: "Annuler", style: "cancel" },
-        { text: "Réglages", onPress: () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) },
+        { text: tr("Annuler"), style: "cancel" },
+        { text: tr("Réglages"), onPress: () => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined) },
       ]);
       return;
     }
@@ -1753,7 +1753,7 @@ export function BusinessCardEditorScreen() {
     if (res.canceled || !asset?.uri) return;
     const mime = asset.mimeType ?? "image/jpeg";
     if (role === "photo") {
-      setUploadLabel("Envoi…");
+      setUploadLabel(tr("Envoi…"));
       try {
         const id = await resolveProfile();
         const media = await uploadBusinessImageFile(id, asset.uri, mime, "photo");
@@ -1763,7 +1763,7 @@ export function BusinessCardEditorScreen() {
           photoUrls: [...d.photoUrls, media.url || asset.uri].slice(0, 8),
         }));
       } catch (e) {
-        setError(cardErrorMessage(e, "Envoi de l’image impossible. Réessaie."));
+        setError(cardErrorMessage(e, tr("Envoi de l’image impossible. Réessaie.")));
       } finally {
         setUploadLabel("");
       }
@@ -1772,12 +1772,12 @@ export function BusinessCardEditorScreen() {
     setDraft((d) => (role === "cover" ? { ...d, coverUrl: asset.uri } : { ...d, logoUrl: asset.uri }));
     if (role === "cover") localRef.current.cover = { uri: asset.uri, mime };
     else localRef.current.logo = { uri: asset.uri, mime };
-    setUploadLabel("Envoi…");
+    setUploadLabel(tr("Envoi…"));
     try {
       const id = await resolveProfile();
       await uploadRole(role, { uri: asset.uri, mime }, id);
     } catch (e) {
-      setError(cardErrorMessage(e, "Envoi de l’image impossible. Réessaie."));
+      setError(cardErrorMessage(e, tr("Envoi de l’image impossible. Réessaie.")));
     } finally {
       setUploadLabel("");
     }
@@ -1831,12 +1831,12 @@ export function BusinessCardEditorScreen() {
       if (Platform.OS === "web") replace({ name: "business-card" });
       else
         Alert.alert(tr("Carte enregistrée"), tr("Ta carte est enregistrée. La photo et la bannière se rechargent à l’ouverture."), [
-          { text: "Voir ma carte", onPress: () => replace({ name: "business-card" }) },
+          { text: tr("Voir ma carte"), onPress: () => replace({ name: "business-card" }) },
         ]);
     } catch (e) {
       const status = cardHttpStatus(e);
       console.warn("[wipp] card save failed", status || "no-status", errorText(e, "unknown"));
-      setError(cardErrorMessage(e, "Enregistrement impossible."));
+      setError(cardErrorMessage(e, tr("Enregistrement impossible.")));
     } finally {
       setBusy(false);
     }
@@ -1913,7 +1913,7 @@ export function BusinessCardEditorScreen() {
         ) : null}
         <View style={{ marginTop: 16, gap: 12 }}>
           <Field label={tr("Nom de l’entreprise *")} value={draft.name} onChangeText={(v) => set("name", v)} />
-          <SelectField label={tr("Catégorie *")} value={draft.category} placeholder={tr("Choisis ta catégorie")} onPress={() => setCategoryOpen(true)} />
+          <SelectField label={tr("Catégorie *")} value={tr(draft.category)} placeholder={tr("Choisis ta catégorie")} onPress={() => setCategoryOpen(true)} />
           <Field
             label={tr("Description")}
             value={draft.description}
@@ -1957,7 +1957,7 @@ export function BusinessCardEditorScreen() {
               key={i}
               label={tr("Étiquette {0}", i + 1)}
               value={draft.tags?.[i] ?? ""}
-              placeholder={["Salon de coiffure", "Extensions", "Soins capillaires"][i]}
+              placeholder={[tr("Salon de coiffure"), tr("Extensions"), tr("Soins capillaires")][i]}
               onChangeText={(v) =>
                 setDraft((d) => {
                   const tags = [...(d.tags ?? []), "", "", ""].slice(0, 3);
@@ -2174,4 +2174,4 @@ export function BusinessCardViewScreen({ publicId }: { publicId: string }) {
 
 export { AdminScreen } from "./admin";
 import { useStaffRole } from "./admin";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";

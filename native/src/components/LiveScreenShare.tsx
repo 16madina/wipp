@@ -29,7 +29,7 @@ export const ScreenPicker = forwardRef<{ open: () => Promise<void> }>(function S
       if (Platform.OS !== "ios") return;
       const tag = findNodeHandle(pickerRef.current);
       const manager = NativeModules.ScreenCapturePickerViewManager as { show?: (tag: number | null) => Promise<void> } | undefined;
-      if (!tag || !manager?.show) throw new Error("Le partage d’écran n’est pas disponible sur cet appareil.");
+      if (!tag || !manager?.show) throw new Error(tr("Le partage d’écran n’est pas disponible sur cet appareil."));
       await manager.show(tag);
     },
   }));

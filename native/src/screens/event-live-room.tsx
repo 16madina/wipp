@@ -282,7 +282,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
           } catch (err) {
             // Excluded or no longer allowed: stop trying.
             if ((err as { status?: number }).status === 403) {
-              setFailNote("L’organisateur t’a retiré(e) de ce direct.");
+              setFailNote(tr("L’organisateur t’a retiré(e) de ce direct."));
               setPhase("failed");
               return;
             }
@@ -349,9 +349,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   /** Camera and microphone only after an explicit yes. */
   function askToPublish(room: Room) {
     Alert.alert(tr("Passer à l’antenne"), tr("Activer ta caméra et ton micro pour le direct ?"), [
-      { text: "Plus tard", style: "cancel" },
+      { text: tr("Plus tard"), style: "cancel" },
       {
-        text: "Activer",
+        text: tr("Activer"),
         onPress: () => {
           void (async () => {
             try {
@@ -417,8 +417,8 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       if (typeof msg.hand === "string" && !handToast.current.has(msg.hand)) {
         handToast.current.add(msg.hand);
         if (roomRef.current && roleOf(roomRef.current.localParticipant).role === "organizer") {
-          const who = [...roomRef.current.remoteParticipants.values()].find((x) => x.identity === msg.hand)?.name ?? "Quelqu’un";
-          setToast(`✋ ${who} lève la main`);
+          const who = [...roomRef.current.remoteParticipants.values()].find((x) => x.identity === msg.hand)?.name ?? tr("Quelqu’un");
+          setToast(tr("✋ {0} lève la main", who));
           setTimeout(() => setToast(null), 3000);
         }
       }
@@ -496,17 +496,17 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     const actions: { text: string; style?: "destructive" | "cancel"; onPress?: () => void }[] = [];
     if (isOrganizer) {
       actions.push({
-        text: "Supprimer le commentaire",
+        text: tr("Supprimer le commentaire"),
         style: "destructive",
         onPress: () => {
           setComments((cur) => cur.filter((x) => x.id !== c.id));
           void import("../lib/event-live").then(({ deleteLiveComment }) => deleteLiveComment(eventId, c.id)).catch(() => undefined);
         },
       });
-      if (c.identity !== roomRef.current?.localParticipant.identity) actions.push({ text: "Exclure cette personne", style: "destructive", onPress: () => exclude(c.identity, c.name) });
+      if (c.identity !== roomRef.current?.localParticipant.identity) actions.push({ text: tr("Exclure cette personne"), style: "destructive", onPress: () => exclude(c.identity, c.name) });
     }
-    if (c.pid) actions.push({ text: "Signaler", onPress: () => report(c.pid!, c.id) });
-    actions.push({ text: "Annuler", style: "cancel" });
+    if (c.pid) actions.push({ text: tr("Signaler"), onPress: () => report(c.pid!, c.id) });
+    actions.push({ text: tr("Annuler"), style: "cancel" });
     Alert.alert(c.name, c.text, actions);
   }
 
@@ -514,7 +514,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     void import("../lib/safety").then(({ REPORT_REASONS, submitContentReport }) => {
       Alert.alert(tr("Signaler"), undefined, [
         ...REPORT_REASONS.map((reason) => ({
-          text: reason,
+          text: tr(reason),
           onPress: () => {
             void submitContentReport({ contentType: "profile", contentId: `live:${eventId}:${contentId}`, targetProfileId: pid, reason }).then(
               () => Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va l’examiner.")),
@@ -522,16 +522,16 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
             );
           },
         })),
-        { text: "Annuler", style: "cancel" as const },
+        { text: tr("Annuler"), style: "cancel" as const },
       ]);
     });
   }
 
   function exclude(identity: string, name: string) {
     Alert.alert(tr("Exclure"), tr("Exclure {0} de ce direct ? Cette personne ne pourra plus revenir.", name), [
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
       {
-        text: "Exclure",
+        text: tr("Exclure"),
         style: "destructive",
         onPress: () => {
           void import("../lib/event-live")
@@ -661,9 +661,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
   function leaveStageSelf() {
     Alert.alert(tr("Quitter la scène"), tr("Ton micro et ta caméra seront coupés. Tu restes dans le direct comme spectateur."), [
-      { text: "Rester", style: "cancel" },
+      { text: tr("Rester"), style: "cancel" },
       {
-        text: "Quitter la scène",
+        text: tr("Quitter la scène"),
         onPress: () => {
           void (async () => {
             selfLeft.current = true;
@@ -686,19 +686,19 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     // Two on stage: the split screen already shows both big, so « Mettre en avant » is not offered.
     const canFeature = featured || tiles.length > 2;
     Alert.alert(t.name, tr("Intervenant sur scène"), [
-      ...(canFeature ? [{ text: featured ? "Revenir à la grille" : "Mettre en avant", onPress: () => void stage({ action: "feature", identity: featured ? null : t.identity }) }] : []),
-      { text: info?.micRevoked ? "Rendre le micro" : "Couper le micro", onPress: () => void stage({ action: "media", pid, micRevoked: !info?.micRevoked }) },
-      { text: info?.camRevoked ? "Rendre la caméra" : "Couper la caméra", onPress: () => void stage({ action: "media", pid, camRevoked: !info?.camRevoked }) },
+      ...(canFeature ? [{ text: featured ? tr("Revenir à la grille") : tr("Mettre en avant"), onPress: () => void stage({ action: "feature", identity: featured ? null : t.identity }) }] : []),
+      { text: info?.micRevoked ? tr("Rendre le micro") : tr("Couper le micro"), onPress: () => void stage({ action: "media", pid, micRevoked: !info?.micRevoked }) },
+      { text: info?.camRevoked ? tr("Rendre la caméra") : tr("Couper la caméra"), onPress: () => void stage({ action: "media", pid, camRevoked: !info?.camRevoked }) },
       {
-        text: "Retirer de la scène",
+        text: tr("Retirer de la scène"),
         style: "destructive",
         onPress: () =>
           Alert.alert(tr("Retirer de la scène"), tr("{0} redeviendra spectateur. Son micro et sa caméra seront coupés.", t.name), [
-            { text: "Annuler", style: "cancel" },
-            { text: "Retirer", style: "destructive", onPress: () => void stage({ action: "leave", pid }) },
+            { text: tr("Annuler"), style: "cancel" },
+            { text: tr("Retirer"), style: "destructive", onPress: () => void stage({ action: "leave", pid }) },
           ]),
       },
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
     ]);
   }
 
@@ -712,9 +712,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       tr("Partager ton écran"),
       tr("Tout ce qui s’affiche sur ton écran sera visible par les spectateurs : présentation, site, app… et aussi tes notifications. Pense à activer « Ne pas déranger ». Rien n’est enregistré."),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: tr("Annuler"), style: "cancel" },
         {
-          text: "Continuer",
+          text: tr("Continuer"),
           onPress: () => {
             void (async () => {
               const room = roomRef.current;
@@ -826,7 +826,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       setChrome(false);
       if (!chromeHint.current) {
         chromeHint.current = true;
-        setToast("Touche l’écran pour afficher les commandes");
+        setToast(tr("Touche l’écran pour afficher les commandes"));
         setTimeout(() => setToast(null), 2800);
       }
     }, 4000);
@@ -856,7 +856,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     const mine = screen?.local ?? false;
     if (!mine && wasSharing.current) {
       wasSharing.current = false;
-      setToast("Partage d’écran arrêté");
+      setToast(tr("Partage d’écran arrêté"));
       setTimeout(() => setToast(null), 2500);
     }
     if (mine) wasSharing.current = true;
@@ -904,9 +904,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
 
   function endForAll() {
     Alert.alert(tr("Terminer le direct"), tr("Terminer la conférence pour tout le monde ?"), [
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
       {
-        text: "Terminer",
+        text: tr("Terminer"),
         style: "destructive",
         onPress: () => {
           void import("../lib/event-live")
@@ -956,7 +956,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       m.showOngoing({
         title: tr("Partage d’écran en cours"),
         body: tr("Les spectateurs de ton direct WIPP voient ton écran."),
-        stopLabel: "Arrêter le partage",
+        stopLabel: tr("Arrêter le partage"),
         onStop: () => void stopScreenShare(),
         camera: true,
         screen: true,
@@ -981,9 +981,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
     const host = tiles.find((t) => t.organizer)?.pid ?? people.find((p) => p.role === "organizer")?.pid;
     if (!host) return;
     Alert.alert(tr("Bloquer l’organisateur"), tr("Tu quitteras ce direct. Cette personne ne pourra plus te contacter et tu ne verras plus ses contenus."), [
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
       {
-        text: "Bloquer",
+        text: tr("Bloquer"),
         style: "destructive",
         onPress: () => {
           void import("../lib/connections").then(({ blockProfile }) => blockProfile(host)).then((ok) => {
@@ -1003,8 +1003,8 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   function viewerTileMenu(t: StageTile) {
     if (!t.pid) return;
     Alert.alert(t.name, undefined, [
-      { text: "Signaler", onPress: () => report(t.pid!, t.identity) },
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Signaler"), onPress: () => report(t.pid!, t.identity) },
+      { text: tr("Annuler"), style: "cancel" },
     ]);
   }
 
@@ -1016,9 +1016,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   function leave() {
     if (isOrganizer && phase === "connected") {
       Alert.alert(tr("Quitter"), tr("Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas."), [
-        { text: "Rester", style: "cancel" },
-        { text: "Quitter sans terminer", onPress: () => pop() },
-        { text: "Terminer pour tous", style: "destructive", onPress: endForAll },
+        { text: tr("Rester"), style: "cancel" },
+        { text: tr("Quitter sans terminer"), onPress: () => pop() },
+        { text: tr("Terminer pour tous"), style: "destructive", onPress: endForAll },
       ]);
       return;
     }
@@ -1026,7 +1026,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
   }
 
   const viewers = Math.max(0, people.filter((p) => p.role === "viewer").length);
-  const title = useWippStore((s) => s.lifestyle.find((e) => e.id === eventId)?.title ?? "Direct");
+  const title = useWippStore((s) => s.lifestyle.find((e) => e.id === eventId)?.title ?? tr("Direct"));
   const ordered = useMemo(() => [...people].sort((a, b) => (a.role === "organizer" ? -1 : b.role === "organizer" ? 1 : a.name.localeCompare(b.name))), [people]);
 
   // ——— Layout: 1 person = full screen with floating comments (unchanged);
@@ -1069,8 +1069,8 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
         onClose={() => {
           if (isOrganizer) {
             Alert.alert(tr("Quitter le direct"), tr("Si tu pars sans terminer, le direct s’arrêtera automatiquement dans 5 minutes si tu ne reviens pas."), [
-              { text: "Rester", style: "cancel" },
-              { text: "Quitter sans terminer", onPress: () => useLiveSession.getState().clear() },
+              { text: tr("Rester"), style: "cancel" },
+              { text: tr("Quitter sans terminer"), onPress: () => useLiveSession.getState().clear() },
             ]);
           } else useLiveSession.getState().clear();
         }}
@@ -1231,7 +1231,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 const left = Math.max(0, Math.ceil((hostGone.since + hostGone.graceMs - nowTick) / 1000));
                 const mm = Math.floor(left / 60);
                 const ss = String(left % 60).padStart(2, "0");
-                return `Le direct reprendra dès son retour. Sinon, il se terminera automatiquement dans ${mm}:${ss}.`;
+                return tr("Le direct reprendra dès son retour. Sinon, il se terminera automatiquement dans {0}:{1}.", mm, ss);
               })()}
             </Text>
           </View>
@@ -1400,10 +1400,10 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                 onLongPress={() => {
                   if (item.identity === roomRef.current?.localParticipant.identity) return;
                   const actions: { text: string; style?: "destructive" | "cancel"; onPress?: () => void }[] = [];
-                  if (isOrganizer && item.role === "viewer" && item.pid) actions.push({ text: "Inviter sur scène", onPress: () => void stage({ action: "invite", pid: item.pid! }) });
-                  if (isOrganizer) actions.push({ text: "Exclure", style: "destructive", onPress: () => exclude(item.identity, item.name) });
-                  if (item.pid) actions.push({ text: "Signaler", onPress: () => report(item.pid!, item.identity) });
-                  actions.push({ text: "Annuler", style: "cancel" });
+                  if (isOrganizer && item.role === "viewer" && item.pid) actions.push({ text: tr("Inviter sur scène"), onPress: () => void stage({ action: "invite", pid: item.pid! }) });
+                  if (isOrganizer) actions.push({ text: tr("Exclure"), style: "destructive", onPress: () => exclude(item.identity, item.name) });
+                  if (item.pid) actions.push({ text: tr("Signaler"), onPress: () => report(item.pid!, item.identity) });
+                  actions.push({ text: tr("Annuler"), style: "cancel" });
                   Alert.alert(item.name, undefined, actions);
                 }}
                 style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}
@@ -1446,9 +1446,9 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
           <View style={{ flexDirection: "row", gap: 10, paddingVertical: 6 }}>
             {(
               [
-                ["shared", "Scène partagée"],
-                ["dominant", "Host dominant"],
-                ["inset", "Invités intégrés"],
+                ["shared", tr("Scène partagée")],
+                ["dominant", tr("Host dominant")],
+                ["inset", tr("Invités intégrés")],
               ] as const
             ).map(([id, label]) => (
               <Press
@@ -1501,8 +1501,8 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
                     const next = st.stage?.mode === "interactive" ? "conference" : "interactive";
                     if (next === "conference" && st.stage?.speakers.length) {
                       Alert.alert(tr("Mode Conférence"), tr("Les intervenants redescendront parmi les spectateurs."), [
-                        { text: "Annuler", style: "cancel" },
-                        { text: "Continuer", onPress: () => void stage({ action: "mode", mode: next }) },
+                        { text: tr("Annuler"), style: "cancel" },
+                        { text: tr("Continuer"), onPress: () => void stage({ action: "mode", mode: next }) },
                       ]);
                     } else void stage({ action: "mode", mode: next });
                   }}

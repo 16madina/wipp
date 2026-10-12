@@ -43,19 +43,20 @@ const HUB_BACKGROUNDS = {
 } as const;
 
 const CONDITION_LABEL: Record<NonNullable<Listing["condition"]>, string> = {
-  new: "Neuf",
-  like_new: "Comme neuf",
-  good: "Bon état",
-  used: "Usagé",
+  get new() { return tr("Neuf"); },
+  get like_new() { return tr("Comme neuf"); },
+  get good() { return tr("Bon état"); },
+  get used() { return tr("Usagé"); },
 };
 
 function listingPriceText(listing: Listing) {
   const raw = listing.price.trim();
   const negotiable = Boolean(listing.negotiable);
-  if (/^gratuit/i.test(raw)) return negotiable ? "Gratuit · négociable" : raw || "Gratuit";
+  if (/^gratuit/i.test(raw)) return negotiable ? tr("Gratuit · négociable") : tr("Gratuit");
+  if (raw === "Échange") return tr("Échange");
   const money = listing.currency && raw && !raw.includes(listing.currency) ? `${raw} ${listing.currency}` : raw;
-  if (!money) return negotiable ? "Prix négociable" : "Prix à préciser";
-  return negotiable && !/négociable/i.test(money) ? `${money} · négociable` : money;
+  if (!money) return negotiable ? tr("Prix négociable") : tr("Prix à préciser");
+  return negotiable && !/négociable/i.test(money) ? tr("{0} · négociable", money) : money;
 }
 
 function isUpcomingEvent(item: { startsAt?: string; endsAt?: string; live?: { state: string } }) {
@@ -73,8 +74,8 @@ function isUpcomingEvent(item: { startsAt?: string; endsAt?: string; live?: { st
 }
 
 function eventAccessText(item: { isFree?: boolean; price?: string; currency?: string }) {
-  if (item.isFree === false) return [item.price, item.currency].filter(Boolean).join(" ") || "Payant";
-  return "Gratuit";
+  if (item.isFree === false) return [item.price, item.currency].filter(Boolean).join(" ") || tr("Payant");
+  return tr("Gratuit");
 }
 
 function shopCatLabel(cat: ShopCategory, t: ReturnType<typeof useT>) {
@@ -143,10 +144,10 @@ export function ExploreScreen() {
         {!searching && tabbed ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 12 }}>
             {([
-              ["home", "Tous"],
-              ["shops", "Entreprises"],
-              ["lifestyle", "Événements"],
-              ["utilities", "Services"],
+              ["home", tr("Tous")],
+              ["shops", tr("Entreprises")],
+              ["lifestyle", tr("Événements")],
+              ["utilities", tr("Services")],
             ] as const).map(([id, label]) => (
               <Chip key={id} label={label} active={hub === id} onPress={() => setHub(id)} />
             ))}
@@ -476,7 +477,7 @@ function UtilitiesPane() {
       {services.map((p) => (
         <View key={p.id} style={{ paddingVertical: 12 }}>
           <Text style={{ color: colors.fg, fontFamily: "Inter_500Medium" }}>{p.name}</Text>
-          <Text style={{ color: colors.muted, fontSize: 13 }}>{p.category} · {p.city}{p.address ? ` · ${p.address}` : ""}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13 }}>{tr(p.category)} · {p.city}{p.address ? ` · ${p.address}` : ""}</Text>
         </View>
       ))}
       {shown.map((p) => (
@@ -548,10 +549,10 @@ function ShopSearch({ q }: { q: string }) {
     <View style={{ paddingHorizontal: 16 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
         {([
-          ["all", "Tout"],
-          ["shops", "Entreprises"],
-          ["users", "Utilisateurs"],
-          ["groups", "Groupes"],
+          ["all", tr("Tout")],
+          ["shops", tr("Entreprises")],
+          ["users", tr("Utilisateurs")],
+          ["groups", tr("Groupes")],
         ] as const).map(([id, label]) => (
           <Chip key={id} label={label} active={kind === id} onPress={() => setKind(id)} />
         ))}
@@ -837,14 +838,14 @@ function LifestylePane() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
         {EVENT_FILTERS.map((c) => (
           <Press key={c} onPress={() => setCat(c)} style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: cat === c ? colors.accent : "transparent", borderWidth: 1, borderColor: cat === c ? colors.accent : whiteA(0.18) }}>
-            <Text style={{ color: cat === c ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{c}</Text>
+            <Text style={{ color: cat === c ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr(c)}</Text>
           </Press>
         ))}
       </ScrollView>
       <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
         {EVENT_WHERE.map(([id, label]) => (
           <Press key={id} onPress={() => setWhere(id)} style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: where === id ? accentA(0.18) : "transparent", borderWidth: 1, borderColor: where === id ? colors.accent : whiteA(0.12) }}>
-            <Text style={{ color: where === id ? colors.accent : colors.muted, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{label}</Text>
+            <Text style={{ color: where === id ? colors.accent : colors.muted, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{tr(label)}</Text>
           </Press>
         ))}
       </View>
@@ -879,7 +880,7 @@ function LifestylePane() {
             interested={
               e.live
                 ? e.live.registered != null
-                  ? { count: e.live.registered, avatars: e.live.registeredAvatars, label: `${e.live.registered} inscrit${e.live.registered > 1 ? "s" : ""}` }
+                  ? { count: e.live.registered, avatars: e.live.registeredAvatars, label: e.live.registered > 1 ? tr("{0} inscrits", e.live.registered) : tr("{0} inscrit", e.live.registered) }
                   : undefined
                 : { count: e.interestedCount ?? 0, avatars: e.interestedAvatars ?? [] }
             }
@@ -936,9 +937,9 @@ export function ListingScreen({ listingId }: { listingId: string }) {
   const openOptions = () => {
               if (mine) {
                 Alert.alert(tr("Annonce"), undefined, [
-                  { text: "Modifier", onPress: () => push({ name: "create-listing", listingId: listing.id }) },
+                  { text: tr("Modifier"), onPress: () => push({ name: "create-listing", listingId: listing.id }) },
                   {
-                    text: "Supprimer l’annonce",
+                    text: tr("Supprimer l’annonce"),
                     style: "destructive",
                     onPress: () => {
                       void import("../lib/lot7/api").then(async ({ removeListing }) => {
@@ -948,17 +949,17 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                       });
                     },
                   },
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Annuler"), style: "cancel" },
                 ]);
                 return;
               }
               Alert.alert(tr("Annonce"), undefined, [
                 {
-                  text: "Signaler l’annonce",
+                  text: tr("Signaler l’annonce"),
                   onPress: () => {
                     Alert.alert(tr("Signaler l’annonce"), undefined, [
                       ...REPORT_REASONS.map((reason) => ({
-                        text: reason,
+                        text: tr(reason),
                         onPress: () => {
                           void submitContentReport({
                             contentType: "listing",
@@ -971,25 +972,25 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                           );
                         },
                       })),
-                      { text: "Annuler", style: "cancel" as const },
+                      { text: tr("Annuler"), style: "cancel" as const },
                     ]);
                   },
                 },
                 {
-                  text: "Masquer l’annonce",
+                  text: tr("Masquer l’annonce"),
                   onPress: () => {
                     useWippStore.setState((s) => ({ listings: s.listings.filter((l) => l.id !== listing.id) }));
                     pop();
                   },
                 },
                 {
-                  text: "Bloquer cet utilisateur",
+                  text: tr("Bloquer cet utilisateur"),
                   style: "destructive",
                   onPress: () => {
                     Alert.alert(tr("Bloquer"), tr("Bloquer cette personne ?"), [
-                      { text: "Annuler", style: "cancel" },
+                      { text: tr("Annuler"), style: "cancel" },
                       {
-                        text: "Bloquer",
+                        text: tr("Bloquer"),
                         style: "destructive",
                         onPress: () => {
                           useWippStore.getState().blockUser(listing.sellerId);
@@ -999,7 +1000,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
                     ]);
                   },
                 },
-                { text: "Annuler", style: "cancel" },
+                { text: tr("Annuler"), style: "cancel" },
               ]);
             };
   const toggleSaved = () => {
@@ -1025,11 +1026,11 @@ export function ListingScreen({ listingId }: { listingId: string }) {
   const card = { marginHorizontal: 14, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: whiteA(0.06) };
   const action = (on: boolean) => ({ flex: 1, minHeight: 52, borderRadius: 14, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 8, backgroundColor: on ? colors.accent : "transparent", borderWidth: 1, borderColor: on ? colors.accent : whiteA(0.18) });
   const specs = [
-    ["Catégorie", listingCatLabel(listing.category)],
-    ["État", listing.condition ? CONDITION_LABEL[listing.condition] : ""],
-    ["Prix", listingPriceText(listing)],
-    ["Ville", [listing.city, listing.country].filter(Boolean).join(", ")],
-    ["Contact", listing.contactPhone ? "Téléphone ou chat" : "Chat WIPP"],
+    [tr("Catégorie"), listingCatLabel(listing.category)],
+    [tr("État"), listing.condition ? CONDITION_LABEL[listing.condition] : ""],
+    [tr("Prix"), listingPriceText(listing)],
+    [tr("Ville"), [listing.city, listing.country].filter(Boolean).join(", ")],
+    [tr("Contact"), listing.contactPhone ? tr("Téléphone ou chat") : tr("Chat WIPP")],
   ].filter(([, v]) => v);
   return (
     <ScreenRoot>
@@ -1047,7 +1048,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               <ChevronLeft size={24} color="#fff" />
             </Press>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Press accessibilityLabel={tr("Partager")} onPress={() => void Share.share({ message: `${listing.title} · ${listingPriceText(listing)} sur WIPP` })} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+              <Press accessibilityLabel={tr("Partager")} onPress={() => void Share.share({ message: tr("{0} · {1} sur WIPP", listing.title, listingPriceText(listing)) })} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
                 <Share2 size={20} color="#fff" />
               </Press>
               {mine ? null : (
@@ -1121,7 +1122,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{seller.displayName}</Text>
               <Text style={{ color: colors.muted, fontSize: 12 }}>
-                {tr("Membre WIPP")}{stats?.memberSince ? ` depuis ${new Date(stats.memberSince).getFullYear()}` : ""}
+                {tr("Membre WIPP")}{stats?.memberSince ? tr(" depuis {0}", new Date(stats.memberSince).getFullYear()) : ""}
               </Text>
               <View style={{ marginTop: 3, flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <StarsInput value={stats?.myRating ?? 0} average={stats?.rating ?? null} onRate={(n) => {
@@ -1174,7 +1175,7 @@ export function ListingScreen({ listingId }: { listingId: string }) {
               </Press>
             ) : null}
             {/^gratuit|^échange/i.test(listing.price.trim()) ? null : (
-              <Press onPress={() => contact(`Bonjour ! Ton annonce « ${listing.title} » m’intéresse. Je te propose : `)} style={[action(false), { flexBasis: "47%" }]}>
+              <Press onPress={() => contact(tr("Bonjour ! Ton annonce « {0} » m’intéresse. Je te propose : ", listing.title))} style={[action(false), { flexBasis: "47%" }]}>
                 <Tag size={18} color={colors.fg} />
                 <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Faire une offre")}</Text>
               </Press>
@@ -1300,10 +1301,10 @@ function MiniMap({ lat, lng }: { lat: number; lng: number }) {
 /** "il y a 3 heures" style label. */
 function timeAgo(ms: number) {
   const s = Math.max(0, (Date.now() - ms) / 1000);
-  if (s < 3600) return `il y a ${Math.max(1, Math.round(s / 60))} min`;
-  if (s < 86400) return `il y a ${Math.round(s / 3600)} h`;
+  if (s < 3600) return tr("il y a {0} min", Math.max(1, Math.round(s / 60)));
+  if (s < 86400) return tr("il y a {0} h", Math.round(s / 3600));
   const d = Math.round(s / 86400);
-  return d < 30 ? `il y a ${d} jour${d > 1 ? "s" : ""}` : `le ${new Date(ms).toLocaleDateString("fr-CA")}`;
+  return d < 30 ? (d > 1 ? tr("il y a {0} jours", d) : tr("il y a 1 jour")) : tr("le {0}", new Date(ms).toLocaleDateString("fr-CA"));
 }
 
 export function PharmacyScreen({ pharmacyId }: { pharmacyId: string }) {
@@ -1396,7 +1397,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
           <Text style={{ color: colors.muted }}>{[item.category, item.when, item.endsAt && !Number.isNaN(Date.parse(item.endsAt)) ? `→ ${new Date(item.endsAt).toLocaleString()}` : ""].filter(Boolean).join(" · ")}</Text>
           {item.live ? null : (
             <>
-              <Text style={{ marginTop: 8, color: colors.fg }}>{item.isOnline ? ["En ligne", item.onlineUrl].filter(Boolean).join(" · ") : [item.place, item.address, item.city, item.country].filter(Boolean).join(" · ")}</Text>
+              <Text style={{ marginTop: 8, color: colors.fg }}>{item.isOnline ? [tr("En ligne"), item.onlineUrl].filter(Boolean).join(" · ") : [item.place, item.address, item.city, item.country].filter(Boolean).join(" · ")}</Text>
               <Text style={{ marginTop: 8, color: colors.accent }}>{eventAccessText(item)}</Text>
             </>
           )}
@@ -1405,7 +1406,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
           {item.contact ? <Text style={{ marginTop: 8, color: colors.muted }}>{item.contact}</Text> : null}
           {item.adultOnly || item.capacity ? (
             <Text style={{ marginTop: 8, color: colors.muted }}>
-              {[item.adultOnly ? "🔞 Réservé aux 18 ans et plus" : "", item.capacity ? `${item.capacity} places` : ""].filter(Boolean).join(" · ")}
+              {[item.adultOnly ? tr("🔞 Réservé aux 18 ans et plus") : "", item.capacity ? tr("{0} places", item.capacity) : ""].filter(Boolean).join(" · ")}
             </Text>
           ) : null}
           {item.live ? (
@@ -1460,9 +1461,9 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                 variant="secondary"
                 onPress={() => {
                   Alert.alert(tr("Événement"), tr("Supprimer cet événement ?"), [
-                    { text: "Annuler", style: "cancel" },
+                    { text: tr("Annuler"), style: "cancel" },
                     {
-                      text: "Supprimer",
+                      text: tr("Supprimer"),
                       style: "destructive",
                       onPress: () => {
                         void import("../lib/lot7/api").then(async ({ removeEvent }) => {
@@ -1484,7 +1485,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
               onPress={() => {
                 Alert.alert(tr("Signaler l’événement"), undefined, [
                   ...REPORT_REASONS.map((reason) => ({
-                    text: reason,
+                    text: tr(reason),
                     onPress: () => {
                       // Events share the listings' report queue; « event: » tells the moderators what it is.
                       void submitContentReport({ contentType: "listing", contentId: `event:${item.id}`, targetProfileId: item.hostId?.startsWith("srvuser:") ? item.hostId : null, reason }).then(
@@ -1493,7 +1494,7 @@ export function LifestyleScreen({ itemId }: { itemId: string }) {
                       );
                     },
                   })),
-                  { text: "Annuler", style: "cancel" as const },
+                  { text: tr("Annuler"), style: "cancel" as const },
                 ]);
               }}
               style={{ marginTop: 18, alignSelf: "center", paddingVertical: 8, paddingHorizontal: 12 }}
@@ -1531,7 +1532,7 @@ function CreateForm({ title, onBack, listingId, eventId }: { title: string; onBa
   const [price, setPrice] = useState(existing?.price ?? existingEvent?.place ?? "");
   const [starts, setStarts] = useState(existingEvent?.startsAt ?? "");
   const [error, setError] = useState("");
-  const event = title.toLowerCase().includes("événement");
+  const event = title.toLowerCase().includes(tr("événement"));
   return (
     <ScreenRoot>
       <GlassHeader>

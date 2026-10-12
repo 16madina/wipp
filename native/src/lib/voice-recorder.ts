@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Linking, Platform } from "react-native";
 import { Audio } from "expo-av";
@@ -67,13 +68,13 @@ function toWave(levels: number[]) {
 
 function askForMic(canAskAgain: boolean) {
   Alert.alert(
-    "Micro désactivé",
-    canAskAgain ? "Autorise le micro pour enregistrer un message vocal." : "Pour enregistrer un message vocal, autorise le micro pour WIPP dans Réglages.",
+    tr("Micro désactivé"),
+    canAskAgain ? tr("Autorise le micro pour enregistrer un message vocal.") : tr("Pour enregistrer un message vocal, autorise le micro pour WIPP dans Réglages."),
     canAskAgain
       ? [{ text: "OK" }]
       : [
-          { text: "Annuler", style: "cancel" },
-          { text: "Ouvrir Réglages", onPress: () => void Linking.openSettings() },
+          { text: tr("Annuler"), style: "cancel" },
+          { text: tr("Ouvrir Réglages"), onPress: () => void Linking.openSettings() },
         ],
   );
 }
@@ -190,7 +191,7 @@ export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
         uri = (await joinAudioParts(list.map((p) => p.uri))).uri;
         drop(list);
       } catch {
-        Alert.alert("Message vocal", "Le message n’a pas pu être assemblé. Réessaie.");
+        Alert.alert(tr("Message vocal"), tr("Le message n’a pas pu être assemblé. Réessaie."));
         drop(list);
         return;
       }
@@ -204,7 +205,7 @@ export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
     const { useCallSession } = await import("./calls/session");
     const call = useCallSession.getState().session;
     if (call && !["ended", "declined", "missed", "busy", "failed"].includes(call.phase)) {
-      Alert.alert("Message vocal", "Impossible d’enregistrer pendant un appel.");
+      Alert.alert(tr("Message vocal"), tr("Impossible d’enregistrer pendant un appel."));
       return false;
     }
     go("starting");
@@ -234,7 +235,7 @@ export function useVoiceRecorder(onTake: (take: VoiceTake) => void) {
     } catch (err) {
       go("idle");
       void Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => undefined);
-      Alert.alert("Message vocal", err instanceof Error && /permission/i.test(err.message) ? "Le micro n’est pas autorisé." : "Le micro n’a pas pu démarrer. Réessaie.");
+      Alert.alert(tr("Message vocal"), err instanceof Error && /permission/i.test(err.message) ? tr("Le micro n’est pas autorisé.") : tr("Le micro n’a pas pu démarrer. Réessaie."));
       return false;
     }
   }, [stop]);

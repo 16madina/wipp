@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import "./crypto-polyfill";
 /**
  * Wipp DM E2E crypto — ECDH P-256 + HKDF-SHA-256 + AES-256-GCM.
@@ -232,7 +233,7 @@ export function parseMessageBody(body: string): { kind: "e2e"; envelope: E2eEnve
   return { kind: "plain", text: body };
 }
 
-export function previewFromBody(body: string, lockedLabel = "Message chiffré") {
+export function previewFromBody(body: string, lockedLabel = tr("Message chiffré")) {
   const parsed = parseMessageBody(body);
   return parsed.kind === "e2e" ? lockedLabel : parsed.text.slice(0, 140);
 }

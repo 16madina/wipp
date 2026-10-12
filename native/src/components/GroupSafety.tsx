@@ -35,10 +35,10 @@ async function dismiss(serverId: string) {
 export function reportGroupFlow(chatId: string, serverId: string, name: string | undefined, leave: boolean) {
   Alert.alert(
     leave ? tr("Signaler et quitter") : tr("Signaler le groupe"),
-    tr("{0}Seuls le groupe et la raison sont envoyés à la modération, jamais les messages.", leave ? `Tu vas quitter « ${name ?? "ce groupe"} ». ` : ""),
+    tr("{0}Seuls le groupe et la raison sont envoyés à la modération, jamais les messages.", leave ? tr("Tu vas quitter « {0} ». ", name ?? "ce groupe") : ""),
     [
       ...GROUP_REPORT_REASONS.map((reason) => ({
-        text: reason,
+        text: tr(reason),
         onPress: () => {
           void import("../lib/lot7/api")
             .then(({ reportGroup }) => reportGroup(serverId, reason, leave))
@@ -57,7 +57,7 @@ export function reportGroupFlow(chatId: string, serverId: string, name: string |
             );
         },
       })),
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Annuler"), style: "cancel" as const },
     ],
   );
 }
@@ -84,7 +84,7 @@ export function GroupSafetyBanner({ chatId, serverId, name }: { chatId: string; 
   }, [serverId]);
 
   if (!info) return null;
-  const who = info.username ? `@${info.username}` : info.displayName || "Quelqu’un";
+  const who = info.username ? `@${info.username}` : info.displayName || tr("Quelqu’un");
   return (
     <View style={{ marginHorizontal: 12, marginTop: 8, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: info.isContact ? colors.hair : colors.danger, padding: 14 }}>
       <View style={{ flexDirection: "row", gap: 10 }}>

@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 import { countdownChoices, type SurpriseOptions } from "../lib/surprise";
 import { colors } from "../theme";
 import { Press } from "./ui";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 type Value = NonNullable<SurpriseOptions["countdown"]>;
 
@@ -18,7 +18,7 @@ function dayStart(offset: number) {
   return d;
 }
 const dayLabel = (offset: number) =>
-  offset === 0 ? "Aujourd’hui" : offset === 1 ? "Demain" : dayStart(offset).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  offset === 0 ? tr("Aujourd’hui") : offset === 1 ? tr("Demain") : dayStart(offset).toLocaleDateString(trLocale(), { weekday: "short", day: "numeric", month: "short" });
 
 function Chip({ label, on, onPress, wide }: { label: string; on: boolean; onPress: () => void; wide?: boolean }) {
   return (
@@ -60,7 +60,7 @@ export function CountdownPicker({ value, onChange }: { value: Value; onChange: (
 
   const past = Boolean(value.at) && value.at! <= Date.now() + 30_000;
   const when = value.at
-    ? new Date(value.at).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+    ? new Date(value.at).toLocaleString(trLocale(), { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
     : null;
 
   return (

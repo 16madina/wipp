@@ -84,7 +84,7 @@ import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
 import { colors, fgA, layout, whiteA } from "../theme";
 import { useDeviceLayout } from "../lib/device-layout";
-import { tr } from "../lib/tr";
+import { tr, trSystem } from "../lib/tr";
 
 function shopFace(shop: Shop) {
   return { displayName: shop.name, avatar: shop.logo || shop.image, online: true };
@@ -348,26 +348,26 @@ export function ChatsScreen() {
             <ScrollView style={{ maxHeight: 520 }} bounces={false}>
               {(
                 [
-                  [menuChat?.pinned ? "Désépingler" : "Épingler", () => menuChatId && useWippStore.getState().pinChat(menuChatId, !menuChat?.pinned)],
-                  [menuChat?.archived ? "Désarchiver" : "Archiver", () => menuChatId && useWippStore.getState().archiveChat(menuChatId, !menuChat?.archived)],
-                  [menuChat?.muted ? "Réactiver les notifications" : "Mettre en sourdine…", () => {
+                  [menuChat?.pinned ? tr("Désépingler") : tr("Épingler"), () => menuChatId && useWippStore.getState().pinChat(menuChatId, !menuChat?.pinned)],
+                  [menuChat?.archived ? tr("Désarchiver") : tr("Archiver"), () => menuChatId && useWippStore.getState().archiveChat(menuChatId, !menuChat?.archived)],
+                  [menuChat?.muted ? tr("Réactiver les notifications") : tr("Mettre en sourdine…"), () => {
                     const id = menuChatId;
                     if (!id) return;
                     if (menuChat?.muted) return useWippStore.getState().setMute(id, "off");
                     Alert.alert(tr("Mettre en sourdine"), undefined, [
-                      { text: "1 heure", onPress: () => useWippStore.getState().setMute(id, "1h") },
-                      { text: "8 heures", onPress: () => useWippStore.getState().setMute(id, "8h") },
-                      { text: "1 semaine", onPress: () => useWippStore.getState().setMute(id, "1w") },
-                      { text: "Toujours", onPress: () => useWippStore.getState().setMute(id, "always") },
-                      { text: "Annuler", style: "cancel" },
+                      { text: tr("1 heure"), onPress: () => useWippStore.getState().setMute(id, "1h") },
+                      { text: tr("8 heures"), onPress: () => useWippStore.getState().setMute(id, "8h") },
+                      { text: tr("1 semaine"), onPress: () => useWippStore.getState().setMute(id, "1w") },
+                      { text: tr("Toujours"), onPress: () => useWippStore.getState().setMute(id, "always") },
+                      { text: tr("Annuler"), style: "cancel" },
                     ]);
                   }],
-                  [menuChat?.unread || menuChat?.manuallyUnreadAt ? "Marquer comme lu" : "Marquer comme non lu", () => menuChatId && useWippStore.getState().toggleUnread(menuChatId)],
-                  [menuChatId && isChatLocked(menuChatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation", () => {
+                  [menuChat?.unread || menuChat?.manuallyUnreadAt ? tr("Marquer comme lu") : tr("Marquer comme non lu"), () => menuChatId && useWippStore.getState().toggleUnread(menuChatId)],
+                  [menuChatId && isChatLocked(menuChatId) ? tr("Déverrouiller la conversation") : tr("Verrouiller la conversation"), () => {
                     const id = menuChatId;
                     if (id) toggleChatLock(id, lockAsk.askPin);
                   }],
-                  ["Masquer dans WIPP Privé", () => {
+                  [tr("Masquer dans WIPP Privé"), () => {
                   const id = menuChatId;
                   if (!id) return;
                   if (!isPrivateEnabled()) {
@@ -378,9 +378,9 @@ export function ChatsScreen() {
                     tr("Masquer et verrouiller"),
                     tr("Cette conversation disparaîtra de Chats. Elle restera uniquement dans WIPP Privé."),
                     [
-                      { text: "Annuler", style: "cancel" },
+                      { text: tr("Annuler"), style: "cancel" },
                       {
-                        text: "Masquer",
+                        text: tr("Masquer"),
                         onPress: () => {
                           void lockChatPrivate(id, askPin).then((ok) => {
                             if (ok) {
@@ -465,7 +465,7 @@ function ChatRow({
             ? shop.name
             : peer?.displayName;
   const locked = isChatLocked(chat.id);
-  const preview = sealed ? t("sealedKeepsNone") : locked ? "Conversation verrouillée" : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
+  const preview = sealed ? t("sealedKeepsNone") : locked ? tr("Conversation verrouillée") : draft?.trim() ? tr("Brouillon : {0}", draft) : trSystem(chat.preview ?? "", false);
   const stamp = ephemeral && chat.expiresAt ? formatRemainShort(chat.expiresAt, now) : formatChatTime(chat.lastAt, lang);
   return (
     <View style={{ minHeight: 74, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
@@ -657,7 +657,7 @@ export function RequestsScreen() {
       <Sheet open={Boolean(accepting)} title={tr("Comment voulez-vous vous connecter ?")} onClose={() => setAccepting(null)}>
         <ConnectionChoicePicker value={choice} onChange={setChoice} />
         <Btn
-          label={choice ? tr("Se connecter · {0}", choice.type === "permanent" ? "Permanent" : "Éphémère") : tr("Choisis une durée valide")}
+          label={choice ? tr("Se connecter · {0}", choice.type === "permanent" ? tr("Permanent") : tr("Éphémère")) : tr("Choisis une durée valide")}
           disabled={!choice}
           style={{ marginTop: 16 }}
           onPress={() => {
@@ -769,15 +769,15 @@ export function ArchivesScreen() {
       <ScrollView>
         {chats.length === 0 ? <Empty title={t("chatsEmpty")} /> : chats.map((c) => {
           const peer = c.type === "group" ? undefined : chatPeer(c, users);
-          const title = c.type === "group" ? c.name ?? "Groupe" : peer?.displayName ?? "Conversation";
+          const title = c.type === "group" ? c.name ?? tr("Groupe") : peer?.displayName ?? tr("Conversation");
           return (
             <Press
               key={c.id}
               onPress={() => push({ name: "conversation", chatId: c.id })}
               onLongPress={() =>
                 Alert.alert(title, undefined, [
-                  { text: "Désarchiver", onPress: () => useWippStore.getState().archiveChat(c.id, false) },
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Désarchiver"), onPress: () => useWippStore.getState().archiveChat(c.id, false) },
+                  { text: tr("Annuler"), style: "cancel" },
                 ])
               }
               style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}
@@ -1007,9 +1007,9 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
 
   function groupPhotoMenu() {
     Alert.alert(tr("Photo du groupe"), undefined, [
-      { text: "Choisir une photo", onPress: () => void changeGroupPhoto(false) },
-      ...(chat?.avatar ? [{ text: "Supprimer la photo", style: "destructive" as const, onPress: () => void changeGroupPhoto(true) }] : []),
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Choisir une photo"), onPress: () => void changeGroupPhoto(false) },
+      ...(chat?.avatar ? [{ text: tr("Supprimer la photo"), style: "destructive" as const, onPress: () => void changeGroupPhoto(true) }] : []),
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
@@ -1019,12 +1019,12 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
     const memberIsAdmin = (chat.adminIds ?? []).includes(id);
     const raw = chat.id.slice(4);
     Alert.alert(u.displayName, `@${u.username}`, [
-      { text: "Voir le profil", onPress: () => push({ name: "found-profile", userId: id }) },
-      ...(u.connected ? [{ text: "Envoyer un message", onPress: () => openOrCreateDm(id) }] : []),
+      { text: tr("Voir le profil"), onPress: () => push({ name: "found-profile", userId: id }) },
+      ...(u.connected ? [{ text: tr("Envoyer un message"), onPress: () => openOrCreateDm(id) }] : []),
       ...(isAdmin
         ? [
             {
-              text: memberIsAdmin ? "Retirer des admins" : "Nommer admin",
+              text: memberIsAdmin ? tr("Retirer des admins") : tr("Nommer admin"),
               onPress: () =>
                 void import("../lib/lot7/api")
                   .then(({ setGroupAdmin }) => setGroupAdmin(raw, id, !memberIsAdmin))
@@ -1032,13 +1032,13 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                   .catch(() => Alert.alert(tr("Groupe"), tr("Action impossible."))),
             },
             {
-              text: "Retirer du groupe",
+              text: tr("Retirer du groupe"),
               style: "destructive" as const,
               onPress: () =>
                 Alert.alert(tr("Retirer du groupe"), tr("Retirer {0} du groupe ?", u.displayName), [
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Annuler"), style: "cancel" },
                   {
-                    text: "Retirer",
+                    text: tr("Retirer"),
                     style: "destructive",
                     onPress: () =>
                       void import("../lib/lot7/api")
@@ -1050,15 +1050,15 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             },
           ]
         : []),
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
   function leaveGroup() {
     Alert.alert(tr("Quitter le groupe"), tr("Quitter « {0} » ? Tu ne recevras plus ses messages.", chat?.name ?? "ce groupe"), [
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
       {
-        text: "Quitter",
+        text: tr("Quitter"),
         style: "destructive",
         onPress: () =>
           void import("../lib/lot7/api")
@@ -1078,7 +1078,8 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const localShop = peer ? shops.find((sh) => sh.ownerId === peer.id) : undefined;
   const members = chat.participantIds.filter((id) => id !== "me").map((id) => users[id]);
   const theme = CHAT_THEMES.find((t) => t.id === (themeId ?? "default")) ?? CHAT_THEMES[0];
-  const disappearLabel = DISAPPEAR_OPTIONS.find(([, ms]) => ms === (chat.disappearAfterMs ?? 0))?.[0] ?? "Désactivés";
+  const disappearLabelFr = DISAPPEAR_OPTIONS.find(([, ms]) => ms === (chat.disappearAfterMs ?? 0))?.[0] ?? "Désactivés";
+  const disappearLabel = tr(disappearLabelFr);
   const conn = chat.connection;
   const call = (kind: "audio" | "video") =>
     push({ name: "active-call", userId: group ? chat.id : peer!.id, kind, dir: "out", group, chatId: group ? chat.id : undefined });
@@ -1119,7 +1120,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                 {group ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>
                     {gs ? (gs.visibility === "public" ? tr("Groupe public") : tr("Groupe privé")) : tr("Groupe")} · {chat.participantIds.length} {tr("membres")}
-                    {gs?.category ? ` · ${gs.category}` : ""}
+                    {gs?.category ? ` · ${tr(gs.category)}` : ""}
                   </Text>
                 ) : profile?.username ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{profile.username}</Text>
@@ -1246,7 +1247,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           <Row
             icon={<Lock size={18} color={colors.fg} />}
             label={isChatLocked(chatId) ? tr("Déverrouiller la conversation") : tr("Verrouiller la conversation")}
-            value={isChatLocked(chatId) ? "Activé" : undefined}
+            value={isChatLocked(chatId) ? tr("Activé") : undefined}
             onPress={() => toggleChatLock(chatId, infoLock.askPin)}
           />
           <Row
@@ -1302,9 +1303,9 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               danger
               onPress={() =>
                 Alert.alert(tr("Signaler le groupe"), tr("Veux-tu aussi quitter le groupe ?"), [
-                  { text: "Signaler et quitter", style: "destructive", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, true) },
-                  { text: "Signaler seulement", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, false) },
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Signaler et quitter"), style: "destructive", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, true) },
+                  { text: tr("Signaler seulement"), onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, false) },
+                  { text: tr("Annuler"), style: "cancel" },
                 ])
               }
             />
@@ -1328,9 +1329,9 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               danger
               onPress={() =>
                 Alert.alert(tr("Bloquer"), tr("{0} ne pourra plus vous contacter.", peer.displayName), [
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Annuler"), style: "cancel" },
                   {
-                    text: "Bloquer",
+                    text: tr("Bloquer"),
                     style: "destructive",
                     onPress: () => {
                       blockUser(peer.id);
@@ -1347,7 +1348,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               onPress={() =>
                 Alert.alert(tr("Signaler ce profil"), tr("Seuls le profil et la raison sont envoyés à la modération, jamais vos messages."), [
                   ...["Contenu inapproprié", "Harcèlement", "Spam ou arnaque", "Faux profil", "Autre"].map((reason) => ({
-                    text: reason,
+                    text: tr(reason),
                     onPress: () => {
                       void import("../lib/safety")
                         .then(({ submitContentReport }) =>
@@ -1359,7 +1360,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                         );
                     },
                   })),
-                  { text: "Annuler", style: "cancel" as const },
+                  { text: tr("Annuler"), style: "cancel" as const },
                 ])
               }
             />
@@ -1390,7 +1391,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           const on = (chat.disappearAfterMs ?? 0) === ms;
           return (
             <Press key={label} onPress={() => { setDisappear(chatId, ms); setSheet(null); }} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14 }}>
-              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : colors.fg }}>{label}</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : colors.fg }}>{tr(label)}</Text>
               {on ? <Check size={18} color={colors.accent} /> : null}
             </Press>
           );
@@ -1460,9 +1461,9 @@ export function PrivateChatsScreen() {
               onPress={() => push({ name: "conversation", chatId: c.id })}
               onLongPress={() => {
                 Alert.alert(tr("WIPP Privé"), tr("Retirer de WIPP Privé ?"), [
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Annuler"), style: "cancel" },
                   {
-                    text: "Retirer",
+                    text: tr("Retirer"),
                     onPress: () => {
                       void unlockChatFromPrivate(c.id, askPin);
                     },

@@ -14,7 +14,7 @@ import { tr } from "../lib/tr";
 type Rsvp = "going" | "maybe" | "no";
 const MONTHS_SHORT = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
 const DAYS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-const LABELS: Record<Rsvp, string> = { going: "J’y vais", maybe: "Peut-être", no: "Non" };
+const LABELS: Record<Rsvp, string> = { get going() { return tr("J’y vais"); }, get maybe() { return tr("Peut-être"); }, get no() { return tr("Non"); } };
 
 const at = (day: Date, t: string) => {
   const d = new Date(day);
@@ -84,8 +84,8 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
             )}
           </Press>
           <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 120))} placeholder={tr("Nom de l’événement")} placeholderTextColor={colors.muted} style={input} />
-          {pickRow(CalendarDays, day ? dayLabel(day) : "Choisir la date", !day, () => setPicker("day"))}
-          {pickRow(Clock, start ? (end ? `${start.replace(":", "h")} – ${end.replace(":", "h")}` : `À ${start.replace(":", "h")}`) : "Choisir l’heure", !start, () => (day ? setPicker("time") : setPicker("day")))}
+          {pickRow(CalendarDays, day ? dayLabel(day) : tr("Choisir la date"), !day, () => setPicker("day"))}
+          {pickRow(Clock, start ? (end ? `${start.replace(":", "h")} – ${end.replace(":", "h")}` : tr("À {0}", start.replace(":", "h"))) : tr("Choisir l’heure"), !start, () => (day ? setPicker("time") : setPicker("day")))}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, ...input, paddingVertical: 0 }}>
             <MapPin size={18} color={colors.accent} />
             <TextInput value={place} onChangeText={(v) => setPlace(v.slice(0, 200))} placeholder={tr("Lieu (facultatif)")} placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingVertical: 12 }} />
@@ -176,8 +176,8 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
       });
   };
 
-  const name = (id: string) => (id === "me" ? "Toi" : users[id]?.displayName || (users[id]?.username ? `@${users[id]!.username}` : "Membre"));
-  const when = `${DAYS[start.getDay()]} ${dayLabel(start)} · ${hhmm(start)}${end ? ` – ${hhmm(end)}` : ""}`;
+  const name = (id: string) => (id === "me" ? tr("Toi") : users[id]?.displayName || (users[id]?.username ? `@${users[id]!.username}` : tr("Membre")));
+  const when = `${tr(DAYS[start.getDay()]!)} ${dayLabel(start)} · ${hhmm(start)}${end ? ` – ${hhmm(end)}` : ""}`;
 
   return (
     <View style={{ minWidth: 240, paddingVertical: 2 }}>
@@ -185,7 +185,7 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ width: 52, borderRadius: 12, overflow: "hidden", backgroundColor: onMe ? "rgba(0,0,0,0.18)" : colors.surface2, alignItems: "center" }}>
           <View style={{ alignSelf: "stretch", backgroundColor: accent, paddingVertical: 2, alignItems: "center" }}>
-            <Text style={{ fontSize: 10, color: onMe ? "#000" : colors.accentFg, fontFamily: "Inter_700Bold" }}>{MONTHS_SHORT[start.getMonth()]}</Text>
+            <Text style={{ fontSize: 10, color: onMe ? "#000" : colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr(MONTHS_SHORT[start.getMonth()]!)}</Text>
           </View>
           <Text style={{ fontSize: 22, color: fg, fontFamily: "Inter_700Bold", paddingVertical: 4 }}>{start.getDate()}</Text>
         </View>

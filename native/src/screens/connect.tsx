@@ -29,7 +29,7 @@ import { signinOtp } from "../lib/auth-api";
 import { useT, useWippStore } from "../lib/store";
 import type { ConnectionChoice, FoundVia, NearbyMode } from "../lib/types";
 import { colors, layout, accentA, fgA, whiteA } from "../theme";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 export function ConnectScreen() {
   const t = useT();
@@ -182,14 +182,14 @@ export function MyQrScreen() {
     try {
       const r = await issueTemp(tempChoice?.type === "ephemeral" ? tempChoice.minutes : 1440);
       if ("error" in r) {
-        setTempErr(r.error === "no_session" ? "Connecte-toi avec un vrai compte pour un QR temporaire." : "QR temporaire indisponible, réessaie.");
+        setTempErr(r.error === "no_session" ? tr("Connecte-toi avec un vrai compte pour un QR temporaire.") : tr("QR temporaire indisponible, réessaie."));
       } else {
         setTempErr(null);
         setTemp(r);
         setNow(Date.now());
       }
     } catch {
-      setTempErr("QR temporaire indisponible, réessaie.");
+      setTempErr(tr("QR temporaire indisponible, réessaie."));
     }
   }
   const card = useRef<QrShareCardHandle>(null);
@@ -215,7 +215,7 @@ export function MyQrScreen() {
         await Share.share({ url: uri, message: `@${username} ${link}` });
       } else {
         const Sharing = await import("expo-sharing");
-        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Partager mon WIPP" });
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: tr("Partager mon WIPP") });
       }
       setCopied(true);
     } catch {
@@ -234,8 +234,8 @@ export function MyQrScreen() {
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) {
         Alert.alert(tr("Photos"), tr("Autorise WIPP à ajouter des photos pour enregistrer ton code QR."), [
-          { text: "Annuler", style: "cancel" },
-          { text: "Réglages", onPress: () => void Linking.openSettings() },
+          { text: tr("Annuler"), style: "cancel" },
+          { text: tr("Réglages"), onPress: () => void Linking.openSettings() },
         ]);
         return;
       }
@@ -534,10 +534,10 @@ export function NearbyScreen() {
     nearby === 0
       ? null
       : nearby === -1
-        ? "🟢 Visible jusqu’à désactivation"
+        ? tr("🟢 Visible jusqu’à désactivation")
         : until
-          ? `🟢 Visible jusqu’à ${String(until.getHours()).padStart(2, "0")}:${String(until.getMinutes()).padStart(2, "0")}`
-          : "🟢 Visible";
+          ? tr("🟢 Visible jusqu’à {0}:{1}", String(until.getHours()).padStart(2, "0"), String(until.getMinutes()).padStart(2, "0"))
+          : tr("🟢 Visible");
 
   return (
     <ScreenRoot>
@@ -579,7 +579,7 @@ export function NearbyScreen() {
           <View style={{ marginTop: 14, gap: 10 }}>
             {people.map((p) => {
               const sent = p.relation === "pending_out" || sentIds.includes(p.userId);
-              const label = p.relation === "connected" ? "Message" : p.relation === "pending_in" ? "Répondre" : sent ? "Demande envoyée" : "Se connecter";
+              const label = p.relation === "connected" ? tr("Message") : p.relation === "pending_in" ? tr("Répondre") : sent ? tr("Demande envoyée") : tr("Se connecter");
               return (
                 <View key={p.id} style={{ padding: 12, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -686,7 +686,7 @@ export function FoundProfileScreen({
   }
   const connected = relation === "connected" || user.connected;
   const pending = relation === "pending_out" || (sent && !connected);
-  const cta = blocked ? "Bloqué" : connected ? t("message") : pending ? t("requestSent") : t("connectWith");
+  const cta = blocked ? tr("Bloqué") : connected ? t("message") : pending ? t("requestSent") : t("connectWith");
   return (
     <ScreenRoot>
       <GlassHeader>
@@ -707,7 +707,7 @@ export function FoundProfileScreen({
               <>
                 <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>{tr("WIPP connecté ✓")}</Text>
                 <Text style={{ color: colors.muted, textAlign: "center" }}>
-                  {tr("⏳ Contact éphémère")}{offerUntil ? tr(" jusqu’au {0}", new Date(offerUntil).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })) : ""}
+                  {tr("⏳ Contact éphémère")}{offerUntil ? tr(" jusqu’au {0}", new Date(offerUntil).toLocaleString(trLocale(), { dateStyle: "short", timeStyle: "short" })) : ""}
                 </Text>
                 <Btn label={t("message")} onPress={() => openOrCreateDm(user.id)} />
               </>

@@ -116,7 +116,7 @@ export function PollBubble({ chatId, m, users, onMe, fg, muted, accent }: { chat
       });
   };
 
-  const name = (id: string) => (id === "me" ? "Toi" : users[id]?.displayName || (users[id]?.username ? `@${users[id]!.username}` : "Membre"));
+  const name = (id: string) => (id === "me" ? tr("Toi") : users[id]?.displayName || (users[id]?.username ? `@${users[id]!.username}` : tr("Membre")));
 
   return (
     <View style={{ minWidth: 230, paddingVertical: 2 }}>
@@ -129,7 +129,7 @@ export function PollBubble({ chatId, m, users, onMe, fg, muted, accent }: { chat
         {poll.options.map((o, i) => {
           const on = mine.has(i);
           return (
-            <Press key={i} onPress={() => vote(i)} accessibilityLabel={tr("{0}, {1} vote{2}{3}", o, counts[i], counts[i] > 1 ? "s" : "", on ? ", ton choix" : "")}>
+            <Press key={i} onPress={() => vote(i)} accessibilityLabel={tr("{0}, {1} vote{2}{3}", o, counts[i], counts[i] > 1 ? "s" : "", on ? tr(", ton choix") : "")}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View
                   style={{

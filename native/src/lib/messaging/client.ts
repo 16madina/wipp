@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 import { supabase } from "../supabase";
 import * as S from "./supa";
 import type { WippChatSummary, WippMessage, WippProfile } from "./types";
@@ -25,7 +26,7 @@ export async function openServerChat(peerUsername: string) {
     body: JSON.stringify({ peerUsername }),
   });
   const chat = (await S.listChats()).find((c) => c.id === data.chat.id);
-  if (!chat) throw new Error("Conversation introuvable");
+  if (!chat) throw new Error(tr("Conversation introuvable"));
   return chat;
 }
 

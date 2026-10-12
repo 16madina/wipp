@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /** Personal phrase on the profile card (replaces the fixed "Good Vibes Only"). */
 import { supabase } from "./supabase";
 import { useWippStore } from "./store";
@@ -46,6 +47,6 @@ export async function saveMyMotto(raw: string) {
     .select("id");
   if (error || !data?.length) {
     apply(previous);
-    throw new Error("La phrase n’a pas pu être enregistrée.");
+    throw new Error(tr("La phrase n’a pas pu être enregistrée."));
   }
 }

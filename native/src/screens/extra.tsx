@@ -34,7 +34,7 @@ export { NewStoryScreen } from "./story-composer";
 function replyFailure(err: unknown) {
   const message = errorText(err, "");
   if (/bloqu|écrire|indisponible|introuvable/i.test(message)) return message;
-  return "Message impossible.";
+  return tr("Message impossible.");
 }
 
 /** `storyId`: opened from a chat (reply / like). Shows that one story, then closes, like WhatsApp. */
@@ -243,8 +243,8 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
   function askDelete() {
     if (!story || !mine) return;
     Alert.alert(tr("Supprimer cette story ?"), undefined, [
-      { text: "Annuler", style: "cancel" },
-      { text: "Supprimer", style: "destructive", onPress: () => void confirmDelete(story.id) },
+      { text: tr("Annuler"), style: "cancel" },
+      { text: tr("Supprimer"), style: "destructive", onPress: () => void confirmDelete(story.id) },
     ]);
   }
 
@@ -274,7 +274,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
       useWippStore.getState().sendMessage(chatId, { type: "text", text, storyRef: storyCite(story, "reply") });
       setReply("");
       dismissComposer();
-      flashSent("Réponse envoyée");
+      flashSent(tr("Réponse envoyée"));
     } catch (err) {
       Alert.alert("WIPP", replyFailure(err));
     } finally {
@@ -299,7 +299,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
       const chatId = await ensureStoryChat(story.userId);
       // A normal message: the author gets the usual notification and sees « A aimé votre story ».
       useWippStore.getState().sendMessage(chatId, { type: "text", text: "❤️", storyRef: storyCite(story, "like") });
-      flashSent("Story aimée");
+      flashSent(tr("Story aimée"));
     } catch (err) {
       setLiked((current) => {
         const next = new Set(current);
@@ -330,7 +330,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
         storyRef: storyCite(story, "reaction"),
       });
       setTray(null);
-      flashSent("Envoyé");
+      flashSent(tr("Envoyé"));
     } catch (err) {
       setBurst(null);
       Alert.alert("WIPP", replyFailure(err));
@@ -407,18 +407,18 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
           onPress={() => {
             if (mine) {
               Alert.alert(tr("Story"), undefined, [
-                { text: "Supprimer la story", style: "destructive", onPress: askDelete },
-                { text: "Annuler", style: "cancel" },
+                { text: tr("Supprimer la story"), style: "destructive", onPress: askDelete },
+                { text: tr("Annuler"), style: "cancel" },
               ]);
               return;
             }
             Alert.alert(tr("Story"), undefined, [
               {
-                text: "Signaler la story",
+                text: tr("Signaler la story"),
                 onPress: () => {
                   Alert.alert(tr("Signaler la story"), undefined, [
                     ...REPORT_REASONS.map((reason) => ({
-                      text: reason,
+                      text: tr(reason),
                       onPress: () => {
                         // The reported story disappears for me right away, even before the server answers.
                         hideStoryLocal(story.id);
@@ -431,9 +431,9 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
                         }).then(
                           () =>
                             Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va l’examiner. Cette story ne s’affichera plus pour toi.\n\nVeux-tu aussi bloquer cette personne ?"), [
-                              { text: "Non", style: "cancel" },
+                              { text: tr("Non"), style: "cancel" },
                               {
-                                text: "Bloquer",
+                                text: tr("Bloquer"),
                                 style: "destructive",
                                 onPress: () => {
                                   useWippStore.getState().blockUser(group.id);
@@ -445,25 +445,25 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
                         );
                       },
                     })),
-                    { text: "Annuler", style: "cancel" as const },
+                    { text: tr("Annuler"), style: "cancel" as const },
                   ]);
                 },
               },
               {
-                text: "Masquer cette story",
+                text: tr("Masquer cette story"),
                 onPress: () => {
                   hideStoryLocal(story.id);
                   move(1);
                 },
               },
               {
-                text: "Bloquer cet utilisateur",
+                text: tr("Bloquer cet utilisateur"),
                 style: "destructive" as const,
                 onPress: () => {
                   Alert.alert(tr("Bloquer"), tr("Bloquer cet utilisateur ?"), [
-                    { text: "Annuler", style: "cancel" },
+                    { text: tr("Annuler"), style: "cancel" },
                     {
-                      text: "Bloquer",
+                      text: tr("Bloquer"),
                       style: "destructive",
                       onPress: () => {
                         useWippStore.getState().blockUser(group.id);
@@ -473,7 +473,7 @@ export function StoriesScreen({ userId, storyId }: { userId: string; storyId?: s
                   ]);
                 },
               },
-              { text: "Annuler", style: "cancel" },
+              { text: tr("Annuler"), style: "cancel" },
             ]);
           }}
           style={{ position: "absolute", top: 68, right: 8, padding: 8, zIndex: 4 }}
@@ -604,7 +604,7 @@ function GroupStepper({ step }: { step: number }) {
         const done = i < step;
         const current = i === step;
         return (
-          <View key={label} style={{ flex: 1, alignItems: "center" }}>
+          <View key={tr(label)} style={{ flex: 1, alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center", width: "100%" }}>
               <View style={{ flex: 1, height: 2, backgroundColor: i === 0 ? "transparent" : i <= step ? colors.accent : colors.hair }} />
               <View
@@ -623,7 +623,7 @@ function GroupStepper({ step }: { step: number }) {
               </View>
               <View style={{ flex: 1, height: 2, backgroundColor: i === GROUP_STEPS.length - 1 ? "transparent" : i < step ? colors.accent : colors.hair }} />
             </View>
-            <Text style={{ marginTop: 6, fontSize: 11, color: current ? colors.fg : colors.muted, fontFamily: current ? "Inter_600SemiBold" : undefined }}>{label}</Text>
+            <Text style={{ marginTop: 6, fontSize: 11, color: current ? colors.fg : colors.muted, fontFamily: current ? "Inter_600SemiBold" : undefined }}>{tr(label)}</Text>
           </View>
         );
       })}
@@ -716,9 +716,9 @@ export function NewGroupFlow() {
             onPress={() =>
               photo
                 ? Alert.alert(tr("Photo du groupe"), undefined, [
-                    { text: "Changer la photo", onPress: () => void pickPhoto() },
-                    { text: "Retirer la photo", style: "destructive", onPress: () => setPhoto(null) },
-                    { text: "Annuler", style: "cancel" },
+                    { text: tr("Changer la photo"), onPress: () => void pickPhoto() },
+                    { text: tr("Retirer la photo"), style: "destructive", onPress: () => setPhoto(null) },
+                    { text: tr("Annuler"), style: "cancel" },
                   ])
                 : void pickPhoto()
             }
@@ -734,11 +734,11 @@ export function NewGroupFlow() {
             </View>
           </Press>
 
-          {label("Nom du groupe")}
+          {label(tr("Nom du groupe"))}
           <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 50))} placeholder={tr("Ex. Famille, Équipe, Masterclass…")} placeholderTextColor={colors.muted} style={{ ...field, height: 50 }} />
           {counter(name.length, 50)}
 
-          {label("Description", true)}
+          {label(tr("Description"), true)}
           <TextInput
             value={description}
             onChangeText={(v) => setDescription(v.slice(0, 200))}
@@ -749,14 +749,14 @@ export function NewGroupFlow() {
           />
           {counter(description.length, 200)}
 
-          {label("Catégorie", true)}
+          {label(tr("Catégorie"), true)}
           <Press onPress={() => setCategoryOpen(true)} style={{ ...field, height: 50, flexDirection: "row", alignItems: "center", gap: 10 }}>
             <LayoutGrid size={18} color={colors.fg} />
             <Text style={{ flex: 1, color: settings.category ? colors.fg : colors.muted, fontSize: 15 }}>{settings.category ?? tr("Choisir une catégorie")}</Text>
             <ChevronRight size={18} color={colors.muted} />
           </Press>
 
-          {label("Visibilité")}
+          {label(tr("Visibilité"))}
           <GroupVisibilityPicker
             value={settings.visibility}
             onChange={(v) => setSettings((s) => ({ ...s, visibility: v, approveNewMembers: v === "private" ? true : s.approveNewMembers, membersCanInvite: v === "public" ? s.membersCanInvite : false }))}
@@ -837,7 +837,7 @@ export function NewGroupFlow() {
           <Text style={{ marginTop: 6, color: colors.success, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("✓ Groupe créé")}</Text>
           <Text style={{ marginTop: 8, color: colors.muted, fontSize: 13, textAlign: "center" }}>
             {settings.visibility === "public" ? tr("Public") : tr("Privé")} · {picked.length + 1} {tr("membre")}{picked.length ? "s" : ""}
-            {settings.category ? ` · ${settings.category}` : ""}
+            {settings.category ? ` · ${tr(settings.category)}` : ""}
             {disappearMs ? tr(" · messages éphémères ({0})", GROUP_DISAPPEAR.find((o) => o.ms === disappearMs)?.label) : ""}
           </Text>
           <Text style={{ marginTop: 6, color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Messages chiffrés de bout en bout")}</Text>
@@ -875,7 +875,7 @@ export function NewGroupFlow() {
               }}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13 }}
             >
-              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : c ? colors.fg : colors.muted }}>{c ?? tr("Aucune catégorie")}</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : c ? colors.fg : colors.muted }}>{c ? tr(c) : tr("Aucune catégorie")}</Text>
               {on ? <Check size={18} color={colors.accent} /> : null}
             </Press>
           );
@@ -896,7 +896,7 @@ export function GroupInfoFull({ chatId }: { chatId: string }) {
         <Header title={chat?.name ?? tr("Groupe")} onBack={pop} />
       </GlassHeader>
       <ScrollView>
-        <Text style={{ padding: 16, color: colors.muted }}>{chat?.description ?? `${chat?.participantIds.length ?? 0} membres`}</Text>
+        <Text style={{ padding: 16, color: colors.muted }}>{chat?.description ?? tr("{0} membres", chat?.participantIds.length ?? 0)}</Text>
         {chat?.participantIds.map((id) => (
           <Press key={id} onPress={() => id !== "me" && push({ name: "found-profile", userId: id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12 }}>
             <Avatar user={id === "me" ? useWippStore.getState().me : users[id]} size={40} />
@@ -958,11 +958,11 @@ export function GroupAddMembersScreen({ chatId }: { chatId: string }) {
     for (const id of picked) {
       try {
         const r = await addGroupMember(chatId.slice(4), id);
-        const name = users[id]?.displayName ?? "Un contact";
-        if (r === "not_contact") problems.push(`${name} n’est pas (ou plus) dans tes contacts.`);
-        else if (r === "banned") problems.push(`${name} a été exclu de ce groupe.`);
+        const name = users[id]?.displayName ?? tr("Un contact");
+        if (r === "not_contact") problems.push(tr("{0} n’est pas (ou plus) dans tes contacts.", name));
+        else if (r === "banned") problems.push(tr("{0} a été exclu de ce groupe.", name));
       } catch (err) {
-        problems.push(String((err as Error)?.message ?? "").includes("forbidden") ? "Seuls les admins peuvent ajouter des membres." : "Un ajout a échoué.");
+        problems.push(String((err as Error)?.message ?? "").includes("forbidden") ? tr("Seuls les admins peuvent ajouter des membres.") : tr("Un ajout a échoué."));
         break;
       }
     }
@@ -1115,7 +1115,7 @@ export function GroupJoinRequestsScreen({ chatId }: { chatId: string }) {
                   <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{r.displayName}</Text>
                   <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{r.username}</Text>
                   <Text style={{ marginTop: 2, color: colors.muted, fontSize: 12 }}>
-                    {r.via === "link" ? tr("Via le lien d’invitation") : tr("Ajouté par {0}", r.invitedBy ?? "un membre")}
+                    {r.via === "link" ? tr("Via le lien d’invitation") : tr("Ajouté par {0}", r.invitedBy ?? tr("un membre"))}
                   </Text>
                 </View>
               </View>
@@ -1200,15 +1200,15 @@ export function GroupQrScreen({ chatId }: { chatId: string }) {
                   void import("expo-clipboard").then((C) => C.setStringAsync(link)).then(() => setCopied(true));
                 }}
               />
-              <Btn label={tr("Partager le lien")} variant="secondary" onPress={() => void shareWippPublic(`Rejoins « ${chat?.name ?? "notre groupe"} » sur WIPP : ${link}`)} />
+              <Btn label={tr("Partager le lien")} variant="secondary" onPress={() => void shareWippPublic(tr("Rejoins « {0} » sur WIPP : {1}", chat?.name ?? "notre groupe", link))} />
               {isAdmin ? (
                 <Btn
                   label={tr("Réinitialiser le lien")}
                   variant="danger"
                   onPress={() =>
                     Alert.alert(tr("Réinitialiser le lien"), tr("L’ancien lien et l’ancien QR ne fonctionneront plus."), [
-                      { text: "Annuler", style: "cancel" },
-                      { text: "Réinitialiser", style: "destructive", onPress: () => void create(true) },
+                      { text: tr("Annuler"), style: "cancel" },
+                      { text: tr("Réinitialiser"), style: "destructive", onPress: () => void create(true) },
                     ])
                   }
                 />
@@ -1491,14 +1491,14 @@ export function OneTimeQrScreen() {
     setExpired(false);
     try {
       const r = await issueTemp();
-      if ("error" in r) setErr(r.error === "no_session" ? "Connecte-toi avec un vrai compte." : "QR temporaire indisponible.");
+      if ("error" in r) setErr(r.error === "no_session" ? tr("Connecte-toi avec un vrai compte.") : tr("QR temporaire indisponible."));
       else {
         setErr(null);
         setTemp(r);
         setNow(Date.now());
       }
     } catch {
-      setErr("QR temporaire indisponible.");
+      setErr(tr("QR temporaire indisponible."));
     }
   }
   useEffect(() => {

@@ -6,8 +6,8 @@ import { tr } from "../lib/tr";
 
 export function PrivatePinGate({
   visible,
-  title = "Code WIPP Privé",
-  hint = "Ce code est distinct du code PIN du téléphone.",
+  title = tr("Code WIPP Privé"),
+  hint = tr("Ce code est distinct du code PIN du téléphone."),
   numeric,
   onCancel,
   onSubmit,

@@ -26,7 +26,7 @@ export default function SurprisePreview() {
           </View>
           <SurpriseReveal
             key={reset}
-            surprise={{ id: "local-love-preview", message: "Tu rends mes journées plus belles. ♥", surpriseType: "scratch", designId: "amour", animationId: "amour-pluie-cristal", surpriseOptions: {}, time: "", mine: false }}
+            surprise={{ id: "local-love-preview", message: tr("Tu rends mes journées plus belles. ♥"), surpriseType: "scratch", designId: "amour", animationId: "amour-pluie-cristal", surpriseOptions: {}, time: "", mine: false }}
             onPlayAnimation={(id) => setPlaying({ id, n: ++sequence.current })}
           />
           <Text style={{ color: colors.muted, textAlign: "center", fontSize: 14 }}>{tr("Ouvre le cadeau, puis gratte la carte pour lire le message et découvrir l’animation.")}</Text>

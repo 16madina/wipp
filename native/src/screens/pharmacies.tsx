@@ -7,7 +7,7 @@ import { getMyPosition, kmBetween, kmLabel, osmTile, type LatLng } from "../lib/
 import { wippApi } from "../lib/proximity/wipp-session";
 import { useWippStore } from "../lib/store";
 import { colors, accentA } from "../theme";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 /** Same shape as the server (src/lib/pharmacy/places.ts). */
 export type PharmacyPlace = {
@@ -54,7 +54,7 @@ function hhmm(iso: string | null, offsetMin?: number | null) {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  if (typeof offsetMin !== "number") return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (typeof offsetMin !== "number") return d.toLocaleTimeString(trLocale(), { hour: "2-digit", minute: "2-digit" });
   const local = new Date(d.getTime() + offsetMin * 60_000);
   return `${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
 }
@@ -63,8 +63,8 @@ function statusOf(p: PharmacyPlace): { label: string; tone: "open" | "closed" | 
   if (p.open24h) return { label: tr("Ouverte 24 h/24"), tone: "open", detail: null };
   const close = hhmm(p.nextCloseTime, p.utcOffsetMinutes);
   const open = hhmm(p.nextOpenTime, p.utcOffsetMinutes);
-  if (p.openNow === true) return { label: tr("Ouverte maintenant"), tone: "open", detail: close ? `Ferme à ${close}` : null };
-  if (p.openNow === false) return { label: tr("Fermée"), tone: "closed", detail: open ? `Ouvre à ${open}` : null };
+  if (p.openNow === true) return { label: tr("Ouverte maintenant"), tone: "open", detail: close ? tr("Ferme à {0}", close) : null };
+  if (p.openNow === false) return { label: tr("Fermée"), tone: "closed", detail: open ? tr("Ouvre à {0}", open) : null };
   // Unknown hours are never shown as "closed".
   return { label: tr("Horaires non communiqués"), tone: "unknown", detail: null };
 }
@@ -189,7 +189,7 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
       setLoad({ state: "ready", places: r.places });
     } catch (err) {
       const e = err as { code?: string; message?: string };
-      setLoad({ state: "error", message: e.message || "Erreur", notConfigured: e.code === "places_not_configured" });
+      setLoad({ state: "error", message: e.message || tr("Erreur"), notConfigured: e.code === "places_not_configured" });
     }
   }
 
@@ -216,7 +216,7 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
       setFromGps(false);
       setLoad({ state: "ready", places: r.places });
     } catch (err) {
-      setLoad({ state: "error", message: (err as Error).message || "Erreur" });
+      setLoad({ state: "error", message: (err as Error).message || tr("Erreur") });
     }
   }
 

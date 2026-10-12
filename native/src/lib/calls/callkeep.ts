@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 import * as Device from "expo-device";
 import { AppState, Platform, Settings } from "react-native";
 
@@ -49,16 +50,16 @@ export async function setupCallKeep(
         maximumCallsPerCallGroup: "1",
       },
       android: {
-        alertTitle: "Appels WIPP",
-        alertDescription: "WIPP a besoin d’accéder aux appels pour les afficher sur l’écran verrouillé.",
-        cancelButton: "Annuler",
+        alertTitle: tr("Appels WIPP"),
+        alertDescription: tr("WIPP a besoin d’accéder aux appels pour les afficher sur l’écran verrouillé."),
+        cancelButton: tr("Annuler"),
         okButton: "OK",
         selfManaged: true,
         additionalPermissions: [],
         foregroundService: {
           channelId: "incoming_calls",
-          channelName: "Appels WIPP",
-          notificationTitle: "Appel WIPP",
+          channelName: tr("Appels WIPP"),
+          notificationTitle: tr("Appel WIPP"),
         },
       },
     });

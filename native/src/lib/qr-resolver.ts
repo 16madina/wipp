@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /**
  * WippQRResolver : QR brut → type → validation → destination.
  * Types : PROFILE /@user, TEMP /t/..., GROUP /g/..., BUSINESS /b/...
@@ -19,13 +20,13 @@ export type QrDestination =
   | { ok: false; error: string };
 
 export const QR_ERRORS = {
-  notWipp: "Ce QR n'est pas un QR WIPP",
-  expired: "QR expiré",
-  used: "QR déjà utilisé",
-  userMissing: "Utilisateur introuvable",
-  groupMissing: "Groupe introuvable",
-  shopMissing: "Carte introuvable",
-  unverifiable: "Impossible de vérifier le QR",
+  get notWipp() { return tr("Ce QR n'est pas un QR WIPP"); },
+  get expired() { return tr("QR expiré"); },
+  get used() { return tr("QR déjà utilisé"); },
+  get userMissing() { return tr("Utilisateur introuvable"); },
+  get groupMissing() { return tr("Groupe introuvable"); },
+  get shopMissing() { return tr("Carte introuvable"); },
+  get unverifiable() { return tr("Impossible de vérifier le QR"); },
 } as const;
 
 export const groupQr = (token: string) => `https://${QR_HOST}/g/${token}`;
@@ -104,8 +105,8 @@ export async function resolveWippQr(raw: string): Promise<QrDestination> {
       }
       if (r.status === "expired") return { ok: false, error: QR_ERRORS.expired };
       if (r.status === "used") return { ok: false, error: QR_ERRORS.used };
-      if (r.status === "self") return { ok: false, error: "C'est ton propre QR" };
-      if (r.status === "no_session") return { ok: false, error: "Connecte-toi avec un vrai compte" };
+      if (r.status === "self") return { ok: false, error: tr("C'est ton propre QR") };
+      if (r.status === "no_session") return { ok: false, error: tr("Connecte-toi avec un vrai compte") };
       return { ok: false, error: QR_ERRORS.unverifiable };
     } catch {
       return { ok: false, error: QR_ERRORS.unverifiable };
@@ -114,12 +115,12 @@ export async function resolveWippQr(raw: string): Promise<QrDestination> {
 
   if (id.kind === "profile") {
     const mine = (useWippStore.getState().serverUsername || "").toLowerCase();
-    if (mine && mine === id.value) return { ok: false, error: "C'est ton propre QR" };
+    if (mine && mine === id.value) return { ok: false, error: tr("C'est ton propre QR") };
     try {
       const p = await findPublicByUsername(id.value);
       if (p) {
         const meId = useWippStore.getState().serverProfileId;
-        if (meId && p.id === meId) return { ok: false, error: "C'est ton propre QR" };
+        if (meId && p.id === meId) return { ok: false, error: tr("C'est ton propre QR") };
         let connected = false;
         if (meId) {
           const a = [meId, p.id].sort();

@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
@@ -106,7 +107,7 @@ function ensureHandler() {
           true,
         );
         notification.request.content.title = red.title ?? "WIPP";
-        notification.request.content.body = red.body ?? "Nouveau message";
+        notification.request.content.body = red.body ?? tr("Nouveau message");
       }
       return {
         shouldShowAlert: true,
@@ -131,20 +132,20 @@ function ensureHandler() {
 export async function ensurePushChannels() {
   if (Platform.OS !== "android") return;
   await Notifications.setNotificationChannelAsync("messages", {
-    name: "Messages",
+    name: tr("Messages"),
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 160, 80, 160],
     sound: "default",
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
   });
   await Notifications.setNotificationChannelAsync("requests", {
-    name: "Demandes",
+    name: tr("Demandes"),
     importance: Notifications.AndroidImportance.DEFAULT,
     vibrationPattern: [0, 120],
     sound: "default",
   });
   await Notifications.setNotificationChannelAsync("calls", {
-    name: "Appels",
+    name: tr("Appels"),
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 400, 200, 400],
     sound: "default",
@@ -152,7 +153,7 @@ export async function ensurePushChannels() {
     bypassDnd: true,
   });
   await Notifications.setNotificationChannelAsync("incoming_calls", {
-    name: "Appels entrants",
+    name: tr("Appels entrants"),
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 400, 200, 400, 200, 400],
     sound: "default",
@@ -458,7 +459,7 @@ export function handleCallData(data: Record<string, unknown>) {
         if (live?.callId === callId && live.phase !== "connected") {
           useCallSession.getState().patch({
             phase: action === "reject" ? "declined" : "ended",
-            note: action === "reject" ? "Appel refusé." : action === "cancel" ? "Appel annulé." : "Appel terminé.",
+            note: action === "reject" ? tr("Appel refusé.") : action === "cancel" ? tr("Appel annulé.") : tr("Appel terminé."),
             url: undefined,
             token: undefined,
           });

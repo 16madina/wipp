@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /**
  * WIPP Privé — coffre local à cet appareil.
  * Ids + vérificateur dans Keystore / Keychain (expo-secure-store).
@@ -177,8 +178,8 @@ export async function authenticateDeviceOwner(promptMessage: string): Promise<Bi
     if (level === LocalAuthentication.SecurityLevel.NONE) return "unavailable";
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage,
-      cancelLabel: "Annuler",
-      fallbackLabel: "Utiliser le code de l’iPhone",
+      cancelLabel: tr("Annuler"),
+      fallbackLabel: tr("Utiliser le code de l’iPhone"),
       disableDeviceFallback: false,
     });
     if (result.success) return "success";
@@ -191,7 +192,7 @@ export async function authenticateDeviceOwner(promptMessage: string): Promise<Bi
   }
 }
 
-export async function authenticateBiometric(promptMessage = "WIPP Privé", fallbackLabel?: string): Promise<BiometricOutcome> {
+export async function authenticateBiometric(promptMessage = tr("WIPP Privé"), fallbackLabel?: string): Promise<BiometricOutcome> {
   if (Platform.OS === "web") return "unavailable";
   const hw = await inspectBiometricHardware();
   if (!hw.hasHardware || !hw.enrolled) return "unavailable";
@@ -199,7 +200,7 @@ export async function authenticateBiometric(promptMessage = "WIPP Privé", fallb
     const LocalAuthentication = await import("expo-local-authentication");
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage,
-      cancelLabel: "Annuler",
+      cancelLabel: tr("Annuler"),
       // iOS shows this button after a failed Face ID try; the app then asks for its own code.
       ...(fallbackLabel ? { fallbackLabel } : {}),
       disableDeviceFallback: true,

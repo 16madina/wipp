@@ -58,7 +58,7 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
       <View style={box}>
         <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Connexion éphémère terminée")}</Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Vous n’êtes plus contacts. L’historique reste visible.")}</Text>
-        <Press disabled={busy} onPress={() => run(() => sendRequest(peer.username, "request"), "Demande de connexion envoyée.")} style={{ ...btn(true), alignSelf: "flex-start" }}>
+        <Press disabled={busy} onPress={() => run(() => sendRequest(peer.username, "request"), tr("Demande de connexion envoyée."))} style={{ ...btn(true), alignSelf: "flex-start" }}>
           <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Se reconnecter")}</Text>
         </Press>
       </View>
@@ -71,7 +71,7 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
         <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{first} {tr("souhaite conserver votre connexion")}</Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Passer en contact permanent ?")}</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Press disabled={busy} onPress={() => run(() => answerKeepContact(peer.id, true), "Vous êtes maintenant contacts permanents.")} style={btn(true)}>
+          <Press disabled={busy} onPress={() => run(() => answerKeepContact(peer.id, true), tr("Vous êtes maintenant contacts permanents."))} style={btn(true)}>
             <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Accepter")}</Text>
           </Press>
           <Press disabled={busy} onPress={() => run(() => answerKeepContact(peer.id, false))} style={btn(false)}>
@@ -96,8 +96,8 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
           onPress={() =>
             run(async () => {
               const r = await requestKeepContact(peer.id);
-              if (r.status === "pending_from_peer") throw new Error(`${first} vous a déjà demandé de garder le contact : répondez à sa demande.`);
-            }, `${first} doit accepter pour garder le contact.`)
+              if (r.status === "pending_from_peer") throw new Error(tr("{0} vous a déjà demandé de garder le contact : répondez à sa demande.", first));
+            }, tr("{0} doit accepter pour garder le contact.", first))
           }
           style={btn(true)}
         >

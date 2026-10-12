@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 import "../crypto-polyfill";
 /**
  * Messaging data layer on Supabase (anon key + user JWT, RLS as the signed-in user).
@@ -62,10 +63,10 @@ export async function loadMe(): Promise<WippProfile> {
   const { data: pid, error: who } = await db.rpc("wipp_my_profile_id");
   if (who || typeof pid !== "string" || !pid) {
     setCachedProfile(null);
-    throw new Error("Profil introuvable");
+    throw new Error(tr("Profil introuvable"));
   }
   const { data, error } = await db.from("wipp_profiles").select(PROFILE_COLS).eq("id", pid).maybeSingle();
-  if (error || !data) throw new Error("Profil introuvable");
+  if (error || !data) throw new Error(tr("Profil introuvable"));
   const p = mapProfile(data);
   setCachedProfile(p);
   return p;
@@ -209,7 +210,7 @@ export async function listChats(): Promise<WippChatSummary[]> {
           username: "",
           displayName: group.name,
         },
-        preview: last ? (last.deleted_at ? "Message supprimé" : groupPreview(last.body ?? "")) : "",
+        preview: last ? (last.deleted_at ? tr("Message supprimé") : groupPreview(last.body ?? "")) : "",
         lastAt: ms(last?.created_at) ?? 0,
         unread,
         pinnedAt: ms(r.pinned_at),
@@ -244,7 +245,7 @@ export async function listChats(): Promise<WippChatSummary[]> {
     out.push({
       id: r.chat_id!,
       peer: mapProfile(peerRow),
-      preview: last ? (last.deleted_at ? "Message supprimé" : previewFromBody(last.body ?? "")) : "",
+      preview: last ? (last.deleted_at ? tr("Message supprimé") : previewFromBody(last.body ?? "")) : "",
       lastAt: ms(last?.created_at) ?? 0,
       unread,
       pinnedAt: ms(r.pinned_at),
@@ -334,7 +335,7 @@ async function assertDmNotBlocked(chatId: string, me: string) {
     db.from("wipp_blocks").select("blocker_id").eq("blocked_id", me).in("blocker_id", peers),
   ]);
   if ((outgoing?.length ?? 0) > 0 || (incoming?.length ?? 0) > 0) {
-    throw new Error("Cette personne est bloquée.");
+    throw new Error(tr("Cette personne est bloquée."));
   }
 }
 

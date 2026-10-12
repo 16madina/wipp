@@ -19,8 +19,8 @@ function titleOf(
   chat: ReturnType<typeof useWippStore.getState>["chats"][number],
   users: ReturnType<typeof useWippStore.getState>["users"],
 ) {
-  if (chat.type === "group") return chat.name || "Groupe";
-  return chatPeer(chat, users)?.displayName || "Conversation";
+  if (chat.type === "group") return chat.name || tr("Groupe");
+  return chatPeer(chat, users)?.displayName || tr("Conversation");
 }
 
 function Preview({ draft }: { draft: ShareDraft }) {
@@ -187,12 +187,12 @@ export function ShareInboxScreen() {
   }
 
   const sendLabel = sending
-    ? "Envoi…"
+    ? tr("Envoi…")
     : picked.length === 0
-      ? "Choisis à qui envoyer"
+      ? tr("Choisis à qui envoyer")
       : picked.length === 1
-        ? `Envoyer à ${titleOf(all.find((c) => c.id === picked[0])!, users)}`
-        : `Envoyer à ${picked.length} conversations`;
+        ? tr("Envoyer à {0}", titleOf(all.find((c) => c.id === picked[0])!, users))
+        : tr("Envoyer à {0} conversations", picked.length);
 
   const sectionTitle = { marginTop: 22, marginBottom: 10, color: colors.muted, fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 0.6, textTransform: "uppercase" } as const;
 

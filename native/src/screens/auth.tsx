@@ -184,7 +184,7 @@ function LangToggle() {
         return (
           <Pressable
             key={id}
-            accessibilityLabel={id === "fr" ? "Français" : "English"}
+            accessibilityLabel={id === "fr" ? tr("Français") : "English"}
             accessibilityState={{ selected: on }}
             hitSlop={6}
             onPress={() => {
@@ -690,15 +690,15 @@ export function PhoneEntryScreen() {
         <CheckLine
           checked={legal}
           onToggle={setLegal}
-          labelStart="En continuant, j’accepte les "
-          linkA="conditions d’utilisation"
+          labelStart={tr("En continuant, j’accepte les ")}
+          linkA={tr("conditions d’utilisation")}
           onA={() => push({ name: "legal", doc: "terms" })}
-          mid=" et les "
-          linkB="politiques de confidentialité"
+          mid={tr(" et les ")}
+          linkB={tr("politiques de confidentialité")}
           onB={() => push({ name: "legal", doc: "privacy" })}
           end="."
         />
-        <CheckLine checked={adult} onToggle={setAdult} labelStart="Je reconnais avoir " linkA="18 ans et plus" onA={() => push({ name: "legal", doc: "age" })} end="." />
+        <CheckLine checked={adult} onToggle={setAdult} labelStart={tr("Je reconnais avoir ")} linkA={tr("18 ans et plus")} onA={() => push({ name: "legal", doc: "age" })} end="." />
         </View>
       </Abs>
       {error ? (
@@ -1196,15 +1196,15 @@ export function ProfileReferenceScreen() {
 
   const status =
     username.length > 0 && !okUser
-      ? { text: "3 à 20 caractères (a-z, 0-9, _)", color: colors.muted }
+      ? { text: tr("3 à 20 caractères (a-z, 0-9, _)"), color: colors.muted }
       : availability === "checking"
-        ? { text: "Vérification…", color: colors.muted }
+        ? { text: tr("Vérification…"), color: colors.muted }
         : checkedUsername === username && availability === "available"
           ? { text: "✓ Disponible", color: colors.success }
           : checkedUsername === username && availability === "taken"
-            ? { text: "Déjà utilisé", color: colors.danger }
+            ? { text: tr("Déjà utilisé"), color: colors.danger }
             : checkedUsername === username && availability === "error"
-              ? { text: "Vérification impossible", color: colors.danger }
+              ? { text: tr("Vérification impossible"), color: colors.danger }
               : null;
   // The background is drawn "cover": find where the mascot's feet land on this screen,
   // so the form starts right under them (image 941×1670, feet at ~38.5 % of its height).

@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 import { useWippStore } from "../store";
 import { create } from "zustand";
 import {
@@ -97,7 +98,7 @@ function watchInvite(id: string) {
       }
       if (Date.now() - started > 60_000 && live.phase === "outgoing") {
         clearInterval(timer);
-        useCallSession.getState().patch({ phase: "missed", note: "Pas de réponse." });
+        useCallSession.getState().patch({ phase: "missed", note: tr("Pas de réponse.") });
         return;
       }
       try {
@@ -113,19 +114,19 @@ function watchInvite(id: string) {
           return;
         } else if (st === "rejected") {
           clearInterval(timer);
-          useCallSession.getState().patch({ phase: "declined", note: "Appel refusé." });
+          useCallSession.getState().patch({ phase: "declined", note: tr("Appel refusé.") });
         } else if (st === "missed") {
           clearInterval(timer);
-          useCallSession.getState().patch({ phase: "missed", note: "Pas de réponse." });
+          useCallSession.getState().patch({ phase: "missed", note: tr("Pas de réponse.") });
         } else if (st === "cancelled") {
           clearInterval(timer);
-          useCallSession.getState().patch({ phase: "ended", note: "Appel annulé." });
+          useCallSession.getState().patch({ phase: "ended", note: tr("Appel annulé.") });
         } else if (st === "ended") {
           clearInterval(timer);
           useCallSession.getState().patch({ phase: "ended" });
         } else if (st === "busy") {
           clearInterval(timer);
-          useCallSession.getState().patch({ phase: "busy", note: "Correspondant occupé." });
+          useCallSession.getState().patch({ phase: "busy", note: tr("Correspondant occupé.") });
         }
       } catch {
         /* keep polling until the invite expires */
@@ -139,7 +140,7 @@ async function attachToken(callId: string, video: boolean) {
   if (token.mode !== "livekit") {
     useCallSession.getState().patch({
       phase: "failed",
-      note: "Serveur d’appels indisponible. Le signal est prêt, le média attend la configuration LiveKit.",
+      note: tr("Serveur d’appels indisponible. Le signal est prêt, le média attend la configuration LiveKit."),
     });
     return;
   }
@@ -179,7 +180,7 @@ export async function openCall(input: {
           status = await callStatus(input.callId);
         } catch {
           if (Date.now() > giveUpAt) {
-            useCallSession.getState().patch({ phase: "missed", note: "Appel expiré." });
+            useCallSession.getState().patch({ phase: "missed", note: tr("Appel expiré.") });
             return;
           }
           await new Promise((r) => setTimeout(r, 2000));
@@ -188,7 +189,7 @@ export async function openCall(input: {
       }
       const invite = status.invite;
       if (invite.status === "missed" || invite.status === "ended" || invite.status === "cancelled") {
-        useCallSession.getState().patch({ phase: "missed", note: "Appel expiré." });
+        useCallSession.getState().patch({ phase: "missed", note: tr("Appel expiré.") });
         return;
       }
       if (invite.status === "rejected") {
@@ -211,7 +212,7 @@ export async function openCall(input: {
     }
     if (input.group && input.chatId) {
       const created = await startGroupCall(input.chatId, input.kind);
-      useCallSession.getState().patch({ callId: created.invite.id, phase: "connecting", displayName: groupName(input.chatId) || "Groupe" });
+      useCallSession.getState().patch({ callId: created.invite.id, phase: "connecting", displayName: groupName(input.chatId) || tr("Groupe") });
       await attachToken(created.invite.id, input.kind === "video");
       return;
     }
@@ -224,7 +225,7 @@ export async function openCall(input: {
       return;
     }
     if (created.invite.status === "busy") {
-      useCallSession.getState().patch({ callId: id, phase: "busy", note: "Correspondant occupé." });
+      useCallSession.getState().patch({ callId: id, phase: "busy", note: tr("Correspondant occupé.") });
       return;
     }
     useCallSession.getState().patch({ callId: id, phase: "outgoing" });
@@ -232,7 +233,7 @@ export async function openCall(input: {
   } catch (err) {
     useCallSession.getState().patch({
       phase: "failed",
-      note: errorText(err, "Appel impossible."),
+      note: errorText(err, tr("Appel impossible.")),
     });
   }
 }
@@ -252,14 +253,14 @@ export async function joinGroupCall(input: { callId: string; chatId: string; kin
     return;
   }
   useCallSession.setState({
-    session: { ...seed({ userId: "call", kind: input.kind, dir: "in", callId: input.callId, chatId: input.chatId, group: true, displayName: groupName(input.chatId) || "Groupe" }), phase: "connecting" },
+    session: { ...seed({ userId: "call", kind: input.kind, dir: "in", callId: input.callId, chatId: input.chatId, group: true, displayName: groupName(input.chatId) || tr("Groupe") }), phase: "connecting" },
   });
   try {
     await setGroupState(input.callId, "joining");
     await attachToken(input.callId, input.kind === "video");
   } catch (err) {
     const status = (err as { status?: number }).status;
-    useCallSession.getState().patch({ phase: status === 410 ? "ended" : "failed", note: status === 410 ? "Cet appel est terminé." : errorText(err, "Impossible de rejoindre l’appel.") });
+    useCallSession.getState().patch({ phase: status === 410 ? "ended" : "failed", note: status === 410 ? tr("Cet appel est terminé.") : errorText(err, tr("Impossible de rejoindre l’appel.")) });
   }
 }
 
@@ -273,7 +274,7 @@ export async function joinCallByLink(token: string, title: string) {
   try {
     await attachToken(joined.callId, joined.kind === "video");
   } catch (err) {
-    useCallSession.getState().patch({ phase: "failed", note: errorText(err, "Impossible de rejoindre l’appel.") });
+    useCallSession.getState().patch({ phase: "failed", note: errorText(err, tr("Impossible de rejoindre l’appel.")) });
   }
 }
 
@@ -289,7 +290,7 @@ export async function acceptCurrentCall() {
     const status = (err as { status?: number }).status;
     useCallSession.getState().patch({
       phase: status === 410 ? "missed" : "failed",
-      note: status === 410 ? "Appel expiré." : "Connexion impossible.",
+      note: status === 410 ? tr("Appel expiré.") : tr("Connexion impossible."),
     });
   }
 }

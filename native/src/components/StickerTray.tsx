@@ -17,7 +17,7 @@ type Wippie = "tous" | "femme" | "homme" | "comique";
 
 /** Bottom bar, left to right. `label` = search placeholder, `short` = name under the icon. */
 const TABS = [
-  { id: "recent", get label() { return tr("Récents"); }, short: "Récents", icon: Clock },
+  { id: "recent", get label() { return tr("Récents"); }, get short() { return tr("Récents"); }, icon: Clock },
   { id: "moji", get label() { return tr("Wippmoji"); }, short: "Wippmoji", icon: Smile },
   { id: "wippie", get label() { return tr("Wippie"); }, short: "Wippie", icon: User },
   { id: "emo", label: "EMO", short: "EMO", icon: Drama },
@@ -135,7 +135,7 @@ export function StickerTray({
               ? moments
               : [];
   const shown = query ? searchStickers(tabStickers, query) : tabStickers;
-  const title = tab === "recent" ? "tous les stickers" : TABS.find((item) => item.id === tab)?.label ?? "Stickers";
+  const title = tab === "recent" ? tr("tous les stickers") : TABS.find((item) => item.id === tab)?.label ?? tr("Stickers");
   // EMO and Moments are full scenes: 3 big cells per row.
   const scenes = tab === "pop" || tab === "emo";
   const minCell = scenes ? 104 : tab === "moji" ? 64 : 80;
@@ -333,7 +333,7 @@ export function StickerTray({
               }}
               style={{ width: item.big ? "100%" : "48%", borderRadius: 16, backgroundColor: colors.navy, padding: 12, borderWidth: 1, borderColor: item.big ? colors.accent : colors.hair }}
             >
-              <Text style={{ fontSize: item.big ? 15 : 13, fontFamily: "Inter_700Bold", color: item.big ? colors.accent : colors.fg }}>{item.name}</Text>
+              <Text style={{ fontSize: item.big ? 15 : 13, fontFamily: "Inter_700Bold", color: item.big ? colors.accent : colors.fg }}>{tr(item.name)}</Text>
               <Text style={{ marginTop: 2, fontSize: item.big ? 12 : 11, color: colors.muted }}>{item.hint}</Text>
             </Press>
           ))}

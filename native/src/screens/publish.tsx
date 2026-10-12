@@ -167,7 +167,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
       const paths: string[] = [];
       for (let index = 0; index < photos.length; index += 1) {
         const photo = photos[index];
-        setStatus(`Photo ${index + 1}/${photos.length}`);
+        setStatus(tr("Photo {0}/{1}", index + 1, photos.length));
         if (photo.path) {
           paths.push(photo.path);
           continue;
@@ -179,11 +179,11 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
         const ext = photo.mime.includes("png") ? "png" : "jpg";
         const path = `listings/${owner}/${crypto.randomUUID()}.${ext}`;
         await uploadPublicMediaFile(path, photo.uri, photo.mime, (sent, total) => {
-          if (total > 0) setStatus(`Photo ${index + 1} · ${Math.round((sent / total) * 100)}%`);
+          if (total > 0) setStatus(tr("Photo {0} · {1}%", index + 1, Math.round((sent / total) * 100)));
         });
         paths.push(path);
       }
-      setStatus("Publication…");
+      setStatus(tr("Publication…"));
       const id = await saveListing({
         id: listingId,
         title: title.trim(),
@@ -202,7 +202,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
       });
       const savedId = id || listingId || "";
       if (savedId) {
-        setStatus("Finalisation…");
+        setStatus(tr("Finalisation…"));
         const { saveListingExtras } = await import("../lib/lot7/api");
         const { geocodeCity } = await import("../lib/geo");
         // No precise address picked: place the listing at its city so distance still works.
@@ -348,7 +348,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
             <View style={{ flex: 1, gap: 10 }}>
               <Text style={rowTitle}>{tr("Prix")}{star}</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
-                {([["sale", "À vendre", Tag], ["give", "À donner", Gift], ["swap", "Échange", ArrowLeftRight]] as const).map(([id, label, Icon]) => (
+                {([["sale", tr("À vendre"), Tag], ["give", tr("À donner"), Gift], ["swap", tr("Échange"), ArrowLeftRight]] as const).map(([id, label, Icon]) => (
                   <Press key={id} onPress={() => setMode(id)} style={[pill(mode === id), { flex: 1, height: 60, flexDirection: "column", justifyContent: "center", gap: 4, paddingHorizontal: 4 }]}>
                     <Icon size={18} color={mode === id ? colors.accentFg : colors.fg} />
                     <Text numberOfLines={1} style={pillText(mode === id)}>{label}</Text>
@@ -593,24 +593,24 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
       if (cover?.uri.startsWith("http") && !cover.path) {
         photo = cover.uri;
       } else if (cover && !cover.path) {
-        setStatus("Couverture…");
+        setStatus(tr("Couverture…"));
         const ext = cover.mime.includes("png") ? "png" : "jpg";
         photo = `events/${owner}/${crypto.randomUUID()}.${ext}`;
         await uploadPublicMediaFile(photo, cover.uri, cover.mime, (sent, total) => {
-          if (total > 0) setStatus(`Couverture · ${Math.round((sent / total) * 100)}%`);
+          if (total > 0) setStatus(tr("Couverture · {0}%", Math.round((sent / total) * 100)));
         });
       } else if (cover?.path) {
         photo = cover.path;
       } else if (!cover) {
         photo = null;
       }
-      setStatus("Publication…");
+      setStatus(tr("Publication…"));
       const id = await saveEvent({
         id: eventId,
         title: title.trim(),
         description: summary.trim(),
         city: city.trim(),
-        place: wippLive ? "En ligne sur WIPP" : online ? "En ligne" : venue.trim(),
+        place: wippLive ? tr("En ligne sur WIPP") : online ? "En ligne" : venue.trim(),
         starts: starts.toISOString(),
         photo,
         contact: access.trim(),
@@ -631,7 +631,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
         const where = online || wippLive ? null : coords ?? (city.trim() ? await geocodeCity(city.trim(), eventCountry.id) : null);
         await saveEventExtras(savedId, { lat: where?.lat ?? null, lng: where?.lng ?? null, capacity: limitOn && limit ? Number(limit) : null, adult: adultOnly });
         if (wippLive) {
-          setStatus("Salle en direct…");
+          setStatus(tr("Salle en direct…"));
           const { saveLive } = await import("../lib/event-live");
           await saveLive(savedId, { visibility, mode: "conference", durationMin, showRegistered });
         }
@@ -686,8 +686,8 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
             {([
-              [false, "Événement physique", "Avec un lieu et une adresse"],
-              [true, "En ligne sur WIPP", "Conférence, masterclass, atelier en direct"],
+              [false, tr("Événement physique"), tr("Avec un lieu et une adresse")],
+              [true, tr("En ligne sur WIPP"), tr("Conférence, masterclass, atelier en direct")],
             ] as const).map(([val, label, sub]) => {
               const on = wippLive === val;
               return (
@@ -782,7 +782,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               <View style={{ flex: 1, gap: 10 }}>
                 <Text style={rowTitle}>{tr("Direct sur WIPP")}</Text>
                 <View style={{ flexDirection: "row", gap: 6 }}>
-                  {([["public", "Public"], ["private", "Privé (sur invitation)"]] as const).map(([id, label]) => (
+                  {([["public", tr("Public")], ["private", tr("Privé (sur invitation)")]] as const).map(([id, label]) => (
                     <Press key={id} onPress={() => setVisibility(id)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: visibility === id ? colors.accent : whiteA(0.06) }}>
                       <Text style={{ fontSize: 12, color: visibility === id ? colors.accentFg : colors.fg }}>{label}</Text>
                     </Press>
@@ -814,7 +814,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Text style={rowTitle}>{tr("Lieu *")}</Text>
                 <View style={{ flexDirection: "row", gap: 6 }}>
-                  {[["place", "En personne"], ["online", "En ligne"]].map(([id, label]) => (
+                  {[["place", tr("En personne")], ["online", "En ligne"]].map(([id, label]) => (
                     <Press key={id} onPress={() => setOnline(id === "online")} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: (id === "online") === online ? colors.accent : whiteA(0.06) }}>
                       <Text style={{ fontSize: 12, color: (id === "online") === online ? colors.accentFg : colors.fg }}>{label}</Text>
                     </Press>
@@ -849,7 +849,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
           <View style={[row, { alignItems: "center" }]}>
             <View style={iconBox}><Ticket size={20} color={colors.accent} /></View>
             <Text style={[rowTitle, { flex: 1 }]}>{tr("Type")}</Text>
-            {[[true, "Gratuit"], [false, "Payant"]].map(([val, label]) => (
+            {[[true, tr("Gratuit")], [false, tr("Payant")]].map(([val, label]) => (
               <Press key={String(label)} onPress={() => setFree(val as boolean)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, height: 42, borderRadius: 12, borderWidth: 1.5, borderColor: free === val ? colors.accent : whiteA(0.15) }}>
                 <Text style={{ color: free === val ? colors.accent : colors.fg, fontFamily: "Inter_600SemiBold" }}>{label as string}</Text>
                 <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: free === val ? colors.accent : whiteA(0.4), alignItems: "center", justifyContent: "center" }}>
@@ -867,7 +867,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {EVENT_CATS.map((c) => (
                   <Press key={c} onPress={() => setCategory(category === c ? "" : c)} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: category === c ? colors.accent : "transparent", borderWidth: 1, borderColor: category === c ? colors.accent : whiteA(0.18) }}>
-                    <Text style={{ color: category === c ? colors.accentFg : colors.fg, fontSize: 13 }}>{c}</Text>
+                    <Text style={{ color: category === c ? colors.accentFg : colors.fg, fontSize: 13 }}>{tr(c)}</Text>
                   </Press>
                 ))}
               </View>

@@ -219,7 +219,7 @@ export function CallOverlay() {
     void showOngoing({
       title: session.kind === "video" ? tr("Appel vidéo WIPP en cours") : tr("Appel WIPP en cours"),
       body: session.displayName,
-      stopLabel: "Raccrocher",
+      stopLabel: tr("Raccrocher"),
       onStop: () => void endCurrentCall(),
       phoneCall: true,
       camera: session.kind === "video",
@@ -527,7 +527,7 @@ export function CallOverlay() {
   for (const u of Object.values(users)) if (u?.id) byIdentity.set(identityKey(u.id), { displayName: u.displayName || `@${u.username}`, avatar: u.avatar });
   const groupTiles = session.group
     ? tiles.map((tile) => {
-        const who = tile.local ? { displayName: "Toi", avatar: me.avatar } : byIdentity.get(tile.identity) ?? { displayName: "Membre" };
+        const who = tile.local ? { displayName: tr("Toi"), avatar: me.avatar } : byIdentity.get(tile.identity) ?? { displayName: tr("Membre") };
         return { key: tile.key, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };
       })
     : undefined;

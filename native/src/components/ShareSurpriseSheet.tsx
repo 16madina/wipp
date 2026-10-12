@@ -49,7 +49,7 @@ import { CountdownPicker } from "./CountdownPicker";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { Press } from "./ui";
 import { gifProviderConfigured } from "../lib/gifs";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 const CONTENT = [
   { get label() { return tr("Galerie"); }, icon: Images },
@@ -63,8 +63,8 @@ const CONTENT = [
 
 /** « Dans 1 heure », « Ce soir à minuit » or « lun. 12 oct. à 08:00 », shown on the tile once chosen. */
 function momentLabel(c: NonNullable<SurpriseOptions["countdown"]>) {
-  if (c.at) return new Date(c.at).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  return c.seconds >= 86_400 ? "Dans 24 heures" : c.seconds >= 3600 ? "Dans 1 heure" : "Dans 1 minute";
+  if (c.at) return new Date(c.at).toLocaleString(trLocale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return c.seconds >= 86_400 ? tr("Dans 24 heures") : c.seconds >= 3600 ? tr("Dans 1 heure") : tr("Dans 1 minute");
 }
 
 const KINDS = [
@@ -228,7 +228,7 @@ export function ShareSurpriseSheet({
   function draft(): Surprise {
     return {
       id: `surprise-${Date.now()}`,
-      message: secret.trim() || "Ton message secret",
+      message: secret.trim() || tr("Ton message secret"),
       surpriseType: kind,
       designId: design,
       animationId: animation,
@@ -238,7 +238,7 @@ export function ShareSurpriseSheet({
         : opts,
       confetti,
       mine: true,
-      time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString(trLocale(), { hour: "2-digit", minute: "2-digit" }),
     };
   }
 
@@ -252,10 +252,10 @@ export function ShareSurpriseSheet({
     drawer === "card"
       ? picker.label
       : drawer === "moment"
-        ? "Compte à rebours"
+        ? tr("Compte à rebours")
         : animCat
-        ? (surpriseAnimationCategories.find((item) => item.id === animCat)?.label ?? "Animations")
-        : "Ajouter une animation";
+        ? (surpriseAnimationCategories.find((item) => item.id === animCat)?.label ?? tr("Animations"))
+        : tr("Ajouter une animation");
 
   return (
     <>
@@ -423,7 +423,7 @@ export function ShareSurpriseSheet({
                             borderColor: tone === item ? colors.surpriseGold : colors.hair,
                           }}
                         >
-                          <Text style={{ fontSize: 12, color: tone === item ? colors.surpriseInk : colors.fg }}>{item}</Text>
+                          <Text style={{ fontSize: 12, color: tone === item ? colors.surpriseInk : colors.fg }}>{tr(item)}</Text>
                         </Press>
                       ))}
                     </ScrollView>
@@ -432,10 +432,10 @@ export function ShareSurpriseSheet({
                         if (occasion.trim().length < 2) return;
                         const line =
                           tone === "Drôle"
-                            ? `Petite surprise pour ${occasion.trim()}… prépare-toi à sourire 😄`
+                            ? tr("Petite surprise pour {0}… prépare-toi à sourire 😄", occasion.trim())
                             : tone === "Poétique"
-                              ? `Pour ${occasion.trim()}, un secret tout en douceur t’attend.`
-                              : `Pour ${occasion.trim()} : un message ${tone.toLowerCase()} rien que pour toi.`;
+                              ? tr("Pour {0}, un secret tout en douceur t’attend.", occasion.trim())
+                              : tr("Pour {0} : un message {1} rien que pour toi.", occasion.trim(), tr(tone).toLowerCase());
                         setSecret(line.slice(0, layout.surpriseMessageLimit));
                         setAssist(false);
                       }}
@@ -474,7 +474,7 @@ export function ShareSurpriseSheet({
                       {row.map((item) => {
                         const art = wippSrc(surpriseKindArt[item.id]);
                         const on = item.id === "scratch" || (item.id === "countdown" ? Boolean(opts.countdown) : confetti);
-                        const note = item.id === "countdown" && opts.countdown ? momentLabel(opts.countdown) : item.id === "confetti" && confetti ? "Activés" : null;
+                        const note = item.id === "countdown" && opts.countdown ? momentLabel(opts.countdown) : item.id === "confetti" && confetti ? tr("Activés") : null;
                         return (
                           <Press
                             key={item.id}

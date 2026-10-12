@@ -11,10 +11,10 @@ import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
 import { tr } from "../lib/tr";
 
 const KIND_LABEL: Record<Surprise["surpriseType"], string> = {
-  scratch: "Carte à gratter",
-  countdown: "Compte à rebours",
-  gift: "Message cadeau",
-  confetti: "Confettis",
+  get scratch() { return tr("Carte à gratter"); },
+  get countdown() { return tr("Compte à rebours"); },
+  get gift() { return tr("Message cadeau"); },
+  get confetti() { return tr("Confettis"); },
 };
 
 const MOTIFS: Record<string, string> = {
@@ -147,7 +147,7 @@ export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { 
             kindLabel={KIND_LABEL[surprise.surpriseType]}
             locked={locked}
             footer={
-              locked ? `S’ouvre dans ${countdownText(left)}` : "Touche pour ouvrir"
+              locked ? tr("S’ouvre dans {0}", countdownText(left)) : tr("Touche pour ouvrir")
             }
             onPress={() => {
               if (locked) return;

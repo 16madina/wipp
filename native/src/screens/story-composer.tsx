@@ -45,9 +45,9 @@ type Phase =
   | { name: "edit"; uri: string; kind: "image" | "video"; mime: string; width?: number; height?: number };
 
 const AUDIENCE_LABEL = {
-  contacts: "Mes contacts",
-  close: "Proches",
-  only_me: "Moi seul",
+  get contacts() { return tr("Mes contacts"); },
+  get close() { return tr("Proches"); },
+  get only_me() { return tr("Moi seul"); },
 } as const;
 
 /** `shared`: content coming from another app (share menu) — the composer opens with it already in place. */
@@ -605,7 +605,7 @@ function VideoTrim({
   const size = duration > 0 ? (length / duration) * 100 : 100;
   const headLeft = duration > 0 ? Math.min(100, Math.max(0, (head / duration) * 100)) : 0;
   const short = duration <= MAX_VIDEO_SEC;
-  const label = short && start < 0.2 && Math.abs(start + length - duration) < 0.35 ? "Utiliser cette vidéo" : "Utiliser ce passage";
+  const label = short && start < 0.2 && Math.abs(start + length - duration) < 0.35 ? tr("Utiliser cette vidéo") : tr("Utiliser ce passage");
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>

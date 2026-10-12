@@ -7,7 +7,7 @@ import { Btn, Chip, Empty, GlassHeader, Header, Press, ScreenRoot, SearchField }
 import { wippApi } from "../lib/proximity/wipp-session";
 import { useWippStore } from "../lib/store";
 import { colors, accentA, whiteA } from "../theme";
-import { tr } from "../lib/tr";
+import { tr, trLocale } from "../lib/tr";
 
 type Role = "admin" | "moderator" | null;
 type AdminUser = {
@@ -38,14 +38,14 @@ type Report = {
 };
 
 const REPORT_TYPE: Record<string, string> = {
-  message: "Message",
-  story: "Story",
-  profile: "Profil",
-  listing: "Annonce",
-  business_card: "Entreprise",
-  group: "Groupe",
+  get message() { return tr("Message"); },
+  get story() { return tr("Story"); },
+  get profile() { return tr("Profil"); },
+  get listing() { return tr("Annonce"); },
+  get business_card() { return tr("Entreprise"); },
+  get group() { return tr("Groupe"); },
 };
-const REPORT_STATUS: Record<string, string> = { open: "ouvert", resolved: "traité", dismissed: "classé" };
+const REPORT_STATUS: Record<string, string> = { get open() { return tr("ouvert"); }, get resolved() { return tr("traité"); }, get dismissed() { return tr("classé"); } };
 type Template = { id: string; label: string; title: string; body: string };
 type Tab = "stats" | "referrers" | "users" | "messages" | "reports" | "suspended" | "push" | "audit";
 
@@ -53,7 +53,7 @@ const api = <T,>(path: string, body?: unknown, method?: string) =>
   wippApi<T>(`staff/${path}`, body === undefined ? { method: method ?? "GET" } : { method: method ?? "POST", body: JSON.stringify(body) });
 
 function when(ms: number) {
-  return new Date(ms).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  return new Date(ms).toLocaleString(trLocale(), { dateStyle: "short", timeStyle: "short" });
 }
 
 function fail(err: unknown) {
@@ -83,19 +83,19 @@ export function AdminScreen() {
   const tabs: [Tab, string][] =
     role === "admin"
       ? [
-          ["stats", "📊 Statistiques"],
-          ["users", "👥 Utilisateurs"],
-          ["referrers", "🎁 Parrains"],
-          ["messages", "💬 Messages"],
-          ["reports", "🚩 Signalements"],
-          ["suspended", "⛔ Suspendus"],
-          ["push", "🔔 Notifications"],
-          ["audit", "🧾 Journal"],
+          ["stats", tr("📊 Statistiques")],
+          ["users", tr("👥 Utilisateurs")],
+          ["referrers", tr("🎁 Parrains")],
+          ["messages", tr("💬 Messages")],
+          ["reports", tr("🚩 Signalements")],
+          ["suspended", tr("⛔ Suspendus")],
+          ["push", tr("🔔 Notifications")],
+          ["audit", tr("🧾 Journal")],
         ]
       : [
-          ["reports", "🚩 Signalements"],
-          ["suspended", "⛔ Suspendus"],
-          ["users", "👥 Utilisateurs"],
+          ["reports", tr("🚩 Signalements")],
+          ["suspended", tr("⛔ Suspendus")],
+          ["users", tr("👥 Utilisateurs")],
         ];
   return (
     <ScreenRoot>
@@ -186,18 +186,18 @@ function AdminPhoneCard() {
 
 function StatsGrid({ s }: { s: Record<string, number> }) {
   const items: [string, number, string][] = [
-    ["👥", s.users, "Utilisateurs"],
-    ["🆕", s.new_users_7d, "Nouveaux (7 j)"],
-    ["⚡", s.new_users_24h, "Nouveaux (24 h)"],
-    ["💬", s.messages_24h, "Messages (24 h)"],
-    ["🗂️", s.chats, "Conversations"],
-    ["🤝", s.connections, "Connexions actives"],
-    ["⏳", s.ephemeral_connections, "Contacts éphémères"],
-    ["🚩", s.open_reports, "Signalements ouverts"],
-    ["⛔", s.suspended, "Comptes suspendus"],
-    ["🛡️", s.moderators, "Modérateurs"],
-    ["🔔", s.push_reachable, "Joignables par push"],
-    ["✉️", s.messages, "Messages (total)"],
+    ["👥", s.users, tr("Utilisateurs")],
+    ["🆕", s.new_users_7d, tr("Nouveaux (7 j)")],
+    ["⚡", s.new_users_24h, tr("Nouveaux (24 h)")],
+    ["💬", s.messages_24h, tr("Messages (24 h)")],
+    ["🗂️", s.chats, tr("Conversations")],
+    ["🤝", s.connections, tr("Connexions actives")],
+    ["⏳", s.ephemeral_connections, tr("Contacts éphémères")],
+    ["🚩", s.open_reports, tr("Signalements ouverts")],
+    ["⛔", s.suspended, tr("Comptes suspendus")],
+    ["🛡️", s.moderators, tr("Modérateurs")],
+    ["🔔", s.push_reachable, tr("Joignables par push")],
+    ["✉️", s.messages, tr("Messages (total)")],
   ];
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 }}>
@@ -311,11 +311,11 @@ function UsersTab({ role }: { role: Role }) {
             <Text numberOfLines={1} style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{u.displayName}</Text>
             <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>
               @{u.username}
-              {u.phone ? ` · ${u.phone}` : ""} {tr("· inscrit le")} {new Date(u.createdAt).toLocaleDateString("fr-FR")}
+              {u.phone ? ` · ${u.phone}` : ""} {tr("· inscrit le")} {new Date(u.createdAt).toLocaleDateString(trLocale())}
             </Text>
           </View>
           <WippBadge badge={u.badge} size={14} />
-          {u.suspendedAt ? <Badge text="Suspendu" tone="danger" /> : u.role !== "user" ? <Badge text={u.role === "admin" ? "Admin" : "Modérateur"} tone="accent" /> : null}
+          {u.suspendedAt ? <Badge text={tr("Suspendu")} tone="danger" /> : u.role !== "user" ? <Badge text={u.role === "admin" ? "Admin" : tr("Modérateur")} tone="accent" /> : null}
         </Press>
       ))}
       {!users.length ? <Text style={{ color: colors.muted }}>{tr("Aucun utilisateur.")}</Text> : null}
@@ -350,14 +350,14 @@ function UsersTab({ role }: { role: Role }) {
             ) : null}
             {role === "admin" && picked.role !== "admin" ? (
               picked.role === "moderator" ? (
-                <Btn label={tr("Retirer le rôle de modérateur")} variant="secondary" onPress={() => act(`users/${picked.id}/role`, { role: "user" }, "Rôle de modérateur retiré.")} />
+                <Btn label={tr("Retirer le rôle de modérateur")} variant="secondary" onPress={() => act(`users/${picked.id}/role`, { role: "user" }, tr("Rôle de modérateur retiré."))} />
               ) : (
-                <Btn label={tr("🛡️ Nommer modérateur")} onPress={() => act(`users/${picked.id}/role`, { role: "moderator" }, `@${picked.username} est maintenant modérateur.`)} />
+                <Btn label={tr("🛡️ Nommer modérateur")} onPress={() => act(`users/${picked.id}/role`, { role: "moderator" }, tr("@{0} est maintenant modérateur.", picked.username))} />
               )
             ) : null}
             {picked.role !== "admin" ? (
               picked.suspendedAt ? (
-                <Btn label={tr("Rétablir le compte")} onPress={() => act(`users/${picked.id}/suspend`, { suspend: false }, "Compte rétabli.")} />
+                <Btn label={tr("Rétablir le compte")} onPress={() => act(`users/${picked.id}/suspend`, { suspend: false }, tr("Compte rétabli."))} />
               ) : (
                 <>
                   <TextInput
@@ -373,8 +373,8 @@ function UsersTab({ role }: { role: Role }) {
                     variant="danger"
                     onPress={() =>
                       Alert.alert(tr("Suspendre"), tr("Suspendre @{0} ? Il ne pourra plus utiliser WIPP.", picked.username), [
-                        { text: "Annuler", style: "cancel" },
-                        { text: "Suspendre", style: "destructive", onPress: () => act(`users/${picked.id}/suspend`, { suspend: true, reason }, "Compte suspendu.") },
+                        { text: tr("Annuler"), style: "cancel" },
+                        { text: tr("Suspendre"), style: "destructive", onPress: () => act(`users/${picked.id}/suspend`, { suspend: true, reason }, tr("Compte suspendu.")) },
                       ])
                     }
                   />
@@ -444,9 +444,9 @@ function ReportsTab() {
                     label={tr("Retirer le contenu")}
                     variant="danger"
                     onPress={() =>
-                      Alert.alert(tr("Retirer le contenu"), tr("{0} ne sera plus visible pour personne.", REPORT_TYPE[r.targetType] ?? "Ce contenu"), [
-                        { text: "Annuler", style: "cancel" },
-                        { text: "Retirer", style: "destructive", onPress: () => void api(`reports/${r.id}/resolve`, { action: "removed" }).then(load).catch(fail) },
+                      Alert.alert(tr("Retirer le contenu"), tr("{0} ne sera plus visible pour personne.", REPORT_TYPE[r.targetType] ?? tr("Ce contenu")), [
+                        { text: tr("Annuler"), style: "cancel" },
+                        { text: tr("Retirer"), style: "destructive", onPress: () => void api(`reports/${r.id}/resolve`, { action: "removed" }).then(load).catch(fail) },
                       ])
                     }
                   />
@@ -458,13 +458,13 @@ function ReportsTab() {
                     label={tr("Suspendre le compte")}
                     variant="danger"
                     onPress={() =>
-                      Alert.alert(tr("Suspendre le compte"), tr("{0} ne pourra plus utiliser WIPP. Tu peux le rétablir dans « Suspendus ».", r.targetUsername ? `@${r.targetUsername}` : "Ce compte"), [
-                        { text: "Annuler", style: "cancel" },
+                      Alert.alert(tr("Suspendre le compte"), tr("{0} ne pourra plus utiliser WIPP. Tu peux le rétablir dans « Suspendus ».", r.targetUsername ? `@${r.targetUsername}` : tr("Ce compte")), [
+                        { text: tr("Annuler"), style: "cancel" },
                         {
-                          text: "Suspendre",
+                          text: tr("Suspendre"),
                           style: "destructive",
                           onPress: () =>
-                            void api(`users/${encodeURIComponent(String(r.targetProfileId).replace(/^srvuser:/, ""))}/suspend`, { suspend: true, reason: `Signalement : ${r.reason}` })
+                            void api(`users/${encodeURIComponent(String(r.targetProfileId).replace(/^srvuser:/, ""))}/suspend`, { suspend: true, reason: tr("Signalement : {0}", r.reason) })
                               .then(() => api(`reports/${r.id}/resolve`, { action: "resolved" }))
                               .then(load)
                               .catch(fail),
@@ -597,9 +597,9 @@ function PushTab() {
         disabled={sending || !title.trim() || !body.trim() || (target === "user" && !username.trim())}
         onPress={() =>
           Alert.alert(tr("Envoyer"), target === "all" ? tr("Envoyer à TOUS les utilisateurs joignables ?") : tr("Envoyer à {0} ?", username.startsWith("@") ? username : `@${username}`), [
-            { text: "Annuler", style: "cancel" },
+            { text: tr("Annuler"), style: "cancel" },
             {
-              text: "Envoyer",
+              text: tr("Envoyer"),
               onPress: () => {
                 setSending(true);
                 void api<{ recipients: number; delivered: number }>("push/send", { title, body, target, username })
@@ -628,16 +628,16 @@ function PushTab() {
 }
 
 const ACTIONS: Record<string, string> = {
-  moderator_added: "Modérateur nommé",
-  moderator_removed: "Modérateur retiré",
-  account_suspended: "Compte suspendu",
-  account_restored: "Compte rétabli",
-  report_resolved: "Signalement traité",
-  report_dismissed: "Signalement classé",
-  report_opened: "Message signalé consulté",
-  push_sent: "Notification envoyée",
-  push_template_saved: "Modèle de notification enregistré",
-  admin_phone_linked: "Numéro admin modifié",
+  get moderator_added() { return tr("Modérateur nommé"); },
+  get moderator_removed() { return tr("Modérateur retiré"); },
+  get account_suspended() { return tr("Compte suspendu"); },
+  get account_restored() { return tr("Compte rétabli"); },
+  get report_resolved() { return tr("Signalement traité"); },
+  get report_dismissed() { return tr("Signalement classé"); },
+  get report_opened() { return tr("Message signalé consulté"); },
+  get push_sent() { return tr("Notification envoyée"); },
+  get push_template_saved() { return tr("Modèle de notification enregistré"); },
+  get admin_phone_linked() { return tr("Numéro admin modifié"); },
 };
 
 function AuditTab() {

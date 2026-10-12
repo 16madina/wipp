@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { Alert, AppState } from "react-native";
 import { saveLanguage } from "./language-pref";
 import { create } from "zustand";
@@ -72,19 +73,19 @@ export function isChatSealed(chat: Chat, now = Date.now()) {
 }
 
 function previewOf(message: Message, lang: Lang = "fr") {
-  if (message.viewOnce) return lang === "fr" ? "Vue unique" : "View once";
-  if (message.encFailed) return lang === "fr" ? "🔒 Message chiffré" : "🔒 Encrypted message";
-  if (message.type === "scratch") return lang === "fr" ? "Surprise ✨" : "Surprise ✨";
-  if (message.type === "voice") return `Vocal · ${message.duration ?? 0}s`;
-  if (message.album && message.album.length > 1) return lang === "fr" ? `${message.album.length} médias` : `${message.album.length} media`;
-  if (message.type === "image") return "Photo";
-  if (message.type === "file") return `📄 ${message.file?.name ?? "Document"}`;
+  if (message.viewOnce) return lang === "fr" ? tr("Vue unique") : "View once";
+  if (message.encFailed) return lang === "fr" ? tr("🔒 Message chiffré") : "🔒 Encrypted message";
+  if (message.type === "scratch") return lang === "fr" ? tr("Surprise ✨") : tr("Surprise ✨");
+  if (message.type === "voice") return tr("Vocal · {0}s", message.duration ?? 0);
+  if (message.album && message.album.length > 1) return lang === "fr" ? tr("{0} médias", message.album.length) : `${message.album.length} media`;
+  if (message.type === "image") return tr("Photo");
+  if (message.type === "file") return `📄 ${message.file?.name ?? tr("Document")}`;
   if (message.type === "gif") return "GIF";
-  if (message.type === "video") return lang === "fr" ? "Vidéo" : "Video";
-  if (message.type === "sticker") return stickerById(message.stickerId ?? "")?.labelFr ?? "Sticker";
-  if (message.type === "event") return `📅 ${message.groupEvent?.title ?? (lang === "fr" ? "Événement" : "Event")}`;
-  if (message.type === "poll") return `📊 ${message.poll?.question ?? (lang === "fr" ? "Sondage" : "Poll")}`;
-  if (message.type === "shop") return message.text ? `🏪 ${message.text}` : "Carte professionnelle";
+  if (message.type === "video") return lang === "fr" ? tr("Vidéo") : "Video";
+  if (message.type === "sticker") return stickerById(message.stickerId ?? "")?.labelFr ?? tr("Sticker");
+  if (message.type === "event") return `📅 ${message.groupEvent?.title ?? (lang === "fr" ? tr("Événement") : "Event")}`;
+  if (message.type === "poll") return `📊 ${message.poll?.question ?? (lang === "fr" ? tr("Sondage") : "Poll")}`;
+  if (message.type === "shop") return message.text ? `🏪 ${message.text}` : tr("Carte professionnelle");
   return message.text ?? "";
 }
 
@@ -603,7 +604,7 @@ export const useWippStore = create<Store>((set, get) => ({
       storyRef: data.storyRef,
       replyPreview:
         data.replyPreview ??
-        (cited?.deletedForAll ? "Message supprimé" : cited?.text?.replace(/\s+/g, " ").trim().slice(0, 80)),
+        (cited?.deletedForAll ? tr("Message supprimé") : cited?.text?.replace(/\s+/g, " ").trim().slice(0, 80)),
       forwarded: data.forwarded,
       mentions: data.mentions,
       expiresAt: existingChat?.disappearAfterMs ? Date.now() + existingChat.disappearAfterMs : undefined,
@@ -764,7 +765,7 @@ export const useWippStore = create<Store>((set, get) => ({
           const st = get();
           const reply = message.replyTo ? (st.messages[chatId] ?? []).find((m) => m.id === message.replyTo) : undefined;
           const cite = reply?.deletedForAll
-            ? "Message supprimé"
+            ? tr("Message supprimé")
             : (reply?.text ?? data.replyPreview ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
           try {
             await sendViaServer(chatId, message.text!, message.id, {
@@ -816,13 +817,13 @@ export const useWippStore = create<Store>((set, get) => ({
           const publicId = message.shopId!.replace(/^business:/, "");
           const shop = get().shops.find((s) => s.id === message.shopId || s.handle === publicId);
           const st = get();
-          await sendViaServer(chatId, message.text || shop?.name || "Carte professionnelle", message.id, {
+          await sendViaServer(chatId, message.text || shop?.name || tr("Carte professionnelle"), message.id, {
             identity: st.identity,
             peerPublicJwk: peerPubOf(st, chatId),
             vault: isPrivateChat(chatId),
             shop: {
               publicId,
-              name: shop?.name || message.text || "Carte professionnelle",
+              name: shop?.name || message.text || tr("Carte professionnelle"),
               category: shop?.tags?.[0] || shop?.category || "",
               city: shop?.city,
               address: shop?.address || undefined,
@@ -897,7 +898,7 @@ export const useWippStore = create<Store>((set, get) => ({
       messages: {
         ...st.messages,
         [chatId]: (st.messages[chatId] ?? []).map((m) =>
-          m.id === messageId ? { ...m, deletedForAll: true, text: "Message supprimé", type: "system", pinned: false, reactions: [] } : m,
+          m.id === messageId ? { ...m, deletedForAll: true, text: tr("Message supprimé"), type: "system", pinned: false, reactions: [] } : m,
         ),
       },
     }));
@@ -963,15 +964,15 @@ export const useWippStore = create<Store>((set, get) => ({
     }
     const lang = get().language;
     const label = !ms
-      ? "Les nouveaux messages ne disparaîtront plus."
+      ? tr("Les nouveaux messages ne disparaîtront plus.")
       : ms >= 30 * 86_400_000
-        ? "Les nouveaux messages disparaîtront après 30 jours."
+        ? tr("Les nouveaux messages disparaîtront après 30 jours.")
         : ms >= DISAPPEAR_7D
-          ? "Les nouveaux messages disparaîtront après 7 jours."
+          ? tr("Les nouveaux messages disparaîtront après 7 jours.")
           : ms >= DISAPPEAR_24H
-            ? "Les nouveaux messages disparaîtront après 24 heures."
+            ? tr("Les nouveaux messages disparaîtront après 24 heures.")
             : lang === "fr"
-              ? "Messages éphémères activés."
+              ? tr("Messages éphémères activés.")
               : "Disappearing messages on.";
     const sys: Message = {
       id: uid("m"),
@@ -1360,9 +1361,9 @@ export const useWippStore = create<Store>((set, get) => ({
           set((s) => ({ sentRequestIds: [...s.sentRequestIds, userId] }));
           return;
         }
-        Alert.alert("Demande", STATUS_FR[status] ?? "La demande n’a pas pu être envoyée.");
+        Alert.alert(tr("Demande"), STATUS_FR[status] ?? tr("La demande n’a pas pu être envoyée."));
       } catch (err) {
-        Alert.alert("Demande", errorText(err, "La demande n’a pas pu être envoyée."));
+        Alert.alert(tr("Demande"), errorText(err, tr("La demande n’a pas pu être envoyée.")));
       }
     })();
   },
@@ -1539,7 +1540,7 @@ export const useWippStore = create<Store>((set, get) => ({
           return {
             id: r.id,
             fromId: id,
-            preview: nearby ? "Demande depuis À proximité" : "veut se connecter avec toi",
+            preview: nearby ? tr("Demande depuis À proximité") : tr("veut se connecter avec toi"),
             nearby,
             invisible: Boolean(r.invisible),
             ring: r.ring ?? null,
@@ -1621,10 +1622,10 @@ export const useWippStore = create<Store>((set, get) => ({
     const opened =
       via === "touch"
         ? fr
-          ? "Vous vous êtes croisés. Prénom seulement. Le chat s’efface à l’heure dite."
+          ? tr("Vous vous êtes croisés. Prénom seulement. Le chat s’efface à l’heure dite.")
           : "You crossed paths. First name only. The thread disappears at the set time."
         : fr
-          ? "Chat temporaire. Aucun @ n’est visible. Le chat s’efface à l’heure dite."
+          ? tr("Chat temporaire. Aucun @ n’est visible. Le chat s’efface à l’heure dite.")
           : "Temporary chat. No @ is visible. The thread disappears at the set time.";
     const chat: Chat = {
       id: uid("c"),
@@ -1664,7 +1665,7 @@ export const useWippStore = create<Store>((set, get) => ({
     return chat.id;
   },
   sealChat: (chatId) => {
-    const ended = get().language === "fr" ? "Conversation terminée. Plus aucun accès." : "Chat ended. No access left.";
+    const ended = get().language === "fr" ? tr("Conversation terminée. Plus aucun accès.") : "Chat ended. No access left.";
     set((s) => ({
       chats: s.chats.map((c) =>
         c.id === chatId ? { ...c, sealed: true, preview: ended, unread: 0, lastAt: Date.now() } : c,
@@ -1708,7 +1709,7 @@ export const useWippStore = create<Store>((set, get) => ({
           await updateGroupInfo(id, { description: description || null, avatar }, { quiet: true });
         } catch (err) {
           console.warn("[wipp] group photo/description failed", err);
-          Alert.alert("Groupe", "Le groupe est créé, mais la photo ou la description n’a pas pu être enregistrée. Tu peux la remettre dans Infos du groupe.");
+          Alert.alert(tr("Groupe"), tr("Le groupe est créé, mais la photo ou la description n’a pas pu être enregistrée. Tu peux la remettre dans Infos du groupe."));
         }
       }
       await get().syncServerInbox();
@@ -1722,7 +1723,7 @@ export const useWippStore = create<Store>((set, get) => ({
       }));
     })().catch(async (err) => {
       console.warn("[wipp] group create failed", err);
-      Alert.alert("Groupe", errorText(err, "Création impossible"));
+      Alert.alert(tr("Groupe"), errorText(err, tr("Création impossible")));
     });
   },
 }));

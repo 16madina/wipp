@@ -1,3 +1,5 @@
+import { tr } from "../tr";
+import { ensureTrLanguage } from "../language-pref";
 /**
  * Android message previews, end-to-end encrypted.
  * The server sends a high-priority FCM *data* message carrying only the ciphertext ("wenc");
@@ -46,22 +48,22 @@ function describe(text: string): string | null {
       const o = JSON.parse(trimmed) as { k?: string; kind?: string; caption?: string; text?: string; surprise?: unknown; shop?: unknown };
       if (o.k === "wipp-media-v1") {
         const labels: Record<string, string> = {
-          image: "📷 Photo",
-          video: "🎥 Vidéo",
-          file: "📄 Document",
-          voice: "🎤 Message vocal",
+          image: tr("📷 Photo"),
+          video: tr("🎥 Vidéo"),
+          file: tr("📄 Document"),
+          voice: tr("🎤 Message vocal"),
           gif: "GIF",
-          sticker: "Sticker",
-          contact: "👤 Contact",
-          location: "📍 Position",
-          link: "🔗 Lien",
+          sticker: tr("Sticker"),
+          contact: tr("👤 Contact"),
+          location: tr("📍 Position"),
+          link: tr("🔗 Lien"),
         };
-        const label = labels[o.kind ?? ""] ?? "Nouveau message";
+        const label = labels[o.kind ?? ""] ?? tr("Nouveau message");
         const caption = (o.caption ?? "").trim();
         return clip(caption ? `${label.split(" ")[0]} ${caption}` : label);
       }
       if (o.k === "wipp-plain-v2") {
-        if (o.surprise) return "🎁 Surprise";
+        if (o.surprise) return tr("🎁 Surprise");
         const body = o.text ?? "";
         if (o.shop) return clip(`🛍️ ${body}`);
         return body ? clip(body) : null;
@@ -98,11 +100,12 @@ export async function onMessagePush(raw: unknown): Promise<boolean> {
   if (Platform.OS !== "android") return false;
   const msg = findMessage(raw);
   if (!msg) return false;
+  await ensureTrLanguage();
   const preview = await decryptPreview(msg.wenc!);
   const { default: n, AndroidImportance, AndroidVisibility } = await import("@notifee/react-native");
   await n.createChannel({
     id: CHANNEL,
-    name: "Messages",
+    name: tr("Messages"),
     importance: AndroidImportance.HIGH,
     sound: "default",
     vibration: true,
@@ -114,7 +117,7 @@ export async function onMessagePush(raw: unknown): Promise<boolean> {
   await n.displayNotification({
     id: String(msg.eventId),
     title: String(msg.title || "WIPP"),
-    body: preview ?? String(msg.fallback || "Nouveau message"),
+    body: preview ?? String(msg.fallback || tr("Nouveau message")),
     data,
     android: {
       channelId: CHANNEL,

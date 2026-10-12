@@ -197,25 +197,25 @@ export function QuestionsSheet({
 
   function more(q: LiveQuestion) {
     if (!organizer) {
-      Alert.alert(q.name, q.text, [{ text: "Signaler", onPress: () => onReport(q) }, { text: "Annuler", style: "cancel" }]);
+      Alert.alert(q.name, q.text, [{ text: tr("Signaler"), onPress: () => onReport(q) }, { text: tr("Annuler"), style: "cancel" }]);
       return;
     }
     Alert.alert(q.name, q.text, [
       q.status === "done" || q.status === "ignored"
-        ? { text: "Remettre en attente", onPress: () => void moderate(q, "restore") }
-        : { text: "Marquer comme traitée", onPress: () => void moderate(q, "done") },
-      ...(q.status === "ignored" ? [] : [{ text: "Ignorer (masquer au public)", onPress: () => void moderate(q, "ignore") }]),
+        ? { text: tr("Remettre en attente"), onPress: () => void moderate(q, "restore") }
+        : { text: tr("Marquer comme traitée"), onPress: () => void moderate(q, "done") },
+      ...(q.status === "ignored" ? [] : [{ text: tr("Ignorer (masquer au public)"), onPress: () => void moderate(q, "ignore") }]),
       {
-        text: "Supprimer (abusive)",
+        text: tr("Supprimer (abusive)"),
         style: "destructive" as const,
         onPress: () =>
           Alert.alert(tr("Supprimer la question"), tr("Elle disparaîtra pour tout le monde."), [
-            { text: "Annuler", style: "cancel" },
-            { text: "Supprimer", style: "destructive", onPress: () => void moderate(q, "delete") },
+            { text: tr("Annuler"), style: "cancel" },
+            { text: tr("Supprimer"), style: "destructive", onPress: () => void moderate(q, "delete") },
           ]),
       },
-      { text: "Signaler l’auteur", onPress: () => onReport(q) },
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Signaler l’auteur"), onPress: () => onReport(q) },
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
@@ -249,11 +249,11 @@ export function QuestionsSheet({
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, paddingHorizontal: 18, marginTop: 8 }}>
             {organizer
-              ? ([["pending", `En attente ${counts.pending}`], ["done", `Traitées ${counts.done}`], ["all", "Toutes"]] as const).map(([id, label]) => (
+              ? ([["pending", tr("En attente {0}", counts.pending)], ["done", tr("Traitées {0}", counts.done)], ["all", tr("Toutes")]] as const).map(([id, label]) => (
                   <Chip key={id} label={label} on={filter === id} onPress={() => setFilter(id)} />
                 ))
               : null}
-            {([["popular", "Populaires"], ["recent", "Récentes"]] as const).map(([id, label]) => (
+            {([["popular", tr("Populaires")], ["recent", tr("Récentes")]] as const).map(([id, label]) => (
               <Chip key={id} label={label} on={sort === id} onPress={() => setSort(id)} subtle />
             ))}
           </View>
@@ -350,14 +350,14 @@ function Chip({ label, on, onPress, subtle }: { label: string; on: boolean; onPr
 }
 
 function StatusChip({ status }: { status: LiveQuestion["status"] }) {
-  const label = status === "shown" ? "À l’écran" : status === "done" ? "Traitée" : status === "ignored" ? "Masquée" : "En attente";
+  const label = status === "shown" ? tr("À l’écran") : status === "done" ? tr("Traitée") : status === "ignored" ? tr("Masquée") : tr("En attente");
   const color = status === "shown" ? GOLD : status === "done" ? "#4ade80" : "rgba(255,255,255,0.55)";
   return <Text style={{ color, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>{label}</Text>;
 }
 
 function ago(ms: number) {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
-  return m < 1 ? "à l’instant" : m < 60 ? `il y a ${m} min` : `il y a ${Math.round(m / 60)} h`;
+  return m < 1 ? tr("à l’instant") : m < 60 ? tr("il y a {0} min", m) : tr("il y a {0} h", Math.round(m / 60));
 }
 
 void colors;

@@ -25,7 +25,7 @@ export function LiveScanner({
     setFail(null);
     const next = permission?.granted ? permission : await requestPermission();
     if (!next?.granted) {
-      setFail("Caméra non autorisée");
+      setFail(tr("Caméra non autorisée"));
       return;
     }
     setLive(true);
@@ -39,7 +39,7 @@ export function LiveScanner({
       const dest = await openWippLink(data, "replace");
       if (!dest.ok) setFail(dest.error);
     } catch {
-      setFail("Impossible de vérifier le QR");
+      setFail(tr("Impossible de vérifier le QR"));
     } finally {
       busy.current = false;
     }

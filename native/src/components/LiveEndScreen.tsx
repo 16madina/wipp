@@ -83,7 +83,7 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
                 <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
                   <Stat value={String(sum.stats.attendees)} label={sum.stats.attendees > 1 ? "participants" : "participant"} />
                   <Stat value={String(sum.stats.questions)} label={sum.stats.questions > 1 ? "questions" : "question"} />
-                  <Stat value={sum.stats.average != null ? `${sum.stats.average} ★` : "—"} label={`${sum.stats.reviews} avis`} />
+                  <Stat value={sum.stats.average != null ? `${sum.stats.average} ★` : "—"} label={tr("{0} avis", sum.stats.reviews)} />
                 </View>
               ) : sum.canReview ? (
                 sent ? (

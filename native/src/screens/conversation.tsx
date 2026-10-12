@@ -67,7 +67,7 @@ import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors, fgA, fixed, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
 import { setScratching, useScratching } from "../lib/scratch-state";
-import { tr } from "../lib/tr";
+import { tr, trSystem } from "../lib/tr";
 
 const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"));
 const NO_MESSAGES: Message[] = [];
@@ -254,18 +254,18 @@ function StoryCiteCard({
 }) {
   const live = stories.find((story) => story.id === cite.id && isStoryLive(story));
   const caption = !live
-    ? "Story expirée"
+    ? tr("Story expirée")
     : cite.mode === "like"
       ? mine
-        ? "Tu as aimé la story"
-        : "A aimé votre story"
+        ? tr("Tu as aimé la story")
+        : tr("A aimé votre story")
       : cite.mode === "reaction"
       ? mine
-        ? "Réaction à la story"
-        : "Réaction à votre story"
+        ? tr("Réaction à la story")
+        : tr("Réaction à votre story")
       : mine
-        ? "Réponse à la story"
-        : "Réponse à votre story";
+        ? tr("Réponse à la story")
+        : tr("Réponse à votre story");
   const open = () => {
     if (live) useWippStore.getState().push({ name: "stories", userId: live.userId, storyId: live.id });
   };
@@ -547,9 +547,9 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const shopFace = shop && clientSide ? { displayName: shop.name, avatar: shop.logo || shop.image, online: true } : undefined;
   const title = chat.type === "group" ? chat.name : shop && clientSide ? shop.name : peer?.displayName;
   const subtitle = typing
-    ? "écrit…"
+    ? tr("écrit…")
     : chat.type === "group"
-      ? `${chat.participantIds.length} personnes`
+      ? tr("{0} personnes", chat.participantIds.length)
       : shop
         ? undefined
         : peer
@@ -699,7 +699,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
     }
     const place = await reverseGeocode(pos).catch(() => null);
     const label = [place?.area, place?.city].filter(Boolean).join(", ");
-    sendText(chatId, `📍 ${label || "Ma position"}\nhttps://maps.google.com/?q=${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`);
+    sendText(chatId, `📍 ${label || tr("Ma position")}\nhttps://maps.google.com/?q=${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`);
   }
 
   /** Documents: decrypt/download when needed, then open with the system viewer. */
@@ -792,7 +792,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
     if (m.type === "system") {
       return (
         <Text style={{ marginBottom: 10, paddingHorizontal: 24, textAlign: "center", fontSize: 12, lineHeight: 17, color: colors.muted }}>
-          {m.text}
+          {trSystem(m.text ?? "")}
         </Text>
       );
     }
@@ -1288,7 +1288,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
         <Press onPress={() => setGifOpen(false)} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
           <Press onPress={() => undefined} style={{ backgroundColor: colors.surface, padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
             <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>
-              {gifProviderConfigured() ? "GIF" : GIF_INTEGRATION_PENDING}
+              {gifProviderConfigured() ? "GIF" : tr(GIF_INTEGRATION_PENDING)}
             </Text>
             <GifSearch
               onPick={(gif) => {
@@ -1429,7 +1429,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                             tr("Le contenu chiffré n’est pas copié. Seuls l’identifiant du message et la raison sont envoyés."),
                             [
                               ...["Contenu inapproprié", "Harcèlement", "Spam ou arnaque", "Autre"].map((reason) => ({
-                                text: reason,
+                                text: tr(reason),
                                 onPress: () => {
                                   void import("../lib/safety").then(({ submitContentReport }) =>
                                     submitContentReport({
@@ -1444,7 +1444,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                                   );
                                 },
                               })),
-                              { text: "Annuler", style: "cancel" as const },
+                              { text: tr("Annuler"), style: "cancel" as const },
                             ],
                           );
                         },
@@ -1455,9 +1455,9 @@ function ConversationInner({ chatId }: { chatId: string }) {
                         danger: true,
                         onSelect: () => {
                           Alert.alert(tr("Bloquer"), tr("Bloquer cet utilisateur ?"), [
-                            { text: "Annuler", style: "cancel" },
+                            { text: tr("Annuler"), style: "cancel" },
                             {
-                              text: "Bloquer",
+                              text: tr("Bloquer"),
                               style: "destructive",
                               onPress: () => {
                                 useWippStore.getState().blockUser(picked.fromId);
@@ -1488,7 +1488,7 @@ function Btnish({ label, onPress }: { label: string; onPress: () => void }) {
 function GifSearch({ onPick }: { onPick: (gif: LocalGif) => void }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<LocalGif[]>(() => loadGifs());
-  const [note, setNote] = useState(gifProviderConfigured() ? "" : "Ajoute EXPO_PUBLIC_GIF_API_KEY pour Tenor. Aucune clé n’est dans l’application.");
+  const [note, setNote] = useState(gifProviderConfigured() ? "" : tr("Ajoute EXPO_PUBLIC_GIF_API_KEY pour Tenor. Aucune clé n’est dans l’application."));
   return (
     <View>
       <TextInput

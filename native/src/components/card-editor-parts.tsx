@@ -111,7 +111,7 @@ export function CategorySheet({ open, categories, selected, onClose, onPick }: {
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
           {rows.filter((c) => c !== "Autre").map((c) => (
             <Press key={c} onPress={() => pick(c)} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: selected === c ? colors.accent : colors.navy }}>
-              <Text style={{ color: selected === c ? colors.accentFg : colors.fg, fontSize: 14 }}>{c}</Text>
+              <Text style={{ color: selected === c ? colors.accentFg : colors.fg, fontSize: 14 }}>{tr(c)}</Text>
             </Press>
           ))}
         </View>
@@ -140,10 +140,10 @@ const TIMES = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).
 /** "Lun–Ven" for consecutive days, "Lun, Mer, Ven" otherwise. */
 function daysLabel(days: number[]) {
   const sorted = [...days].sort((a, b) => a - b);
-  if (sorted.length === 7) return "Tous les jours";
+  if (sorted.length === 7) return tr("Tous les jours");
   const consecutive = sorted.every((d, i) => i === 0 || d === sorted[i - 1] + 1);
-  if (consecutive && sorted.length > 2) return `${DAYS[sorted[0]]}–${DAYS[sorted[sorted.length - 1]]}`;
-  return sorted.map((d) => DAYS[d]).join(", ");
+  if (consecutive && sorted.length > 2) return `${tr(DAYS[sorted[0]!]!)}–${tr(DAYS[sorted[sorted.length - 1]!]!)}`;
+  return sorted.map((d) => tr(DAYS[d]!)).join(", ");
 }
 
 /** Pick opening days and hours; stored as text like "Lun–Ven · 09:00–18:00". */
@@ -201,7 +201,7 @@ export function HoursSheet({
         <View style={{ flexDirection: "row", gap: 6 }}>
           {DAYS.map((d, i) => (
             <Press key={d} onPress={() => toggle(i)} style={{ flex: 1, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: days.includes(i) ? colors.accent : colors.navy }}>
-              <Text style={{ color: days.includes(i) ? colors.accentFg : colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{d}</Text>
+              <Text style={{ color: days.includes(i) ? colors.accentFg : colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr(d)}</Text>
             </Press>
           ))}
         </View>

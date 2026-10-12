@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { fromCrossJSON, toJSONAsync, type SerovalNode } from "seroval";
 import { WIPP_WEB_ORIGIN } from "./firebase-config";
 import { supabase } from "./supabase";
@@ -21,20 +22,20 @@ export async function callServerFn<T>(id: string, data: unknown): Promise<T> {
       body,
     });
   } catch {
-    throw new Error("Réseau indisponible. Vérifie ta connexion.");
+    throw new Error(tr("Réseau indisponible. Vérifie ta connexion."));
   }
   const text = await res.text();
   if (res.status === 403) {
-    throw new Error("Connexion au serveur WIPP refusée. Réessaie dans un instant.");
+    throw new Error(tr("Connexion au serveur WIPP refusée. Réessaie dans un instant."));
   }
   if (!text) {
-    throw new Error("Réponse vide du serveur WIPP.");
+    throw new Error(tr("Réponse vide du serveur WIPP."));
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text) as unknown;
   } catch {
-    throw new Error(res.ok ? "Réponse serveur illisible." : `Erreur serveur (${res.status}).`);
+    throw new Error(res.ok ? tr("Réponse serveur illisible.") : tr("Erreur serveur ({0}).", res.status));
   }
   const serialized = res.headers.get("x-tss-serialized") === "true";
   const value = serialized ? fromCrossJSON(parsed as SerovalNode, { plugins: [] }) : parsed;
@@ -47,7 +48,7 @@ function unwrapServerFn<T>(value: unknown, ok: boolean, status: number): T {
     if (env.error != null && env.result === undefined) {
       const err = env.error;
       throw new Error(
-        err instanceof Error ? err.message : typeof err === "string" ? err : `Erreur serveur (${status}).`,
+        err instanceof Error ? err.message : typeof err === "string" ? err : tr("Erreur serveur ({0}).", status),
       );
     }
     if (!ok) {
@@ -55,7 +56,7 @@ function unwrapServerFn<T>(value: unknown, ok: boolean, status: number): T {
       const message =
         inner && typeof inner === "object" && "error" in inner && typeof (inner as { error: unknown }).error === "string"
           ? (inner as { error: string }).error
-          : `Erreur serveur (${status}).`;
+          : tr("Erreur serveur ({0}).", status);
       throw new Error(message);
     }
     return env.result as T;
@@ -64,7 +65,7 @@ function unwrapServerFn<T>(value: unknown, ok: boolean, status: number): T {
     const message =
       value && typeof value === "object" && "error" in value && typeof (value as { error: unknown }).error === "string"
         ? (value as { error: string }).error
-        : `Erreur serveur (${status}).`;
+        : tr("Erreur serveur ({0}).", status);
     throw new Error(message);
   }
   return value as T;

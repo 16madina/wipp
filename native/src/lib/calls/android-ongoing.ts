@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 /**
  * Android: a visible, permanent notification while a call or a screen share is running.
  *
@@ -60,7 +61,7 @@ export async function showOngoing(o: Ongoing) {
     if (o.camera && (await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA))) types.push(T.FOREGROUND_SERVICE_TYPE_CAMERA);
     if (o.screen) types.push(T.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
     if (!types.length) return;
-    await n.createChannel({ id: CHANNEL, name: "Appel ou partage en cours", importance: AndroidImportance.DEFAULT, vibration: false, visibility: AndroidVisibility.PUBLIC });
+    await n.createChannel({ id: CHANNEL, name: tr("Appel ou partage en cours"), importance: AndroidImportance.DEFAULT, vibration: false, visibility: AndroidVisibility.PUBLIC });
     await n.displayNotification({
       id: ID,
       title: o.title,

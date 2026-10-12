@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./firebase-config";
 import { firebaseIdToken } from "./firebase-phone";
 import { cachedMediaUrl, rememberMediaUrl } from "./media-url-cache";
@@ -14,7 +15,7 @@ export async function signStorageObject(bucket: "wipp-business-cards" | "wipp-pu
 
 async function signFresh(bucket: "wipp-business-cards" | "wipp-public-media", path: string) {
   const token = await firebaseIdToken();
-  if (!token) throw new Error("Session requise pour afficher l’image.");
+  if (!token) throw new Error(tr("Session requise pour afficher l’image."));
   const encoded = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encoded}`, {
     method: "POST",
@@ -27,7 +28,7 @@ async function signFresh(bucket: "wipp-business-cards" | "wipp-public-media", pa
   });
   if (!res.ok) {
     console.warn("[wipp] media sign failed", bucket, res.status);
-    throw new Error(res.status === 401 || res.status === 403 ? "Image privée illisible." : "Affichage de l’image impossible.");
+    throw new Error(res.status === 401 || res.status === 403 ? tr("Image privée illisible.") : tr("Affichage de l’image impossible."));
   }
   let signed = "";
   try {
@@ -36,7 +37,7 @@ async function signFresh(bucket: "wipp-business-cards" | "wipp-public-media", pa
   } catch {
     signed = "";
   }
-  if (!signed) throw new Error("Affichage de l’image impossible.");
+  if (!signed) throw new Error(tr("Affichage de l’image impossible."));
   if (signed.startsWith("http")) return signed;
   return `${SUPABASE_URL}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
 }

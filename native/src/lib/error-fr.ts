@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /**
  * Turns a technical (often English) error into a short French sentence for the screen.
  * French messages written by WIPP pass through unchanged.
@@ -18,11 +19,11 @@ const RULES: [RegExp, string][] = [
 // Rough French check: accents or common French words.
 const looksFrench = (s: string) => /[éèêàçùâîôû’]|\b(le|la|les|de|du|des|une?|est|pas|impossible|requis|choisis|indique)\b/i.test(s);
 
-export function frError(message: string | undefined | null, fallback = "Une erreur est survenue. Réessaie."): string {
+export function frError(message: string | undefined | null, fallback = tr("Une erreur est survenue. Réessaie.")): string {
   const m = (message ?? "").trim();
   if (!m) return fallback;
-  for (const [re, fr] of RULES) if (re.test(m)) return fr;
-  return looksFrench(m) ? m : fallback;
+  for (const [re, fr] of RULES) if (re.test(m)) return tr(fr);
+  return looksFrench(m) ? tr(m) : fallback;
 }
 
 /** `catch (err)` helper: French message for any thrown value. */

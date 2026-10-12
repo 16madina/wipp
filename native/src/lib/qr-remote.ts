@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 export type RemoteProfile = {
   id: string;
   username: string;
@@ -36,16 +37,16 @@ export async function groupInviteCall(token: string, join: boolean) {
 }
 
 export const GROUP_FR: Record<string, string> = {
-  ok: "Invitation valide",
-  joined: "Tu as rejoint le groupe",
-  pending: "Demande envoyée : un admin du groupe doit l’approuver",
-  already_member: "Tu es déjà membre de ce groupe",
-  revoked: "Invitation révoquée",
-  expired: "Invitation expirée",
-  full: "Invitation complète",
-  refused: "Tu ne peux pas rejoindre ce groupe",
-  closed: "Ce groupe n'accepte pas d'invitation",
-  invalid: "Groupe introuvable",
-  no_session: "Connecte-toi avec un vrai compte",
-  error: "Impossible de vérifier le QR",
+  get ok() { return tr("Invitation valide"); },
+  get joined() { return tr("Tu as rejoint le groupe"); },
+  get pending() { return tr("Demande envoyée : un admin du groupe doit l’approuver"); },
+  get already_member() { return tr("Tu es déjà membre de ce groupe"); },
+  get revoked() { return tr("Invitation révoquée"); },
+  get expired() { return tr("Invitation expirée"); },
+  get full() { return tr("Invitation complète"); },
+  get refused() { return tr("Tu ne peux pas rejoindre ce groupe"); },
+  get closed() { return tr("Ce groupe n'accepte pas d'invitation"); },
+  get invalid() { return tr("Groupe introuvable"); },
+  get no_session() { return tr("Connecte-toi avec un vrai compte"); },
+  get error() { return tr("Impossible de vérifier le QR"); },
 };

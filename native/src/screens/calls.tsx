@@ -106,7 +106,7 @@ export function CallsScreen() {
           const u = users[c.userId];
           const groupChat = c.group ? chats.find((x) => x.id === c.userId) : undefined;
           const name = c.group
-            ? groupChat?.name || c.peer?.name || "Groupe"
+            ? groupChat?.name || c.peer?.name || tr("Groupe")
             : u?.displayName || c.peer?.name || (c.peer?.username ? `@${c.peer.username}` : "WIPP");
           const face = u ?? { displayName: name, avatar: c.peer?.avatar };
           const Icon = c.missed ? PhoneMissed : c.direction === "in" ? PhoneIncoming : PhoneOutgoing;
@@ -181,9 +181,9 @@ const LINK_HOURS: { h: number; label: string }[] = [
 function untilLabel(ms: number) {
   const left = Math.max(0, ms - Date.now());
   const h = Math.round(left / 3_600_000);
-  if (h < 1) return "moins d’une heure";
+  if (h < 1) return tr("moins d’une heure");
   if (h < 48) return `${h} h`;
-  return `${Math.round(h / 24)} jours`;
+  return tr("{0} jours", Math.round(h / 24));
 }
 
 /** Créer un lien d’appel : audio / vidéo, durée, puis partager ; liste des liens actifs (annulables). */
@@ -247,13 +247,13 @@ export function CallLinkScreen() {
               <Btn
                 label={tr("Partager le lien")}
                 variant="secondary"
-                onPress={() => void import("../lib/share-public").then(({ shareWippPublic }) => shareWippPublic(`Rejoins mon appel WIPP : ${created.url}`))}
+                onPress={() => void import("../lib/share-public").then(({ shareWippPublic }) => shareWippPublic(tr("Rejoins mon appel WIPP : {0}", created.url)))}
               />
               <Btn
                 label={tr("Rejoindre l’appel maintenant")}
                 variant="secondary"
                 onPress={() => {
-                  void import("../lib/calls/session").then(({ joinCallByLink }) => joinCallByLink(created.token, "Lien d’appel"));
+                  void import("../lib/calls/session").then(({ joinCallByLink }) => joinCallByLink(created.token, tr("Lien d’appel")));
                 }}
               />
               <Btn label={tr("Créer un autre lien")} variant="ghost" onPress={() => setCreated(null)} />
@@ -266,8 +266,8 @@ export function CallLinkScreen() {
             </Text>
             <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>{tr("Type d’appel")}</Text>
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
-              {chip(kind === "audio", "Audio", () => setKind("audio"))}
-              {chip(kind === "video", "Vidéo", () => setKind("video"))}
+              {chip(kind === "audio", tr("Audio"), () => setKind("audio"))}
+              {chip(kind === "video", tr("Vidéo"), () => setKind("video"))}
             </View>
             <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 8 }}>{tr("Le lien expire après")}</Text>
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 22 }}>{LINK_HOURS.map((o) => chip(hours === o.h, o.label, () => setHours(o.h)))}</View>
@@ -291,9 +291,9 @@ export function CallLinkScreen() {
                 <Press
                   onPress={async () => {
                                   Alert.alert(tr("Annuler le lien"), tr("Le lien ne fonctionnera plus et l’appel en cours sera terminé."), [
-                      { text: "Garder", style: "cancel" },
+                      { text: tr("Garder"), style: "cancel" },
                       {
-                        text: "Annuler le lien",
+                        text: tr("Annuler le lien"),
                         style: "destructive",
                         onPress: () =>
                           void import("../lib/calls/livekit-client")
@@ -354,7 +354,7 @@ export function CallJoinScreen({ token }: { token: string }) {
                 onPress={() => {
                   setBusy(true);
                   void import("../lib/calls/session")
-                    .then(({ joinCallByLink }) => joinCallByLink(token, `Appel de ${name}`))
+                    .then(({ joinCallByLink }) => joinCallByLink(token, tr("Appel de {0}", name)))
                     .then(() => pop())
                     .catch((err) => {
                       setBusy(false);

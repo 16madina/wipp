@@ -297,8 +297,8 @@ export function StageSheet({
           <Press
             onPress={() =>
               Alert.alert(tr("Revenir au mode Conférence"), tr("Tous les intervenants redescendront parmi les spectateurs. Leur micro et leur caméra seront coupés."), [
-                { text: "Annuler", style: "cancel" },
-                { text: "Revenir au mode Conférence", style: "destructive", onPress: () => void act({ action: "mode", mode: "conference" }) },
+                { text: tr("Annuler"), style: "cancel" },
+                { text: tr("Revenir au mode Conférence"), style: "destructive", onPress: () => void act({ action: "mode", mode: "conference" }) },
               ])
             }
             style={{ marginTop: 12, height: 46, borderRadius: 14, backgroundColor: "rgba(229,56,59,0.15)", borderWidth: 1, borderColor: "#e5383b", alignItems: "center", justifyContent: "center" }}
@@ -308,7 +308,7 @@ export function StageSheet({
         ) : null}
         <ScrollView>
           <Section title={tr("Demandes de parole ({0})", stage?.hands.length ?? 0)}>
-            {!stage?.hands.length ? <Empty text="Aucune main levée." /> : null}
+            {!stage?.hands.length ? <Empty text={tr("Aucune main levée.")} /> : null}
             {stage?.hands.map((p) => (
               <Row key={p.pid} p={p} sub={p.at ? `✋ ${hhmm(p.at)}` : undefined}>
                 <Small label={tr("Refuser")} onPress={() => void act({ action: "dismiss", pid: p.pid })} />
@@ -326,7 +326,7 @@ export function StageSheet({
             </Section>
           ) : null}
           <Section title={tr("Sur scène")}>
-            {!stage?.speakers.length ? <Empty text="Tu es seul(e) sur scène." /> : null}
+            {!stage?.speakers.length ? <Empty text={tr("Tu es seul(e) sur scène.")} /> : null}
             {stage?.speakers.map((p) => {
               const isFeatured = stage.featured === p.identity;
               return (

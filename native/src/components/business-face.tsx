@@ -220,24 +220,24 @@ export function BusinessCardExperience({
   const link = cardLink(card.publicId);
   function visitorMenu() {
     Alert.alert(card.name, undefined, [
-      { text: "Partager", onPress: () => void Share.share({ message: `${card.name}\n${link}` }) },
+      { text: tr("Partager"), onPress: () => void Share.share({ message: `${card.name}\n${link}` }) },
       {
-        text: "Signaler l’entreprise",
+        text: tr("Signaler l’entreprise"),
         style: "destructive",
         onPress: () =>
           Alert.alert(tr("Signaler l’entreprise"), undefined, [
             ...REPORT_REASONS.map((reason) => ({
-              text: reason,
+              text: tr(reason),
               onPress: () =>
                 void submitContentReport({ contentType: "business_card", contentId: card.id, targetProfileId: card.ownerProfileId, reason }).then(
                   () => Alert.alert(tr("Signalement envoyé"), tr("Merci. L’équipe WIPP va examiner cette entreprise.")),
                   (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
                 ),
             })),
-            { text: "Annuler", style: "cancel" as const },
+            { text: tr("Annuler"), style: "cancel" as const },
           ]),
       },
-      { text: "Annuler", style: "cancel" },
+      { text: tr("Annuler"), style: "cancel" },
     ]);
   }
   const qr = businessQr(card.publicId);
@@ -273,7 +273,7 @@ export function BusinessCardExperience({
           {[
             { icon: Globe, title: tr("Copier le lien de ma carte"), sub: tr("Le lien sera copié dans le presse-papiers"), go: () => void copyLink() },
             { icon: QrCode, title: tr("Partager le QR code"), sub: tr("Envoyer mon QR en image"), go: () => void exportBusinessQr(qr, card.name).catch(() => Alert.alert("QR", tr("Le partage du QR a échoué."))) },
-            { icon: Share2, title: tr("Partager ailleurs"), sub: tr("WhatsApp, Instagram, etc."), go: () => void Share.share({ message: `${card.name} sur WIPP\n${link}` }) },
+            { icon: Share2, title: tr("Partager ailleurs"), sub: tr("WhatsApp, Instagram, etc."), go: () => void Share.share({ message: tr("{0} sur WIPP\n{1}", card.name, link) }) },
           ].map((row) => (
             <Press key={row.title} onPress={row.go} style={{ flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 12 }}>
               <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
@@ -352,7 +352,7 @@ export function BusinessCardExperience({
               <Text numberOfLines={2} style={{ flexShrink: 1, color: colors.fg, fontSize: 24, fontFamily: "Inter_700Bold" }}>{card.name}</Text>
               {card.verified ? <BadgeCheck size={22} color="#ffffff" fill="#1d9bf0" accessibilityLabel={tr("Entreprise vérifiée par WIPP")} /> : null}
             </View>
-            {card.category ? <Text style={{ marginTop: 2, color: colors.muted, fontSize: 14 }}>{card.category}</Text> : null}
+            {card.category ? <Text style={{ marginTop: 2, color: colors.muted, fontSize: 14 }}>{tr(card.category)}</Text> : null}
           </View>
         </View>
         {tags.length ? (

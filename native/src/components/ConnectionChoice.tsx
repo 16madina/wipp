@@ -55,8 +55,8 @@ export function ConnectionChoicePicker({
         <View style={{ flexDirection: "row", gap: 10 }}>
           {(
             [
-              ["permanent", "♾️", "Permanent", "Sans date de fin"],
-              ["ephemeral", "⏳", "Éphémère", "Pour une durée choisie"],
+              ["permanent", "♾️", tr("Permanent"), tr("Sans date de fin")],
+              ["ephemeral", "⏳", tr("Éphémère"), tr("Pour une durée choisie")],
             ] as const
           ).map(([id, icon, title, sub]) => (
             <Press
@@ -135,5 +135,5 @@ export function ConnectionChoicePicker({
 }
 
 export function choiceLabel(c: ConnectionChoice) {
-  return c.type === "permanent" ? "♾️ Contact permanent" : `⏳ Contact éphémère · ${durationLabel(c.minutes)}`;
+  return c.type === "permanent" ? tr("♾️ Contact permanent") : tr("⏳ Contact éphémère · {0}", durationLabel(c.minutes));
 }

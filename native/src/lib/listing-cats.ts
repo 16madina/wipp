@@ -1,17 +1,18 @@
+import { tr } from "./tr";
 /** Listing categories shown in the form and in Explorer (ids are stored on the listing). */
 export const LISTING_CATEGORIES = [
-  { id: "auto", label: "Véhicules" },
-  { id: "realty", label: "Immobilier" },
-  { id: "electronics", label: "Électronique" },
-  { id: "fashion", label: "Mode" },
-  { id: "home", label: "Maison & Jardin" },
-  { id: "jobs", label: "Emploi & Services" },
-  { id: "leisure", label: "Loisirs" },
-  { id: "goods", label: "Autre" },
+  { id: "auto", get label() { return tr("Véhicules"); } },
+  { id: "realty", get label() { return tr("Immobilier"); } },
+  { id: "electronics", get label() { return tr("Électronique"); } },
+  { id: "fashion", get label() { return tr("Mode"); } },
+  { id: "home", get label() { return tr("Maison & Jardin"); } },
+  { id: "jobs", get label() { return tr("Emploi & Services"); } },
+  { id: "leisure", get label() { return tr("Loisirs"); } },
+  { id: "goods", get label() { return tr("Autre"); } },
 ] as const;
 
-const LEGACY: Record<string, string> = { services: "Services" };
+const LEGACY: Record<string, string> = { get services() { return tr("Services"); } };
 
 export function listingCatLabel(id?: string) {
-  return LISTING_CATEGORIES.find((c) => c.id === id)?.label ?? (id ? LEGACY[id] : undefined) ?? "Autre";
+  return LISTING_CATEGORIES.find((c) => c.id === id)?.label ?? (id ? LEGACY[id] : undefined) ?? tr("Autre");
 }

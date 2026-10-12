@@ -1,0 +1,379 @@
+1758|Star balloons
+1759|Cloud of stars
+1760|Jar of stars
+1761|Window
+1762|Halloween
+1763|Christmas
+1764|Happy New Year
+1765|Valentine’s Day
+1766|Easter
+1767|Mother’s Day
+1768|Father’s Day
+1769|Thanksgiving
+1770|Eid
+1771|Congratulations
+1772|Good morning
+1773|Birthday
+1774|Get well soon
+1775|Good night
+1776|Couldn’t send the file
+1777|Microphone off
+1778|Allow the microphone to record a voice message.
+1779|To record a voice message, allow the microphone for WIPP in Settings.
+1780|Open Settings
+1781|Couldn’t put the message together. Try again.
+1782|Can’t record during a call.
+1783|The microphone isn’t allowed.
+1784|The microphone couldn’t start. Try again.
+1785|Profile
+1786|Business
+1787|open
+1788|resolved
+1789|dismissed
+1790|📊 Statistics
+1791|👥 Users
+1792|🎁 Referrers
+1793|💬 Messages
+1794|🚩 Reports
+1795|⛔ Suspended
+1796|🔔 Notifications
+1797|🧾 Log
+1798|Users
+1799|New (7 d)
+1800|New (24 h)
+1801|Messages (24 h)
+1802|Chats
+1803|Active connections
+1804|Temporary contacts
+1805|Open reports
+1806|Suspended accounts
+1807|Moderators
+1808|Reachable by push
+1809|Messages (total)
+1810|Suspended
+1811|Moderator role removed.
+1812|@{0} is now a moderator.
+1813|Account restored.
+1814|Account suspended.
+1815|This content
+1816|This account
+1817|Report: {0}
+1818|Moderator appointed
+1819|Moderator removed
+1820|Account suspended
+1821|Account restored
+1822|Report resolved
+1823|Report dismissed
+1824|Reported message viewed
+1825|Notification sent
+1826|Notification template saved
+1827|Admin number changed
+1829|By continuing, I accept the 
+1830|terms of use
+1831| and the 
+1832|privacy policy
+1833|I confirm I am 
+1834|3 to 20 characters (a-z, 0-9, _)
+1835|less than an hour
+1836|Join my WIPP call: {0}
+1837|Keep
+1838|Call from {0}
+1839|Unarchive
+1840|Archive
+1841|Turn notifications back on
+1842|Mute…
+1843|8 hours
+1844|1 week
+1845|Always
+1846|Mark as read
+1847|Mark as unread
+1848|Hide in WIPP Private
+1849|Draft: {0}
+1850|Remove the photo
+1851|Send a message
+1852|Remove from admins
+1853|Make admin
+1854|On
+1855|Report only
+1856|Sign in with a real account to get a temporary QR.
+1857|Temporary QR unavailable, try again.
+1858|Settings
+1859|🟢 Visible until turned off
+1860|🟢 Visible until {0}:{1}
+1861|🟢 Visible
+1862|Connect
+1863|Blocked
+1864|Story expired
+1865|You liked the story
+1866|Liked your story
+1867|Reaction to the story
+1868|Reaction to your story
+1869|Reply to the story
+1870|Reply to your story
+1871|typing…
+1872|My location
+1873|Add EXPO_PUBLIC_GIF_API_KEY for Tenor. No key is in the app.
+1874|The organizer removed you from this live.
+1875|Turn on
+1876|✋ {0} raised a hand
+1877|Delete the comment
+1878|Remove this person
+1879|Spotlight
+1880|Tap the screen to show the controls
+1881|Screen sharing stopped
+1882|End
+1883|Stop sharing
+1884|Leave without ending
+1885|End for everyone
+1886|The live will resume as soon as they are back. Otherwise it will end automatically in {0}:{1}.
+1887|Invite on stage
+1888|Shared stage
+1889|Host in focus
+1890|Guests inset
+1891|Free · negotiable
+1892|Free
+1893|Swap
+1894|Price on request
+1895|{0} · negotiable
+1896|Paid
+1897|Businesses
+1898|All
+1899|Groups
+1900|Music
+1901|Party
+1902|Business
+1903|Sport
+1904|Culture
+1905|Food
+1906|Community
+1907|In person
+1908|Delete the listing
+1909|Hide the listing
+1910|Phone or chat
+1911|{0} · {1} on WIPP
+1912|Hi! I’m interested in your listing “{0}”. My offer: 
+1913|{0} days ago
+1914|1 day ago
+1915|on {0}
+1916|🔞 18 and over only
+1917|{0} spots
+1918|Couldn’t message.
+1919|Reply sent
+1920|Story liked
+1921|Delete the story
+1922|Hide this story
+1923|Info
+1924|Members
+1925|Family
+1926|Friends
+1927|Work
+1928|School / Studies
+1929|Neighborhood
+1930|Association
+1931|Business
+1932|A contact
+1933|{0} isn’t in your contacts (anymore).
+1934|{0} was removed from this group.
+1935|Only admins can add members.
+1936|One person couldn’t be added.
+1937|a member
+1938|Join “{0}” on WIPP: {1}
+1939|Reset
+1940|Sign in with a real account.
+1941|Temporary QR unavailable.
+1942|Man
+1943|Woman
+1944|Not specified
+1945|Off
+1946|On
+1947|Asked at the first WIPP Touch
+1948|On
+1949|Off
+1950|Not set up
+1951|Off
+1952|The app isn’t working (bug)
+1953|Fraud or scam
+1954|Harassment or shocking content
+1955|Account, sign-in or SMS code
+1956|Business page
+1957|Privacy and data
+1958|Suggestion
+1959|Account: @{0}
+1960|Device: {0} {1}
+1961|Blocked profile
+1962|My listings
+1963|My events
+1964|My saved items
+1965|Uploading… {0}%
+1966|Couldn’t upload the image. Try again.
+1967|View my card
+1968|Hair salon
+1969|Extensions
+1970|Hair care
+1971|Closes at {0}
+1972|Error
+1973|Photo {0}/{1}
+1974|Photo {0} · {1}%
+1975|Finishing…
+1976|For sale
+1977|Free to take
+1978|Cover…
+1979|Cover · {0}%
+1980|Live room…
+1981|In-person event
+1982|With a place and an address
+1983|Talk, masterclass, live workshop
+1984|Private (by invitation)
+1985|In person
+1986|Join me on WIPP! Download the app, and when you sign up enter my invitation code: @{0}⏎{1}
+1987| (until {0})
+1988|Pin my business
+1989|Give this code
+1990|I’m giving you {0} days of pinning for your business on WIPP! In WIPP: Profile › Earn rewards › I have a pinning code, then enter: {1}
+1991| for “{0}”
+1992|Choose who to send to
+1993|Send to {0}
+1994|Send to {0} chats
+1995|My contacts
+1996|Close friends
+1997|Only me
+1998|Use this video
+1999|Use this part
+2000|You make my days brighter. ♥
+2001|I love you
+2002|Teddy bear
+2003|Love letter
+2004|Thinking of you
+2005|My love
+2006|Foggy glass
+2007|Heart hands
+2008|My other half
+2009|The key to my heart
+2010|My favorite
+2011|Madly
+2012|You light up my life
+2013|You make me float
+2014|Inseparable
+2015|Forever
+2016|Home is you
+2017|Have a nice day
+2018|Breakfast
+2019|Sunflower
+2020|Paper plane
+2021|Hey there
+2022|Wake up!
+2023|Cake
+2024|Cupcake
+2025|Cracked screen
+2026|Cracked screen 2
+2027|Make a wish
+2028|Piñata
+2029|Puppy
+2030|It’s your day
+2031|Happy b-day
+2032|Hip hip hooray
+2033|Forever young
+2034|Happy Birthday
+2035|May all your wishes come true
+2036|Happy birthday!
+2037|Soup
+2038|Hug
+2039|After the rain
+2040|Mended heart
+2041|Sprout
+2042|Bubble
+2043|Heal fast
+2044|Bye bye germs
+2045|Feel better soon
+2046|Take care of yourself
+2047|Full of energy
+2048|Rest well
+2049|Stay strong!
+2050|A little pick-me-up
+2051|Big hug
+2052|Get well soon
+2053|We complete each other
+2054|My hero
+2055|Far from the eyes
+2056|Best friends
+2057|Always there for you
+2058|I miss you
+2059|Night out with friends
+2060|Friends for life
+2061|Thanks for being there
+2062|Have a nice trip
+2063|Here we go
+2064|Happy holidays
+2065|Safe travels
+2066|Enjoy
+2067|Wherever you are
+2068|Get home safe
+2069|Off on an adventure
+2070|Welcome
+2071|Sheep
+2072|Sweet dreams
+2073|Good night
+2074|Owl
+2075|Sleep well
+2076|See you tomorrow
+2077|Fishing for stars
+2078|Herbal tea
+2079|Bedtime!
+2080|Moon and stars
+2081|You look gorgeous
+2082|The prettiest is you
+2083|Queen of the day
+2084|So stylish
+2085|You’re glowing
+2086|So classy
+2087|Stunning
+2088|You’re one of a kind
+2089|Wow, that look
+2090|Pumpkin
+2091|Witch
+2092|Spider
+2093|Cauldron
+2094|Ghosts
+2095|Vampire
+2096|Mummy
+2097|Candy
+2098|Skeleton
+2099|Christmas tree
+2100|Merry Christmas
+2101|Ho ho ho!
+2102|Merry Christmas
+2103|Yum, it’s Christmas
+2104|Happy holidays
+2105|Christmas surprise
+2106|Jingle bells
+2107|Dear Santa
+2108|Peace and joy
+2109|Champagne
+2110|Happy New Year
+2111|New Year’s resolutions
+2112|3, 2, 1… Happy New Year!
+2113|Fresh start
+2114|Let the party begin
+2115|Health, happiness, prosperity
+2116|A beautiful year begins
+2117|Best wishes
+2118|Cupid
+2119|Be my Valentine
+2120|Happy Valentine’s Day
+2121|Be my Valentine
+2122|You + me
+2123|I’m falling for you
+2124|You make me melt
+2125|My heart beats for you
+2126|XOXO
+2127|My Valentine
+2128|Chick
+2129|Giant bouquet
+2130|Trophy
+2131|Turkey
+2132|Lanterns
+2133|Diploma
+2134|GIF search coming soon. You can already paste a GIF link.
+2135|Secret
+2136|Fake profile
+2137|Stories

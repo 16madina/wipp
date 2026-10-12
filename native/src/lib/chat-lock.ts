@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /**
  * Conversations verrouillées — distinct de WIPP Privé.
  * La conversation reste visible dans Chats (nom + photo), mais son contenu demande le code
@@ -131,7 +132,7 @@ export async function authenticateLock(askPin: () => Promise<string | null>) {
   lastWait = 0;
   if (bio) {
     // Face ID first; if it fails, is cancelled or « Entrer mon code » is tapped, ask for the lock code.
-    const r = await authenticateBiometric("Ouvrir la conversation verrouillée", "Entrer mon code");
+    const r = await authenticateBiometric(tr("Ouvrir la conversation verrouillée"), tr("Entrer mon code"));
     if (r === "success") return true;
   }
   const pin = await askPin();

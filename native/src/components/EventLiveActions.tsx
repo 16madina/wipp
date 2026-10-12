@@ -85,8 +85,8 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
                 if (soon) go();
                 else
                   Alert.alert(tr("Démarrer maintenant ?"), tr("L’heure prévue n’est pas encore arrivée. Les inscrits seront prévenus que c’est en direct."), [
-                    { text: "Annuler", style: "cancel" },
-                    { text: "Démarrer", onPress: go },
+                    { text: tr("Annuler"), style: "cancel" },
+                    { text: tr("Démarrer"), onPress: go },
                   ]);
               }}
             />
@@ -100,7 +100,7 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
               <Press
                 onPress={() =>
                   void run(async () => (await import("../lib/event-live")).newLiveLink(eventId), (r) => {
-                    void Share.share({ message: `Rejoins mon événement en ligne sur WIPP : ${r.url}` });
+                    void Share.share({ message: tr("Rejoins mon événement en ligne sur WIPP : {0}", r.url) });
                   })
                 }
                 style={{ flex: 1, height: 44, borderRadius: 12, borderWidth: 1, borderColor: whiteA(0.15), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
@@ -140,8 +140,8 @@ export function EventLiveActions({ eventId, startsAt }: { eventId: string; start
             <Press
               onPress={() =>
                 Alert.alert(tr("Annuler l’événement"), tr("Les inscrits ne pourront plus rejoindre le direct."), [
-                  { text: "Retour", style: "cancel" },
-                  { text: "Annuler l’événement", style: "destructive", onPress: () => void run(async () => (await import("../lib/event-live")).cancelLive(eventId)) },
+                  { text: tr("Retour"), style: "cancel" },
+                  { text: tr("Annuler l’événement"), style: "destructive", onPress: () => void run(async () => (await import("../lib/event-live")).cancelLive(eventId)) },
                 ])
               }
               style={{ alignSelf: "center", padding: 8 }}

@@ -24,3 +24,11 @@ export function saveLanguage(lang: SavedLang) {
     /* the choice still applies until the app is closed */
   }
 }
+
+let loaded: Promise<void> | null = null;
+/** A push handled while WIPP is closed runs without the screens: read the saved language once, so its text follows it. */
+export function ensureTrLanguage() {
+  return (loaded ??= readLanguage().then((lang) => {
+    if (lang) setTrLanguage(lang);
+  }));
+}

@@ -41,7 +41,7 @@ export function GiftParcel({ onPress, kindLabel, footer, locked }: { onPress: ()
   const shadow = bob.interpolate({ inputRange: [0, 1], outputRange: [1, 0.75] });
 
   return (
-    <Press onPress={onPress} style={{ flex: 1, backgroundColor: "#100c08" }} accessibilityLabel={tr("Surprise{0}{1}", kindLabel ? ` : ${kindLabel}` : "", locked ? ", verrouillée" : "")}>
+    <Press onPress={onPress} style={{ flex: 1, backgroundColor: "#100c08" }} accessibilityLabel={tr("Surprise{0}{1}", kindLabel ? ` : ${kindLabel}` : "", locked ? tr(", verrouillée") : "")}>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 }}>
         <Animated.View style={{ transform: [{ translateY: floatY }, { rotate }], alignItems: "center" }}>
           <Animated.View style={{ transform: [{ translateY: lidY }] }}>
