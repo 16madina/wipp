@@ -65,7 +65,6 @@ export async function setupCallKeep(
       // Only a tap in Recents (no callUUID): an outgoing call WIPP started itself is not ours to restart.
       if (data?.handle && !data.callUUID) onStart?.(data.handle, Boolean(data.video));
     };
-    (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", start);
     keep.addEventListener("answerCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) {
@@ -93,6 +92,8 @@ export async function setupCallKeep(
         }
       },
     );
+    // Registered after « didLoadWithEvents », so a tap made while WIPP was closed is not lost.
+    (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", start);
     keep.addEventListener("endCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) onEnd(id);

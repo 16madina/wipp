@@ -6,7 +6,7 @@ import { Camera } from "expo-camera";
 import { Press } from "./ui";
 import { CallScreen } from "./CallScreen";
 import { formatDuration } from "../lib/format";
-import { useWippStore } from "../lib/store";
+import { isTabScreen, useWippStore } from "../lib/store";
 import { palettes } from "../theme";
 
 /** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
@@ -97,14 +97,22 @@ export function CallOverlay() {
         if (live?.callId === callId) void endCurrentCall();
       },
       (handle, video) => {
-        // Touched in the iPhone's Recents: call that contact back, unless a call is already going on.
-        if (useCallSession.getState().session) return;
-        const st = useWippStore.getState();
+        // Touched in the iPhone's Recents: call that contact back. When WIPP was fully closed, the contacts
+        // are not loaded yet at this point — keep trying for a few seconds instead of giving up.
         const wanted = handle.trim().toLowerCase();
-        const user = Object.values(st.users).find((u) => u?.id?.startsWith("srvuser:") && u.username && `@${u.username}`.toLowerCase() === wanted);
-        if (!user || st.blockedIds.includes(user.id)) return;
-        if (st.stack.some((s) => s.name === "active-call")) return;
-        st.push({ name: "active-call", userId: user.id, kind: video ? "video" : "audio", dir: "out", group: false });
+        let tries = 0;
+        const attempt = () => {
+          const st = useWippStore.getState();
+          if (useCallSession.getState().session || st.stack.some((s) => s.name === "active-call")) return;
+          const user = Object.values(st.users).find((u) => u?.id?.startsWith("srvuser:") && u.username && `@${u.username}`.toLowerCase() === wanted);
+          const ready = st.onboarded && Boolean(st.serverProfileId) && st.stack.some((s) => isTabScreen(s.name));
+          if (user && ready) {
+            if (!st.blockedIds.includes(user.id)) st.push({ name: "active-call", userId: user.id, kind: video ? "video" : "audio", dir: "out", group: false });
+            return;
+          }
+          if (++tries < 40) setTimeout(attempt, 500);
+        };
+        attempt();
       },
     );
   }, []);
