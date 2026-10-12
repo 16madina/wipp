@@ -27,7 +27,7 @@ function patchAppDelegate(src) {
   // A WIPP call touched in the iPhone Recents asks the app to call that person back.
   src = src.replace(
     "    let result = RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)",
-    "    let recents = RNCallKeep.application(application, continue: userActivity, restorationHandler: restorationHandler)\n    let result = recents || RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)",
+    "    let recents = RNCallKeep.application(application, continue: userActivity, restorationHandler: { items in restorationHandler(items as? [UIUserActivityRestoring]) })\n    let result = recents || RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)",
   );
   src = src.replace(
     "public class AppDelegate: ExpoAppDelegate {",
