@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { STICKER_FOCUS } from "../generated/sticker-focus";
 import { Asset } from "expo-asset";
 import { cacheDirectory, copyAsync, getInfoAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
 import { Image } from "expo-image";
@@ -207,6 +208,28 @@ export function WippSticker({
 
   if (still) {
     if (!poster) return <View style={box} />;
+    // The picture keeps room around the character for its animation: zoom the still on the character,
+    // so every emoji of a row looks the same size.
+    const focus = fill ? undefined : STICKER_FOCUS[id];
+    if (focus) {
+      const [ratio, x0, y0, x1, y1] = focus;
+      const w = ratio < 1 ? size * ratio : size;
+      const h = ratio < 1 ? size : size / ratio;
+      const k = (size * 0.94) / Math.max((x1 - x0) * w, (y1 - y0) * h);
+      return (
+        <View style={{ width: size, height: size, overflow: "hidden" }}>
+          <Image
+            recyclingKey={`still-${id}`}
+            source={typeof poster === "number" ? poster : { uri: poster.uri, isAnimated: false }}
+            style={{ position: "absolute", width: w * k, height: h * k, left: size / 2 - ((x0 + x1) / 2) * w * k, top: size / 2 - ((y0 + y1) / 2) * h * k }}
+            contentFit="fill"
+            autoplay={false}
+            allowDownscaling
+            cachePolicy="memory-disk"
+          />
+        </View>
+      );
+    }
     return (
       <Image
         recyclingKey={`still-${id}`}
@@ -235,14 +258,21 @@ export function WippSticker({
 
   if (shown) {
     const animate = imageAnim && !broken;
-    return (
+    // Same zoom as the still picture (no jump when it starts moving); the animation may spill over the frame.
+    const focus = fill ? undefined : STICKER_FOCUS[id];
+    const [ratio, x0, y0, x1, y1] = focus ?? [1, 0, 0, 1, 1];
+    const w = ratio < 1 ? size * ratio : size;
+    const h = ratio < 1 ? size : size / ratio;
+    const k = (size * 0.94) / Math.max((x1 - x0) * w, (y1 - y0) * h);
+    const zoomed = { position: "absolute" as const, width: w * k, height: h * k, left: size / 2 - ((x0 + x1) / 2) * w * k, top: size / 2 - ((y0 + y1) / 2) * h * k };
+    const picture = (
       <Image
         ref={img}
         recyclingKey={id}
         source={animate ? animatedSource(shown) : shown}
         placeholder={poster}
-        style={box}
-        contentFit="contain"
+        style={focus ? zoomed : box}
+        contentFit={focus ? "fill" : "contain"}
         autoplay={animate}
         useAppleWebpCodec={false}
         allowDownscaling={!animate}
@@ -255,6 +285,7 @@ export function WippSticker({
         }}
       />
     );
+    return focus ? <View style={{ width: size, height: size, overflow: "visible" }}>{picture}</View> : picture;
   }
   return (
     <View style={{ ...box, alignItems: "center", justifyContent: "center" }}>
