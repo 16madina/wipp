@@ -1,5 +1,5 @@
 import * as Device from "expo-device";
-import { AppState, Platform } from "react-native";
+import { AppState, Platform, Settings } from "react-native";
 
 type Keep = {
   setup: (options: Record<string, unknown>) => Promise<boolean>;
@@ -9,7 +9,9 @@ type Keep = {
   removeEventListener: (event: string) => void;
   setCurrentCallActive?: (uuid: string) => void;
   backToForeground?: () => void;
+  getInitialEvents?: () => Promise<{ name: string; data: Record<string, unknown> }[]>;
 };
+
 
 let keep: Keep | null = null;
 const uuidToCall = new Map<string, string>();
@@ -21,7 +23,12 @@ export function callKeepAvailable() {
   return keep != null && Platform.OS !== "web";
 }
 
-export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (callId: string) => void) {
+/** `onStart`: a WIPP call was touched in the iPhone's Recents — call that person back (`handle` is « @username »). */
+export async function setupCallKeep(
+  onAnswer: (callId: string) => void,
+  onEnd: (callId: string) => void,
+  onStart?: (handle: string, video: boolean) => void,
+) {
   // CallKit does not run on the iOS simulator: it reports every call as ended,
   // which the app turned into an automatic "decline". Use the in-app screen there.
   if (Platform.OS === "web" || keep || !Device.isDevice) return;
@@ -35,6 +42,9 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
         // Official WIPP ringtone (bundled CAF, < 30 s), also used when a VoIP push wakes the app.
         ringtoneSound: "wipp_ring.caf",
         supportsVideo: true,
+        // WIPP calls carry a name, not a phone number: say so, and list them in the iPhone Recents.
+        handleType: "generic",
+        includesCallsInRecents: true,
         maximumCallGroups: "1",
         maximumCallsPerCallGroup: "1",
       },
@@ -52,6 +62,17 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
         },
       },
     });
+    type StartData = { handle?: string; video?: boolean; callUUID?: string };
+    let lastStart = "";
+    const start = (data: StartData) => {
+      // Only a tap in Recents (no callUUID): an outgoing call WIPP started itself is not ours to restart.
+      if (!data?.handle || data.callUUID) return;
+      // The same tap can arrive by two roads (live event and « events from before launch »).
+      const key = `${data.handle}|${Math.floor(Date.now() / 15_000)}`;
+      if (key === lastStart) return;
+      lastStart = key;
+      onStart?.(data.handle, Boolean(data.video));
+    };
     keep.addEventListener("answerCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) {
@@ -65,6 +86,11 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
       "didLoadWithEvents",
       (events) => {
         for (const e of events ?? []) {
+          // WIPP was closed and opened by a tap in Recents.
+          if (e.name === "RNCallKeepDidReceiveStartCallAction") {
+            start(e.data as StartData);
+            continue;
+          }
           if (e.name !== "RNCallKeepPerformAnswerCallAction" || !e.data?.callUUID) continue;
           const id = uuidToCall.get(e.data.callUUID);
           if (id) {
@@ -74,6 +100,23 @@ export async function setupCallKeep(onAnswer: (callId: string) => void, onEnd: (
         }
       },
     );
+    // Registered after « didLoadWithEvents », so a tap made while WIPP was closed is not lost.
+    (keep.addEventListener as unknown as (e: string, cb: (data: StartData) => void) => void)("didReceiveStartCallAction", (data) => start(data));
+    // WIPP fully closed, opened by a tap in Recents: the native side kept the request (the call library is
+    // not ready that early). React Native reads the phone's settings once at launch, so it is in there.
+    try {
+      const kept = Settings.get("wippRecentsCallback") as { handle?: string; video?: boolean; at?: number } | undefined;
+      if (kept?.handle && kept.at && Date.now() - kept.at * 1000 < 60_000) {
+        Settings.set({ wippRecentsCallback: { handle: "", video: false, at: 0 } });
+        start({ handle: kept.handle, video: Boolean(kept.video) });
+      }
+    } catch {
+      /* no stored request */
+    }
+    // WIPP fully closed, opened by a tap in Recents: the request was stored before any listener existed.
+    void keep.getInitialEvents?.().then((events) => {
+      for (const e of events ?? []) if (e.name === "RNCallKeepDidReceiveStartCallAction") start(e.data as StartData);
+    }).catch(() => undefined);
     keep.addEventListener("endCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) onEnd(id);
@@ -93,7 +136,8 @@ export function showSystemIncoming(callId: string, video: boolean, callerName?: 
     return (c === "x" ? n : (n & 0x3) | 0x8).toString(16);
   });
   uuidToCall.set(uuid, callId);
-  keep.displayIncomingCall(uuid, "wipp", callerName || "WIPP", "generic", video);
+  // The name of the caller is the handle, so each person gets a separate line in Recents.
+  keep.displayIncomingCall(uuid, callerName || "WIPP", callerName || "WIPP", "generic", video);
 }
 
 /** True when the iPhone call screen (CallKit) is already showing this call — it plays the ringtone itself. */

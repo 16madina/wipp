@@ -327,7 +327,9 @@ export function CallScreen({
   // mine is off), and my own preview shows as soon as my camera is on (even if theirs is off).
   const videoLive = !mosaic && connected && (!!remoteVid || !!localVid);
   const flip = swapped && !!remoteVid && !!localVid;
-  const main = videoLive ? (remoteVid ? (flip ? localVid : remoteVid) : localVid) : null;
+  // Video call still ringing: my own camera already fills the screen, like a mirror, behind the caller card.
+  const preview = !mosaic && session.dir !== "in" && session.phase === "outgoing" && !!localVid;
+  const main = videoLive ? (remoteVid ? (flip ? localVid : remoteVid) : localVid) : preview ? localVid : null;
   const mini = videoLive && remoteVid ? (flip ? remoteVid : localVid) : null;
   const status = connected ? formatDuration(sec) : (session.note && terminal ? session.note : c.states[session.phase]);
 
@@ -372,6 +374,7 @@ export function CallScreen({
       {main ? (
         <Pressable onPress={showControls} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
           <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={main === localVid} zOrder={0} />
+          {preview ? <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.35)" }} /> : null}
         </Pressable>
       ) : (
         <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
