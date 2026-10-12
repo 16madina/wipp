@@ -273,6 +273,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         platform?: string;
         kind?: string;
         installationId?: string;
+        lang?: string;
       }>(request);
       const result = await registerPushToken({
         profileId: me.id,
@@ -280,6 +281,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
         platform: body.platform,
         kind: body.kind,
         installationId: body.installationId,
+        lang: body.lang,
       });
       return json(result);
     }

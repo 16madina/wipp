@@ -1,3 +1,4 @@
+import { trLang } from "../tr";
 import { Platform } from "react-native";
 import * as Device from "expo-device";
 import { wippApi } from "../proximity/wipp-session";
@@ -16,7 +17,7 @@ async function sendToken(token: string) {
   try {
     await wippApi("devices/push", {
       method: "POST",
-      body: JSON.stringify({ token, platform: "ios", kind: "voip", installationId: await getInstallationId() }),
+      body: JSON.stringify({ token, platform: "ios", kind: "voip", installationId: await getInstallationId(), lang: trLang() }),
     });
     pendingToken = null;
   } catch {

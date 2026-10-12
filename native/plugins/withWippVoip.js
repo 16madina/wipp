@@ -98,10 +98,14 @@ function patchAppDelegate(src) {
   static func missedContent(_ key: String, video: Bool) -> UNMutableNotificationContent {
     let name = callerNames[key] ?? ""
     let content = UNMutableNotificationContent()
-    content.title = "Appel manqué"
-    content.body = name.isEmpty || name == "WIPP"
-      ? (video ? "Appel vidéo WIPP manqué" : "Appel audio WIPP manqué")
-      : "\\(name) · \\(video ? "appel vidéo" : "appel audio")"
+    // Language chosen in WIPP (written by the app in src/lib/language-pref.ts).
+    let english = UserDefaults.standard.string(forKey: "wippLang") == "en"
+    content.title = english ? "Missed call" : "Appel manqué"
+    if name.isEmpty || name == "WIPP" {
+      content.body = english ? (video ? "Missed WIPP video call" : "Missed WIPP audio call") : (video ? "Appel vidéo WIPP manqué" : "Appel audio WIPP manqué")
+    } else {
+      content.body = "\\(name) · \\(english ? (video ? "video call" : "audio call") : (video ? "appel vidéo" : "appel audio"))"
+    }
     content.sound = UNNotificationSound(named: UNNotificationSoundName("wipp_message.caf"))
     content.userInfo = ["type": "missed-call", "screen": "calls"]
     return content

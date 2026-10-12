@@ -1,4 +1,4 @@
-import { tr } from "../tr";
+import { tr, trLang } from "../tr";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
@@ -199,7 +199,7 @@ export async function registerDeviceToken(): Promise<boolean> {
         if (native?.data) {
           await wippApi("devices/push", {
             method: "POST",
-            body: JSON.stringify({ token: String(native.data), platform: "ios", kind: "apns", installationId: await getInstallationId() }),
+            body: JSON.stringify({ token: String(native.data), platform: "ios", kind: "apns", installationId: await getInstallationId(), lang: trLang() }),
           });
         }
       } catch {
@@ -215,6 +215,7 @@ export async function registerDeviceToken(): Promise<boolean> {
       method: "POST",
       body: JSON.stringify({
         token,
+        lang: trLang(),
         platform: Platform.OS,
         kind: "expo",
         installationId: await getInstallationId(),
@@ -429,7 +430,7 @@ export function bootstrapPush() {
       await wippApi("devices/push", {
         method: "POST",
         // "fcm-e2e": this build decrypts message previews itself (data-only pushes).
-        body: JSON.stringify({ token, platform: "android", kind: "fcm-e2e", installationId: await getInstallationId() }),
+        body: JSON.stringify({ token, platform: "android", kind: "fcm-e2e", installationId: await getInstallationId(), lang: trLang() }),
       });
     }),
   );

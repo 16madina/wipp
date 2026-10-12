@@ -23,7 +23,7 @@ import { DancingScript_600SemiBold } from "@expo-google-fonts/dancing-script";
 import * as SplashScreen from "expo-splash-screen";
 import { ShareIntentProvider } from "expo-share-intent";
 import { useState } from "react";
-import { readLanguage } from "../src/lib/language-pref";
+import { readLanguage, shareLanguageWithNative } from "../src/lib/language-pref";
 import { setTrLanguage } from "../src/lib/tr";
 import { useWippStore } from "../src/lib/store";
 
@@ -52,6 +52,7 @@ export default function RootLayout() {
     void readLanguage().then((saved) => {
       if (saved) {
         setTrLanguage(saved);
+        shareLanguageWithNative(saved);
         useWippStore.setState({ language: saved });
       }
       setLangReady(true);

@@ -12,6 +12,11 @@ export function setTrLanguage(lang: string) {
   english = lang === "en";
 }
 
+/** "fr" or "en": what the phone tells the server, so notifications arrive in the same language. */
+export function trLang(): "fr" | "en" {
+  return english ? "en" : "fr";
+}
+
 export function tr(fr: string, ...values: unknown[]): string {
   const text = english ? (TR_EN[fr] ?? fr) : fr;
   return values.length ? text.replace(/\{(\d+)\}/g, (_, i) => String(values[Number(i)] ?? "")) : text;
