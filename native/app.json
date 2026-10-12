@@ -147,7 +147,7 @@
     },
     "android": {
       "package": "com.wipp.app",
-      "versionCode": 8,
+      "versionCode": 9,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/adaptive-foreground.png",
