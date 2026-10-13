@@ -1097,6 +1097,7 @@ export const useWippStore = create<Store>((set, get) => ({
         });
         scheduleInboxSave(get);
         void import("./profile-motto").then(({ loadMyMotto }) => loadMyMotto());
+        void import("./profile-socials").then(({ loadMySocials }) => loadMySocials());
         void get().ensureCrypto();
         void import("./messaging/identity").then((m) => m.ensureDeliveryKeyForNotifications(profile.id));
         void get().syncBusinessContexts();

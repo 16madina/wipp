@@ -2158,5 +2158,12 @@
  "Bleu sarcelle",
  "Bleu glacier",
  "Passer à ma couleur",
- "Couleur"
+ "Couleur",
+ "Le nom {0} n’est pas valide.",
+ "Tes réseaux n’ont pas pu être enregistrés.",
+ "Modifier mes réseaux",
+ "+ Mes réseaux",
+ "Mes réseaux",
+ "Ajoute ton nom d’utilisateur. Tes contacts verront les icônes sur ton profil et pourront ouvrir ta page.",
+ "nom"
 ]

@@ -63,6 +63,8 @@ import { wippSrc } from "../lib/assets";
 import { getBusinessCardOfOwner, type BusinessCardView } from "../lib/business-card";
 import { findPublicByUsername } from "../lib/public-profiles";
 import { MOTTO_FONT, mottoSize } from "../lib/profile-motto";
+import { loadSocials, type Socials } from "../lib/profile-socials";
+import { SocialIcons } from "../components/SocialIcons";
 import { shareWippPublic } from "../lib/share-public";
 import { APP_HOST } from "../lib/utils";
 import { formatChatTime, formatRemainShort } from "../lib/format";
@@ -930,6 +932,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const [editDesc, setEditDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [fresh, setFresh] = useState<{ motto?: string; bio?: string } | null>(null);
+  const [socials, setSocials] = useState<Socials | null>(null);
   const [card, setCard] = useState<BusinessCardView | null>(null);
 
   // Fresh public data (phrase, bio) and the person's business card, if published.
@@ -944,6 +947,9 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
         .catch(() => undefined);
     }
     if (peer.id.startsWith("srvuser:")) {
+      void loadSocials(peer.id).then((s) => {
+        if (!off) setSocials(s);
+      });
       void getBusinessCardOfOwner(peer.id)
         .then((c) => {
           if (!off) setCard(c);
@@ -1131,6 +1137,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                     <Text style={{ fontSize: 11, color: fgA(0.7) }}>{profile.city}</Text>
                   </View>
                 ) : null}
+                {!group ? <SocialIcons socials={socials} size={28} style={{ marginTop: 8 }} /> : null}
               </View>
             </View>
             {!group && profile?.motto ? (

@@ -45,6 +45,8 @@ import { DEFAULT_COUNTRY } from "../lib/countries";
 import { WORLD_COUNTRIES, findWorldCountry } from "../lib/countries-world";
 import { Sheet } from "../components/card-editor-parts";
 import { MOTTO_FONT, MOTTO_MAX, mottoSize } from "../lib/profile-motto";
+import { SOCIAL_KINDS, SOCIAL_NAME, saveMySocials, type SocialKind } from "../lib/profile-socials";
+import { SocialIcon, SocialIcons } from "../components/SocialIcons";
 import { useAppearance } from "../lib/appearance";
 import { AddressField, CategorySheet, DialPhoneField, FlagImage, HoursSheet, SelectField, WorldCountrySheet } from "../components/card-editor-parts";
 import {
@@ -101,6 +103,10 @@ export function MeScreen() {
   const [mottoOpen, setMottoOpen] = useState(false);
   const [mottoDraft, setMottoDraft] = useState("");
   const [mottoSaving, setMottoSaving] = useState(false);
+  const [socialsOpen, setSocialsOpen] = useState(false);
+  const [socialsDraft, setSocialsDraft] = useState<Record<SocialKind, string>>({ tiktok: "", instagram: "", snapchat: "", facebook: "" });
+  const [socialsSaving, setSocialsSaving] = useState(false);
+  const [socialsError, setSocialsError] = useState("");
   const contacts = Object.values(users).filter((u) => u?.connected).length;
   const vaultEpoch = useWippStore((s) => s.vaultEpoch);
   void vaultEpoch;
@@ -160,6 +166,20 @@ export function MeScreen() {
                 <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <MapPin size={12} color={colors.accent} />
                   <Text style={{ fontSize: 11, color: fgA(0.7) }}>{me.city}, {country}</Text>
+                </View>
+                <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <SocialIcons socials={me.socials} size={26} />
+                  <Press
+                    accessibilityLabel={tr("Modifier mes réseaux")}
+                    onPress={() => {
+                      setSocialsDraft({ tiktok: me.socials?.tiktok ?? "", instagram: me.socials?.instagram ?? "", snapchat: me.socials?.snapchat ?? "", facebook: me.socials?.facebook ?? "" });
+                      setSocialsError("");
+                      setSocialsOpen(true);
+                    }}
+                    style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Text style={{ fontSize: 11, color: colors.muted }}>{me.socials && Object.keys(me.socials).length ? tr("Modifier") : tr("+ Mes réseaux")}</Text>
+                  </Press>
                 </View>
               </View>
             </View>
@@ -305,6 +325,38 @@ export function MeScreen() {
           />
         </View>
       </ScrollView>
+      <Sheet open={socialsOpen} title={tr("Mes réseaux")} onClose={() => setSocialsOpen(false)}>
+        <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 12 }}>
+          {tr("Ajoute ton nom d’utilisateur. Tes contacts verront les icônes sur ton profil et pourront ouvrir ta page.")}
+        </Text>
+        {SOCIAL_KINDS.map((kind) => (
+          <View key={kind} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <SocialIcon kind={kind} size={34} />
+            <TextInput
+              value={socialsDraft[kind]}
+              onChangeText={(v) => setSocialsDraft((d) => ({ ...d, [kind]: v }))}
+              placeholder={`${SOCIAL_NAME[kind]} · @${tr("nom")}`}
+              placeholderTextColor={colors.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={{ flex: 1, height: 44, borderRadius: 12, paddingHorizontal: 12, backgroundColor: colors.surface2, color: colors.fg, fontSize: 15 }}
+            />
+          </View>
+        ))}
+        {socialsError ? <Text style={{ color: colors.danger, fontSize: 13, marginBottom: 8 }}>{socialsError}</Text> : null}
+        <Btn
+          label={socialsSaving ? "…" : tr("Enregistrer")}
+          disabled={socialsSaving}
+          onPress={() => {
+            setSocialsSaving(true);
+            setSocialsError("");
+            void saveMySocials(socialsDraft)
+              .then(() => setSocialsOpen(false))
+              .catch((err: unknown) => setSocialsError(err instanceof Error ? err.message : tr("Tes réseaux n’ont pas pu être enregistrés.")))
+              .finally(() => setSocialsSaving(false));
+          }}
+        />
+      </Sheet>
       <Sheet open={mottoOpen} title={tr("Ta phrase")} onClose={() => setMottoOpen(false)}>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 10 }}>
           {tr("Un petit message personnel affiché sur ton profil.")} {MOTTO_MAX} {tr("caractères maximum.")}

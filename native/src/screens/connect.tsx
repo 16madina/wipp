@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { loadSocials, type Socials } from "../lib/profile-socials";
+import { SocialIcons } from "../components/SocialIcons";
 import { Alert, Linking, Platform, Share, Text, View, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { ImagePlus, MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
@@ -630,6 +632,12 @@ export function FoundProfileScreen({
 }) {
   const [offer, setOffer] = useState<"open" | "busy" | "accepted" | "declined" | "error">(offerToken ? "open" : "declined");
   const [offerUntil, setOfferUntil] = useState<number | null>(null);
+  const [socials, setSocials] = useState<Socials | null>(null);
+  useEffect(() => {
+    let off = false;
+    if (userId.startsWith("srvuser:")) void loadSocials(userId).then((s) => { if (!off) setSocials(s); });
+    return () => { off = true; };
+  }, [userId]);
   const t = useT();
   const pop = useWippStore((s) => s.pop);
   const user = useWippStore((s) => s.users[userId]);
@@ -696,6 +704,7 @@ export function FoundProfileScreen({
         {src ? <Image source={src} style={{ width: 96, height: 96, borderRadius: 48 }} /> : <Avatar user={user} size={96} />}
         <Text style={{ marginTop: 12, fontSize: 22, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{user.displayName}</Text>
         <Text style={{ color: colors.muted }}>@{user.username}</Text>
+        <SocialIcons socials={socials} size={32} style={{ marginTop: 10 }} />
         {user.motto ? (
           <Text style={{ marginTop: 8, fontFamily: "DancingScript_600SemiBold", fontSize: 22, color: colors.accent, textAlign: "center", transform: [{ rotate: "-3deg" }] }}>{user.motto}</Text>
         ) : null}

@@ -264,6 +264,8 @@ export type User = {
   bio: string;
   /** Personal phrase on the profile card (max 40 chars). */
   motto?: string;
+  /** Handles on social networks, shown as icons on the profile. */
+  socials?: { tiktok?: string; instagram?: string; snapchat?: string; facebook?: string };
   avatar: string;
   online: boolean;
   lastSeen?: number;
