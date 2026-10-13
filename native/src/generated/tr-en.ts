@@ -1114,6 +1114,7 @@ export const TR_EN: Record<string, string> = {
   "Mes réseaux": "My networks",
   "Ajoute ton nom d’utilisateur. Tes contacts verront les icônes sur ton profil et pourront ouvrir ta page.": "Add your username. Your contacts will see the icons on your profile and can open your page.",
   "nom": "name",
+  "+ Réseaux": "+ Networks",
   "♾️ Contact permanent": "♾️ Permanent contact",
   "Bloquer {0}": "Block {0}",
   "{0} ne pourra plus vous contacter.": "{0} will no longer be able to contact you.",

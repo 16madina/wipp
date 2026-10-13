@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Facebook, Ghost, Instagram } from "lucide-react-native";
+import { Facebook, Ghost, Instagram, Youtube } from "lucide-react-native";
 import { Linking, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SOCIAL_KINDS, SOCIAL_NAME, socialLink, type SocialKind, type Socials } from "../lib/profile-socials";
@@ -32,6 +32,13 @@ export function SocialIcon({ kind, size = 30 }: { kind: SocialKind; size?: numbe
       </View>
     );
   }
+  if (kind === "youtube") {
+    return (
+      <View style={{ ...round, backgroundColor: "#ff0000" }}>
+        <Youtube size={glyph} color="#fff" />
+      </View>
+    );
+  }
   return (
     <View style={{ ...round, backgroundColor: "#1877f2" }}>
       <Facebook size={glyph} color="#fff" fill="#fff" />
@@ -44,7 +51,7 @@ export function SocialIcons({ socials, size = 30, style }: { socials?: Socials |
   const kinds = SOCIAL_KINDS.filter((kind) => socials?.[kind]);
   if (!kinds.length) return null;
   return (
-    <View style={[{ flexDirection: "row", alignItems: "center", gap: 8 }, style]}>
+    <View style={[{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }, style]}>
       {kinds.map((kind) => (
         <Press key={kind} accessibilityLabel={`${SOCIAL_NAME[kind]} @${socials![kind]}`} onPress={() => void Linking.openURL(socialLink(kind, socials![kind]!)).catch(() => undefined)}>
           <SocialIcon kind={kind} size={size} />

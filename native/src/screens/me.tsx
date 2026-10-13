@@ -104,7 +104,7 @@ export function MeScreen() {
   const [mottoDraft, setMottoDraft] = useState("");
   const [mottoSaving, setMottoSaving] = useState(false);
   const [socialsOpen, setSocialsOpen] = useState(false);
-  const [socialsDraft, setSocialsDraft] = useState<Record<SocialKind, string>>({ tiktok: "", instagram: "", snapchat: "", facebook: "" });
+  const [socialsDraft, setSocialsDraft] = useState<Record<SocialKind, string>>({ tiktok: "", instagram: "", snapchat: "", facebook: "", youtube: "" });
   const [socialsSaving, setSocialsSaving] = useState(false);
   const [socialsError, setSocialsError] = useState("");
   const contacts = Object.values(users).filter((u) => u?.connected).length;
@@ -167,20 +167,20 @@ export function MeScreen() {
                   <MapPin size={12} color={colors.accent} />
                   <Text style={{ fontSize: 11, color: fgA(0.7) }}>{me.city}, {country}</Text>
                 </View>
-                <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <SocialIcons socials={me.socials} size={26} />
-                  <Press
-                    accessibilityLabel={tr("Modifier mes réseaux")}
-                    onPress={() => {
-                      setSocialsDraft({ tiktok: me.socials?.tiktok ?? "", instagram: me.socials?.instagram ?? "", snapchat: me.socials?.snapchat ?? "", facebook: me.socials?.facebook ?? "" });
-                      setSocialsError("");
-                      setSocialsOpen(true);
-                    }}
-                    style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
-                  >
-                    <Text style={{ fontSize: 11, color: colors.muted }}>{me.socials && Object.keys(me.socials).length ? tr("Modifier") : tr("+ Mes réseaux")}</Text>
-                  </Press>
-                </View>
+              </View>
+              <View style={{ alignItems: "flex-end", gap: 6, paddingTop: 2 }}>
+                <SocialIcons socials={me.socials} size={26} style={{ maxWidth: 96, justifyContent: "flex-end" }} />
+                <Press
+                  accessibilityLabel={tr("Modifier mes réseaux")}
+                  onPress={() => {
+                    setSocialsDraft({ tiktok: me.socials?.tiktok ?? "", instagram: me.socials?.instagram ?? "", snapchat: me.socials?.snapchat ?? "", facebook: me.socials?.facebook ?? "", youtube: me.socials?.youtube ?? "" });
+                    setSocialsError("");
+                    setSocialsOpen(true);
+                  }}
+                  style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, borderWidth: 1, borderColor: colors.hair, alignItems: "center", justifyContent: "center" }}
+                >
+                  <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>{me.socials && Object.keys(me.socials).length ? tr("Modifier") : tr("+ Réseaux")}</Text>
+                </Press>
               </View>
             </View>
             <Press

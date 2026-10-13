@@ -3,18 +3,18 @@ import { supabase } from "./supabase";
 import { useWippStore } from "./store";
 import { tr } from "./tr";
 
-export const SOCIAL_KINDS = ["tiktok", "instagram", "snapchat", "facebook"] as const;
+export const SOCIAL_KINDS = ["tiktok", "instagram", "snapchat", "facebook", "youtube"] as const;
 export type SocialKind = (typeof SOCIAL_KINDS)[number];
 export type Socials = Partial<Record<SocialKind, string>>;
 
-export const SOCIAL_NAME: Record<SocialKind, string> = { tiktok: "TikTok", instagram: "Instagram", snapchat: "Snapchat", facebook: "Facebook" };
+export const SOCIAL_NAME: Record<SocialKind, string> = { tiktok: "TikTok", instagram: "Instagram", snapchat: "Snapchat", facebook: "Facebook", youtube: "YouTube" };
 
 /** « @name », « name » or a pasted profile link → the bare handle (empty when it is not usable). */
 export function cleanHandle(raw: string): string {
   let v = raw.trim();
   if (/^https?:\/\//i.test(v) || /^(www\.)?[a-z]+\.(com|me)\//i.test(v)) {
     v = v.replace(/^https?:\/\//i, "").replace(/[?#].*$/, "");
-    const parts = v.split("/").filter(Boolean).slice(1).filter((p) => p !== "add" && p !== "u");
+    const parts = v.split("/").filter(Boolean).slice(1).filter((p) => p !== "add" && p !== "u" && p !== "c" && p !== "channel" && p !== "user");
     v = parts[0] ?? "";
   }
   v = v.replace(/^@+/, "");
@@ -25,6 +25,7 @@ export function socialLink(kind: SocialKind, handle: string) {
   if (kind === "tiktok") return `https://www.tiktok.com/@${handle}`;
   if (kind === "instagram") return `https://www.instagram.com/${handle}`;
   if (kind === "snapchat") return `https://www.snapchat.com/add/${handle}`;
+  if (kind === "youtube") return `https://www.youtube.com/@${handle}`;
   return `https://www.facebook.com/${handle}`;
 }
 

@@ -1137,8 +1137,8 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                     <Text style={{ fontSize: 11, color: fgA(0.7) }}>{profile.city}</Text>
                   </View>
                 ) : null}
-                {!group ? <SocialIcons socials={socials} size={28} style={{ marginTop: 8 }} /> : null}
               </View>
+              {!group ? <SocialIcons socials={socials} size={26} style={{ maxWidth: 96, justifyContent: "flex-end", paddingTop: 2 }} /> : null}
             </View>
             {!group && profile?.motto ? (
               <View style={{ alignSelf: "flex-end", maxWidth: "80%", marginTop: 6, transform: [{ rotate: "-4deg" }] }}>
