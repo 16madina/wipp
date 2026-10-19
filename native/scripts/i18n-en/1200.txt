@@ -1,0 +1,159 @@
+1200|Message info
+1201|Read by ·
+1202|Delivered to ·
+1203|Not yet delivered to
+1204|A person who turned off read receipts only appears in “Delivered to”.
+1205|Scratch with your finger
+1206|Something went wrong
+1207|This screen could not be displayed. The rest of WIPP works.
+1208|Go back
+1209|Gallery
+1210|Contact
+1211|Scratch card
+1212|Your message is hidden under the card. Tap to choose it.
+1213|Countdown
+1214|The parcel stays locked until the chosen moment.
+1215|Confetti
+1216|A rain of confetti when the message appears.
+1217|Send content or create a surprise.
+1218|WIPP Surprise
+1219|Turn your messages into experiences.
+1220|Write your message...
+1221|Assistant
+1222|Surprise assistant
+1223|The occasion… e.g. Deena’s birthday
+1224|Generate the message
+1225|Add an animation
+1226|Compose your surprise
+1227|You can combine everything: the card, the countdown and the confetti.
+1228|Animation:
+1229|Send the surprise
+1230|No countdown
+1231|The animations of this category are coming soon.
+1232|Remove the animation
+1233|Back to my surprise
+1234|Wippie
+1235|WIPP Moments
+1236|Surprises
+1237|Scratch to discover the surprise.
+1238|A surprise that bursts
+1239|A surprise to wait for
+1240|A message to unlock
+1241|No results for “
+1242|Close the preview
+1243|Send {0}
+1244|Search in {0}
+1245|Clear the search
+1246|Her
+1247|Him
+1248|Funny
+1249|Text background
+1250|Confirm the text
+1251|Write something…
+1252|Colour {0}
+1253|Close the stickers
+1254|Add a text
+1255|Aa
+1256|Add a sticker
+1257|Mute animation sounds
+1258|Turn on animation sounds
+1259|Surprise discovered
+1260|See the surprise again
+1261|Replay
+1262|Connect
+1263|Press and hold: WIPP Touch
+1264|Pause playback
+1265|Listen to the message
+1266|View-once voice message: on
+1267|View-once voice message: off
+1268|View once: it can be listened to only one time.
+1269|Delete the voice message
+1270|Resume recording
+1271|Send the voice message
+1272|Slide to cancel
+1273|Voice message: hold to record
+1274|Verified by WIPP
+1275|WIPP Ambassador
+1276|Create my business card →
+1277|Subscription
+1278|Try again in a moment.
+1279|Saving did not go through. Try again.
+1280|Report the business
+1281|Thank you. The WIPP team will review this business.
+1282|Link copied
+1283|The link to your card is in the clipboard.
+1284|Share my card
+1285|Copy the link to my card
+1286|The link will be copied to the clipboard
+1287|Share the QR code
+1288|Send my QR as an image
+1289|Sharing the QR failed.
+1290|Share elsewhere
+1291|WhatsApp, Instagram, etc.
+1292|No WIPP contacts yet.
+1293|The banner is saved, but it could not be displayed.
+1294|Add a cover photo
+1295|Business verified by WIPP
+1296|Following
+1297|Unfollow
+1298|Follow
+1299|Opening…
+1300|See less
+1301|See more
+1302|Scan to⏎discover my card⏎on WIPP
+1303|Scan to⏎discover this⏎business on WIPP
+1304|The download failed.
+1305|Download the QR
+1306|QR · Link
+1307|Remove from my businesses
+1308|Save to my businesses
+1309|Saved
+1310|My businesses
+1311|Change the cover photo
+1312|Choose a country
+1313|Search for a country or a dialling code
+1314|Category of your business
+1315|Search (e.g. hair, catering…)
+1316|Can’t find it? Write your category:
+1317|E.g. Car rental
+1318|Opening hours
+1319|Days
+1320|Opens
+1321|Closes
+1322|Add “
+1323|choose days
+1324|Different hours on weekends? Add one line per group of days.
+1325|Business phone (optional)
+1326|Business number
+1327|Address (optional)
+1328|Start typing the address
+1329|Event date
+1330|No end
+1331|Start
+1332|End (optional)
+1333|{0} interested
+1334|Online on WIPP
+1335|Online
+1336|Place to be confirmed
+1337|Surprise received · local preview
+1338|I have a little surprise for you…
+1339|Open the gift, then scratch the card to read the message and discover the animation.
+1340|Restart the demo
+1341|CHAT · SHARE · DISCOVER
+1342|again
+1343|profile
+1344|of
+1345|member
+1346|members
+1347|document
+1348|LIVE
+1349|view
+1350|ENDED
+1351|participant
+1352|registered
+1353|🌙 ON DUTY
+1354|AUDIENCE QUESTION
+1355|HOST
+1356|WIPP
+1357|vote
+1358|OK

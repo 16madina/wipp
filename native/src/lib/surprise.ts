@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { Clock3, Gift, Images, PartyPopper, type LucideIcon } from "lucide-react-native";
 import { ANIM_MS } from "../generated/anim-durations";
 
@@ -57,31 +58,31 @@ export type SurpriseAnimationItem = {
 export type SurpriseAnimationCategory = SurpriseAnimationItem & { collection?: string };
 
 export const designPicker: Record<SurpriseType, { label: string; icon: LucideIcon }> = {
-  scratch: { label: "Choisir la carte à gratter", icon: Images },
-  countdown: { label: "Choisir le moment", icon: Clock3 },
-  gift: { label: "Choisir le cadeau", icon: Gift },
-  confetti: { label: "Choisir les confettis", icon: PartyPopper },
+  scratch: { get label() { return tr("Choisir la carte à gratter"); }, icon: Images },
+  countdown: { get label() { return tr("Choisir le moment"); }, icon: Clock3 },
+  gift: { get label() { return tr("Choisir le cadeau"); }, icon: Gift },
+  confetti: { get label() { return tr("Choisir les confettis"); }, icon: PartyPopper },
 };
 
 const SCRATCH_CARDS: SurpriseDesignItem[] = [
-  { id: "amour", label: "Amour", mark: "♥", art: "fx/surprise/cards/wipp-amour.jpg" },
-  { id: "rose", label: "Rose", mark: "♡", art: "fx/surprise/cards/wipp-rose.jpg" },
-  { id: "gold", label: "Or", mark: "✦", art: "fx/surprise/cards/wipp-gold.jpg" },
-  { id: "mood", label: "Mood", mark: "☾", art: "fx/surprise/cards/wipp-mood.jpg" },
-  { id: "voyage", label: "Voyage", mark: "✈", art: "fx/surprise/cards/wipp-voyage.jpg" },
-  { id: "bff", label: "Amitié", mark: "♡", art: "fx/surprise/cards/wipp-bff.jpg" },
-  { id: "crew", label: "Crew", mark: "★", art: "fx/surprise/cards/wipp-crew.jpg" },
-  { id: "fete", label: "Fête", mark: "✦", art: "fx/surprise/cards/wipp-fete.jpg" },
-  { id: "marbre", label: "Marbre", mark: "◇", art: "fx/surprise/cards/wipp-marbre.jpg" },
-  { id: "prestige", label: "Prestige", mark: "♛", art: "fx/surprise/cards/wipp-prestige.jpg" },
-  { id: "vip", label: "VIP", mark: "♔", art: "fx/surprise/cards/wipp-vip.jpg" },
+  { id: "amour", get label() { return tr("Amour"); }, mark: "♥", art: "fx/surprise/cards/wipp-amour.jpg" },
+  { id: "rose", get label() { return tr("Rose"); }, mark: "♡", art: "fx/surprise/cards/wipp-rose.jpg" },
+  { id: "gold", get label() { return tr("Or"); }, mark: "✦", art: "fx/surprise/cards/wipp-gold.jpg" },
+  { id: "mood", get label() { return tr("Mood"); }, mark: "☾", art: "fx/surprise/cards/wipp-mood.jpg" },
+  { id: "voyage", get label() { return tr("Voyage"); }, mark: "✈", art: "fx/surprise/cards/wipp-voyage.jpg" },
+  { id: "bff", get label() { return tr("Amitié"); }, mark: "♡", art: "fx/surprise/cards/wipp-bff.jpg" },
+  { id: "crew", get label() { return tr("Crew"); }, mark: "★", art: "fx/surprise/cards/wipp-crew.jpg" },
+  { id: "fete", get label() { return tr("Fête"); }, mark: "✦", art: "fx/surprise/cards/wipp-fete.jpg" },
+  { id: "marbre", get label() { return tr("Marbre"); }, mark: "◇", art: "fx/surprise/cards/wipp-marbre.jpg" },
+  { id: "prestige", get label() { return tr("Prestige"); }, mark: "♛", art: "fx/surprise/cards/wipp-prestige.jpg" },
+  { id: "vip", get label() { return tr("VIP"); }, mark: "♔", art: "fx/surprise/cards/wipp-vip.jpg" },
 ];
 
 const LEGACY_SCRATCH: SurpriseDesignItem[] = [
-  { id: "heart", label: "Cœur", mark: "♥", art: "fx/surprise/cards/wipp-amour.jpg" },
-  { id: "stars", label: "Étoiles", mark: "✦", art: "fx/surprise/cards/wipp-gold.jpg" },
-  { id: "crown", label: "Couronne", mark: "♛", art: "fx/surprise/cards/wipp-prestige.jpg" },
-  { id: "neon", label: "Néon", mark: "♡", art: "fx/surprise/cards/wipp-rose.jpg" },
+  { id: "heart", get label() { return tr("Cœur"); }, mark: "♥", art: "fx/surprise/cards/wipp-amour.jpg" },
+  { id: "stars", get label() { return tr("Étoiles"); }, mark: "✦", art: "fx/surprise/cards/wipp-gold.jpg" },
+  { id: "crown", get label() { return tr("Couronne"); }, mark: "♛", art: "fx/surprise/cards/wipp-prestige.jpg" },
+  { id: "neon", get label() { return tr("Néon"); }, mark: "♡", art: "fx/surprise/cards/wipp-rose.jpg" },
 ];
 
 export const surpriseDesigns: Record<SurpriseType, SurpriseDesignItem[]> = {
@@ -92,9 +93,9 @@ export const surpriseDesigns: Record<SurpriseType, SurpriseDesignItem[]> = {
 };
 
 export const countdownChoices = [
-  { seconds: 60, label: "1 minute" },
-  { seconds: 3600, label: "1 heure" },
-  { seconds: 86_400, label: "24 heures" },
+  { seconds: 60, get label() { return tr("1 minute"); } },
+  { seconds: 3600, get label() { return tr("1 heure"); } },
+  { seconds: 86_400, get label() { return tr("24 heures"); } },
 ];
 
 /** Built-in full-screen confetti rain (not a file): played by SurpriseAnimOverlay. */
@@ -114,7 +115,9 @@ export function countdownText(seconds: number) {
 
 const clip = (id: string, label: string): SurpriseAnimationItem => ({
   id,
-  label,
+  get label() {
+    return tr(label);
+  },
   art: `fx/surprise/anims/${id}-poster.png`,
   anim: `fx/surprise/anims/${id}.webp`,
   sound: `fx/surprise/anims/${id}.m4a`,
@@ -133,7 +136,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   clip("amour-mains-coeur", "Mains cœur"),
   {
     id: "amour-pluie-cristal",
-    label: "Pluie d’amour",
+    get label() { return tr("Pluie d’amour"); },
     art: "fx/surprise/anims/amour-pluie-cristal-poster.png",
     anim: "fx/surprise/anims/amour-pluie-cristal.webp",
     enter: "pop",
@@ -141,7 +144,7 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   },
   {
     id: "amour-fusion",
-    label: "Fusion",
+    get label() { return tr("Fusion"); },
     art: "fx/surprise/anims/amour-fusion-poster.png",
     anim: "fx/surprise/anims/amour-fusion.webp",
     enter: "pop",
@@ -149,23 +152,23 @@ export const amourAnimations: SurpriseAnimationItem[] = [
   },
   {
     id: "amour-bisous",
-    label: "Bisous",
+    get label() { return tr("Bisous"); },
     art: "fx/surprise/anims/amour-bisous-poster.png",
     anim: "fx/surprise/anims/amour-bisous.webp",
     enter: "bottom",
     durationMs: ANIM_MS["amour-bisous"],
   },
-  { id: "amour-monstre", label: "Petit monstre", art: "fx/surprise/anims/amour-monstre.png", enter: "pop" },
-  { id: "love-hearts", label: "Cœurs", art: "fx/love/love_hearts.png", enter: "bottom" },
-  { id: "love-balloons", label: "Ballons", art: "fx/love/love_balloons.png" },
-  { id: "love-bouquet", label: "Bouquet", art: "fx/love/love_bouquet.png" },
-  { id: "love-envelope", label: "Enveloppe", art: "fx/love/love_envelope.png" },
-  { id: "love-fireworks", label: "Feu d’artifice", art: "fx/love/love_fireworks.png" },
-  { id: "love-gift", label: "Cadeau", art: "fx/love/love_gift.png" },
-  { id: "love-petals", label: "Pétales", art: "fx/love/love_petals.png" },
-  { id: "love-rain", label: "Pluie de cœurs", art: "fx/love/love_rain.png" },
-  { id: "love-teddy", label: "Ourson", art: "fx/love/love_teddy.png" },
-  { id: "love-toast", label: "Toast", art: "fx/love/love_toast.png" },
+  { id: "amour-monstre", get label() { return tr("Petit monstre"); }, art: "fx/surprise/anims/amour-monstre.png", enter: "pop" },
+  { id: "love-hearts", get label() { return tr("Cœurs"); }, art: "fx/love/love_hearts.png", enter: "bottom" },
+  { id: "love-balloons", get label() { return tr("Ballons"); }, art: "fx/love/love_balloons.png" },
+  { id: "love-bouquet", get label() { return tr("Bouquet"); }, art: "fx/love/love_bouquet.png" },
+  { id: "love-envelope", get label() { return tr("Enveloppe"); }, art: "fx/love/love_envelope.png" },
+  { id: "love-fireworks", get label() { return tr("Feu d’artifice"); }, art: "fx/love/love_fireworks.png" },
+  { id: "love-gift", get label() { return tr("Cadeau"); }, art: "fx/love/love_gift.png" },
+  { id: "love-petals", get label() { return tr("Pétales"); }, art: "fx/love/love_petals.png" },
+  { id: "love-rain", get label() { return tr("Pluie de cœurs"); }, art: "fx/love/love_rain.png" },
+  { id: "love-teddy", get label() { return tr("Ourson"); }, art: "fx/love/love_teddy.png" },
+  { id: "love-toast", get label() { return tr("Toast"); }, art: "fx/love/love_toast.png" },
   clip("amour-moitie", "Ma moitié"),
   clip("amour-cle", "La clé de mon cœur"),
   clip("amour-pingouin", "Mon préféré"),
@@ -179,18 +182,18 @@ export const amourAnimations: SurpriseAnimationItem[] = [
 ];
 
 const journeeAnimations: SurpriseAnimationItem[] = [
-  { id: "day-sun", label: "Soleil", art: "fx/jour/day_sun.png" },
-  { id: "day-sunrise", label: "Aube", art: "fx/jour/day_sunrise.png" },
-  { id: "day-coffee", label: "Café", art: "fx/jour/day_coffee.png" },
-  { id: "day-bird", label: "Oiseau", art: "fx/jour/day_bird.png" },
-  { id: "day-butterflies", label: "Papillons", art: "fx/jour/day_butterflies.png" },
-  { id: "day-cloud-heart", label: "Nuage cœur", art: "fx/jour/day_cloud_heart.png" },
-  { id: "day-flower-arch", label: "Arche de fleurs", art: "fx/jour/day_flower_arch.png" },
-  { id: "day-hummingbird", label: "Colibri", art: "fx/jour/day_hummingbird.png" },
-  { id: "day-orange", label: "Orange", art: "fx/jour/day_orange.png" },
-  { id: "day-sunflowers", label: "Tournesols", art: "fx/jour/day_sunflowers.png" },
-  { id: "day-balloons", label: "Ballons", art: "fx/jour/day_balloons.png" },
-  { id: "day-alarm", label: "Réveil", art: "fx/jour/day_alarm.png" },
+  { id: "day-sun", get label() { return tr("Soleil"); }, art: "fx/jour/day_sun.png" },
+  { id: "day-sunrise", get label() { return tr("Aube"); }, art: "fx/jour/day_sunrise.png" },
+  { id: "day-coffee", get label() { return tr("Café"); }, art: "fx/jour/day_coffee.png" },
+  { id: "day-bird", get label() { return tr("Oiseau"); }, art: "fx/jour/day_bird.png" },
+  { id: "day-butterflies", get label() { return tr("Papillons"); }, art: "fx/jour/day_butterflies.png" },
+  { id: "day-cloud-heart", get label() { return tr("Nuage cœur"); }, art: "fx/jour/day_cloud_heart.png" },
+  { id: "day-flower-arch", get label() { return tr("Arche de fleurs"); }, art: "fx/jour/day_flower_arch.png" },
+  { id: "day-hummingbird", get label() { return tr("Colibri"); }, art: "fx/jour/day_hummingbird.png" },
+  { id: "day-orange", get label() { return tr("Orange"); }, art: "fx/jour/day_orange.png" },
+  { id: "day-sunflowers", get label() { return tr("Tournesols"); }, art: "fx/jour/day_sunflowers.png" },
+  { id: "day-balloons", get label() { return tr("Ballons"); }, art: "fx/jour/day_balloons.png" },
+  { id: "day-alarm", get label() { return tr("Réveil"); }, art: "fx/jour/day_alarm.png" },
 ];
 
 const bonjourAnimations: SurpriseAnimationItem[] = [
@@ -246,17 +249,17 @@ const retablissementAnimations: SurpriseAnimationItem[] = [
 ];
 
 const nuitAnimations: SurpriseAnimationItem[] = [
-  { id: "night-moon", label: "Lune", art: "fx/nuit/night_moon.png" },
-  { id: "night-galaxy", label: "Galaxie", art: "fx/nuit/night_galaxy.png" },
-  { id: "night-lantern", label: "Lanterne", art: "fx/nuit/night_lantern.png" },
-  { id: "night-shooting-stars", label: "Étoiles filantes", art: "fx/nuit/night_shooting_stars.png" },
-  { id: "night-sky-lanterns", label: "Lanternes célestes", art: "fx/nuit/night_sky_lanterns.png" },
-  { id: "night-sleeping-bear", label: "Ours endormi", art: "fx/nuit/night_sleeping_bear.png" },
-  { id: "night-sleepy-cloud", label: "Nuage", art: "fx/nuit/night_sleepy_cloud.png" },
-  { id: "night-star-balloons", label: "Ballons d’étoiles", art: "fx/nuit/night_star_balloons.png" },
-  { id: "night-star-cloud", label: "Nuage d’étoiles", art: "fx/nuit/night_star_cloud.png" },
-  { id: "night-star-jar", label: "Bocal d’étoiles", art: "fx/nuit/night_star_jar.png" },
-  { id: "night-window", label: "Fenêtre", art: "fx/nuit/night_window.png" },
+  { id: "night-moon", get label() { return tr("Lune"); }, art: "fx/nuit/night_moon.png" },
+  { id: "night-galaxy", get label() { return tr("Galaxie"); }, art: "fx/nuit/night_galaxy.png" },
+  { id: "night-lantern", get label() { return tr("Lanterne"); }, art: "fx/nuit/night_lantern.png" },
+  { id: "night-shooting-stars", get label() { return tr("Étoiles filantes"); }, art: "fx/nuit/night_shooting_stars.png" },
+  { id: "night-sky-lanterns", get label() { return tr("Lanternes célestes"); }, art: "fx/nuit/night_sky_lanterns.png" },
+  { id: "night-sleeping-bear", get label() { return tr("Ours endormi"); }, art: "fx/nuit/night_sleeping_bear.png" },
+  { id: "night-sleepy-cloud", get label() { return tr("Nuage"); }, art: "fx/nuit/night_sleepy_cloud.png" },
+  { id: "night-star-balloons", get label() { return tr("Ballons d’étoiles"); }, art: "fx/nuit/night_star_balloons.png" },
+  { id: "night-star-cloud", get label() { return tr("Nuage d’étoiles"); }, art: "fx/nuit/night_star_cloud.png" },
+  { id: "night-star-jar", get label() { return tr("Bocal d’étoiles"); }, art: "fx/nuit/night_star_jar.png" },
+  { id: "night-window", get label() { return tr("Fenêtre"); }, art: "fx/nuit/night_window.png" },
 ];
 
 const amitieAnimations: SurpriseAnimationItem[] = [
@@ -315,18 +318,18 @@ const beauteAnimations: SurpriseAnimationItem[] = [
 /** Événements: filled as the seasonal animations are made (Halloween, Saint-Valentin, Noël…). */
 /** Tabs of the « Événements » category, in display order. A tab only shows once it has animations. */
 export const eventGroups: { id: string; label: string }[] = [
-  { id: "halloween", label: "Halloween" },
-  { id: "noel", label: "Noël" },
-  { id: "nouvel-an", label: "Bonne année" },
-  { id: "saint-valentin", label: "Saint-Valentin" },
-  { id: "paques", label: "Pâques" },
-  { id: "fete-meres", label: "Fête des mères" },
-  { id: "fete-peres", label: "Fête des pères" },
-  { id: "action-de-grace", label: "Action de grâce" },
-  { id: "aid", label: "Aïd" },
-  { id: "felicitations", label: "Félicitations" },
+  { id: "halloween", get label() { return tr("Halloween"); } },
+  { id: "noel", get label() { return tr("Noël"); } },
+  { id: "nouvel-an", get label() { return tr("Bonne année"); } },
+  { id: "saint-valentin", get label() { return tr("Saint-Valentin"); } },
+  { id: "paques", get label() { return tr("Pâques"); } },
+  { id: "fete-meres", get label() { return tr("Fête des mères"); } },
+  { id: "fete-peres", get label() { return tr("Fête des pères"); } },
+  { id: "action-de-grace", get label() { return tr("Action de grâce"); } },
+  { id: "aid", get label() { return tr("Aïd"); } },
+  { id: "felicitations", get label() { return tr("Félicitations"); } },
 ];
-const eventClip = (group: string, id: string, label: string): SurpriseAnimationItem => ({ ...clip(id, label), group });
+const eventClip = (group: string, id: string, label: string): SurpriseAnimationItem => Object.assign(clip(id, label), { group });
 const evenementsAnimations: SurpriseAnimationItem[] = [
   eventClip("halloween", "event-halloween", "Citrouille"),
   eventClip("halloween", "event-halloween-sorciere", "Sorcière"),
@@ -377,26 +380,26 @@ const evenementsAnimations: SurpriseAnimationItem[] = [
 ];
 
 export const surpriseAnimationCategories: SurpriseAnimationCategory[] = [
-  { id: "bonjour", label: "Bonjour", art: "fx/surprise/anims/cat-bonjour.jpg", collection: "bonjour" },
+  { id: "bonjour", get label() { return tr("Bonjour"); }, art: "fx/surprise/anims/cat-bonjour.jpg", collection: "bonjour" },
   {
     id: "anniversaire",
-    label: "Anniversaire",
+    get label() { return tr("Anniversaire"); },
     art: "fx/surprise/anims/cat-anniversaire.jpg",
     collection: "anniversaire",
   },
-  { id: "amour", label: "Amour", art: "fx/surprise/anims/cat-amour.jpg", collection: "amour" },
+  { id: "amour", get label() { return tr("Amour"); }, art: "fx/surprise/anims/cat-amour.jpg", collection: "amour" },
   {
     id: "bon-retablissement",
-    label: "Bon rétablissement",
+    get label() { return tr("Bon rétablissement"); },
     art: "fx/surprise/anims/cat-retablissement.jpg",
     collection: "bon-retablissement",
   },
-  { id: "beaute", label: "Beauté", art: "fx/surprise/anims/cat-beaute.jpg", collection: "beaute" },
+  { id: "beaute", get label() { return tr("Beauté"); }, art: "fx/surprise/anims/cat-beaute.jpg", collection: "beaute" },
   // Fêtes et temps forts de l'année (Halloween, Saint-Valentin, Noël, Action de grâce…).
-  { id: "evenements", label: "Événements", art: "fx/surprise/anims/cat-evenements.jpg", collection: "evenements" },
-  { id: "bonne-nuit", label: "Bonne nuit", art: "fx/surprise/anims/cat-nuit.jpg", collection: "bonne-nuit" },
-  { id: "voyage", label: "Voyage", art: "fx/surprise/anims/cat-voyage.jpg", collection: "voyage" },
-  { id: "amitie", label: "Amitié", art: "fx/surprise/anims/cat-amitie.jpg", collection: "amitie" },
+  { id: "evenements", get label() { return tr("Événements"); }, art: "fx/surprise/anims/cat-evenements.jpg", collection: "evenements" },
+  { id: "bonne-nuit", get label() { return tr("Bonne nuit"); }, art: "fx/surprise/anims/cat-nuit.jpg", collection: "bonne-nuit" },
+  { id: "voyage", get label() { return tr("Voyage"); }, art: "fx/surprise/anims/cat-voyage.jpg", collection: "voyage" },
+  { id: "amitie", get label() { return tr("Amitié"); }, art: "fx/surprise/anims/cat-amitie.jpg", collection: "amitie" },
 ];
 
 /** Only real animations are offered: a still picture never appears in the picker. */

@@ -27,6 +27,7 @@ const colors = palettes.dark;
 import { formatDuration } from "../lib/format";
 import { useT, useWippStore } from "../lib/store";
 import { acceptCurrentCall, declineCurrentCall, upgradeToVideo, useCallSession, type CallPhase, type CallSession } from "../lib/calls/session";
+import { tr } from "../lib/tr";
 
 const BG_TOP = "#070B16";
 const BG_BOTTOM = "#02040A";
@@ -40,51 +41,51 @@ type RTC = ComponentType<{ streamURL: string; style?: object; objectFit?: "cover
 const COPY = {
   fr: {
     audio: "Appel audio WIPP",
-    video: "Appel vidéo WIPP",
-    message: "Message",
+    get video() { return tr("Appel vidéo WIPP"); },
+    get message() { return tr("Message"); },
     remind: "Rappel",
     decline: "Refuser",
     accept: "Accepter",
     mic: "Micro",
     speaker: "Haut-parleur",
-    camera: "Caméra",
+    get camera() { return tr("Caméra"); },
     more: "Plus",
     states: {
       outgoing: "Appel…",
       ringing: "Sonnerie…",
       connecting: "Connexion…",
-      connected: "Connecté",
+      get connected() { return tr("Connecté"); },
       reconnecting: "Reconnexion…",
-      ended: "Appel terminé",
-      declined: "Refusé",
-      missed: "Sans réponse",
-      busy: "Occupé",
-      failed: "Échec de connexion",
+      get ended() { return tr("Appel terminé"); },
+      get declined() { return tr("Refusé"); },
+      get missed() { return tr("Sans réponse"); },
+      get busy() { return tr("Occupé"); },
+      get failed() { return tr("Échec de connexion"); },
     } as Record<CallPhase, string>,
     a11y: {
-      accept: "Accepter l’appel",
-      decline: "Refuser l’appel",
-      mute: "Couper le microphone",
-      unmute: "Activer le microphone",
-      speakerOn: "Activer le haut-parleur",
-      speakerOff: "Désactiver le haut-parleur",
-      camOn: "Activer la caméra",
-      camOff: "Désactiver la caméra",
-      flip: "Changer de caméra",
-      hangup: "Raccrocher",
-      minimize: "Réduire l’appel",
+      get accept() { return tr("Accepter l’appel"); },
+      get decline() { return tr("Refuser l’appel"); },
+      get mute() { return tr("Couper le microphone"); },
+      get unmute() { return tr("Activer le microphone"); },
+      get speakerOn() { return tr("Activer le haut-parleur"); },
+      get speakerOff() { return tr("Désactiver le haut-parleur"); },
+      get camOn() { return tr("Activer la caméra"); },
+      get camOff() { return tr("Désactiver la caméra"); },
+      get flip() { return tr("Changer de caméra"); },
+      get hangup() { return tr("Raccrocher"); },
+      get minimize() { return tr("Réduire l’appel"); },
     },
-    moreTitle: "Options de l’appel",
-    toVideo: "Passer en vidéo",
-    flip: "Changer de caméra",
-    minimize: "Réduire l’appel",
-    cancel: "Annuler",
+    get moreTitle() { return tr("Options de l’appel"); },
+    get toVideo() { return tr("Passer en vidéo"); },
+    get flip() { return tr("Changer de caméra"); },
+    get minimize() { return tr("Réduire l’appel"); },
+    get cancel() { return tr("Annuler"); },
     remindIn: "Je te rappelle dans 15 minutes",
   },
   en: {
     audio: "WIPP audio call",
     video: "WIPP video call",
-    message: "Message",
+    get message() { return tr("Message"); },
     remind: "Remind me",
     decline: "Decline",
     accept: "Accept",
@@ -359,7 +360,7 @@ export function CallScreen({
     void import("expo-notifications")
       .then((N) =>
         N.scheduleNotificationAsync({
-          content: { title: "WIPP", body: `Rappeler ${peer.displayName}`, data: { type: "remind_call", userId: session.userId } },
+          content: { title: "WIPP", body: tr("Rappeler {0}", peer.displayName), data: { type: "remind_call", userId: session.userId } },
           trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 15 * 60 },
         }),
       )
@@ -407,7 +408,7 @@ export function CallScreen({
           <View style={{ alignItems: "center", marginBottom: 6 }}>
             <Text numberOfLines={1} style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{peer.displayName}</Text>
             <Text style={{ color: GREY, fontSize: 13, fontVariant: ["tabular-nums"] }}>
-              {status} · {groupTiles.length} participant{groupTiles.length > 1 ? "s" : ""}
+              {status} · {groupTiles.length} {tr("participant")}{groupTiles.length > 1 ? "s" : ""}
             </Text>
           </View>
           <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} />
@@ -450,7 +451,7 @@ export function CallScreen({
       {videoLive && remoteVid && !localVid && !mosaic ? (
         <View style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.35)", backgroundColor: "rgba(0,0,0,0.75)", alignItems: "center", justifyContent: "center", gap: 6, padding: 8 }}>
           <VideoOff size={22} color={GOLD} />
-          <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>Ta caméra est éteinte</Text>
+          <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>{tr("Ta caméra est éteinte")}</Text>
         </View>
       ) : null}
 

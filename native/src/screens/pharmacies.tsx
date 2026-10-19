@@ -7,6 +7,7 @@ import { getMyPosition, kmBetween, kmLabel, osmTile, type LatLng } from "../lib/
 import { wippApi } from "../lib/proximity/wipp-session";
 import { useWippStore } from "../lib/store";
 import { colors, accentA } from "../theme";
+import { tr, trLocale } from "../lib/tr";
 
 /** Same shape as the server (src/lib/pharmacy/places.ts). */
 export type PharmacyPlace = {
@@ -53,19 +54,19 @@ function hhmm(iso: string | null, offsetMin?: number | null) {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  if (typeof offsetMin !== "number") return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (typeof offsetMin !== "number") return d.toLocaleTimeString(trLocale(), { hour: "2-digit", minute: "2-digit" });
   const local = new Date(d.getTime() + offsetMin * 60_000);
   return `${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 function statusOf(p: PharmacyPlace): { label: string; tone: "open" | "closed" | "unknown"; detail: string | null } {
-  if (p.open24h) return { label: "Ouverte 24 h/24", tone: "open", detail: null };
+  if (p.open24h) return { label: tr("Ouverte 24 h/24"), tone: "open", detail: null };
   const close = hhmm(p.nextCloseTime, p.utcOffsetMinutes);
   const open = hhmm(p.nextOpenTime, p.utcOffsetMinutes);
-  if (p.openNow === true) return { label: "Ouverte maintenant", tone: "open", detail: close ? `Ferme à ${close}` : null };
-  if (p.openNow === false) return { label: "Fermée", tone: "closed", detail: open ? `Ouvre à ${open}` : null };
+  if (p.openNow === true) return { label: tr("Ouverte maintenant"), tone: "open", detail: close ? tr("Ferme à {0}", close) : null };
+  if (p.openNow === false) return { label: tr("Fermée"), tone: "closed", detail: open ? tr("Ouvre à {0}", open) : null };
   // Unknown hours are never shown as "closed".
-  return { label: "Horaires non communiqués", tone: "unknown", detail: null };
+  return { label: tr("Horaires non communiqués"), tone: "unknown", detail: null };
 }
 
 function openDirections(lat: number, lng: number, name: string, placeId?: string) {
@@ -117,7 +118,7 @@ function PharmacyMap({ origin, places, onPick }: { origin: LatLng; places: Pharm
         );
       })}
       <View style={{ position: "absolute", left: "50%", top: 95, marginLeft: -8, marginTop: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: "#2F80ED", borderWidth: 3, borderColor: "#fff" }} />
-      <Text style={{ position: "absolute", right: 6, bottom: 4, color: "rgba(0,0,0,0.6)", fontSize: 9 }}>© OpenStreetMap</Text>
+      <Text style={{ position: "absolute", right: 6, bottom: 4, color: "rgba(0,0,0,0.6)", fontSize: 9 }}>{tr("© OpenStreetMap")}</Text>
     </View>
   );
 }
@@ -134,7 +135,7 @@ function PharmacyCard({ p, origin, duty }: { p: PharmacyPlace; origin: LatLng | 
         </Text>
         {duty ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: accentA(0.16) }}>
-            <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_700Bold" }}>🌙 DE GARDE</Text>
+            <Text style={{ color: colors.accent, fontSize: 11, fontFamily: "Inter_700Bold" }}>{tr("🌙 DE GARDE")}</Text>
           </View>
         ) : null}
       </View>
@@ -146,16 +147,16 @@ function PharmacyCard({ p, origin, duty }: { p: PharmacyPlace; origin: LatLng | 
       <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={2}>
         {km != null ? `📍 ${kmLabel(km)}${p.address ? `  ·  ${p.address}` : ""}` : `📍 ${p.address ?? ""}`}
       </Text>
-      {duty ? <Text style={{ color: colors.muted, fontSize: 12 }}>Source vérifiée : {duty.source}</Text> : null}
+      {duty ? <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Source vérifiée :")} {duty.source}</Text> : null}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
         <Press onPress={() => openDirections(p.lat, p.lng, p.name, p.id)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", height: 40, borderRadius: 12, backgroundColor: colors.accent }}>
           <Navigation size={16} color={colors.accentFg} />
-          <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>Itinéraire</Text>
+          <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr("Itinéraire")}</Text>
         </Press>
         {p.phone ? (
           <Press onPress={() => call(p.phone!)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", height: 40, borderRadius: 12, borderWidth: 1, borderColor: colors.hair }}>
             <Phone size={16} color={colors.fg} />
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Appeler</Text>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Appeler")}</Text>
           </Press>
         ) : null}
       </View>
@@ -188,7 +189,7 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
       setLoad({ state: "ready", places: r.places });
     } catch (err) {
       const e = err as { code?: string; message?: string };
-      setLoad({ state: "error", message: e.message || "Erreur", notConfigured: e.code === "places_not_configured" });
+      setLoad({ state: "error", message: e.message || tr("Erreur"), notConfigured: e.code === "places_not_configured" });
     }
   }
 
@@ -215,7 +216,7 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
       setFromGps(false);
       setLoad({ state: "ready", places: r.places });
     } catch (err) {
-      setLoad({ state: "error", message: (err as Error).message || "Erreur" });
+      setLoad({ state: "error", message: (err as Error).message || tr("Erreur") });
     }
   }
 
@@ -247,27 +248,27 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
 
         {load.state === "locating" || load.state === "loading" ? (
           <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>
-            {load.state === "locating" ? "Recherche de ta position…" : "Recherche des pharmacies proches…"}
+            {load.state === "locating" ? tr("Recherche de ta position…") : tr("Recherche des pharmacies proches…")}
           </Text>
         ) : null}
 
         {load.state === "denied" ? (
           <View style={{ gap: 10, marginTop: 8 }}>
-            <Empty title="Position non disponible" />
+            <Empty title={tr("Position non disponible")} />
             <Text style={{ color: colors.muted, textAlign: "center", lineHeight: 19 }}>
-              WIPP utilise votre position pour trouver les pharmacies ouvertes près de vous. Autorise la localisation, ou cherche une ville ou une adresse.
+              {tr("WIPP utilise votre position pour trouver les pharmacies ouvertes près de vous. Autorise la localisation, ou cherche une ville ou une adresse.")}
             </Text>
-            <Btn label="Autoriser la localisation" onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
-            <Btn label="Réessayer" variant="secondary" onPress={() => void locate(true)} />
+            <Btn label={tr("Autoriser la localisation")} onPress={() => void Promise.resolve(Linking.openSettings?.()).catch(() => undefined)} />
+            <Btn label={tr("Réessayer")} variant="secondary" onPress={() => void locate(true)} />
           </View>
         ) : null}
 
         {load.state === "denied" || load.state === "ready" ? (
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
             <View style={{ flex: 1 }}>
-              <SearchField value={query} onChangeText={setQuery} placeholder="Ville ou adresse" onSubmitEditing={() => void searchText()} />
+              <SearchField value={query} onChangeText={setQuery} placeholder={tr("Ville ou adresse")} onSubmitEditing={() => void searchText()} />
             </View>
-            <Press onPress={() => void searchText()} accessibilityLabel="Chercher" style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+            <Press onPress={() => void searchText()} accessibilityLabel={tr("Chercher")} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
               <Search size={18} color={colors.fg} />
             </Press>
           </View>
@@ -275,9 +276,9 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
 
         {load.state === "error" ? (
           <View style={{ gap: 10, marginTop: 8 }}>
-            <Empty title={load.notConfigured ? "Bientôt disponible" : "Impossible de charger les pharmacies"} />
+            <Empty title={load.notConfigured ? tr("Bientôt disponible") : tr("Impossible de charger les pharmacies")} />
             <Text style={{ color: colors.muted, textAlign: "center" }}>{load.message}</Text>
-            <Btn label="Réessayer" onPress={() => void locate(true)} />
+            <Btn label={tr("Réessayer")} onPress={() => void locate(true)} />
           </View>
         ) : null}
 
@@ -291,7 +292,7 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
 
         {load.state === "ready" && tab === "duty" ? (
           duty?.loading ? (
-            <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>Recherche des pharmacies de garde…</Text>
+            <Text style={{ color: colors.muted, textAlign: "center", marginTop: 24 }}>{tr("Recherche des pharmacies de garde…")}</Text>
           ) : duty?.available && duty.list.length ? (
             duty.list.map((d) =>
               d.lat != null && d.lng != null ? (
@@ -305,13 +306,13 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
             )
           ) : (
             <View style={{ gap: 10, marginTop: 8 }}>
-              <Empty title="🌙 Pharmacies de garde" />
+              <Empty title={tr("🌙 Pharmacies de garde")} />
               <Text style={{ color: colors.muted, textAlign: "center", lineHeight: 19 }}>
                 {duty?.available
-                  ? "Aucune pharmacie de garde n’est publiée par la source officielle pour cette zone en ce moment."
-                  : "Les données officielles de pharmacies de garde ne sont pas encore disponibles pour cette zone."}
+                  ? tr("Aucune pharmacie de garde n’est publiée par la source officielle pour cette zone en ce moment.")
+                  : tr("Les données officielles de pharmacies de garde ne sont pas encore disponibles pour cette zone.")}
               </Text>
-              <Btn label="Voir les pharmacies ouvertes maintenant" onPress={() => setTab("open")} />
+              <Btn label={tr("Voir les pharmacies ouvertes maintenant")} onPress={() => setTab("open")} />
             </View>
           )
         ) : null}
@@ -322,17 +323,17 @@ export function PharmacyResults({ mode }: { mode: "open" | "h24" }) {
           ) : (
             <View style={{ gap: 10, marginTop: 8 }}>
               <Empty
-                title={tab === "open" ? "Aucune pharmacie ouverte trouvée" : tab === "h24" ? "Aucune pharmacie ouverte 24 h/24 trouvée" : "Aucune pharmacie trouvée"}
-                body={tab === "h24" ? "Selon les horaires publiés sur Google. Ce n’est pas la liste officielle des pharmacies de garde." : undefined}
+                title={tab === "open" ? tr("Aucune pharmacie ouverte trouvée") : tab === "h24" ? tr("Aucune pharmacie ouverte 24 h/24 trouvée") : tr("Aucune pharmacie trouvée")}
+                body={tab === "h24" ? tr("Selon les horaires publiés sur Google. Ce n’est pas la liste officielle des pharmacies de garde.") : undefined}
               />
-              {tab === "h24" && openList.length ? <Btn label="Voir les pharmacies ouvertes maintenant" onPress={() => setTab("open")} /> : null}
+              {tab === "h24" && openList.length ? <Btn label={tr("Voir les pharmacies ouvertes maintenant")} onPress={() => setTab("open")} /> : null}
             </View>
           )
         ) : null}
 
         {load.state === "ready" ? (
           <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", marginTop: 8 }}>
-            Horaires fournis par Google.
+            {tr("Horaires fournis par Google.")}
           </Text>
         ) : null}
     </View>
@@ -346,12 +347,12 @@ export function PharmaciesScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="💊 Pharmacies" onBack={pop} />
+        <Header title={tr("💊 Pharmacies")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }}>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <Chip label="🟢 Ouvertes maintenant" active={mode === "open"} onPress={() => setMode("open")} />
-          <Chip label="🕐 Ouvertes 24 h/24" active={mode === "h24"} onPress={() => setMode("h24")} />
+          <Chip label={tr("🟢 Ouvertes maintenant")} active={mode === "open"} onPress={() => setMode("open")} />
+          <Chip label={tr("🕐 Ouvertes 24 h/24")} active={mode === "h24"} onPress={() => setMode("h24")} />
         </View>
         <PharmacyResults mode={mode} />
       </ScrollView>

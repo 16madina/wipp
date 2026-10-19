@@ -5,17 +5,19 @@ import { ChevronLeft, ChevronRight, Clock, Heart, MapPin, Navigation } from "luc
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { colors, accentA, fgA, whiteA } from "../theme";
+import { tr, trLocale } from "../lib/tr";
 
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const MONTHS_SHORT = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
 const WEEK = ["L", "M", "M", "J", "V", "S", "D"];
+const WEEK_EN = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function hhmm(d: Date) {
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export function dayLabel(d: Date) {
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return d.toLocaleDateString(trLocale(), { day: "numeric", month: "long", year: "numeric" });
 }
 
 function BottomSheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
@@ -47,18 +49,18 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
   const canPrev = month > new Date(today.getFullYear(), today.getMonth(), 1);
   return (
-    <BottomSheet open={open} title="Date de l’événement" onClose={onClose}>
+    <BottomSheet open={open} title={tr("Date de l’événement")} onClose={onClose}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <Press disabled={!canPrev} onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={{ padding: 8, opacity: canPrev ? 1 : 0.3 }}>
           <ChevronLeft size={22} color={colors.fg} />
         </Press>
-        <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold", textTransform: "capitalize" }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</Text>
+        <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold", textTransform: "capitalize" }}>{tr(MONTHS[month.getMonth()]!)} {month.getFullYear()}</Text>
         <Press onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={{ padding: 8 }}>
           <ChevronRight size={22} color={colors.fg} />
         </Press>
       </View>
       <View style={{ flexDirection: "row" }}>
-        {WEEK.map((w, i) => (
+        {(trLocale() === "fr-FR" ? WEEK : WEEK_EN).map((w, i) => (
           <Text key={`${w}${i}`} style={{ flex: 1, textAlign: "center", color: colors.muted, fontSize: 12, marginBottom: 6 }}>{w}</Text>
         ))}
       </View>
@@ -84,7 +86,7 @@ export function CalendarSheet({ open, value, onClose, onPick }: { open: boolean;
 const TIMES = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`);
 
 /** Start time and optional end time, by quarter hour. */
-export function TimeSheet({ open, start, end, single, title = "Heure", onClose, onSave }: { open: boolean; start: string; end: string; single?: boolean; title?: string; onClose: () => void; onSave: (start: string, end: string) => void }) {
+export function TimeSheet({ open, start, end, single, title = tr("Heure"), onClose, onSave }: { open: boolean; start: string; end: string; single?: boolean; title?: string; onClose: () => void; onSave: (start: string, end: string) => void }) {
   const [a, setA] = useState(start || "20:00");
   const [b, setB] = useState(end);
   useEffect(() => {
@@ -106,7 +108,7 @@ export function TimeSheet({ open, start, end, single, title = "Heure", onClose, 
       >
         {(allowNone ? ["", ...TIMES] : TIMES).map((t) => (
           <Press key={t || "none"} onPress={() => set(t)} style={{ height: ROW, alignItems: "center", justifyContent: "center", backgroundColor: value === t ? accentA(0.18) : "transparent" }}>
-            <Text style={{ color: value === t ? colors.accent : colors.fg, fontSize: 16, fontFamily: value === t ? "Inter_600SemiBold" : undefined }}>{t || "Pas de fin"}</Text>
+            <Text style={{ color: value === t ? colors.accent : colors.fg, fontSize: 16, fontFamily: value === t ? "Inter_600SemiBold" : undefined }}>{t || tr("Pas de fin")}</Text>
           </Press>
         ))}
       </ScrollView>
@@ -116,18 +118,18 @@ export function TimeSheet({ open, start, end, single, title = "Heure", onClose, 
     <BottomSheet open={open} title={title} onClose={onClose}>
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{single ? "Heure de publication" : "Début"}</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{single ? tr("Heure de publication") : tr("Début")}</Text>
           {column(a, setA, false)}
         </View>
         {single ? null : (
           <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>Fin (facultative)</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>{tr("Fin (facultative)")}</Text>
             {column(b, setB, true)}
           </View>
         )}
       </View>
       <Press onPress={() => onSave(a, b)} style={{ marginTop: 16, height: 50, borderRadius: 14, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 16 }}>Valider</Text>
+        <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 16 }}>{tr("Valider")}</Text>
       </Press>
     </BottomSheet>
   );
@@ -173,7 +175,7 @@ export function EventCard({
       {starts ? (
         <View style={{ position: "absolute", top: 0, left: 0, paddingHorizontal: 14, paddingVertical: 8, borderBottomRightRadius: 16, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center" }}>
           <Text style={{ color: colors.fg, fontSize: 26, lineHeight: 28, fontFamily: "Inter_800ExtraBold" }}>{starts.getDate()}</Text>
-          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_700Bold" }}>{MONTHS_SHORT[starts.getMonth()]}</Text>
+          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_700Bold" }}>{tr(MONTHS_SHORT[starts.getMonth()]!)}</Text>
         </View>
       ) : null}
       <View style={{ position: "absolute", top: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -188,7 +190,7 @@ export function EventCard({
           </View>
         )}
         {onSave ? (
-          <Press accessibilityLabel="Enregistrer" onPress={onSave} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+          <Press accessibilityLabel={tr("Enregistrer")} onPress={onSave} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
             <Heart size={18} color={saved ? colors.accent : colors.fg} fill={saved ? colors.accent : "transparent"} />
           </Press>
         ) : null}
@@ -209,7 +211,7 @@ export function EventCard({
             ) : null}
           </View>
           <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
-            {interested.label ?? `${interested.count} intéressé${interested.count > 1 ? "s" : ""}`}
+            {interested.label ?? tr("{0} intéressé{1}", interested.count, interested.count > 1 ? "s" : "")}
           </Text>
         </View>
       ) : null}
@@ -225,7 +227,7 @@ export function EventCard({
           ) : null}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 }}>
             <MapPin size={14} color={colors.accent} />
-            <Text numberOfLines={1} style={{ color: live ? colors.accent : colors.fg, fontSize: 12, fontFamily: live ? "Inter_600SemiBold" : undefined }}>{live ? "En ligne sur WIPP" : online ? "En ligne" : city || "Lieu à préciser"}</Text>
+            <Text numberOfLines={1} style={{ color: live ? colors.accent : colors.fg, fontSize: 12, fontFamily: live ? "Inter_600SemiBold" : undefined }}>{live ? tr("En ligne sur WIPP") : online ? tr("En ligne") : city || tr("Lieu à préciser")}</Text>
           </View>
           {distance ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { getApps, initializeApp } from "firebase/app";
 import {
   browserLocalPersistence,
@@ -184,15 +185,15 @@ export async function signOutFirebase() {
 
 function smsSendError(err: unknown): string {
   const code = typeof err === "object" && err && "code" in err ? String((err as { code: string }).code) : "";
-  if (code.includes("invalid-phone-number")) return "Numéro invalide. Pour la Côte d’Ivoire, entre les 10 chiffres avec le 0, indicatif +225.";
-  if (code.includes("operation-not-allowed")) return "Firebase bloque les SMS vers ce pays. Autorise la Côte d’Ivoire dans les règles SMS.";
-  if (code.includes("error-code:-39")) return "Firebase n’a pas pu remettre le SMS à cet opérateur. La Côte d’Ivoire est déjà autorisée. Réessaie dans quelques minutes.";
-  if (code.includes("too-many-requests") || code.includes("quota")) return "Trop d'essais. Réessaie dans un instant.";
-  if (code.includes("network")) return "Réseau indisponible. Réessaie.";
+  if (code.includes("invalid-phone-number")) return tr("Numéro invalide. Pour la Côte d’Ivoire, entre les 10 chiffres avec le 0, indicatif +225.");
+  if (code.includes("operation-not-allowed")) return tr("Firebase bloque les SMS vers ce pays. Autorise la Côte d’Ivoire dans les règles SMS.");
+  if (code.includes("error-code:-39")) return tr("Firebase n’a pas pu remettre le SMS à cet opérateur. La Côte d’Ivoire est déjà autorisée. Réessaie dans quelques minutes.");
+  if (code.includes("too-many-requests") || code.includes("quota")) return tr("Trop d'essais. Réessaie dans un instant.");
+  if (code.includes("network")) return tr("Réseau indisponible. Réessaie.");
   if (code.includes("captcha") || code.includes("argument-error")) {
-    return "Vérification anti-robot impossible ici. Ouvre WIPP sur ton téléphone pour recevoir le SMS.";
+    return tr("Vérification anti-robot impossible ici. Ouvre WIPP sur ton téléphone pour recevoir le SMS.");
   }
-  return "Envoi du SMS impossible. Réessaie dans un instant.";
+  return tr("Envoi du SMS impossible. Réessaie dans un instant.");
 }
 
 async function ensureVerifier(): Promise<ApplicationVerifier> {
@@ -215,7 +216,7 @@ async function ensureVerifier(): Promise<ApplicationVerifier> {
     })();
     return webVerifierReady;
   }
-  throw new Error("La vérification SMS n'est pas encore prête. Réessaie.");
+  throw new Error(tr("La vérification SMS n'est pas encore prête. Réessaie."));
 }
 
 export async function sendSmsCode(phone: string): Promise<void> {
@@ -226,11 +227,11 @@ export async function sendSmsCode(phone: string): Promise<void> {
 }
 
 export async function confirmSmsCode(code: string): Promise<void> {
-  if (!verificationId) throw new Error("Code expiré. Renvoie un nouveau code.");
+  if (!verificationId) throw new Error(tr("Code expiré. Renvoie un nouveau code."));
   const auth = firebaseAuth();
   const credential = PhoneAuthProvider.credential(verificationId, code.trim());
   const cred = await signInWithCredential(auth, credential);
-  if (!cred.user) throw new Error("Code SMS incorrect ou expiré.");
+  if (!cred.user) throw new Error(tr("Code SMS incorrect ou expiré."));
   // Force one refresh so a role claim already written by Firebase is visible.
   // The claim itself is never set on the device.
   await cred.user.getIdToken(true);

@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import type { Lang } from "./types";
 
 const FR = "fr-CA";
@@ -82,7 +83,7 @@ export function formatChatTime(ts: number, lang: Lang) {
   const when = asEpochMs(ts);
   if (when == null) return "";
   if (isToday(when)) return formatClock(when);
-  if (isYesterday(when)) return lang === "fr" ? "Hier" : "Yesterday";
+  if (isYesterday(when)) return lang === "fr" ? tr("Hier") : "Yesterday";
   if (isThisWeek(when)) return weekday(when, lang);
   return dayMonth(when, lang, "short");
 }
@@ -91,26 +92,26 @@ export function formatFullStamp(ts: number, lang: Lang) {
   const when = asEpochMs(ts);
   if (when == null) return "";
   if (isToday(when)) {
-    return `${lang === "fr" ? "Aujourd'hui" : "Today"} · ${formatClock(when)}`;
+    return `${lang === "fr" ? tr("Aujourd'hui") : "Today"} · ${formatClock(when)}`;
   }
   if (isYesterday(when)) {
-    return `${lang === "fr" ? "Hier" : "Yesterday"} · ${formatClock(when)}`;
+    return `${lang === "fr" ? tr("Hier") : "Yesterday"} · ${formatClock(when)}`;
   }
   return `${dayMonth(when, lang, "long")} · ${formatClock(when)}`;
 }
 
 export function formatLastSeen(ts: number | undefined, online: boolean, lang: Lang) {
   const when = asEpochMs(ts);
-  if (online) return lang === "fr" ? "en ligne" : "online";
-  if (when == null) return lang === "fr" ? "vu récemment" : "last seen recently";
+  if (online) return lang === "fr" ? tr("en ligne") : "online";
+  if (when == null) return lang === "fr" ? tr("vu récemment") : "last seen recently";
   if (isToday(when)) {
     return lang === "fr"
-      ? `vu aujourd'hui à ${formatClock(when)}`
+      ? tr("vu aujourd'hui à {0}", formatClock(when))
       : `last seen today at ${formatClock(when)}`;
   }
   if (isYesterday(when)) {
     return lang === "fr"
-      ? `vu hier à ${formatClock(when)}`
+      ? tr("vu hier à {0}", formatClock(when))
       : `last seen yesterday at ${formatClock(when)}`;
   }
   return lang === "fr"
@@ -132,7 +133,7 @@ export function formatRelativeShort(ts: number, lang: Lang) {
   if (when == null) return "";
   const diff = Date.now() - when;
   const min = Math.floor(diff / 60000);
-  if (min < 1) return lang === "fr" ? "à l'instant" : "now";
+  if (min < 1) return lang === "fr" ? tr("à l'instant") : "now";
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h} h`;

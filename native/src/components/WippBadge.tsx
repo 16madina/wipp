@@ -1,3 +1,4 @@
+import { tr } from "../lib/tr";
 import { BadgeCheck } from "lucide-react-native";
 
 /** Blue = Ambassadeur (3 amis invités) ; gold = certifié par WIPP. Nothing for everyone else. */
@@ -8,7 +9,7 @@ export function WippBadge({ badge, size = 16 }: { badge?: "blue" | "gold" | null
       size={size}
       color="#ffffff"
       fill={badge === "gold" ? "#d4a017" : "#1d9bf0"}
-      accessibilityLabel={badge === "gold" ? "Certifié par WIPP" : "Ambassadeur WIPP"}
+      accessibilityLabel={badge === "gold" ? tr("Certifié par WIPP") : tr("Ambassadeur WIPP")}
     />
   );
 }

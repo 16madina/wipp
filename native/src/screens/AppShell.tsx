@@ -104,6 +104,7 @@ import { hydratePrivateVault } from "../lib/private-vault";
 import { bootstrapPush, onSessionReady } from "../lib/push";
 import { IntroSplash } from "./intro";
 import { useDeviceLayout } from "../lib/device-layout";
+import { tr } from "../lib/tr";
 
 const AUTH = new Set([
   "splash",
@@ -328,7 +329,8 @@ export function AppShell() {
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
-  const theme = useAppearance((s) => s.theme);
+  // Redraw every screen when the colour set changes (two light sets share the same brightness).
+  const theme = useAppearance((s) => s.skin);
   const { hasShareIntent } = useShareIntentContext();
 
   useEffect(() => {
@@ -450,7 +452,7 @@ export function AppShell() {
           if (useWippStore.getState().stack.at(-1)?.name !== "wgo-touch") useWippStore.getState().push({ name: "wgo-touch" });
         };
         if (Platform.OS === "android") {
-          void QA.setItems([{ id: "wipp-touch", title: "WIPP Touch", subtitle: "Rapprochez vos téléphones", params: { screen: "wgo-touch" } }]).catch(() => undefined);
+          void QA.setItems([{ id: "wipp-touch", title: tr("WIPP Touch"), subtitle: tr("Rapprochez vos téléphones"), params: { screen: "wgo-touch" } }]).catch(() => undefined);
         }
         open(QA.initial);
         const sub = QA.addListener(open);

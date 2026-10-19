@@ -1,0 +1,240 @@
+720|Who can see my stories?
+721|Your contacts, or only your close friends if you choose “Close friends” when publishing. A story disappears automatically after the chosen duration.
+722|Are my messages private?
+723|Yes. Messages, photos, videos, voice notes and groups are end-to-end encrypted: even WIPP cannot read them. A screenshot taken by the other person is still possible.
+724|How do I delete my account?
+725|Me › Security › Delete my account. Deletion is immediate and permanent.
+726|Reason
+727|Why are you writing to us?
+728|Support
+729|Describe your problem in a few words (10 characters minimum).
+730|No email app is set up on this phone. Write to us at {0} with the subject “{1}”.
+731|Help & support
+732|Help
+733|Frequently asked questions
+734|Didn’t find your answer? Contact support ›
+735|Write to the WIPP team. We usually reply within 48 hours, to the address you send the email from.
+736|Choose a reason
+737|Describe the problem
+738|What happened? On which screen? Since when?
+739|Your @username, the phone model and the WIPP version are added automatically to help us. Never send your SMS code or your lock code.
+740|Send to support
+741|Support address:
+742|Unable to load the blocked accounts.
+743|Unblock {0}?
+744|Not possible for now.
+745|Delete your account?
+746|This action requests the deletion of the WIPP profile linked to the current session: stories, business card, listings and account data the server can erase. Messages already received by other people may stay in their conversation. The Firebase account of the number is not erased by the app. A web page exists, but it asks for a password: https://wippapp.com/delete-account. Accounts created by phone can also write to support@wippapp.com.
+747|Type SUPPRIMER to confirm.
+748|Deleting…
+749|Deletion is not available on the server yet.
+750|Unable to load.
+751|+ Listing
+752|+ Event
+753|Publish your first listing.
+754|You haven’t saved anything yet.
+755|Explore
+756|no reviews yet
+757|interested
+758|Sign in to create your business card.
+759|The business card is not available on the server yet.
+760|Unable to load the card.
+761|A saved image could not be displayed. You can upload it again.
+762|Access to photos denied.
+763|WIPP needs access to your photos for the card.
+764|The server did not return the saved card.
+765|Card saved
+766|Your card is saved. The photo and the banner reload when it opens.
+767|Edit my card
+768|Create my business card
+769|Preview
+770|Banner
+771|Add a banner
+772|Remove the banner
+773|Remove the photo
+774|Business name *
+775|Category *
+776|Choose your category
+777|E.g. Braiding salon in Abidjan since 2019. Box braids, cornrows, custom wigs. By appointment, home visits possible.
+778|Say what you offer, for whom, and what makes you unique.
+779|Country *
+780|Choose a country
+781|City *
+782|Show the address on my card
+783|Customers see your address and can come to see you.
+784|Address hidden: only the city and the country are visible. Useful if you work from home.
+785|Opening hours (optional)
+786|Choose the days and hours
+787|Your personal WIPP number is never used.
+788|Website link (optional)
+789|Tags
+790|Up to 3 words that describe your business (e.g. Hair salon, Extensions).
+791|Tag {0}
+792|Social networks
+793|Your account name or the link to your page. Customers can open it from your card.
+794|Instagram
+795|TikTok
+796|Facebook
+797|Our services
+798|What you offer (e.g. Cuts, Braids, Colouring), with a photo. Up to 12.
+799|Remove {0}
+800|Add
+801|Choose the service photo
+802|Service name (e.g. Braids)
+803|Business photos
+804|Remove this photo
+805|Save the changes
+806|This card is not available.
+807|Unable to open the conversation.
+808|Open 24/7
+809|Open now
+810|Closed
+811|Opening hours not provided
+812|Verified source:
+813|Directions
+814|Finding your position…
+815|Finding nearby pharmacies…
+816|Position not available
+817|WIPP uses your position to find open pharmacies near you. Allow location, or search for a city or an address.
+818|Allow location
+819|Try again
+820|City or address
+821|Search
+822|Coming soon
+823|Unable to load the pharmacies
+824|Finding on-duty pharmacies…
+825|🌙 On-duty pharmacies
+826|No on-duty pharmacy is published by the official source for this area right now.
+827|Official on-duty pharmacy data is not available for this area yet.
+828|See the pharmacies open now
+829|No open pharmacy found
+830|No 24/7 pharmacy found
+831|No pharmacy found
+832|Based on the opening hours published on Google. This is not the official list of on-duty pharmacies.
+833|Opening hours provided by Google.
+834|💊 Pharmacies
+835|New
+836|Like new
+837|Good condition
+838|Used
+839|Allow access to photos to illustrate your post.
+840|Add at least one photo.
+841|The title and the category are required.
+842|Enter the city (or choose an address).
+843|Enter the price, or choose “Free” or “Swap”.
+844|Unable to publish.
+845|Edit the listing
+846|Publish a listing
+847|Sell, buy,
+848|find more
+849|Publish your listing and reach the WIPP community near you.
+850|Listing photos
+851|Add up to 8 photos · the 1st is the cover
+852|Add photos
+853|Set as cover
+854|Cover
+855|Listing title
+856|E.g. iPhone 14 Pro in excellent condition
+857|Describe your item in detail: condition, features, reasons for selling…
+858|Condition
+859|Price ({0})
+860|Negotiable price
+861|Position unavailable. Allow location, or type your city.
+862|Locating…
+863|Position saved ✓
+864|Use my position
+865|Only the city and the neighbourhood are shown, never your exact address.
+866|Contact preferences
+867|Recommended (anonymous)
+868|Phone
+869|Show my number
+870|Feature my listing
+871|At the top of the results for 7 days · one listing at a time
+872|Schedule the publication
+873|Visible on {0} at {1}:{2}
+874|Choose a date and a time
+875|Publishing…
+876|Publish my listing
+877|Publication time
+878|Choose a date and a time in the future.
+879|The event name is required.
+880|Choose the start date and time.
+881|Enter the city for an in-person event.
+882|The end cannot be before the start.
+883|Enter the price of the paid event.
+884|Edit the 
+885|Create an⏎
+886|event
+887|Share your event on WIPP and bring your community together.
+888|Event photo
+889|Add an attractive image
+890|Event title *
+891|E.g. Afrobeats night
+892|Tell people about your event: programme, artists, who it is for…
+893|Date and time *
+894|Start now
+895|Now
+896|Date
+897|Time
+898|Live on WIPP
+899|Planned duration
+900|{0} h 30
+901|Show the number of people registered
+902|Free · up to 100 viewers · no recording.
+903|You will invite your contacts from the event page.
+904|Visible to everyone in Events.
+905|Place *
+906|Link (Zoom, YouTube, Instagram…)
+907|Name of the place (venue, bar, park…)
+908|Type
+909|Ticket price *
+910|E.g. 25
+911|WIPP does not collect ticket payments: the price is for information. Add your ticketing link below if you have one.
+912|Advanced settings
+913|Limit the number of places
+914|Number of places
+915|18+ event
+916|Details: free entry, dress code…
+917|Ticketing link or details
+918|Publish my event
+919|Unable to load your rewards.
+920|Thank you!
+921|You were invited by {0}. Your friend moves towards their rewards from your first message.
+922|Invitation code
+923|Unable to save the code.
+924|Business pinned
+925|“{0}” is pinned at the top of Explore for {1} days{2}.
+926|Pin code
+927|Unable to use the code.
+928|{0}-day code
+929|Earn rewards
+930|Invite your friends to WIPP
+931|A friend counts when they enter your code at sign-up and you are in contact on WIPP (connected, or one message each).
+932|/ {0} friends — next: {1}
+933|friends — all rewards unlocked!
+934|Your invitation code
+935|Share my invitation
+936|The rewards
+937|active friends
+938|Gold badge
+939|Reserved for accounts verified by the WIPP team.
+940|My pin codes
+941|Used{0}
+942|{0} days · tap to use it or give it away
+943|I have a pin code
+944|A code given by a friend pins your Business page at the top of Explore.
+945|Confirm
+946|Did someone invite you?
+947|Enter their @username during your first week on WIPP.
+948|My guests (
+949|Active
+950|Not in contact yet
+951|Rewards are free and cannot be exchanged for money. Only friends in contact with you count (20 per month at most). Fake, suspended or duplicate accounts do not count.
+952|Unable to read the content.
+953|Share on WIPP
+954|Nothing to share.
+955|Preparing the content…
+956|{0} items
+957|{0}{1} skipped (unsupported format, too large or more than 10)
+958|Publish in my story
+959|My story

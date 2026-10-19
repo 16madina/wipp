@@ -9,11 +9,12 @@ import { CalendarSheet, TimeSheet, dayLabel, hhmm } from "./event-parts";
 import { colors } from "../theme";
 import { useWippStore } from "../lib/store";
 import type { Message, User } from "../lib/types";
+import { tr } from "../lib/tr";
 
 type Rsvp = "going" | "maybe" | "no";
 const MONTHS_SHORT = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
 const DAYS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-const LABELS: Record<Rsvp, string> = { going: "J’y vais", maybe: "Peut-être", no: "Non" };
+const LABELS: Record<Rsvp, string> = { get going() { return tr("J’y vais"); }, get maybe() { return tr("Peut-être"); }, get no() { return tr("Non"); } };
 
 const at = (day: Date, t: string) => {
   const d = new Date(day);
@@ -64,44 +65,44 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
   );
 
   return (
-    <Sheet open={open} title="Créer un événement" onClose={onClose}>
+    <Sheet open={open} title={tr("Créer un événement")} onClose={onClose}>
       <ScrollView style={{ maxHeight: 560 }} keyboardShouldPersistTaps="handled">
         <View style={{ gap: 10 }}>
-          <Press onPress={() => void pickPhoto()} accessibilityLabel={photoUri ? "Changer la photo" : "Ajouter une photo"} style={{ height: 150, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+          <Press onPress={() => void pickPhoto()} accessibilityLabel={photoUri ? tr("Changer la photo") : tr("Ajouter une photo")} style={{ height: 150, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
             {photoUri ? (
               <>
                 <Image source={{ uri: photoUri }} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} contentFit="cover" />
-                <Press accessibilityLabel="Retirer la photo" onPress={() => setPhotoUri(null)} style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+                <Press accessibilityLabel={tr("Retirer la photo")} onPress={() => setPhotoUri(null)} style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
                   <X size={16} color="#fff" />
                 </Press>
               </>
             ) : (
               <>
                 <Camera size={26} color={colors.accent} />
-                <Text style={{ marginTop: 6, color: colors.muted, fontSize: 13 }}>Ajouter une photo (facultatif)</Text>
+                <Text style={{ marginTop: 6, color: colors.muted, fontSize: 13 }}>{tr("Ajouter une photo (facultatif)")}</Text>
               </>
             )}
           </Press>
-          <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 120))} placeholder="Nom de l’événement" placeholderTextColor={colors.muted} style={input} />
-          {pickRow(CalendarDays, day ? dayLabel(day) : "Choisir la date", !day, () => setPicker("day"))}
-          {pickRow(Clock, start ? (end ? `${start.replace(":", "h")} – ${end.replace(":", "h")}` : `À ${start.replace(":", "h")}`) : "Choisir l’heure", !start, () => (day ? setPicker("time") : setPicker("day")))}
+          <TextInput value={title} onChangeText={(v) => setTitle(v.slice(0, 120))} placeholder={tr("Nom de l’événement")} placeholderTextColor={colors.muted} style={input} />
+          {pickRow(CalendarDays, day ? dayLabel(day) : tr("Choisir la date"), !day, () => setPicker("day"))}
+          {pickRow(Clock, start ? (end ? `${start.replace(":", "h")} – ${end.replace(":", "h")}` : tr("À {0}", start.replace(":", "h"))) : tr("Choisir l’heure"), !start, () => (day ? setPicker("time") : setPicker("day")))}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, ...input, paddingVertical: 0 }}>
             <MapPin size={18} color={colors.accent} />
-            <TextInput value={place} onChangeText={(v) => setPlace(v.slice(0, 200))} placeholder="Lieu (facultatif)" placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingVertical: 12 }} />
+            <TextInput value={place} onChangeText={(v) => setPlace(v.slice(0, 200))} placeholder={tr("Lieu (facultatif)")} placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.fg, fontSize: 15, paddingVertical: 12 }} />
           </View>
           <TextInput
             value={description}
             onChangeText={(v) => setDescription(v.slice(0, 1000))}
-            placeholder="Description (facultatif)"
+            placeholder={tr("Description (facultatif)")}
             placeholderTextColor={colors.muted}
             multiline
             style={[input, { minHeight: 80, textAlignVertical: "top" }]}
           />
         </View>
-        {past ? <Text style={{ color: colors.danger, fontSize: 12, marginTop: 8 }}>Choisis une date et une heure à venir.</Text> : null}
+        {past ? <Text style={{ color: colors.danger, fontSize: 12, marginTop: 8 }}>{tr("Choisis une date et une heure à venir.")}</Text> : null}
         <View style={{ marginTop: 14 }}>
           <Btn
-            label="Envoyer l’événement"
+            label={tr("Envoyer l’événement")}
             disabled={!ready}
             onPress={() => {
               if (!startsAt) return;
@@ -132,7 +133,7 @@ export function CreateEventSheet({ open, onClose, onSend }: { open: boolean; onC
         open={picker === "time"}
         start={start || (startsAt ? t24(startsAt) : "19:00")}
         end={end}
-        title="Heure de l’événement"
+        title={tr("Heure de l’événement")}
         onClose={() => setPicker(null)}
         onSave={(a, b) => {
           setStart(a);
@@ -171,12 +172,12 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
       .then(({ rsvpEvent }) => rsvpEvent(m.id, next))
       .catch(() => {
         patch(before);
-        Alert.alert("Événement", "Ta réponse n’a pas pu être enregistrée.");
+        Alert.alert(tr("Événement"), tr("Ta réponse n’a pas pu être enregistrée."));
       });
   };
 
-  const name = (id: string) => (id === "me" ? "Toi" : users[id]?.displayName || (users[id]?.username ? `@${users[id]!.username}` : "Membre"));
-  const when = `${DAYS[start.getDay()]} ${dayLabel(start)} · ${hhmm(start)}${end ? ` – ${hhmm(end)}` : ""}`;
+  const name = (id: string) => (id === "me" ? tr("Toi") : users[id]?.displayName || (users[id]?.username ? `@${users[id]!.username}` : tr("Membre")));
+  const when = `${tr(DAYS[start.getDay()]!)} ${dayLabel(start)} · ${hhmm(start)}${end ? ` – ${hhmm(end)}` : ""}`;
 
   return (
     <View style={{ minWidth: 240, paddingVertical: 2 }}>
@@ -184,12 +185,12 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ width: 52, borderRadius: 12, overflow: "hidden", backgroundColor: onMe ? "rgba(0,0,0,0.18)" : colors.surface2, alignItems: "center" }}>
           <View style={{ alignSelf: "stretch", backgroundColor: accent, paddingVertical: 2, alignItems: "center" }}>
-            <Text style={{ fontSize: 10, color: onMe ? "#000" : colors.accentFg, fontFamily: "Inter_700Bold" }}>{MONTHS_SHORT[start.getMonth()]}</Text>
+            <Text style={{ fontSize: 10, color: onMe ? "#000" : colors.accentFg, fontFamily: "Inter_700Bold" }}>{tr(MONTHS_SHORT[start.getMonth()]!)}</Text>
           </View>
           <Text style={{ fontSize: 22, color: fg, fontFamily: "Inter_700Bold", paddingVertical: 4 }}>{start.getDate()}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, color: muted }}>{finished ? "Événement terminé" : "Événement"}</Text>
+          <Text style={{ fontSize: 11, color: muted }}>{finished ? tr("Événement terminé") : tr("Événement")}</Text>
           <Text style={{ fontSize: 16, color: fg, fontFamily: "Inter_600SemiBold" }}>{ev.title}</Text>
           <Text style={{ marginTop: 2, fontSize: 13, color: muted }}>{when}</Text>
           {ev.place ? (
@@ -218,7 +219,7 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
         })}
       </View>
       <Press onPress={() => setDetails(true)} style={{ marginTop: 10, alignItems: "center", paddingVertical: 4 }}>
-        <Text style={{ fontSize: 13, color: accent, fontFamily: "Inter_600SemiBold" }}>{rsvps.length ? `Voir les réponses · ${rsvps.length}` : "Aucune réponse pour l’instant"}</Text>
+        <Text style={{ fontSize: 13, color: accent, fontFamily: "Inter_600SemiBold" }}>{rsvps.length ? tr("Voir les réponses · {0}", rsvps.length) : tr("Aucune réponse pour l’instant")}</Text>
       </Press>
       <Sheet open={details} title={ev.title} onClose={() => setDetails(false)}>
         <ScrollView style={{ maxHeight: 480 }}>
@@ -237,7 +238,7 @@ export function EventBubble({ chatId, m, users, onMe, fg, muted, accent }: { cha
                     </View>
                   ))
                 ) : (
-                  <Text style={{ color: colors.muted, fontSize: 13 }}>Personne</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Personne")}</Text>
                 )}
               </View>
             );
@@ -279,7 +280,7 @@ function EventPhoto({ ev }: { ev: NonNullable<Message["groupEvent"]> }) {
       {uri ? (
         <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
       ) : (
-        <Text style={{ color: colors.muted, fontSize: 12 }}>{failed ? "Photo indisponible" : "Chargement de la photo…"}</Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>{failed ? tr("Photo indisponible") : tr("Chargement de la photo…")}</Text>
       )}
     </View>
   );

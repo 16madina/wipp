@@ -3,6 +3,7 @@ import { Animated, Easing, Text, View } from "react-native";
 import Svg, { Defs, Ellipse, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { colors } from "../theme";
 import { Press } from "./ui";
+import { tr } from "../lib/tr";
 
 /**
  * Small glossy 3D-looking gift box: it floats and gives a little shake now and then,
@@ -40,7 +41,7 @@ export function GiftParcel({ onPress, kindLabel, footer, locked }: { onPress: ()
   const shadow = bob.interpolate({ inputRange: [0, 1], outputRange: [1, 0.75] });
 
   return (
-    <Press onPress={onPress} style={{ flex: 1, backgroundColor: "#100c08" }} accessibilityLabel={`Surprise${kindLabel ? ` : ${kindLabel}` : ""}${locked ? ", verrouillée" : ""}`}>
+    <Press onPress={onPress} style={{ flex: 1, backgroundColor: "#100c08" }} accessibilityLabel={tr("Surprise{0}{1}", kindLabel ? ` : ${kindLabel}` : "", locked ? tr(", verrouillée") : "")}>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 }}>
         <Animated.View style={{ transform: [{ translateY: floatY }, { rotate }], alignItems: "center" }}>
           <Animated.View style={{ transform: [{ translateY: lidY }] }}>
@@ -90,7 +91,7 @@ export function GiftParcel({ onPress, kindLabel, footer, locked }: { onPress: ()
           </Svg>
         </Animated.View>
         <Animated.View style={{ marginTop: 2, width: 46, height: 5, borderRadius: 23, backgroundColor: "rgba(245,201,79,0.10)", transform: [{ scaleX: shadow }] }} />
-        <Text style={{ marginTop: 4, fontFamily: "GreatVibes_400Regular", fontSize: 28, lineHeight: 32, color: colors.surpriseBright }}>Surprise</Text>
+        <Text style={{ marginTop: 4, fontFamily: "GreatVibes_400Regular", fontSize: 28, lineHeight: 32, color: colors.surpriseBright }}>{tr("Surprise")}</Text>
         {kindLabel ? <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.surprisePaper }}>{kindLabel}</Text> : null}
         {footer ? <Text style={{ marginTop: 2, fontSize: 11, fontFamily: locked ? "Inter_600SemiBold" : undefined, color: locked ? "#F5C94F" : "rgba(255,240,210,0.6)" }}>{footer}</Text> : null}
       </View>

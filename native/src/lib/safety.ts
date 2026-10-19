@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { supabase } from "./supabase";
 import { myProfileId } from "./lot7/api";
 
@@ -35,6 +36,6 @@ export async function submitContentReport(input: {
     reason: input.reason.slice(0, 80),
   });
   if (error) {
-    throw new Error("Le signalement n’est pas encore disponible. La mise à jour du serveur doit être appliquée.");
+    throw new Error(tr("Le signalement n’est pas encore disponible. La mise à jour du serveur doit être appliquée."));
   }
 }

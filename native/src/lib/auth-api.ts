@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { WIPP_WEB_ORIGIN } from "./firebase-config";
 import { firebaseIdToken } from "./firebase-phone";
 
@@ -25,9 +26,9 @@ async function linkProfile(body: Record<string, unknown>): Promise<AuthResult> {
   try {
     idToken = await firebaseIdToken();
   } catch {
-    return { ok: false, error: "Réseau indisponible. Ta session téléphone reste ouverte." };
+    return { ok: false, error: tr("Réseau indisponible. Ta session téléphone reste ouverte.") };
   }
-  if (!idToken) return { ok: false, error: "Aucune session téléphone sur cet appareil." };
+  if (!idToken) return { ok: false, error: tr("Aucune session téléphone sur cet appareil.") };
   const res = await fetch(`${WIPP_WEB_ORIGIN}/api/wipp/auth/profile`, {
     method: "POST",
     headers: {
@@ -44,10 +45,10 @@ async function linkProfile(body: Record<string, unknown>): Promise<AuthResult> {
     profile?: LinkedProfile;
   };
   if (data.noAccount) {
-    return { ok: false, error: data.message || "Aucun compte pour ce numéro.", noAccount: true };
+    return { ok: false, error: data.message || tr("Aucun compte pour ce numéro."), noAccount: true };
   }
   if (!res.ok || data.ok === false || !data.profile?.id) {
-    return { ok: false, error: data.message || "Connexion impossible." };
+    return { ok: false, error: data.message || tr("Connexion impossible.") };
   }
   return { ok: true, profile: data.profile };
 }
@@ -71,6 +72,6 @@ export async function signinOtp(): Promise<AuthResult> {
   try {
     return await linkProfile({ mode: "signin" });
   } catch {
-    return { ok: false, error: "Connexion impossible." };
+    return { ok: false, error: tr("Connexion impossible.") };
   }
 }

@@ -63,6 +63,8 @@ import { wippSrc } from "../lib/assets";
 import { getBusinessCardOfOwner, type BusinessCardView } from "../lib/business-card";
 import { findPublicByUsername } from "../lib/public-profiles";
 import { MOTTO_FONT, mottoSize } from "../lib/profile-motto";
+import { loadSocials, type Socials } from "../lib/profile-socials";
+import { SocialIcons } from "../components/SocialIcons";
 import { shareWippPublic } from "../lib/share-public";
 import { APP_HOST } from "../lib/utils";
 import { formatChatTime, formatRemainShort } from "../lib/format";
@@ -84,6 +86,7 @@ import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
 import { colors, fgA, layout, whiteA } from "../theme";
 import { useDeviceLayout } from "../lib/device-layout";
+import { tr, trSystem } from "../lib/tr";
 
 function shopFace(shop: Shop) {
   return { displayName: shop.name, avatar: shop.logo || shop.image, online: true };
@@ -191,7 +194,7 @@ export function ChatsScreen() {
                   if (lastPinWaitMs() > 0) {
                     haptic("error");
                     const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
-                    Alert.alert("WIPP", `Réessaie dans ${secs} s.`);
+                    Alert.alert("WIPP", tr("Réessaie dans {0} s.", secs));
                   }
                 })();
               }, 3000);
@@ -283,7 +286,7 @@ export function ChatsScreen() {
             <View style={{ width: 52, alignItems: "center" }}>
               <Archive size={20} color={colors.muted} />
             </View>
-            <Text style={{ flex: 1, fontSize: 15, color: colors.fg, fontFamily: "Inter_500Medium" }}>Archivées</Text>
+            <Text style={{ flex: 1, fontSize: 15, color: colors.fg, fontFamily: "Inter_500Medium" }}>{tr("Archivées")}</Text>
             <Text style={{ fontSize: 13, color: colors.muted }}>{archivedCount}</Text>
           </Press>
         ) : null}
@@ -341,45 +344,45 @@ export function ChatsScreen() {
           <Pressable onPress={() => undefined} style={{ borderRadius: 18, overflow: "hidden", backgroundColor: colors.surface }}>
             {menuChat ? (
               <Text numberOfLines={1} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, fontSize: 13, color: colors.muted }}>
-                {menuChat.type === "group" ? menuChat.name : chatPeer(menuChat, users)?.displayName ?? "Conversation"}
+                {menuChat.type === "group" ? menuChat.name : chatPeer(menuChat, users)?.displayName ?? tr("Conversation")}
               </Text>
             ) : null}
             <ScrollView style={{ maxHeight: 520 }} bounces={false}>
               {(
                 [
-                  [menuChat?.pinned ? "Désépingler" : "Épingler", () => menuChatId && useWippStore.getState().pinChat(menuChatId, !menuChat?.pinned)],
-                  [menuChat?.archived ? "Désarchiver" : "Archiver", () => menuChatId && useWippStore.getState().archiveChat(menuChatId, !menuChat?.archived)],
-                  [menuChat?.muted ? "Réactiver les notifications" : "Mettre en sourdine…", () => {
+                  [menuChat?.pinned ? tr("Désépingler") : tr("Épingler"), () => menuChatId && useWippStore.getState().pinChat(menuChatId, !menuChat?.pinned)],
+                  [menuChat?.archived ? tr("Désarchiver") : tr("Archiver"), () => menuChatId && useWippStore.getState().archiveChat(menuChatId, !menuChat?.archived)],
+                  [menuChat?.muted ? tr("Réactiver les notifications") : tr("Mettre en sourdine…"), () => {
                     const id = menuChatId;
                     if (!id) return;
                     if (menuChat?.muted) return useWippStore.getState().setMute(id, "off");
-                    Alert.alert("Mettre en sourdine", undefined, [
-                      { text: "1 heure", onPress: () => useWippStore.getState().setMute(id, "1h") },
-                      { text: "8 heures", onPress: () => useWippStore.getState().setMute(id, "8h") },
-                      { text: "1 semaine", onPress: () => useWippStore.getState().setMute(id, "1w") },
-                      { text: "Toujours", onPress: () => useWippStore.getState().setMute(id, "always") },
-                      { text: "Annuler", style: "cancel" },
+                    Alert.alert(tr("Mettre en sourdine"), undefined, [
+                      { text: tr("1 heure"), onPress: () => useWippStore.getState().setMute(id, "1h") },
+                      { text: tr("8 heures"), onPress: () => useWippStore.getState().setMute(id, "8h") },
+                      { text: tr("1 semaine"), onPress: () => useWippStore.getState().setMute(id, "1w") },
+                      { text: tr("Toujours"), onPress: () => useWippStore.getState().setMute(id, "always") },
+                      { text: tr("Annuler"), style: "cancel" },
                     ]);
                   }],
-                  [menuChat?.unread || menuChat?.manuallyUnreadAt ? "Marquer comme lu" : "Marquer comme non lu", () => menuChatId && useWippStore.getState().toggleUnread(menuChatId)],
-                  [menuChatId && isChatLocked(menuChatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation", () => {
+                  [menuChat?.unread || menuChat?.manuallyUnreadAt ? tr("Marquer comme lu") : tr("Marquer comme non lu"), () => menuChatId && useWippStore.getState().toggleUnread(menuChatId)],
+                  [menuChatId && isChatLocked(menuChatId) ? tr("Déverrouiller la conversation") : tr("Verrouiller la conversation"), () => {
                     const id = menuChatId;
                     if (id) toggleChatLock(id, lockAsk.askPin);
                   }],
-                  ["Masquer dans WIPP Privé", () => {
+                  [tr("Masquer dans WIPP Privé"), () => {
                   const id = menuChatId;
                   if (!id) return;
                   if (!isPrivateEnabled()) {
-                    Alert.alert("WIPP", "Active WIPP Privé dans Confidentialité.");
+                    Alert.alert("WIPP", tr("Active WIPP Privé dans Confidentialité."));
                     return;
                   }
                   Alert.alert(
-                    "Masquer et verrouiller",
-                    "Cette conversation disparaîtra de Chats. Elle restera uniquement dans WIPP Privé.",
+                    tr("Masquer et verrouiller"),
+                    tr("Cette conversation disparaîtra de Chats. Elle restera uniquement dans WIPP Privé."),
                     [
-                      { text: "Annuler", style: "cancel" },
+                      { text: tr("Annuler"), style: "cancel" },
                       {
-                        text: "Masquer",
+                        text: tr("Masquer"),
                         onPress: () => {
                           void lockChatPrivate(id, askPin).then((ok) => {
                             if (ok) {
@@ -389,7 +392,7 @@ export function ChatsScreen() {
                             if (lastPinWaitMs() > 0) {
                               haptic("error");
                               const secs = Math.max(1, Math.ceil(lastPinWaitMs() / 1000));
-                              Alert.alert("WIPP", `Réessaie dans ${secs} s.`);
+                              Alert.alert("WIPP", tr("Réessaie dans {0} s.", secs));
                             }
                           });
                         },
@@ -464,12 +467,12 @@ function ChatRow({
             ? shop.name
             : peer?.displayName;
   const locked = isChatLocked(chat.id);
-  const preview = sealed ? t("sealedKeepsNone") : locked ? "Conversation verrouillée" : draft?.trim() ? `Brouillon : ${draft}` : chat.preview;
+  const preview = sealed ? t("sealedKeepsNone") : locked ? tr("Conversation verrouillée") : draft?.trim() ? tr("Brouillon : {0}", draft) : trSystem(chat.preview ?? "", false);
   const stamp = ephemeral && chat.expiresAt ? formatRemainShort(chat.expiresAt, now) : formatChatTime(chat.lastAt, lang);
   return (
     <View style={{ minHeight: 74, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
       <Press
-        accessibilityLabel={ring === "none" ? "Ouvrir la conversation" : "Voir la story"}
+        accessibilityLabel={ring === "none" ? tr("Ouvrir la conversation") : tr("Voir la story")}
         onPress={() => {
           if (ring !== "none" && peer) push({ name: "stories", userId: peer.id });
           else onOpen();
@@ -489,7 +492,7 @@ function ChatRow({
           </Text>
           {shop ? (
             <View style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: colors.accent }}>Professionnel</Text>
+              <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: colors.accent }}>{tr("Professionnel")}</Text>
             </View>
           ) : null}
           {peer && !shop ? <WippBadge badge={peer.badge} size={14} /> : null}
@@ -593,9 +596,9 @@ export function RequestsScreen() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
         {!live && __DEV__ ? (
           <Press onPress={() => push({ name: "touch-incoming" })} style={{ marginBottom: 12, minHeight: 48, borderRadius: 12, backgroundColor: colors.surface, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 14, color: colors.fg }}>Demande WIPP Touch reçue</Text>
+            <Text style={{ fontSize: 14, color: colors.fg }}>{tr("Demande WIPP Touch reçue")}</Text>
             <View style={{ borderRadius: 999, backgroundColor: whiteA(0.1), paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 11, color: colors.muted }}>Démo</Text>
+              <Text style={{ fontSize: 11, color: colors.muted }}>{tr("Démo")}</Text>
             </View>
           </Press>
         ) : null}
@@ -618,14 +621,14 @@ export function RequestsScreen() {
           const first = r.invisible ? (u?.displayName ?? "").split(" ")[0] || u?.username : u?.displayName;
           return (
             <View key={r.id} style={{ marginBottom: 12, borderRadius: 12, backgroundColor: colors.surface, padding: 16 }}>
-              {r.invisible ? <Text style={{ marginBottom: 10, fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }}>Demande reçue (mode Invisible)</Text> : null}
+              {r.invisible ? <Text style={{ marginBottom: 10, fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tr("Demande reçue (mode Invisible)")}</Text> : null}
               <View style={{ flexDirection: "row", gap: 12 }}>
                 {r.invisible ? <InvisibleAvatar size={52} ring={r.ring} /> : <Avatar user={u} size={48} />}
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={{ fontFamily: "Inter_500Medium", color: colors.fg }}>{first}</Text>
                   <Text style={{ fontSize: 13, color: colors.muted }}>@{u?.username}</Text>
                   <Text style={{ marginTop: 8, fontSize: 14, color: r.nearby ? colors.fg : colors.muted, fontFamily: r.nearby ? "Inter_600SemiBold" : undefined }}>{r.preview}</Text>
-                  {r.invisible ? <Text style={{ marginTop: 2, fontSize: 13, color: colors.muted }}>Cet utilisateur utilise le mode Invisible.</Text> : null}
+                  {r.invisible ? <Text style={{ marginTop: 2, fontSize: 13, color: colors.muted }}>{tr("Cet utilisateur utilise le mode Invisible.")}</Text> : null}
                 </View>
               </View>
               <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -640,23 +643,23 @@ export function RequestsScreen() {
                   />
                 </View>
                 <View style={{ flexGrow: 1, minWidth: 70 }}>
-                  <Btn label="Refuser" variant="secondary" onPress={() => declineRequest(r.id)} style={{ height: 40 }} />
+                  <Btn label={tr("Refuser")} variant="secondary" onPress={() => declineRequest(r.id)} style={{ height: 40 }} />
                 </View>
                 <View style={{ flexGrow: 1, minWidth: 70 }}>
                   <Btn label={t("ignore")} variant="secondary" onPress={() => ignoreRequest(r.id)} style={{ height: 40 }} />
                 </View>
                 <View style={{ flexGrow: 1, minWidth: 70 }}>
-                  <Btn label="Bloquer" variant="danger" onPress={() => blockUser(r.fromId)} style={{ height: 40 }} />
+                  <Btn label={tr("Bloquer")} variant="danger" onPress={() => blockUser(r.fromId)} style={{ height: 40 }} />
                 </View>
               </View>
             </View>
           );
         })}
       </ScrollView>
-      <Sheet open={Boolean(accepting)} title="Comment voulez-vous vous connecter ?" onClose={() => setAccepting(null)}>
+      <Sheet open={Boolean(accepting)} title={tr("Comment voulez-vous vous connecter ?")} onClose={() => setAccepting(null)}>
         <ConnectionChoicePicker value={choice} onChange={setChoice} />
         <Btn
-          label={choice ? `Se connecter · ${choice.type === "permanent" ? "Permanent" : "Éphémère"}` : "Choisis une durée valide"}
+          label={choice ? tr("Se connecter · {0}", choice.type === "permanent" ? tr("Permanent") : tr("Éphémère")) : tr("Choisis une durée valide")}
           disabled={!choice}
           style={{ marginTop: 16 }}
           onPress={() => {
@@ -763,20 +766,20 @@ export function ArchivesScreen() {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Archives" onBack={pop} />
+        <Header title={tr("Archives")} onBack={pop} />
       </GlassHeader>
       <ScrollView>
         {chats.length === 0 ? <Empty title={t("chatsEmpty")} /> : chats.map((c) => {
           const peer = c.type === "group" ? undefined : chatPeer(c, users);
-          const title = c.type === "group" ? c.name ?? "Groupe" : peer?.displayName ?? "Conversation";
+          const title = c.type === "group" ? c.name ?? tr("Groupe") : peer?.displayName ?? tr("Conversation");
           return (
             <Press
               key={c.id}
               onPress={() => push({ name: "conversation", chatId: c.id })}
               onLongPress={() =>
                 Alert.alert(title, undefined, [
-                  { text: "Désarchiver", onPress: () => useWippStore.getState().archiveChat(c.id, false) },
-                  { text: "Annuler", style: "cancel" },
+                  { text: tr("Désarchiver"), onPress: () => useWippStore.getState().archiveChat(c.id, false) },
+                  { text: tr("Annuler"), style: "cancel" },
                 ])
               }
               style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}
@@ -788,7 +791,7 @@ export function ArchivesScreen() {
                   <Text style={{ fontSize: 12, color: colors.muted }}>{formatChatTime(c.lastAt, lang)}</Text>
                 </View>
                 <Text numberOfLines={1} style={{ marginTop: 2, color: colors.muted, fontSize: 14 }}>
-                  {isChatLocked(c.id) ? "Conversation verrouillée" : c.preview}
+                  {isChatLocked(c.id) ? tr("Conversation verrouillée") : c.preview}
                 </Text>
               </View>
             </Press>
@@ -823,7 +826,7 @@ function GroupGrid({
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
             <Plus size={26} color={colors.accentFg} />
           </View>
-          <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>Créer un groupe</Text>
+          <Text style={{ color: colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{tr("Créer un groupe")}</Text>
         </Press>
       </View>
       {groups.map((g) => {
@@ -844,7 +847,7 @@ function GroupGrid({
               </View>
               <Text numberOfLines={2} style={{ marginTop: 10, color: colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{g.name}</Text>
               <Text numberOfLines={1} style={{ marginTop: 2, color: colors.muted, fontSize: 11 }}>
-                {g.participantIds.length} membre{g.participantIds.length > 1 ? "s" : ""}
+                {g.participantIds.length} {tr("membre")}{g.participantIds.length > 1 ? "s" : ""}
               </Text>
             </Press>
           </View>
@@ -871,7 +874,7 @@ export function MyGroupsScreen() {
       <ScrollView contentContainerStyle={{ paddingVertical: 12, paddingBottom: 40 }}>
         <GroupGrid groups={groups} users={users} onOpen={(id) => push({ name: "conversation", chatId: id })} onCreate={() => push({ name: "new-group" })} onInfo={(id) => push({ name: "chat-info", chatId: id })} />
         {groups.length === 0 ? (
-          <Text style={{ marginTop: 16, color: colors.muted, textAlign: "center", paddingHorizontal: 24 }}>Tu n’as pas encore de groupe. Crée le premier !</Text>
+          <Text style={{ marginTop: 16, color: colors.muted, textAlign: "center", paddingHorizontal: 24 }}>{tr("Tu n’as pas encore de groupe. Crée le premier !")}</Text>
         ) : null}
       </ScrollView>
     </ScreenRoot>
@@ -929,6 +932,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const [editDesc, setEditDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [fresh, setFresh] = useState<{ motto?: string; bio?: string } | null>(null);
+  const [socials, setSocials] = useState<Socials | null>(null);
   const [card, setCard] = useState<BusinessCardView | null>(null);
 
   // Fresh public data (phrase, bio) and the person's business card, if published.
@@ -943,6 +947,9 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
         .catch(() => undefined);
     }
     if (peer.id.startsWith("srvuser:")) {
+      void loadSocials(peer.id).then((s) => {
+        if (!off) setSocials(s);
+      });
       void getBusinessCardOfOwner(peer.id)
         .then((c) => {
           if (!off) setCard(c);
@@ -979,7 +986,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
       await refresh();
       setEditOpen(false);
     } catch {
-      Alert.alert("Groupe", "Modification impossible pour le moment.");
+      Alert.alert(tr("Groupe"), tr("Modification impossible pour le moment."));
     } finally {
       setBusy(false);
     }
@@ -1000,15 +1007,15 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
       }
       await refresh();
     } catch {
-      Alert.alert("Photo du groupe", "Impossible de changer la photo pour le moment.");
+      Alert.alert(tr("Photo du groupe"), tr("Impossible de changer la photo pour le moment."));
     }
   }
 
   function groupPhotoMenu() {
-    Alert.alert("Photo du groupe", undefined, [
-      { text: "Choisir une photo", onPress: () => void changeGroupPhoto(false) },
-      ...(chat?.avatar ? [{ text: "Supprimer la photo", style: "destructive" as const, onPress: () => void changeGroupPhoto(true) }] : []),
-      { text: "Annuler", style: "cancel" as const },
+    Alert.alert(tr("Photo du groupe"), undefined, [
+      { text: tr("Choisir une photo"), onPress: () => void changeGroupPhoto(false) },
+      ...(chat?.avatar ? [{ text: tr("Supprimer la photo"), style: "destructive" as const, onPress: () => void changeGroupPhoto(true) }] : []),
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
@@ -1018,46 +1025,46 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
     const memberIsAdmin = (chat.adminIds ?? []).includes(id);
     const raw = chat.id.slice(4);
     Alert.alert(u.displayName, `@${u.username}`, [
-      { text: "Voir le profil", onPress: () => push({ name: "found-profile", userId: id }) },
-      ...(u.connected ? [{ text: "Envoyer un message", onPress: () => openOrCreateDm(id) }] : []),
+      { text: tr("Voir le profil"), onPress: () => push({ name: "found-profile", userId: id }) },
+      ...(u.connected ? [{ text: tr("Envoyer un message"), onPress: () => openOrCreateDm(id) }] : []),
       ...(isAdmin
         ? [
             {
-              text: memberIsAdmin ? "Retirer des admins" : "Nommer admin",
+              text: memberIsAdmin ? tr("Retirer des admins") : tr("Nommer admin"),
               onPress: () =>
                 void import("../lib/lot7/api")
                   .then(({ setGroupAdmin }) => setGroupAdmin(raw, id, !memberIsAdmin))
                   .then(refresh)
-                  .catch(() => Alert.alert("Groupe", "Action impossible.")),
+                  .catch(() => Alert.alert(tr("Groupe"), tr("Action impossible."))),
             },
             {
-              text: "Retirer du groupe",
+              text: tr("Retirer du groupe"),
               style: "destructive" as const,
               onPress: () =>
-                Alert.alert("Retirer du groupe", `Retirer ${u.displayName} du groupe ?`, [
-                  { text: "Annuler", style: "cancel" },
+                Alert.alert(tr("Retirer du groupe"), tr("Retirer {0} du groupe ?", u.displayName), [
+                  { text: tr("Annuler"), style: "cancel" },
                   {
-                    text: "Retirer",
+                    text: tr("Retirer"),
                     style: "destructive",
                     onPress: () =>
                       void import("../lib/lot7/api")
                         .then(({ removeGroupMember }) => removeGroupMember(raw, id))
-                        .then((r) => (r === "is_owner" ? Alert.alert("Groupe", "Le créateur du groupe ne peut pas être retiré.") : refresh()))
-                        .catch(() => Alert.alert("Groupe", "Action impossible.")),
+                        .then((r) => (r === "is_owner" ? Alert.alert(tr("Groupe"), tr("Le créateur du groupe ne peut pas être retiré.")) : refresh()))
+                        .catch(() => Alert.alert(tr("Groupe"), tr("Action impossible."))),
                   },
                 ]),
             },
           ]
         : []),
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
   function leaveGroup() {
-    Alert.alert("Quitter le groupe", `Quitter « ${chat?.name ?? "ce groupe"} » ? Tu ne recevras plus ses messages.`, [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(tr("Quitter le groupe"), tr("Quitter « {0} » ? Tu ne recevras plus ses messages.", chat?.name ?? "ce groupe"), [
+      { text: tr("Annuler"), style: "cancel" },
       {
-        text: "Quitter",
+        text: tr("Quitter"),
         style: "destructive",
         onPress: () =>
           void import("../lib/lot7/api")
@@ -1066,7 +1073,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               useWippStore.setState((s) => ({ chats: s.chats.filter((c) => c.id !== chatId) }));
               useWippStore.getState().goTab("chats");
             })
-            .catch(() => Alert.alert("Groupe", "Impossible de quitter le groupe pour le moment.")),
+            .catch(() => Alert.alert(tr("Groupe"), tr("Impossible de quitter le groupe pour le moment."))),
       },
     ]);
   }
@@ -1077,7 +1084,8 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   const localShop = peer ? shops.find((sh) => sh.ownerId === peer.id) : undefined;
   const members = chat.participantIds.filter((id) => id !== "me").map((id) => users[id]);
   const theme = CHAT_THEMES.find((t) => t.id === (themeId ?? "default")) ?? CHAT_THEMES[0];
-  const disappearLabel = DISAPPEAR_OPTIONS.find(([, ms]) => ms === (chat.disappearAfterMs ?? 0))?.[0] ?? "Désactivés";
+  const disappearLabelFr = DISAPPEAR_OPTIONS.find(([, ms]) => ms === (chat.disappearAfterMs ?? 0))?.[0] ?? "Désactivés";
+  const disappearLabel = tr(disappearLabelFr);
   const conn = chat.connection;
   const call = (kind: "audio" | "video") =>
     push({ name: "active-call", userId: group ? chat.id : peer!.id, kind, dir: "out", group, chatId: group ? chat.id : undefined });
@@ -1085,7 +1093,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title={group ? "Infos du groupe" : "Infos du contact"} onBack={pop} />
+        <Header title={group ? tr("Infos du groupe") : tr("Infos du contact")} onBack={pop} />
       </GlassHeader>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Same card as my own profile (Moi): photo on the left, name + badge, @pseudo, city, phrase, bio. */}
@@ -1094,7 +1102,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Press
                 disabled={group ? !canEdit : !profile?.avatar}
-                accessibilityLabel={group ? (canEdit ? "Modifier la photo du groupe" : "Photo du groupe") : "Voir la photo"}
+                accessibilityLabel={group ? (canEdit ? tr("Modifier la photo du groupe") : tr("Photo du groupe")) : tr("Voir la photo")}
                 onPress={() => {
                   if (group) return groupPhotoMenu();
                   const src = profile?.avatar ? wippSrc(profile.avatar) : undefined;
@@ -1117,8 +1125,8 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                 </View>
                 {group ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>
-                    {gs ? (gs.visibility === "public" ? "Groupe public" : "Groupe privé") : "Groupe"} · {chat.participantIds.length} membres
-                    {gs?.category ? ` · ${gs.category}` : ""}
+                    {gs ? (gs.visibility === "public" ? tr("Groupe public") : tr("Groupe privé")) : tr("Groupe")} · {chat.participantIds.length} {tr("membres")}
+                    {gs?.category ? ` · ${tr(gs.category)}` : ""}
                   </Text>
                 ) : profile?.username ? (
                   <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{profile.username}</Text>
@@ -1130,6 +1138,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                   </View>
                 ) : null}
               </View>
+              {!group ? <SocialIcons socials={socials} size={26} style={{ maxWidth: 96, justifyContent: "flex-end", paddingTop: 2 }} /> : null}
             </View>
             {!group && profile?.motto ? (
               <View style={{ alignSelf: "flex-end", maxWidth: "80%", marginTop: 6, transform: [{ rotate: "-4deg" }] }}>
@@ -1155,17 +1164,17 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                 style={{ alignSelf: "flex-start", marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}
               >
                 <Pencil size={13} color={colors.accent} />
-                <Text style={{ fontSize: 13, color: colors.accent }}>{chat.description ? "Modifier le groupe" : "Modifier le nom · Ajouter une description"}</Text>
+                <Text style={{ fontSize: 13, color: colors.accent }}>{chat.description ? tr("Modifier le groupe") : tr("Modifier le nom · Ajouter une description")}</Text>
               </Press>
             ) : null}
             <View style={{ marginTop: 12, flexDirection: "row", gap: 6 }}>
               <Press onPress={() => call("audio")} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <Phone size={14} color={colors.paper} />
-                <Text style={{ fontSize: 11, color: colors.paper }}>Audio</Text>
+                <Text style={{ fontSize: 11, color: colors.paper }}>{tr("Audio")}</Text>
               </Press>
               <Press onPress={() => call("video")} style={{ flex: 1, height: 40, borderRadius: 999, borderWidth: 1, borderColor: fgA(0.2), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <Video size={14} color={colors.paper} />
-                <Text style={{ fontSize: 11, color: colors.paper }}>Vidéo</Text>
+                <Text style={{ fontSize: 11, color: colors.paper }}>{tr("Vidéo")}</Text>
               </Press>
               {!group && profile?.username ? (
                 <Press
@@ -1173,12 +1182,12 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                   style={{ flex: 1, height: 40, borderRadius: 999, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
                   <Share2 size={14} color={colors.accentFg} />
-                  <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Partager</Text>
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>{tr("Partager")}</Text>
                 </Press>
               ) : (
                 <Press onPress={() => push({ name: "global-search" })} style={{ flex: 1, height: 40, borderRadius: 999, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   <Search size={14} color={colors.accentFg} />
-                  <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>Rechercher</Text>
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.accentFg }}>{tr("Rechercher")}</Text>
                 </Press>
               )}
             </View>
@@ -1194,7 +1203,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               {card?.logoUrl ? <Image source={{ uri: card.logoUrl }} style={{ width: 44, height: 44 }} contentFit="cover" /> : <Store size={20} color={colors.accent} />}
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 12, color: colors.muted }}>{card ? `Carte de visite de ${firstName}` : `Entreprise de ${firstName}`}</Text>
+              <Text style={{ fontSize: 12, color: colors.muted }}>{card ? tr("Carte de visite de {0}", firstName) : tr("Entreprise de {0}", firstName)}</Text>
               <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{card?.name ?? localShop?.name}</Text>
               {card?.category || localShop?.category ? (
                 <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{card?.category ?? String(localShop?.category ?? "")}</Text>
@@ -1206,7 +1215,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
 
         <View style={{ marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, backgroundColor: colors.surface }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ flex: 1, fontSize: 15, color: colors.fg }}>Médias et documents</Text>
+            <Text style={{ flex: 1, fontSize: 15, color: colors.fg }}>{tr("Médias et documents")}</Text>
             <Text style={{ fontSize: 13, color: colors.muted }}>{media.length + docs}</Text>
           </View>
           {media.length ? (
@@ -1218,39 +1227,39 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
               ))}
             </ScrollView>
           ) : (
-            <Text style={{ marginTop: 6, fontSize: 13, color: colors.muted }}>Aucune photo ni vidéo partagée pour l’instant.</Text>
+            <Text style={{ marginTop: 6, fontSize: 13, color: colors.muted }}>{tr("Aucune photo ni vidéo partagée pour l’instant.")}</Text>
           )}
-          {docs ? <Text style={{ marginTop: 8, fontSize: 13, color: colors.muted }}>{docs} document{docs > 1 ? "s" : ""}</Text> : null}
+          {docs ? <Text style={{ marginTop: 8, fontSize: 13, color: colors.muted }}>{docs} {tr("document")}{docs > 1 ? "s" : ""}</Text> : null}
         </View>
 
         <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
-          <Row icon={<Pin size={18} color={colors.fg} />} label="Épingler la discussion" trailing={<Toggle value={Boolean(chat.pinned)} onChange={(v) => pinChat(chatId, v)} />} />
-          <Row icon={<BellOff size={18} color={colors.fg} />} label="Mettre en sourdine" trailing={<Toggle value={Boolean(chat.muted)} onChange={(v) => setMute(chatId, v ? "always" : "off")} />} />
+          <Row icon={<Pin size={18} color={colors.fg} />} label={tr("Épingler la discussion")} trailing={<Toggle value={Boolean(chat.pinned)} onChange={(v) => pinChat(chatId, v)} />} />
+          <Row icon={<BellOff size={18} color={colors.fg} />} label={tr("Mettre en sourdine")} trailing={<Toggle value={Boolean(chat.muted)} onChange={(v) => setMute(chatId, v ? "always" : "off")} />} />
           <Row
             icon={<Palette size={18} color={colors.fg} />}
-            label="Thème de la discussion"
+            label={tr("Thème de la discussion")}
             value={theme.label}
             onPress={() => setSheet("theme")}
           />
-          {!group ? <Row icon={<Clock size={18} color={colors.fg} />} label="Messages éphémères" value={disappearLabel} onPress={() => setSheet("disappear")} /> : null}
+          {!group ? <Row icon={<Clock size={18} color={colors.fg} />} label={tr("Messages éphémères")} value={disappearLabel} onPress={() => setSheet("disappear")} /> : null}
           {group ? (
             <Row
               icon={<Clock size={18} color={colors.fg} />}
-              label="Messages éphémères"
+              label={tr("Messages éphémères")}
               value={disappearLabel}
               onPress={isAdmin ? () => push({ name: "group-settings", chatId }) : undefined}
             />
           ) : null}
-          {isAdmin ? <Row icon={<ShieldCheck size={18} color={colors.fg} />} label="Autorisations du groupe" onPress={() => push({ name: "group-settings", chatId })} /> : null}
+          {isAdmin ? <Row icon={<ShieldCheck size={18} color={colors.fg} />} label={tr("Autorisations du groupe")} onPress={() => push({ name: "group-settings", chatId })} /> : null}
           <Row
             icon={<Lock size={18} color={colors.fg} />}
-            label={isChatLocked(chatId) ? "Déverrouiller la conversation" : "Verrouiller la conversation"}
-            value={isChatLocked(chatId) ? "Activé" : undefined}
+            label={isChatLocked(chatId) ? tr("Déverrouiller la conversation") : tr("Verrouiller la conversation")}
+            value={isChatLocked(chatId) ? tr("Activé") : undefined}
             onPress={() => toggleChatLock(chatId, infoLock.askPin)}
           />
           <Row
             icon={<ShieldCheck size={18} color={colors.fg} />}
-            label="Chiffrement de bout en bout"
+            label={tr("Chiffrement de bout en bout")}
             onPress={() => push({ name: "e2e-info", chatId })}
           />
         </View>
@@ -1258,12 +1267,12 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
         {group ? (
           <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
             <Text style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, fontSize: 13, color: colors.muted }}>
-              {chat.participantIds.length} membre{chat.participantIds.length > 1 ? "s" : ""}
+              {chat.participantIds.length} {tr("membre")}{chat.participantIds.length > 1 ? "s" : ""}
             </Text>
-            {canAdd ? <Row icon={<UserPlus size={18} color={colors.accent} />} label="Ajouter des membres" onPress={() => push({ name: "group-add", chatId })} /> : null}
-            {canInvite ? <Row icon={<Link2 size={18} color={colors.accent} />} label="Inviter via un lien ou un QR" onPress={() => push({ name: "group-qr", chatId })} /> : null}
+            {canAdd ? <Row icon={<UserPlus size={18} color={colors.accent} />} label={tr("Ajouter des membres")} onPress={() => push({ name: "group-add", chatId })} /> : null}
+            {canInvite ? <Row icon={<Link2 size={18} color={colors.accent} />} label={tr("Inviter via un lien ou un QR")} onPress={() => push({ name: "group-qr", chatId })} /> : null}
             {isAdmin && pendingJoins > 0 ? (
-              <Row icon={<UserPlus size={18} color={colors.danger} />} label="Demandes d’adhésion" value={String(pendingJoins)} onPress={() => push({ name: "group-requests", chatId })} />
+              <Row icon={<UserPlus size={18} color={colors.danger} />} label={tr("Demandes d’adhésion")} value={String(pendingJoins)} onPress={() => push({ name: "group-requests", chatId })} />
             ) : null}
             {[...chat.participantIds]
               .sort((a, b) => (a === "me" ? -1 : b === "me" ? 1 : Number((chat.adminIds ?? []).includes(b)) - Number((chat.adminIds ?? []).includes(a))))
@@ -1279,12 +1288,12 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
                   >
                     <Avatar user={u} size={40} />
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15 }}>{id === "me" ? "Toi" : u?.displayName}</Text>
+                      <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15 }}>{id === "me" ? tr("Toi") : u?.displayName}</Text>
                       {u?.username ? <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12 }}>@{u.username}</Text> : null}
                     </View>
                     {admin ? (
                       <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.accentSoft }}>
-                        <Text style={{ fontSize: 11, color: colors.accent, fontFamily: "Inter_600SemiBold" }}>Admin</Text>
+                        <Text style={{ fontSize: 11, color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{tr("Admin")}</Text>
                       </View>
                     ) : null}
                   </Press>
@@ -1297,25 +1306,25 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
             <Row
               icon={<Flag size={18} color={colors.danger} />}
-              label="Signaler le groupe"
+              label={tr("Signaler le groupe")}
               danger
               onPress={() =>
-                Alert.alert("Signaler le groupe", "Veux-tu aussi quitter le groupe ?", [
-                  { text: "Signaler et quitter", style: "destructive", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, true) },
-                  { text: "Signaler seulement", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, false) },
-                  { text: "Annuler", style: "cancel" },
+                Alert.alert(tr("Signaler le groupe"), tr("Veux-tu aussi quitter le groupe ?"), [
+                  { text: tr("Signaler et quitter"), style: "destructive", onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, true) },
+                  { text: tr("Signaler seulement"), onPress: () => reportGroupFlow(chatId, chatId.slice(4), chat.name, false) },
+                  { text: tr("Annuler"), style: "cancel" },
                 ])
               }
             />
-            <Row icon={<LogOut size={18} color={colors.danger} />} label="Quitter le groupe" danger onPress={leaveGroup} />
+            <Row icon={<LogOut size={18} color={colors.danger} />} label={tr("Quitter le groupe")} danger onPress={leaveGroup} />
           </View>
         ) : null}
 
         {!group && conn ? (
           <Text style={{ marginHorizontal: 16, marginTop: 10, fontSize: 12, color: colors.muted }}>
             {conn.type === "ephemeral" && conn.expiresAt
-              ? `⏳ Contact éphémère · expire dans ${remainingLabel(conn.expiresAt)}`
-              : "♾️ Contact permanent"}
+              ? tr("⏳ Contact éphémère · expire dans {0}", remainingLabel(conn.expiresAt))
+              : tr("♾️ Contact permanent")}
           </Text>
         ) : null}
 
@@ -1323,13 +1332,13 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
           <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface }}>
             <Row
               icon={<Ban size={18} color={colors.danger} />}
-              label={`Bloquer ${peer.displayName.split(" ")[0] || "@" + peer.username}`}
+              label={tr("Bloquer {0}", peer.displayName.split(" ")[0] || "@" + peer.username)}
               danger
               onPress={() =>
-                Alert.alert("Bloquer", `${peer.displayName} ne pourra plus vous contacter.`, [
-                  { text: "Annuler", style: "cancel" },
+                Alert.alert(tr("Bloquer"), tr("{0} ne pourra plus vous contacter.", peer.displayName), [
+                  { text: tr("Annuler"), style: "cancel" },
                   {
-                    text: "Bloquer",
+                    text: tr("Bloquer"),
                     style: "destructive",
                     onPress: () => {
                       blockUser(peer.id);
@@ -1341,24 +1350,24 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             />
             <Row
               icon={<Flag size={18} color={colors.danger} />}
-              label="Signaler"
+              label={tr("Signaler")}
               danger
               onPress={() =>
-                Alert.alert("Signaler ce profil", "Seuls le profil et la raison sont envoyés à la modération, jamais vos messages.", [
+                Alert.alert(tr("Signaler ce profil"), tr("Seuls le profil et la raison sont envoyés à la modération, jamais vos messages."), [
                   ...["Contenu inapproprié", "Harcèlement", "Spam ou arnaque", "Faux profil", "Autre"].map((reason) => ({
-                    text: reason,
+                    text: tr(reason),
                     onPress: () => {
                       void import("../lib/safety")
                         .then(({ submitContentReport }) =>
                           submitContentReport({ contentType: "profile", contentId: peer.id.replace(/^srvuser:/, ""), targetProfileId: peer.id, reason }),
                         )
                         .then(
-                          () => Alert.alert("Signalement", "Signalement envoyé."),
-                          () => Alert.alert("Signalement", "Signalement impossible pour le moment."),
+                          () => Alert.alert(tr("Signalement"), tr("Signalement envoyé.")),
+                          () => Alert.alert(tr("Signalement"), tr("Signalement impossible pour le moment.")),
                         );
                     },
                   })),
-                  { text: "Annuler", style: "cancel" as const },
+                  { text: tr("Annuler"), style: "cancel" as const },
                 ])
               }
             />
@@ -1367,8 +1376,8 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
       </ScrollView>
 
       {infoLock.gate}
-      <Sheet open={sheet === "theme"} title="Thème de la discussion" onClose={() => setSheet(null)}>
-        <Text style={{ marginBottom: 12, fontSize: 13, color: colors.muted }}>La couleur de vos bulles, sur ce téléphone uniquement.</Text>
+      <Sheet open={sheet === "theme"} title={tr("Thème de la discussion")} onClose={() => setSheet(null)}>
+        <Text style={{ marginBottom: 12, fontSize: 13, color: colors.muted }}>{tr("La couleur de vos bulles, sur ce téléphone uniquement.")}</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14 }}>
           {CHAT_THEMES.map((t) => {
             const on = (themeId ?? "default") === t.id;
@@ -1384,38 +1393,38 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
         </View>
       </Sheet>
 
-      <Sheet open={sheet === "disappear"} title="Messages éphémères" onClose={() => setSheet(null)}>
+      <Sheet open={sheet === "disappear"} title={tr("Messages éphémères")} onClose={() => setSheet(null)}>
         {DISAPPEAR_OPTIONS.map(([label, ms]) => {
           const on = (chat.disappearAfterMs ?? 0) === ms;
           return (
             <Press key={label} onPress={() => { setDisappear(chatId, ms); setSheet(null); }} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14 }}>
-              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : colors.fg }}>{label}</Text>
+              <Text style={{ flex: 1, fontSize: 15, color: on ? colors.accent : colors.fg }}>{tr(label)}</Text>
               {on ? <Check size={18} color={colors.accent} /> : null}
             </Press>
           );
         })}
       </Sheet>
 
-      <Sheet open={editOpen} title="Modifier le groupe" onClose={() => setEditOpen(false)}>
-        <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 6 }}>Nom du groupe</Text>
+      <Sheet open={editOpen} title={tr("Modifier le groupe")} onClose={() => setEditOpen(false)}>
+        <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 6 }}>{tr("Nom du groupe")}</Text>
         <TextInput
           value={editName}
           onChangeText={(v) => setEditName(v.slice(0, 80))}
-          placeholder="Nom du groupe"
+          placeholder={tr("Nom du groupe")}
           placeholderTextColor={colors.muted}
           style={{ height: 46, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14, fontSize: 15 }}
         />
-        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 14, marginBottom: 6 }}>Description (facultative)</Text>
+        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 14, marginBottom: 6 }}>{tr("Description (facultative)")}</Text>
         <TextInput
           value={editDesc}
           onChangeText={(v) => setEditDesc(v.slice(0, 500))}
-          placeholder="Règles, sujet du groupe…"
+          placeholder={tr("Règles, sujet du groupe…")}
           placeholderTextColor={colors.muted}
           multiline
           style={{ minHeight: 90, maxHeight: 180, borderRadius: 12, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 14, paddingTop: 12, fontSize: 15, textAlignVertical: "top" }}
         />
         <Text style={{ alignSelf: "flex-end", marginTop: 4, fontSize: 11, color: colors.muted }}>{editDesc.length}/500</Text>
-        <Btn label={busy ? "Enregistrement…" : "Enregistrer"} disabled={busy || !editName.trim()} onPress={() => void saveGroupInfo()} style={{ marginTop: 12 }} />
+        <Btn label={busy ? tr("Enregistrement…") : tr("Enregistrer")} disabled={busy || !editName.trim()} onPress={() => void saveGroupInfo()} style={{ marginTop: 12 }} />
       </Sheet>
 
       {viewer ? <MediaViewer items={viewer.items} start={viewer.start} onClose={() => setViewer(null)} /> : null}
@@ -1442,7 +1451,7 @@ export function PrivateChatsScreen() {
     <ScreenRoot>
       <GlassHeader>
         <Header
-          title="WIPP Privé 🔒"
+          title={tr("WIPP Privé 🔒")}
           onBack={() => {
             lockPrivateSession();
             pop();
@@ -1451,17 +1460,17 @@ export function PrivateChatsScreen() {
       </GlassHeader>
       <ScrollView>
         {chats.length === 0 ? (
-          <Empty title="Aucune conversation privée" />
+          <Empty title={tr("Aucune conversation privée")} />
         ) : (
           chats.map((c) => (
             <Press
               key={c.id}
               onPress={() => push({ name: "conversation", chatId: c.id })}
               onLongPress={() => {
-                Alert.alert("WIPP Privé", "Retirer de WIPP Privé ?", [
-                  { text: "Annuler", style: "cancel" },
+                Alert.alert(tr("WIPP Privé"), tr("Retirer de WIPP Privé ?"), [
+                  { text: tr("Annuler"), style: "cancel" },
                   {
-                    text: "Retirer",
+                    text: tr("Retirer"),
                     onPress: () => {
                       void unlockChatFromPrivate(c.id, askPin);
                     },
@@ -1513,12 +1522,12 @@ function ResumeLiveButton() {
   if (!live) return null;
   return (
     <Press
-      accessibilityLabel="Reprendre le live"
+      accessibilityLabel={tr("Reprendre le live")}
       onPress={() => push({ name: "event-live", eventId: live.eventId })}
       style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 32, paddingHorizontal: 11, marginRight: 4, borderRadius: 16, backgroundColor: "#e5383b" }}
     >
       <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#fff" }} />
-      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" }}>Reprendre le live</Text>
+      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" }}>{tr("Reprendre le live")}</Text>
     </Press>
   );
 }

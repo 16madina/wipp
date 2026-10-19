@@ -6,6 +6,7 @@ import { Press } from "./ui";
 import { colors } from "../theme";
 import { useWippStore } from "../lib/store";
 import type { GroupSafety } from "../lib/lot7/api";
+import { tr } from "../lib/tr";
 
 export const GROUP_REPORT_REASONS = ["Spam ou arnaque", "Harcèlement", "Contenu inapproprié", "Je ne connais pas ce groupe", "Autre"] as const;
 
@@ -33,11 +34,11 @@ async function dismiss(serverId: string) {
  */
 export function reportGroupFlow(chatId: string, serverId: string, name: string | undefined, leave: boolean) {
   Alert.alert(
-    leave ? "Signaler et quitter" : "Signaler le groupe",
-    `${leave ? `Tu vas quitter « ${name ?? "ce groupe"} ». ` : ""}Seuls le groupe et la raison sont envoyés à la modération, jamais les messages.`,
+    leave ? tr("Signaler et quitter") : tr("Signaler le groupe"),
+    tr("{0}Seuls le groupe et la raison sont envoyés à la modération, jamais les messages.", leave ? tr("Tu vas quitter « {0} ». ", name ?? "ce groupe") : ""),
     [
       ...GROUP_REPORT_REASONS.map((reason) => ({
-        text: reason,
+        text: tr(reason),
         onPress: () => {
           void import("../lib/lot7/api")
             .then(({ reportGroup }) => reportGroup(serverId, reason, leave))
@@ -47,16 +48,16 @@ export function reportGroupFlow(chatId: string, serverId: string, name: string |
                   void dismiss(serverId);
                   useWippStore.setState((s) => ({ chats: s.chats.filter((c) => c.id !== chatId) }));
                   useWippStore.getState().goTab("chats");
-                  Alert.alert("Signalement", "Groupe signalé. Tu as quitté le groupe.");
+                  Alert.alert(tr("Signalement"), tr("Groupe signalé. Tu as quitté le groupe."));
                 } else {
-                  Alert.alert("Signalement", "Groupe signalé. Merci, la modération va vérifier.");
+                  Alert.alert(tr("Signalement"), tr("Groupe signalé. Merci, la modération va vérifier."));
                 }
               },
-              () => Alert.alert("Signalement", "Signalement impossible pour le moment."),
+              () => Alert.alert(tr("Signalement"), tr("Signalement impossible pour le moment.")),
             );
         },
       })),
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Annuler"), style: "cancel" as const },
     ],
   );
 }
@@ -83,17 +84,17 @@ export function GroupSafetyBanner({ chatId, serverId, name }: { chatId: string; 
   }, [serverId]);
 
   if (!info) return null;
-  const who = info.username ? `@${info.username}` : info.displayName || "Quelqu’un";
+  const who = info.username ? `@${info.username}` : info.displayName || tr("Quelqu’un");
   return (
     <View style={{ marginHorizontal: 12, marginTop: 8, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: info.isContact ? colors.hair : colors.danger, padding: 14 }}>
       <View style={{ flexDirection: "row", gap: 10 }}>
         <ShieldAlert size={20} color={info.isContact ? colors.accent : colors.danger} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{who} t’a ajouté à ce groupe</Text>
+          <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{who} {tr("t’a ajouté à ce groupe")}</Text>
           <Text style={{ marginTop: 3, color: colors.muted, fontSize: 12.5, lineHeight: 17 }}>
             {info.isContact
-              ? "Tu ne veux pas faire partie de ce groupe ? Tu peux le signaler et le quitter."
-              : "Cette personne n’est pas dans tes contacts. Si ce groupe ne te dit rien, signale-le et quitte-le."}
+              ? tr("Tu ne veux pas faire partie de ce groupe ? Tu peux le signaler et le quitter.")
+              : tr("Cette personne n’est pas dans tes contacts. Si ce groupe ne te dit rien, signale-le et quitte-le.")}
           </Text>
         </View>
       </View>
@@ -102,7 +103,7 @@ export function GroupSafetyBanner({ chatId, serverId, name }: { chatId: string; 
           onPress={() => reportGroupFlow(chatId, serverId, name, true)}
           style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.danger }}
         >
-          <Text style={{ color: colors.danger, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Signaler et quitter</Text>
+          <Text style={{ color: colors.danger, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{tr("Signaler et quitter")}</Text>
         </Press>
         <Press
           onPress={() => {
@@ -111,7 +112,7 @@ export function GroupSafetyBanner({ chatId, serverId, name }: { chatId: string; 
           }}
           style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12, backgroundColor: colors.accent }}
         >
-          <Text style={{ color: colors.accentFg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Rester</Text>
+          <Text style={{ color: colors.accentFg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{tr("Rester")}</Text>
         </Press>
       </View>
     </View>

@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { Platform } from "react-native";
 import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
 import { SUPABASE_ANON_KEY } from "./firebase-config";
@@ -23,7 +24,7 @@ export async function uploadFileToStorage(
     const body = await (await fetch(uri)).blob();
     onProgress?.(0, body.size);
     const res = await fetch(endpoint, { method: "POST", headers, body });
-    if (!res.ok) throw new Error("Envoi du fichier impossible");
+    if (!res.ok) throw new Error(tr("Envoi du fichier impossible"));
     onProgress?.(body.size, body.size);
     return;
   }
@@ -36,5 +37,5 @@ export async function uploadFileToStorage(
     },
   );
   const result = await task.uploadAsync();
-  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi du fichier impossible");
+  if (!result || result.status < 200 || result.status >= 300) throw new Error(tr("Envoi du fichier impossible"));
 }

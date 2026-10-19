@@ -5,6 +5,7 @@ import { colors, whiteA } from "../theme";
 import { answerKeepContact, remainingLabel, requestKeepContact, sendRequest } from "../lib/connections";
 import { useWippStore } from "../lib/store";
 import type { Chat, User } from "../lib/types";
+import { tr } from "../lib/tr";
 
 /**
  * Connection state at the top of a 1-to-1 conversation (NOT disappearing messages):
@@ -43,7 +44,7 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
         if (done) Alert.alert("WIPP", done);
         refresh();
       })
-      .catch((err) => Alert.alert("WIPP", (err as Error)?.message || "Action impossible"))
+      .catch((err) => Alert.alert("WIPP", (err as Error)?.message || tr("Action impossible")))
       .finally(() => setBusy(false));
   };
 
@@ -55,10 +56,10 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
     if (conn.type !== "ephemeral") return null;
     return (
       <View style={box}>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>Connexion éphémère terminée</Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>Vous n’êtes plus contacts. L’historique reste visible.</Text>
-        <Press disabled={busy} onPress={() => run(() => sendRequest(peer.username, "request"), "Demande de connexion envoyée.")} style={{ ...btn(true), alignSelf: "flex-start" }}>
-          <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Se reconnecter</Text>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Connexion éphémère terminée")}</Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Vous n’êtes plus contacts. L’historique reste visible.")}</Text>
+        <Press disabled={busy} onPress={() => run(() => sendRequest(peer.username, "request"), tr("Demande de connexion envoyée."))} style={{ ...btn(true), alignSelf: "flex-start" }}>
+          <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Se reconnecter")}</Text>
         </Press>
       </View>
     );
@@ -67,14 +68,14 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
   if (conn.upgradeRequestedByPeer) {
     return (
       <View style={box}>
-        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{first} souhaite conserver votre connexion</Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>Passer en contact permanent ?</Text>
+        <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{first} {tr("souhaite conserver votre connexion")}</Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Passer en contact permanent ?")}</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Press disabled={busy} onPress={() => run(() => answerKeepContact(peer.id, true), "Vous êtes maintenant contacts permanents.")} style={btn(true)}>
-            <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Accepter</Text>
+          <Press disabled={busy} onPress={() => run(() => answerKeepContact(peer.id, true), tr("Vous êtes maintenant contacts permanents."))} style={btn(true)}>
+            <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Accepter")}</Text>
           </Press>
           <Press disabled={busy} onPress={() => run(() => answerKeepContact(peer.id, false))} style={btn(false)}>
-            <Text style={{ color: colors.fg, fontSize: 13 }}>Refuser</Text>
+            <Text style={{ color: colors.fg, fontSize: 13 }}>{tr("Refuser")}</Text>
           </Press>
         </View>
       </View>
@@ -85,22 +86,22 @@ export function ConnectionBanner({ chat, peer }: { chat: Chat; peer?: User }) {
   return (
     <View style={{ ...box, flexDirection: "row", alignItems: "center", gap: 10 }}>
       <Text style={{ flex: 1, color: colors.fg, fontSize: 13 }}>
-        ⏳ Contact éphémère · expire dans {remainingLabel(conn.expiresAt, now)}
+        {tr("⏳ Contact éphémère · expire dans")} {remainingLabel(conn.expiresAt, now)}
       </Text>
       {conn.upgradeRequestedByMe ? (
-        <Text style={{ color: colors.muted, fontSize: 12 }}>Demande envoyée</Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Demande envoyée")}</Text>
       ) : (
         <Press
           disabled={busy}
           onPress={() =>
             run(async () => {
               const r = await requestKeepContact(peer.id);
-              if (r.status === "pending_from_peer") throw new Error(`${first} vous a déjà demandé de garder le contact : répondez à sa demande.`);
-            }, `${first} doit accepter pour garder le contact.`)
+              if (r.status === "pending_from_peer") throw new Error(tr("{0} vous a déjà demandé de garder le contact : répondez à sa demande.", first));
+            }, tr("{0} doit accepter pour garder le contact.", first))
           }
           style={btn(true)}
         >
-          <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Garder ce contact</Text>
+          <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{tr("Garder ce contact")}</Text>
         </Press>
       )}
     </View>

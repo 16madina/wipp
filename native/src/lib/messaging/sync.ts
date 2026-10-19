@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 /**
  * Bridge local Zustand UI store ↔ WIPP messaging API.
  * Server chats use ids prefixed with `srv:` in the client store.
@@ -94,7 +95,7 @@ export async function mapServerMessageAsync(
         {
           ...base,
           ...meta,
-          text: m.deletedAt ? "Message supprimé" : plain.text,
+          text: m.deletedAt ? tr("Message supprimé") : plain.text,
           replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
           replyPreview: plain.reply?.preview,
           forwarded: plain.forwarded,
@@ -117,7 +118,7 @@ export async function mapServerMessageAsync(
         {
           ...base,
           ...meta,
-          text: m.deletedAt ? "Message supprimé" : plain.text,
+          text: m.deletedAt ? tr("Message supprimé") : plain.text,
           replyTo: plain.reply?.id ?? m.replyTo ?? undefined,
           replyPreview: plain.reply?.preview,
           forwarded: plain.forwarded,
@@ -205,7 +206,7 @@ export function applyMediaEnvelope(m: Message, media: ParsedMedia, label: string
   return {
     ...m,
     type,
-    text: withBlob ? (media.caption ?? "") : media.album?.length ? `${media.album.length} médias` : label,
+    text: withBlob ? (media.caption ?? "") : media.album?.length ? tr("{0} médias", media.album.length) : label,
     stickerId: media.stickerId ?? m.stickerId,
     viewOnce: media.viewOnce ?? m.viewOnce,
     attachmentId: media.id ?? m.attachmentId,
@@ -213,7 +214,7 @@ export function applyMediaEnvelope(m: Message, media: ParsedMedia, label: string
     mediaChunks: media.chunks ?? m.mediaChunks,
     mediaMime: media.mime ?? m.mediaMime,
     album,
-    file: kind === "file" ? (m.file ?? { name: media.name ?? "Document", size: media.size ?? 0, mime: media.mime ?? "", url: "" }) : m.file,
+    file: kind === "file" ? (m.file ?? { name: media.name ?? tr("Document"), size: media.size ?? 0, mime: media.mime ?? "", url: "" }) : m.file,
     contactCard: media.contact ?? m.contactCard,
     geo: media.location ?? m.geo,
     linkCard: media.link ?? m.linkCard,
@@ -254,7 +255,7 @@ function mapGroupMedia(m: WippMessage, meServerId: string | undefined): Message 
       stickerId: parsed.stickerId,
       file:
         parsed.type === "file"
-          ? { name: parsed.name ?? "Document", size: parsed.size ?? 0, mime: parsed.mime ?? "", url: stored ?? "" }
+          ? { name: parsed.name ?? tr("Document"), size: parsed.size ?? 0, mime: parsed.mime ?? "", url: stored ?? "" }
           : undefined,
       createdAt: m.createdAt,
       status: receiptStatus(m, Boolean(fromMe)),
@@ -299,7 +300,7 @@ function mapServerMessageSync(m: WippMessage, meServerId: string | undefined): M
     chatId: toLocalChatId(m.chatId),
     fromId: fromMe ? "me" : `srvuser:${m.senderId}`,
     type: m.deletedAt ? "system" : "text",
-    text: m.deletedAt ? "Message supprimé" : plain?.text,
+    text: m.deletedAt ? tr("Message supprimé") : plain?.text,
     enc: parsed.kind === "e2e" && !m.deletedAt ? parsed.envelope : undefined,
     encFailed: parsed.kind === "e2e" && !m.deletedAt,
     createdAt: m.createdAt,
@@ -540,7 +541,7 @@ export function mergeServerMessagesIntoState(
   const preview = last?.text
     ? last.text
     : last?.enc
-      ? "Message chiffré"
+      ? tr("Message chiffré")
       : last
         ? ""
         : undefined;
@@ -559,17 +560,17 @@ export function mergeServerMessagesIntoState(
 function mediaPreview(type: Message["type"]) {
   switch (type) {
     case "image":
-      return "📷 Photo";
+      return tr("📷 Photo");
     case "video":
-      return "🎥 Vidéo";
+      return tr("🎥 Vidéo");
     case "voice":
-      return "🎤 Message vocal";
+      return tr("🎤 Message vocal");
     case "file":
-      return "📄 Document";
+      return tr("📄 Document");
     case "gif":
       return "GIF";
     case "sticker":
-      return "Sticker";
+      return tr("Sticker");
     default:
       return "";
   }
@@ -609,7 +610,7 @@ async function decryptGroupMerged(state: StoreSlice, localChatId: string, identi
   return {
     messages: { ...state.messages, [localChatId]: next },
     // A surprise never shows its secret in the chat list.
-    chats: state.chats.map((c) => (c.id === localChatId && last?.text ? { ...c, preview: last.type === "scratch" ? "Surprise ✨" : last.text } : c)),
+    chats: state.chats.map((c) => (c.id === localChatId && last?.text ? { ...c, preview: last.type === "scratch" ? tr("Surprise ✨") : last.text } : c)),
   };
 }
 
@@ -732,7 +733,7 @@ export async function decryptMergedMessages(
       const media = m.deletedForAll ? null : parseMedia(plain.text);
       const base: Message = media
         ? applyMediaEnvelope(m, media, mediaLabel(media.kind))
-        : ({ ...m, text: m.deletedForAll ? "Message supprimé" : plain.text, ...(suspect ? { healed: true } : {}) } as Message);
+        : ({ ...m, text: m.deletedForAll ? tr("Message supprimé") : plain.text, ...(suspect ? { healed: true } : {}) } as Message);
       next.push(
         applySurprise(
           {
@@ -759,7 +760,7 @@ export async function decryptMergedMessages(
       c.id === localChatId && last
         ? {
             ...c,
-            preview: last.text || mediaPreview(last.type) || (last.enc ? "Message chiffré" : c.preview),
+            preview: last.text || mediaPreview(last.type) || (last.enc ? tr("Message chiffré") : c.preview),
             lastAt: last.createdAt,
           }
         : c,

@@ -39,6 +39,7 @@ import { palettes } from "../theme";
 /** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
 const colors = palettes.dark;
 import { Press, SafeTop } from "../components/ui";
+import { tr } from "../lib/tr";
 
 const ONB: { kind: "tap" | "globe" | "privacy" | "together"; title: I18nKey; accent: I18nKey; body: I18nKey }[] = [
   { kind: "tap", title: "onb1Title", accent: "onb1Accent", body: "onb1Body" },
@@ -157,7 +158,7 @@ function AuthBack() {
   const insets = useSafeAreaInsets();
   return (
     <Pressable
-      accessibilityLabel="Retour"
+      accessibilityLabel={tr("Retour")}
       hitSlop={12}
       onPress={() => {
         const { stack, pop, replace } = useWippStore.getState();
@@ -168,6 +169,34 @@ function AuthBack() {
     >
       <ChevronLeft size={24} color="#fff" strokeWidth={2.5} />
     </Pressable>
+  );
+}
+
+/** Français / English, at the top right of the first screens: the whole app follows. */
+function LangToggle() {
+  const insets = useSafeAreaInsets();
+  const language = useWippStore((s) => s.language);
+  const setLanguage = useWippStore((s) => s.setLanguage);
+  return (
+    <View style={{ position: "absolute", top: insets.top + 8, right: 12, zIndex: 60, elevation: 60, flexDirection: "row", padding: 3, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)" }}>
+      {(["fr", "en"] as const).map((id) => {
+        const on = language === id;
+        return (
+          <Pressable
+            key={id}
+            accessibilityLabel={id === "fr" ? tr("Français") : "English"}
+            accessibilityState={{ selected: on }}
+            hitSlop={6}
+            onPress={() => {
+              if (!on) setLanguage(id);
+            }}
+            style={{ minWidth: 40, height: 30, paddingHorizontal: 10, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#F7C52B" : "transparent" }}
+          >
+            <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: on ? "#0a0a0d" : "#fff" }}>{id.toUpperCase()}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -226,7 +255,7 @@ function CountrySheet({
           onPress={() => {}}
           style={{ maxHeight: "55%", backgroundColor: colors.navy, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
         >
-          <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16, padding: 16 }}>Pays</Text>
+          <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16, padding: 16 }}>{tr("Pays")}</Text>
           <FlatList
             data={COUNTRIES}
             keyExtractor={(item) => item.id}
@@ -286,8 +315,8 @@ function KeyboardDone({ nativeID }: { nativeID: string }) {
   return (
     <InputAccessoryView nativeID={nativeID}>
       <View style={{ height: 46, paddingHorizontal: 16, backgroundColor: "#171A22", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.14)", alignItems: "flex-end", justifyContent: "center" }}>
-        <Pressable accessibilityLabel="Fermer le clavier" onPress={() => Keyboard.dismiss()} hitSlop={12}>
-          <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>Terminé</Text>
+        <Pressable accessibilityLabel={tr("Fermer le clavier")} onPress={() => Keyboard.dismiss()} hitSlop={12}>
+          <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{tr("Terminé")}</Text>
         </Pressable>
       </View>
     </InputAccessoryView>
@@ -502,11 +531,46 @@ export function OnboardingScreen() {
 export function WelcomeScreen() {
   const push = useWippStore((s) => s.push);
   const replace = useWippStore((s) => s.replace);
+  const english = useWippStore((s) => s.language) === "en";
+  const win = useWindowDimensions();
   return (
     <Artwork source={authWelcome}>
+      {/* The picture carries its texts in French. In English, real texts and buttons are drawn over them. */}
+      {english ? (
+        <>
+          <Abs t={17.6} l={18} h={13.2} w={64}>
+            <View pointerEvents="none" style={{ flex: 1, borderRadius: 20, backgroundColor: "rgba(6,7,12,0.93)", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#fff", fontSize: win.width * 0.078, lineHeight: win.width * 0.092, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+                Come closer.{"\n"}Connect.{"\n"}
+                <Text style={{ color: "#F7C52B" }}>That’s WIPP.</Text>
+              </Text>
+            </View>
+          </Abs>
+          <Abs t={70.7} l={5} h={7} w={90}>
+            <View pointerEvents="none" style={{ flex: 1, borderRadius: 999, backgroundColor: "#F7C52B", alignItems: "center", justifyContent: "center", flexDirection: "row" }}>
+              <Text style={{ color: "#0a0a0d", fontSize: 17, fontFamily: "Inter_600SemiBold" }}>Create an account</Text>
+              <View style={{ position: "absolute", right: 22 }}><ArrowRight size={20} color="#0a0a0d" /></View>
+            </View>
+          </Abs>
+          <Abs t={79.3} l={5} h={7} w={90}>
+            <View pointerEvents="none" style={{ flex: 1, borderRadius: 999, backgroundColor: "#07080c", borderWidth: 1.5, borderColor: "#F7C52B", alignItems: "center", justifyContent: "center", flexDirection: "row" }}>
+              <Text style={{ color: "#fff", fontSize: 17, fontFamily: "Inter_500Medium" }}>I already have an account</Text>
+              <View style={{ position: "absolute", right: 22 }}><ArrowRight size={20} color="#fff" /></View>
+            </View>
+          </Abs>
+          <Abs t={87.2} l={4} h={7.6} w={92}>
+            <View pointerEvents="none" style={{ flex: 1, backgroundColor: "#050609", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, lineHeight: 20, textAlign: "center" }}>
+                By continuing, you accept the <Text style={{ color: "#F7C52B", textDecorationLine: "underline" }}>Terms of Use</Text>{"\n"}and the <Text style={{ color: "#F7C52B", textDecorationLine: "underline" }}>Privacy Policy</Text>.
+              </Text>
+            </View>
+          </Abs>
+        </>
+      ) : null}
+      <LangToggle />
       <Abs t={70.7} l={5} h={7} w={90}>
         <Pressable
-          accessibilityLabel="Créer un compte"
+          accessibilityLabel={tr("Créer un compte")}
           onPress={() => {
             void startFreshSignup().then(() => push({ name: "phone-entry" }));
           }}
@@ -514,13 +578,13 @@ export function WelcomeScreen() {
         />
       </Abs>
       <Abs t={79.3} l={5} h={7} w={90}>
-        <Pressable accessibilityLabel="J’ai déjà un compte" onPress={() => replace({ name: "login" })} style={{ flex: 1 }} />
+        <Pressable accessibilityLabel={tr("J’ai déjà un compte")} onPress={() => replace({ name: "login" })} style={{ flex: 1 }} />
       </Abs>
       <Abs t={88} l={48} h={3.5} w={35}>
-        <Pressable accessibilityLabel="Conditions d’utilisation" onPress={() => push({ name: "legal", doc: "terms" })} style={{ flex: 1 }} />
+        <Pressable accessibilityLabel={tr("Conditions d’utilisation")} onPress={() => push({ name: "legal", doc: "terms" })} style={{ flex: 1 }} />
       </Abs>
       <Abs t={91} l={32} h={3.5} w={43}>
-        <Pressable accessibilityLabel="Politique de confidentialité" onPress={() => push({ name: "legal", doc: "privacy" })} style={{ flex: 1 }} />
+        <Pressable accessibilityLabel={tr("Politique de confidentialité")} onPress={() => push({ name: "legal", doc: "privacy" })} style={{ flex: 1 }} />
       </Abs>
     </Artwork>
   );
@@ -545,7 +609,7 @@ export function PhoneEntryScreen() {
     if (!legal || !adult || busy) return;
     const normalized = nationalToE164(country, phone);
     if (!normalized) {
-      setError("Entre un numéro de téléphone valide.");
+      setError(tr("Entre un numéro de téléphone valide."));
       return;
     }
     setBusy(true);
@@ -571,12 +635,24 @@ export function PhoneEntryScreen() {
         <View pointerEvents="none" style={{ flex: 1, borderRadius: 24, backgroundColor: "rgba(5,8,18,0.86)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </Abs>
       <AuthBack />
+      <LangToggle />
+      {/* The title is part of the picture, in French: in English it is drawn over it. */}
+      {useWippStore.getState().language === "en" ? (
+        <Abs t={14.2} l={6} h={14} w={88}>
+          <View pointerEvents="none" style={{ flex: 1, borderRadius: 20, backgroundColor: "rgba(4,7,16,0.94)", alignItems: "center", justifyContent: "center", paddingHorizontal: 10 }}>
+            <Text style={{ color: "#fff", fontSize: 24, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+              Your <Text style={{ color: "#F7C52B" }}>phone number</Text>
+            </Text>
+            <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.85)", fontSize: 15, lineHeight: 21, textAlign: "center" }}>We will send you a code by SMS{"\n"}to verify your number.</Text>
+          </View>
+        </Abs>
+      ) : null}
       <Abs t={65} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
-          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
+          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>{tr("Numéro de téléphone")}</Text>
           <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
             <Pressable
-              accessibilityLabel={`Pays : ${country.fr} (${country.dial})`}
+              accessibilityLabel={tr("Pays : {0} ({1})", country.fr, country.dial)}
               onPress={() => setMenuOpen(true)}
               hitSlop={8}
               style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 4 }}
@@ -614,15 +690,15 @@ export function PhoneEntryScreen() {
         <CheckLine
           checked={legal}
           onToggle={setLegal}
-          labelStart="En continuant, j’accepte les "
-          linkA="conditions d’utilisation"
+          labelStart={tr("En continuant, j’accepte les ")}
+          linkA={tr("conditions d’utilisation")}
           onA={() => push({ name: "legal", doc: "terms" })}
-          mid=" et les "
-          linkB="politiques de confidentialité"
+          mid={tr(" et les ")}
+          linkB={tr("politiques de confidentialité")}
           onB={() => push({ name: "legal", doc: "privacy" })}
           end="."
         />
-        <CheckLine checked={adult} onToggle={setAdult} labelStart="Je reconnais avoir " linkA="18 ans et plus" onA={() => push({ name: "legal", doc: "age" })} end="." />
+        <CheckLine checked={adult} onToggle={setAdult} labelStart={tr("Je reconnais avoir ")} linkA={tr("18 ans et plus")} onA={() => push({ name: "legal", doc: "age" })} end="." />
         </View>
       </Abs>
       {error ? (
@@ -631,7 +707,7 @@ export function PhoneEntryScreen() {
         </Abs>
       ) : null}
       <Abs t={87.05} l={4.8} h={7} w={90.4}>
-        <ContinueHit ready={legal && adult} busy={busy} label="Continuer" onPress={() => void continueWithPhone()} solid />
+        <ContinueHit ready={legal && adult} busy={busy} label={tr("Continuer")} onPress={() => void continueWithPhone()} solid />
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
       <KeyboardDone nativeID={phoneAccessoryId} />
@@ -658,7 +734,7 @@ export function LoginScreen() {
     if (busy) return;
     const e164 = nationalToE164(country, phone);
     if (!e164) {
-      setError("Entre un numéro de téléphone valide.");
+      setError(tr("Entre un numéro de téléphone valide."));
       return;
     }
     setBusy(true);
@@ -687,15 +763,16 @@ export function LoginScreen() {
         />
       </Abs>
       <AuthBack />
+      <LangToggle />
       <Abs t={11} l={6} w={84}>
         <Image source={logoGold} style={{ width: 120, height: 52 }} contentFit="contain" contentPosition="left" />
-        <Text style={{ marginTop: 6, color: colors.accent, fontSize: 10, letterSpacing: 2, fontFamily: "Inter_600SemiBold" }}>DISCUTE · PARTAGE · DÉCOUVRE</Text>
+        <Text style={{ marginTop: 6, color: colors.accent, fontSize: 10, letterSpacing: 2, fontFamily: "Inter_600SemiBold" }}>{tr("DISCUTE · PARTAGE · DÉCOUVRE")}</Text>
         <Text style={{ marginTop: 20, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.fg, fontSize: 34, lineHeight: 38, fontFamily: "Inter_700Bold" }}>
-          Content{"\n"}de te <Text style={{ color: colors.accent }}>revoir</Text> 👋
+          {tr("Content")}{"\n"}{tr("de te")} <Text style={{ color: colors.accent }}>{tr("revoir")}</Text> 👋
         </Text>
-        <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.85)", fontSize: 17, fontFamily: "Inter_500Medium" }}>Retrouve ton WIPP</Text>
+        <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.85)", fontSize: 17, fontFamily: "Inter_500Medium" }}>{tr("Retrouve ton WIPP")}</Text>
         <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.82)", fontSize: 13, lineHeight: 19, maxWidth: 230 }}>
-          Entre le numéro associé à ton compte. Nous t’enverrons un code par SMS pour vérifier que c’est bien toi.
+          {tr("Entre le numéro associé à ton compte. Nous t’enverrons un code par SMS pour vérifier que c’est bien toi.")}
         </Text>
       </Abs>
       <Abs t={58} l={3} h={29} w={94}>
@@ -703,10 +780,10 @@ export function LoginScreen() {
       </Abs>
       <Abs t={59.5} l={7} h={9.5} w={86}>
         <View ref={phoneBlockRef} style={{ flex: 1 }}>
-          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>Numéro de téléphone</Text>
+          <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_500Medium", marginBottom: 7 }}>{tr("Numéro de téléphone")}</Text>
           <View style={{ flex: 1, minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.48)", backgroundColor: "rgba(9,15,28,0.94)" }}>
             <Pressable
-              accessibilityLabel={`Pays : ${country.fr} (${country.dial})`}
+              accessibilityLabel={tr("Pays : {0} ({1})", country.fr, country.dial)}
               onPress={() => setMenuOpen(true)}
               hitSlop={8}
               style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 4 }}
@@ -750,21 +827,21 @@ export function LoginScreen() {
       {/* Consent was given at sign-up: a passive reminder is enough here. */}
       <Abs t={80.3} l={8} w={84}>
         <Text style={{ color: "rgba(247,249,252,0.6)", fontSize: 11, lineHeight: 16, textAlign: "center" }}>
-          En continuant, tu acceptes les{" "}
-          <Text onPress={() => push({ name: "legal", doc: "terms" })} style={{ color: colors.accent, textDecorationLine: "underline" }}>Conditions d’utilisation</Text>
-          {" "}et la{" "}
-          <Text onPress={() => push({ name: "legal", doc: "privacy" })} style={{ color: colors.accent, textDecorationLine: "underline" }}>Politique de confidentialité</Text>.
+          {tr("En continuant, tu acceptes les")}{" "}
+          <Text onPress={() => push({ name: "legal", doc: "terms" })} style={{ color: colors.accent, textDecorationLine: "underline" }}>{tr("Conditions d’utilisation")}</Text>
+          {" "}{tr("et la")}{" "}
+          <Text onPress={() => push({ name: "legal", doc: "privacy" })} style={{ color: colors.accent, textDecorationLine: "underline" }}>{tr("Politique de confidentialité")}</Text>.
         </Text>
       </Abs>
       <Abs t={90} l={10} h={6} w={80}>
         <Pressable
-          accessibilityLabel="Je n’ai pas encore de compte"
+          accessibilityLabel={tr("Je n’ai pas encore de compte")}
           onPress={() => {
             void startFreshSignup().then(() => push({ name: "phone-entry" }));
           }}
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
-          <Text style={{ textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.accent, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Je n’ai pas encore de compte</Text>
+          <Text style={{ textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.accent, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Je n’ai pas encore de compte")}</Text>
         </Pressable>
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
@@ -820,11 +897,11 @@ export function SmsReferenceScreen() {
           setError(res.error);
           return;
         }
-        setError("error" in res ? res.error : "Connexion impossible.");
+        setError("error" in res ? res.error : tr("Connexion impossible."));
         setBusy(false);
         return;
       } catch {
-        setError("Connexion impossible. Réessaie quand le réseau revient.");
+        setError(tr("Connexion impossible. Réessaie quand le réseau revient."));
         setBusy(false);
         return;
       }
@@ -836,7 +913,7 @@ export function SmsReferenceScreen() {
       return;
     }
     if (result.phone !== pending.phone) {
-      setError("Vérification impossible. Recommence.");
+      setError(tr("Vérification impossible. Recommence."));
       return;
     }
     setVerifiedSignup(result);
@@ -849,8 +926,8 @@ export function SmsReferenceScreen() {
         clearPending();
         enterLinkedProfile(existing.profile, phone);
         Alert.alert(
-          "Bon retour !",
-          `Ce numéro a déjà un compte WIPP${existing.profile.username ? ` (@${existing.profile.username})` : ""}. On t’a connecté·e à ce compte.`,
+          tr("Bon retour !"),
+          tr("Ce numéro a déjà un compte WIPP{0}. On t’a connecté·e à ce compte.", existing.profile.username ? ` (@${existing.profile.username})` : ""),
         );
         return;
       }
@@ -896,13 +973,13 @@ export function SmsReferenceScreen() {
       </Abs>
       <Abs t={15} l={6} w={88}>
         <Text style={{ textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: colors.fg, fontSize: 32, lineHeight: 36, fontFamily: "Inter_700Bold" }}>
-          Vérifie ton <Text style={{ color: colors.accent }}>numéro</Text>
+          {tr("Vérifie ton")} <Text style={{ color: colors.accent }}>{tr("numéro")}</Text>
         </Text>
         <Text style={{ marginTop: 10, textShadowColor: "rgba(0,0,0,0.65)", textShadowRadius: 6, color: "rgba(247,249,252,0.85)", fontSize: 15, lineHeight: 21 }}>
-          Nous t’avons envoyé un code par SMS au
+          {tr("Nous t’avons envoyé un code par SMS au")}
         </Text>
         <Pressable
-          accessibilityLabel="Modifier mon numéro"
+          accessibilityLabel={tr("Modifier mon numéro")}
           onPress={pop}
           style={{ marginTop: 12, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, height: 46, borderRadius: 14, backgroundColor: "rgba(5,8,18,0.82)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" }}
         >
@@ -953,25 +1030,25 @@ export function SmsReferenceScreen() {
                 push({ name: "profile-reference" });
               }}
             >
-              <Text style={{ color: colors.accent, fontSize: 12, marginTop: 4 }}>Créer un compte</Text>
+              <Text style={{ color: colors.accent, fontSize: 12, marginTop: 4 }}>{tr("Créer un compte")}</Text>
             </Pressable>
           ) : null}
         </Abs>
       ) : null}
       <Abs t={78} l={8} h={5} w={84}>
         <Pressable disabled={seconds > 0 || busy} onPress={() => void resend()} style={{ flex: 1, justifyContent: "center" }}>
-          <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>Tu n’as pas reçu le code ?</Text>
+          <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{tr("Tu n’as pas reçu le code ?")}</Text>
           <Text style={{ marginTop: 3, textAlign: "center", color: seconds > 0 ? "rgba(255,216,77,0.6)" : colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-            {seconds > 0 ? `Renvoyer le code dans 00:${String(seconds).padStart(2, "0")}` : "Renvoyer le code"}
+            {seconds > 0 ? tr("Renvoyer le code dans 00:{0}", String(seconds).padStart(2, "0")) : tr("Renvoyer le code")}
           </Text>
         </Pressable>
       </Abs>
       <Abs t={84} l={6} h={6.6} w={88}>
-        <ContinueHit ready={code.length === 6} busy={busy} label="Continuer" onPress={() => void validate()} solid />
+        <ContinueHit ready={code.length === 6} busy={busy} label={tr("Continuer")} onPress={() => void validate()} solid />
       </Abs>
       <Abs t={91.5} l={20} h={5} w={60}>
-        <Pressable accessibilityLabel="Modifier mon numéro" onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Modifier mon numéro</Text>
+        <Pressable accessibilityLabel={tr("Modifier mon numéro")} onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{tr("Modifier mon numéro")}</Text>
         </Pressable>
       </Abs>
       <KeyboardDone nativeID={codeAccessoryId} />
@@ -1031,7 +1108,7 @@ export function ProfileReferenceScreen() {
   async function choosePhoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setError("Autorise l’accès aux photos pour choisir ta photo de profil.");
+      setError(tr("Autorise l’accès aux photos pour choisir ta photo de profil."));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -1048,11 +1125,11 @@ export function ProfileReferenceScreen() {
     Keyboard.dismiss();
     const verified = getVerifiedSignup();
     if (!verified || verified.phone !== phone) {
-      setError("Code SMS expiré. Recommence la vérification.");
+      setError(tr("Code SMS expiré. Recommence la vérification."));
       return;
     }
     if (!firstName.trim() || !lastName.trim() || !okUser) {
-      setError("Renseigne ton prénom, ton nom et un pseudo valide.");
+      setError(tr("Renseigne ton prénom, ton nom et un pseudo valide."));
       return;
     }
     setBusy(true);
@@ -1063,12 +1140,12 @@ export function ProfileReferenceScreen() {
       setCheckedUsername(username);
       setAvailability(free ? "available" : "taken");
       if (!free) {
-        setError(`@${username} est déjà utilisé. Choisis un autre pseudo.`);
+        setError(tr("@{0} est déjà utilisé. Choisis un autre pseudo.", username));
         setBusy(false);
         return;
       }
     } catch {
-      setError("Impossible de vérifier le pseudo. Vérifie ta connexion et réessaie.");
+      setError(tr("Impossible de vérifier le pseudo. Vérifie ta connexion et réessaie."));
       setBusy(false);
       return;
     }
@@ -1087,7 +1164,7 @@ export function ProfileReferenceScreen() {
       const gotName = (result.profile.displayName || "").replace(/\s+/g, " ").trim().toLowerCase();
       const gotUser = (result.profile.username || "").toLowerCase();
       if (gotUser !== username.toLowerCase() || (gotName && gotName !== wantedName)) {
-        setError("Ce numéro a déjà un compte WIPP. Pour une autre personne, entre un autre numéro. Pour revenir sur celui-ci, choisis « J’ai déjà un compte ».");
+        setError(tr("Ce numéro a déjà un compte WIPP. Pour une autre personne, entre un autre numéro. Pour revenir sur celui-ci, choisis « J’ai déjà un compte »."));
         const { signOutFirebase } = await import("../lib/firebase-phone");
         const { clearLinkedSession } = await import("../lib/firebase-linked-session");
         await signOutFirebase().catch(() => undefined);
@@ -1111,7 +1188,7 @@ export function ProfileReferenceScreen() {
       }
       push({ name: "signup-celebration", username: result.profile.username || username });
     } catch {
-      setError("Inscription impossible. Réessaie.");
+      setError(tr("Inscription impossible. Réessaie."));
     } finally {
       setBusy(false);
     }
@@ -1119,15 +1196,15 @@ export function ProfileReferenceScreen() {
 
   const status =
     username.length > 0 && !okUser
-      ? { text: "3 à 20 caractères (a-z, 0-9, _)", color: colors.muted }
+      ? { text: tr("3 à 20 caractères (a-z, 0-9, _)"), color: colors.muted }
       : availability === "checking"
-        ? { text: "Vérification…", color: colors.muted }
+        ? { text: tr("Vérification…"), color: colors.muted }
         : checkedUsername === username && availability === "available"
           ? { text: "✓ Disponible", color: colors.success }
           : checkedUsername === username && availability === "taken"
-            ? { text: "Déjà utilisé", color: colors.danger }
+            ? { text: tr("Déjà utilisé"), color: colors.danger }
             : checkedUsername === username && availability === "error"
-              ? { text: "Vérification impossible", color: colors.danger }
+              ? { text: tr("Vérification impossible"), color: colors.danger }
               : null;
   // The background is drawn "cover": find where the mascot's feet land on this screen,
   // so the form starts right under them (image 941×1670, feet at ~38.5 % of its height).
@@ -1170,42 +1247,42 @@ export function ProfileReferenceScreen() {
       </Animated.View>
       {/* Thin arrow in the corner, clear of the WIPP sign (no dark disc over the picture). */}
       <View style={{ position: "absolute", top: insets.top, left: 0 }}>
-        <Pressable accessibilityLabel="Retour" hitSlop={10} onPress={pop} style={{ marginLeft: 4, marginTop: 2, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,216,77,0.45)" }}>
+        <Pressable accessibilityLabel={tr("Retour")} hitSlop={10} onPress={pop} style={{ marginLeft: 4, marginTop: 2, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,216,77,0.45)" }}>
           <ChevronLeft size={22} color="#fff" strokeWidth={3} />
         </Pressable>
       </View>
       {/* No card: the form sits in the empty space of the picture, under the mascot. */}
       <View style={{ position: "absolute", left: 0, right: 0, top: feetY + 10, bottom: Math.max(insets.bottom, 14), paddingHorizontal: 22 }}>
         <Text style={{ color: colors.fg, fontSize: 22, fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>
-          Complète ton <Text style={{ color: colors.accent }}>profil</Text>
+          {tr("Complète ton")} <Text style={{ color: colors.accent }}>{tr("profil")}</Text>
         </Text>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginTop: 12, marginBottom: 12 }}>
-          <Pressable accessibilityLabel="Photo de profil" onPress={() => void choosePhoto()} style={{ width: 84, height: 84, borderRadius: 42, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.38)" }}>
+          <Pressable accessibilityLabel={tr("Photo de profil")} onPress={() => void choosePhoto()} style={{ width: 84, height: 84, borderRadius: 42, borderWidth: 2, borderColor: colors.accent, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.38)" }}>
             {photoUri ? <Image source={{ uri: photoUri }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <Camera size={30} color={colors.accent} />}
           </Pressable>
-          <Pressable accessibilityLabel="Choisir une photo" onPress={() => void choosePhoto()}>
-            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{photoUri ? "Changer la photo" : "Ajouter une photo"}</Text>
-            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1 }}>Facultatif · visible par tes contacts</Text>
+          <Pressable accessibilityLabel={tr("Choisir une photo")} onPress={() => void choosePhoto()}>
+            <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{photoUri ? tr("Changer la photo") : tr("Ajouter une photo")}</Text>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1 }}>{tr("Facultatif · visible par tes contacts")}</Text>
           </Pressable>
         </View>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <Text style={label}>Prénom</Text>
+            <Text style={label}>{tr("Prénom")}</Text>
             <View ref={firstNameBlockRef} style={field}>
-              <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Prénom" placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="givenName" style={input} />
+              <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder={tr("Prénom")} placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="givenName" style={input} />
             </View>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={label}>Nom</Text>
+            <Text style={label}>{tr("Nom")}</Text>
             <View ref={lastNameBlockRef} style={field}>
-              <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder="Nom" placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="familyName" style={input} />
+              <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder={tr("Nom")} placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="familyName" style={input} />
             </View>
           </View>
         </View>
 
-        <Text style={[label, { marginTop: 12 }]}>Ton WIPP · c’est ainsi qu’on te trouvera</Text>
+        <Text style={[label, { marginTop: 12 }]}>{tr("Ton WIPP · c’est ainsi qu’on te trouvera")}</Text>
         <View ref={usernameBlockRef} style={[field, { flexDirection: "row", alignItems: "center" }]}>
           <Text style={{ color: colors.accent, fontSize: 15, marginRight: 2 }}>@</Text>
           <TextInput
@@ -1231,7 +1308,7 @@ export function ProfileReferenceScreen() {
           <TextInput
             value={invitedBy}
             onChangeText={(v) => setInvitedBy(v.toLowerCase().replace(/[^a-z0-9_.]/g, ""))}
-            placeholder="Code d’invitation (facultatif)"
+            placeholder={tr("Code d’invitation (facultatif)")}
             placeholderTextColor={colors.muted}
             autoCapitalize="none"
             autoCorrect={false}
@@ -1253,12 +1330,12 @@ export function ProfileReferenceScreen() {
         {/* Small gap only: the button stays close to the country box (extra space goes below). */}
         <View style={{ flexGrow: 1, minHeight: 14, maxHeight: 24 }} />
         <Pressable
-          accessibilityLabel="Continuer"
+          accessibilityLabel={tr("Continuer")}
           disabled={busy}
           onPress={() => void finish()}
           style={{ height: 52, borderRadius: 26, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? 0.7 : 1 }}
         >
-          {busy ? <ActivityIndicator color={colors.accentFg} /> : <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>Continuer</Text>}
+          {busy ? <ActivityIndicator color={colors.accentFg} /> : <Text style={{ color: colors.accentFg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("Continuer")}</Text>}
           {busy ? null : <ArrowRight size={20} color={colors.accentFg} />}
         </Pressable>
       </View>
@@ -1280,10 +1357,10 @@ export function SignupCelebrationScreen({ username }: { username: string }) {
       <View style={{ marginTop: 32, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
         <Check size={32} color={colors.accentFg} strokeWidth={3} />
       </View>
-      <Text style={{ marginTop: 32, fontSize: 29, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>Bienvenue sur WIPP ✨</Text>
+      <Text style={{ marginTop: 32, fontSize: 29, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>{tr("Bienvenue sur WIPP ✨")}</Text>
       <Text style={{ marginTop: 12, fontSize: 19, fontFamily: "Inter_500Medium", color: colors.accent }}>@{username}</Text>
-      <Text style={{ marginTop: 8, fontSize: 17, color: colors.fg }}>Ton WIPP est prêt.</Text>
-      <Text style={{ position: "absolute", bottom: "18%", fontSize: 16, fontFamily: "Inter_500Medium", color: colors.muted }}>Connecte ta vie.</Text>
+      <Text style={{ marginTop: 8, fontSize: 17, color: colors.fg }}>{tr("Ton WIPP est prêt.")}</Text>
+      <Text style={{ position: "absolute", bottom: "18%", fontSize: 16, fontFamily: "Inter_500Medium", color: colors.muted }}>{tr("Connecte ta vie.")}</Text>
     </View>
   );
 }

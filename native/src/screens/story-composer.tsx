@@ -33,6 +33,7 @@ import { palettes } from "../theme";
 /** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
 const colors = palettes.dark;
 import { errorText } from "../lib/error-fr";
+import { tr } from "../lib/tr";
 
 const MAX_VIDEO_SEC = 60;
 const MIN_VIDEO_SEC = 1;
@@ -44,9 +45,9 @@ type Phase =
   | { name: "edit"; uri: string; kind: "image" | "video"; mime: string; width?: number; height?: number };
 
 const AUDIENCE_LABEL = {
-  contacts: "Mes contacts",
-  close: "Proches",
-  only_me: "Moi seul",
+  get contacts() { return tr("Mes contacts"); },
+  get close() { return tr("Proches"); },
+  get only_me() { return tr("Moi seul"); },
 } as const;
 
 /** `shared`: content coming from another app (share menu) — the composer opens with it already in place. */
@@ -71,7 +72,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
   async function publish() {
     if (busy || (phase.name !== "edit" && phase.name !== "text")) return;
     if (phase.name === "text" && !text.trim()) {
-      setError("Écris ta story avant de la publier.");
+      setError(tr("Écris ta story avant de la publier."));
       return;
     }
     setError("");
@@ -91,7 +92,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
         mime = phase.mime;
         uri = phase.uri;
         if (phase.kind === "image") {
-          setPublishLabel("Publication…");
+          setPublishLabel(tr("Publication…"));
           const crop = storyCropRect({
             imageWidth: frame.current.imageW || phase.width || 0,
             imageHeight: frame.current.imageH || phase.height || 0,
@@ -117,7 +118,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
           }
         } else if (!mediaUrl) {
           finalBytes = localFileBytes(uri);
-          setPublishLabel("Publication… 0%");
+          setPublishLabel(tr("Publication… 0%"));
           const uploadStarted = Date.now();
           const { storyObjectPath } = await import("../lib/calls/rules");
           mediaUrl = await uploadPrivateMediaFile(
@@ -126,14 +127,14 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
             mime,
             (sent, total) => {
               const ratio = total > 0 ? sent / total : 0;
-              setPublishLabel(`Publication… ${Math.round(ratio * 100)}%`);
+              setPublishLabel(tr("Publication… {0}%", Math.round(ratio * 100)));
             },
           );
           uploadMs = Date.now() - uploadStarted;
           uploadedPath.current = mediaUrl;
         }
       }
-      setPublishLabel("Publication…");
+      setPublishLabel(tr("Publication…"));
       const rpcStarted = Date.now();
       await publishStory({
         kind,
@@ -143,7 +144,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
         overlay: phase.name === "edit" ? overlay : null,
       });
       rpcMs = Date.now() - rpcStarted;
-      setPublishLabel("Publié");
+      setPublishLabel(tr("Publié"));
       const refreshStarted = Date.now();
       await refreshStoriesInStore(useWippStore.getState().serverProfileId);
       if (__DEV__ && kind === "video") {
@@ -157,12 +158,12 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
       }
       pop();
     } catch (err) {
-      const message = errorText(err, "Publication impossible");
+      const message = errorText(err, tr("Publication impossible"));
       void import("../lib/crash-log").then(({ logAppError }) => logAppError(err, false, `story ${phase.name === "edit" ? phase.kind : "text"}`));
       if (overlay && /could not find|schema cache|p_overlay|function/i.test(message)) {
-        setError("Le texte sur la vidéo attend une mise à jour du serveur. La story n’a pas été publiée.");
+        setError(tr("Le texte sur la vidéo attend une mise à jour du serveur. La story n’a pas été publiée."));
       } else {
-        setError("La publication n’a pas abouti. Réessaie.");
+        setError(tr("La publication n’a pas abouti. Réessaie."));
       }
       if (__DEV__) console.warn("[wipp] story publish failed", { message, uploadMs, rpcMs, totalMs: Date.now() - started });
     } finally {
@@ -214,7 +215,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
       ) : null}
       {phase.name === "text" || phase.name === "edit" ? (
         <>
-          <Press accessibilityLabel="Fermer" onPress={pop} style={{ position: "absolute", top: insets.top + 8, left: 12, width: 44, height: 44, alignItems: "center", justifyContent: "center", zIndex: 4 }}>
+          <Press accessibilityLabel={tr("Fermer")} onPress={pop} style={{ position: "absolute", top: insets.top + 8, left: 12, width: 44, height: 44, alignItems: "center", justifyContent: "center", zIndex: 4 }}>
             <X size={26} color="#fff" />
           </Press>
           <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 16, gap: 10, zIndex: 4 }} pointerEvents="box-none">
@@ -223,17 +224,17 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder="Légende"
+                placeholder={tr("Légende")}
                 placeholderTextColor="rgba(255,255,255,0.75)"
                 style={{ height: 44, borderRadius: 22, paddingHorizontal: 16, color: "#fff", backgroundColor: "rgba(0,0,0,0.45)", fontFamily: "Inter_500Medium" }}
               />
             ) : null}
-            <Press accessibilityLabel="Choisir qui peut voir" onPress={() => setAudienceOpen(true)} style={{ height: 48, borderRadius: 24, backgroundColor: "rgba(0,0,0,0.55)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <Press accessibilityLabel={tr("Choisir qui peut voir")} onPress={() => setAudienceOpen(true)} style={{ height: 48, borderRadius: 24, backgroundColor: "rgba(0,0,0,0.55)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{AUDIENCE_LABEL[audience]}</Text>
               <ChevronRight size={18} color="#fff" />
             </Press>
-            <Press disabled={busy} accessibilityLabel="Ajouter à ma story" onPress={() => void publish()} style={{ height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", opacity: busy ? 0.7 : 1 }}>
-              <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{busy ? publishLabel || "Publication…" : "Ajouter à ma story"}</Text>
+            <Press disabled={busy} accessibilityLabel={tr("Ajouter à ma story")} onPress={() => void publish()} style={{ height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", opacity: busy ? 0.7 : 1 }}>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{busy ? publishLabel || tr("Publication…") : tr("Ajouter à ma story")}</Text>
             </Press>
           </View>
         </>
@@ -241,7 +242,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
       <Modal visible={audienceOpen} transparent animationType="slide" onRequestClose={() => setAudienceOpen(false)}>
         <Press onPress={() => setAudienceOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: colors.navy, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: insets.bottom + 20, gap: 8 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 17, marginBottom: 8 }}>Qui peut voir</Text>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 17, marginBottom: 8 }}>{tr("Qui peut voir")}</Text>
             {(["contacts", "close", "only_me"] as const).map((value) => (
               <Press key={value} onPress={() => { setAudience(value); setAudienceOpen(false); }} style={{ height: 48, borderRadius: 12, backgroundColor: audience === value ? colors.surface2 : "transparent", justifyContent: "center", paddingHorizontal: 12 }}>
                 <Text style={{ color: colors.fg, fontSize: 16 }}>{AUDIENCE_LABEL[value]}</Text>
@@ -261,7 +262,7 @@ function TextStoryCanvas({ text, onChange }: { text: string; onChange: (value: s
         <TextInput
           value={text}
           onChangeText={onChange}
-          placeholder="Écris ta story"
+          placeholder={tr("Écris ta story")}
           placeholderTextColor="rgba(247,249,252,0.45)"
           multiline
           autoFocus
@@ -543,7 +544,7 @@ function VideoTrim({
     if (busy) return;
     const end = start + length;
     if (!(start >= 0 && end > start && end <= duration + 0.25 && end - start <= MAX_VIDEO_SEC + 0.05)) {
-      setError("Le passage choisi n’est pas valide.");
+      setError(tr("Le passage choisi n’est pas valide."));
       return;
     }
     const keepsWholeClip = duration <= MAX_VIDEO_SEC && start < 0.2 && Math.abs(end - duration) < 0.35;
@@ -594,7 +595,7 @@ function VideoTrim({
           message: errorText(err, String(err)),
         });
       }
-      setError("Le découpage de cette vidéo a échoué.");
+      setError(tr("Le découpage de cette vidéo a échoué."));
     } finally {
       setBusy(false);
     }
@@ -604,15 +605,15 @@ function VideoTrim({
   const size = duration > 0 ? (length / duration) * 100 : 100;
   const headLeft = duration > 0 ? Math.min(100, Math.max(0, (head / duration) * 100)) : 0;
   const short = duration <= MAX_VIDEO_SEC;
-  const label = short && start < 0.2 && Math.abs(start + length - duration) < 0.35 ? "Utiliser cette vidéo" : "Utiliser ce passage";
+  const label = short && start < 0.2 && Math.abs(start + length - duration) < 0.35 ? tr("Utiliser cette vidéo") : tr("Utiliser ce passage");
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <VideoView player={player} style={{ flex: 1 }} contentFit="contain" nativeControls={false} />
-      <Press accessibilityLabel={playing ? "Pause" : "Lecture"} onPress={togglePlay} style={{ position: "absolute", top: "38%", alignSelf: "center", width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+      <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ position: "absolute", top: "38%", alignSelf: "center", width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
         {playing ? <Pause size={28} color="#fff" /> : <Play size={28} color="#fff" />}
       </Press>
-      <Press accessibilityLabel="Fermer" onPress={onCancel} style={{ position: "absolute", top: insets.top + 8, left: 12, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+      <Press accessibilityLabel={tr("Fermer")} onPress={onCancel} style={{ position: "absolute", top: insets.top + 8, left: 12, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
         <X size={26} color="#fff" />
       </Press>
       <View style={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 16, gap: 12, backgroundColor: "rgba(0,0,0,0.72)" }}>
@@ -620,7 +621,7 @@ function VideoTrim({
           {formatClock(start)} — {formatClock(start + length)}
         </Text>
         <Text style={{ color: colors.muted, textAlign: "center" }}>
-          {Math.round(length)} s{short ? "" : ` · maximum ${MAX_VIDEO_SEC} s`}
+          {Math.round(length)} s{short ? "" : tr(" · maximum {0} s", MAX_VIDEO_SEC)}
         </Text>
         <View
           onLayout={(event) => {
@@ -654,7 +655,7 @@ function VideoTrim({
                 return (
                   <Press
                     key={sec}
-                    accessibilityLabel={`Garder ${sec} secondes`}
+                    accessibilityLabel={tr("Garder {0} secondes", sec)}
                     onPress={() => apply(startRef.current, sec, "start")}
                     style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: on ? colors.accent : "rgba(255,255,255,0.12)" }}
                   >
@@ -669,7 +670,7 @@ function VideoTrim({
           {busy ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <ActivityIndicator color={colors.accentFg} />
-              <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>Préparation de la vidéo…</Text>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>{tr("Préparation de la vidéo…")}</Text>
             </View>
           ) : (
             <Text style={{ color: colors.accentFg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{label}</Text>
@@ -704,7 +705,7 @@ function StoryGallery({
   async function load(nextAlbum?: MediaLibrary.Album | null) {
     const perm = await MediaLibrary.requestPermissionsAsync(false, ["photo", "video"]);
     if (!perm.granted) {
-      setNotice("Autorise l’accès aux photos pour afficher ta pellicule. Tu peux aussi prendre une photo.");
+      setNotice(tr("Autorise l’accès aux photos pour afficher ta pellicule. Tu peux aussi prendre une photo."));
       return;
     }
     setLimited(perm.accessPrivileges === "limited");
@@ -724,7 +725,7 @@ function StoryGallery({
   }
 
   useEffect(() => {
-    void load().catch(() => setNotice("La photothèque n’a pas pu s’ouvrir."));
+    void load().catch(() => setNotice(tr("La photothèque n’a pas pu s’ouvrir.")));
   }, [tab]);
 
   async function choose(asset: MediaLibrary.Asset) {
@@ -750,7 +751,7 @@ function StoryGallery({
             message: errorText(err, String(err)),
           });
         }
-        setNotice("Cette vidéo n’est pas encore disponible sur l’iPhone. Réessaie.");
+        setNotice(tr("Cette vidéo n’est pas encore disponible sur l’iPhone. Réessaie."));
       } finally {
         setPreparing(false);
       }
@@ -790,14 +791,14 @@ function StoryGallery({
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingTop: insetsTop + 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center" }}>
-        <Press accessibilityLabel="Fermer" onPress={onClose} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+        <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
           <X size={26} color="#fff" />
         </Press>
         <View style={{ flex: 1, flexDirection: "row", justifyContent: "center", gap: 18 }}>
           {(["photos", "albums"] as const).map((item) => (
             <Press key={item} onPress={() => { setAlbum(null); setTab(item); }}>
               <Text style={{ color: tab === item ? "#fff" : colors.muted, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>
-                {item === "photos" ? "Photos" : "Albums"}
+                {item === "photos" ? tr("Photos") : tr("Albums")}
               </Text>
             </Press>
           ))}
@@ -807,13 +808,13 @@ function StoryGallery({
       <View style={{ paddingVertical: 12 }}>
         <Press onPress={onText} style={{ marginLeft: 16, width: 92, height: 72, borderRadius: 16, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center", gap: 6 }}>
           <Type size={22} color={colors.accent} />
-          <Text style={{ color: colors.paper, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Texte</Text>
+          <Text style={{ color: colors.paper, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("Texte")}</Text>
         </Press>
       </View>
       {notice ? <Text style={{ color: colors.muted, paddingHorizontal: 16, marginBottom: 8 }}>{notice}</Text> : null}
       {limited ? (
         <Press onPress={() => void MediaLibrary.presentPermissionsPickerAsync(["photo", "video"]).then(() => load(album))} style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-          <Text style={{ color: colors.accent }}>Modifier la sélection</Text>
+          <Text style={{ color: colors.accent }}>{tr("Modifier la sélection")}</Text>
         </Press>
       ) : null}
       {tab === "albums" && !album ? (
@@ -851,7 +852,7 @@ function StoryGallery({
       {preparing ? (
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", gap: 12 }}>
           <ActivityIndicator color="#fff" />
-          <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>Préparation de la vidéo…</Text>
+          <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{tr("Préparation de la vidéo…")}</Text>
         </View>
       ) : null}
     </View>

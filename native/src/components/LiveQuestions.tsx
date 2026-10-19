@@ -12,6 +12,7 @@ import { Press } from "./ui";
 import { errorText } from "../lib/error-fr";
 import { palettes } from "../theme";
 import type { LiveQuestion, LiveQuestions } from "../lib/event-live";
+import { tr } from "../lib/tr";
 
 const colors = palettes.dark;
 const GOLD = "#d4a017";
@@ -79,7 +80,7 @@ export function SpotlightCard({
       <View style={{ padding: 14, borderRadius: 18, backgroundColor: "rgba(6,10,24,0.82)", borderWidth: 1, borderColor: "rgba(212,160,23,0.75)" }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <HelpCircle size={15} color={GOLD} />
-          <Text style={{ color: GOLD, fontSize: 11, letterSpacing: 1.2, fontFamily: "Inter_700Bold" }}>QUESTION DU PUBLIC</Text>
+          <Text style={{ color: GOLD, fontSize: 11, letterSpacing: 1.2, fontFamily: "Inter_700Bold" }}>{tr("QUESTION DU PUBLIC")}</Text>
         </View>
         <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Avatar user={{ displayName: q.name, avatar: q.avatar ?? undefined }} size={26} />
@@ -90,9 +91,9 @@ export function SpotlightCard({
         <Text style={{ marginTop: 8, color: "#fff", fontSize: 16, lineHeight: 22, fontFamily: "Inter_600SemiBold" }}>« {q.text} »</Text>
         {organizer ? (
           <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
-            <CardBtn label="Traitée" onPress={onDone} icon={<Check size={14} color="#0b1220" />} primary />
-            <CardBtn label="Masquer" onPress={onHide} icon={<EyeOff size={14} color="#fff" />} />
-            <CardBtn label="Suivante" onPress={onNext} icon={<ChevronRight size={14} color="#fff" />} />
+            <CardBtn label={tr("Traitée")} onPress={onDone} icon={<Check size={14} color="#0b1220" />} primary />
+            <CardBtn label={tr("Masquer")} onPress={onHide} icon={<EyeOff size={14} color="#fff" />} />
+            <CardBtn label={tr("Suivante")} onPress={onNext} icon={<ChevronRight size={14} color="#fff" />} />
           </View>
         ) : null}
       </View>
@@ -168,7 +169,7 @@ export function QuestionsSheet({
       setTimeout(() => setSent(false), 2200);
       onChanged();
     } catch (err) {
-      Alert.alert("Question", errorText(err, "Question non envoyée."));
+      Alert.alert(tr("Question"), errorText(err, tr("Question non envoyée.")));
     } finally {
       setSending(false);
     }
@@ -180,7 +181,7 @@ export function QuestionsSheet({
       await voteLiveQuestion(eventId, q.id, !q.myVote);
       onChanged();
     } catch (err) {
-      Alert.alert("Question", errorText(err, "Vote impossible."));
+      Alert.alert(tr("Question"), errorText(err, tr("Vote impossible.")));
     }
   }
 
@@ -190,31 +191,31 @@ export function QuestionsSheet({
       await moderateLiveQuestion(eventId, q.id, action);
       onChanged();
     } catch (err) {
-      Alert.alert("Question", errorText(err, "Action impossible."));
+      Alert.alert(tr("Question"), errorText(err, tr("Action impossible.")));
     }
   }
 
   function more(q: LiveQuestion) {
     if (!organizer) {
-      Alert.alert(q.name, q.text, [{ text: "Signaler", onPress: () => onReport(q) }, { text: "Annuler", style: "cancel" }]);
+      Alert.alert(q.name, q.text, [{ text: tr("Signaler"), onPress: () => onReport(q) }, { text: tr("Annuler"), style: "cancel" }]);
       return;
     }
     Alert.alert(q.name, q.text, [
       q.status === "done" || q.status === "ignored"
-        ? { text: "Remettre en attente", onPress: () => void moderate(q, "restore") }
-        : { text: "Marquer comme traitée", onPress: () => void moderate(q, "done") },
-      ...(q.status === "ignored" ? [] : [{ text: "Ignorer (masquer au public)", onPress: () => void moderate(q, "ignore") }]),
+        ? { text: tr("Remettre en attente"), onPress: () => void moderate(q, "restore") }
+        : { text: tr("Marquer comme traitée"), onPress: () => void moderate(q, "done") },
+      ...(q.status === "ignored" ? [] : [{ text: tr("Ignorer (masquer au public)"), onPress: () => void moderate(q, "ignore") }]),
       {
-        text: "Supprimer (abusive)",
+        text: tr("Supprimer (abusive)"),
         style: "destructive" as const,
         onPress: () =>
-          Alert.alert("Supprimer la question", "Elle disparaîtra pour tout le monde.", [
-            { text: "Annuler", style: "cancel" },
-            { text: "Supprimer", style: "destructive", onPress: () => void moderate(q, "delete") },
+          Alert.alert(tr("Supprimer la question"), tr("Elle disparaîtra pour tout le monde."), [
+            { text: tr("Annuler"), style: "cancel" },
+            { text: tr("Supprimer"), style: "destructive", onPress: () => void moderate(q, "delete") },
           ]),
       },
-      { text: "Signaler l’auteur", onPress: () => onReport(q) },
-      { text: "Annuler", style: "cancel" as const },
+      { text: tr("Signaler l’auteur"), onPress: () => onReport(q) },
+      { text: tr("Annuler"), style: "cancel" as const },
     ]);
   }
 
@@ -223,7 +224,7 @@ export function QuestionsSheet({
 
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
-      <Press accessibilityLabel="Fermer les questions" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }} />
+      <Press accessibilityLabel={tr("Fermer les questions")} onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Animated.View
           style={{
@@ -240,19 +241,19 @@ export function QuestionsSheet({
         >
           <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}>
             <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>
-              Questions du public{data ? ` (${counts.all})` : ""}
+              {tr("Questions du public")}{data ? ` (${counts.all})` : ""}
             </Text>
-            <Press accessibilityLabel="Fermer" onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+            <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
               <X size={20} color="#fff" />
             </Press>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, paddingHorizontal: 18, marginTop: 8 }}>
             {organizer
-              ? ([["pending", `En attente ${counts.pending}`], ["done", `Traitées ${counts.done}`], ["all", "Toutes"]] as const).map(([id, label]) => (
+              ? ([["pending", tr("En attente {0}", counts.pending)], ["done", tr("Traitées {0}", counts.done)], ["all", tr("Toutes")]] as const).map(([id, label]) => (
                   <Chip key={id} label={label} on={filter === id} onPress={() => setFilter(id)} />
                 ))
               : null}
-            {([["popular", "Populaires"], ["recent", "Récentes"]] as const).map(([id, label]) => (
+            {([["popular", tr("Populaires")], ["recent", tr("Récentes")]] as const).map(([id, label]) => (
               <Chip key={id} label={label} on={sort === id} onPress={() => setSort(id)} subtle />
             ))}
           </View>
@@ -266,7 +267,7 @@ export function QuestionsSheet({
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <Text style={{ color: "rgba(255,255,255,0.55)", textAlign: "center", paddingVertical: 22, paddingHorizontal: 24 }}>
-                  {organizer ? "Aucune question pour le moment." : "Aucune question pour le moment. Sois la première personne à en poser une !"}
+                  {organizer ? tr("Aucune question pour le moment.") : tr("Aucune question pour le moment. Sois la première personne à en poser une !")}
                 </Text>
               }
               renderItem={({ item: q }) => (
@@ -277,14 +278,14 @@ export function QuestionsSheet({
                       {q.name} · @{q.username} · {ago(q.createdAt)}
                     </Text>
                     <StatusChip status={q.status} />
-                    <Press accessibilityLabel="Plus" onPress={() => more(q)} style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
+                    <Press accessibilityLabel={tr("Plus")} onPress={() => more(q)} style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
                       <MoreHorizontal size={16} color="rgba(255,255,255,0.6)" />
                     </Press>
                   </View>
                   <Text style={{ marginTop: 6, color: "#fff", fontSize: 15, lineHeight: 20 }}>{q.text}</Text>
                   <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Press
-                      accessibilityLabel={q.myVote ? "Retirer mon vote" : "Soutenir cette question"}
+                      accessibilityLabel={q.myVote ? tr("Retirer mon vote") : tr("Soutenir cette question")}
                       disabled={Boolean(ended)}
                       onPress={() => void vote(q)}
                       style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: q.myVote ? "rgba(212,160,23,0.22)" : "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: q.myVote ? GOLD : "transparent" }}
@@ -296,11 +297,11 @@ export function QuestionsSheet({
                     {organizer && q.status !== "done" && q.status !== "ignored" ? (
                       q.status === "shown" ? (
                         <Press onPress={() => void moderate(q, "unshow")} style={{ paddingHorizontal: 12, height: 30, borderRadius: 15, borderWidth: 1, borderColor: GOLD, justifyContent: "center" }}>
-                          <Text style={{ color: GOLD, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Retirer de l’écran</Text>
+                          <Text style={{ color: GOLD, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{tr("Retirer de l’écran")}</Text>
                         </Press>
                       ) : (
                         <Press onPress={() => void moderate(q, "show")} style={{ paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: GOLD, justifyContent: "center" }}>
-                          <Text style={{ color: "#0b1220", fontSize: 12, fontFamily: "Inter_700Bold" }}>Afficher à l’écran</Text>
+                          <Text style={{ color: "#0b1220", fontSize: 12, fontFamily: "Inter_700Bold" }}>{tr("Afficher à l’écran")}</Text>
                         </Press>
                       )
                     ) : null}
@@ -311,28 +312,28 @@ export function QuestionsSheet({
           )}
           {/* Ask — viewers (and the organizer can test it) */}
           {organizer ? null : ended ? (
-            <Text style={{ color: "rgba(255,255,255,0.55)", textAlign: "center", paddingTop: 10 }}>Le direct est terminé : plus de questions ni de votes.</Text>
+            <Text style={{ color: "rgba(255,255,255,0.55)", textAlign: "center", paddingTop: 10 }}>{tr("Le direct est terminé : plus de questions ni de votes.")}</Text>
           ) : open ? (
             <View style={{ paddingHorizontal: 14, paddingTop: 8 }}>
-              {sent ? <Text style={{ color: GOLD, fontSize: 12, marginBottom: 6, textAlign: "center" }}>✓ Question envoyée</Text> : null}
+              {sent ? <Text style={{ color: GOLD, fontSize: 12, marginBottom: 6, textAlign: "center" }}>{tr("✓ Question envoyée")}</Text> : null}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44, borderRadius: 22, paddingLeft: 16, paddingRight: 6, backgroundColor: "rgba(255,255,255,0.1)", borderWidth: 1, borderColor: "rgba(212,160,23,0.35)" }}>
                 <TextInput
                   value={draft}
                   onChangeText={(v) => setDraft(v.slice(0, 300))}
                   autoFocus={focusAsk}
-                  placeholder="Poser une question…"
+                  placeholder={tr("Poser une question…")}
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   multiline
                   style={{ flex: 1, color: "#fff", fontSize: 14, paddingVertical: 10, maxHeight: 90 }}
                 />
                 <Press disabled={sending || draft.trim().length < 3} onPress={() => void ask()} style={{ paddingHorizontal: 12, height: 34, borderRadius: 17, backgroundColor: GOLD, justifyContent: "center", opacity: sending || draft.trim().length < 3 ? 0.5 : 1 }}>
-                  <Text style={{ color: "#0b1220", fontFamily: "Inter_700Bold", fontSize: 13 }}>Envoyer</Text>
+                  <Text style={{ color: "#0b1220", fontFamily: "Inter_700Bold", fontSize: 13 }}>{tr("Envoyer")}</Text>
                 </Press>
               </View>
               <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginTop: 4, textAlign: "right" }}>{draft.length}/300</Text>
             </View>
           ) : (
-            <Text style={{ color: "rgba(255,255,255,0.55)", textAlign: "center", paddingTop: 10 }}>Les questions sont fermées pour le moment.</Text>
+            <Text style={{ color: "rgba(255,255,255,0.55)", textAlign: "center", paddingTop: 10 }}>{tr("Les questions sont fermées pour le moment.")}</Text>
           )}
         </Animated.View>
       </KeyboardAvoidingView>
@@ -349,14 +350,14 @@ function Chip({ label, on, onPress, subtle }: { label: string; on: boolean; onPr
 }
 
 function StatusChip({ status }: { status: LiveQuestion["status"] }) {
-  const label = status === "shown" ? "À l’écran" : status === "done" ? "Traitée" : status === "ignored" ? "Masquée" : "En attente";
+  const label = status === "shown" ? tr("À l’écran") : status === "done" ? tr("Traitée") : status === "ignored" ? tr("Masquée") : tr("En attente");
   const color = status === "shown" ? GOLD : status === "done" ? "#4ade80" : "rgba(255,255,255,0.55)";
   return <Text style={{ color, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>{label}</Text>;
 }
 
 function ago(ms: number) {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
-  return m < 1 ? "à l’instant" : m < 60 ? `il y a ${m} min` : `il y a ${Math.round(m / 60)} h`;
+  return m < 1 ? tr("à l’instant") : m < 60 ? tr("il y a {0} min", m) : tr("il y a {0} h", Math.round(m / 60));
 }
 
 void colors;

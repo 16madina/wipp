@@ -21,6 +21,7 @@ import { colors } from "../theme";
 import { FONT_LABEL, fontStyle, StoryLayerContent, textLayerStyles, textSizeFor } from "./StoryLayers";
 import { Press } from "./ui";
 import { WippSticker } from "./WippSticker";
+import { tr } from "../lib/tr";
 
 type Canvas = { w: number; h: number };
 
@@ -178,21 +179,21 @@ function TextEditor({
     <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Press onPress={onCancel} accessibilityLabel="Annuler" style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+          <Press onPress={onCancel} accessibilityLabel={tr("Annuler")} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
             <X size={26} color="#fff" />
           </Press>
           <Press
             onPress={nextBg}
-            accessibilityLabel="Fond du texte"
+            accessibilityLabel={tr("Fond du texte")}
             style={{ width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: bg === "none" ? "rgba(255,255,255,0.12)" : bg === "solid" ? "#fff" : "rgba(255,255,255,0.4)" }}
           >
             <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: bg === "solid" ? "#000" : "#fff" }}>A</Text>
           </Press>
-          <Press onPress={done} accessibilityLabel="Terminé" style={{ height: 40, paddingHorizontal: 18, borderRadius: 20, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>Terminé</Text>
+          <Press onPress={done} accessibilityLabel={tr("Terminé")} style={{ height: 40, paddingHorizontal: 18, borderRadius: 20, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Terminé")}</Text>
           </Press>
         </View>
-        <Press onPress={done} accessibilityLabel="Valider le texte" style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
+        <Press onPress={done} accessibilityLabel={tr("Valider le texte")} style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
           <View style={[s.box, { maxWidth: canvasW * 0.9 }]}>
             <TextInput
               value={text}
@@ -200,7 +201,7 @@ function TextEditor({
               autoFocus
               multiline
               maxLength={120}
-              placeholder="Écris quelque chose…"
+              placeholder={tr("Écris quelque chose…")}
               placeholderTextColor="rgba(255,255,255,0.55)"
               selectionColor={colors.accent}
               style={[s.text, { minWidth: 60, padding: 0 }]}
@@ -224,7 +225,7 @@ function TextEditor({
               <Press
                 key={c}
                 onPress={() => setColor(c)}
-                accessibilityLabel={`Couleur ${c}`}
+                accessibilityLabel={tr("Couleur {0}", c)}
                 style={{ width: color === c ? 32 : 26, height: color === c ? 32 : 26, borderRadius: 16, backgroundColor: c, borderWidth: 2, borderColor: color === c ? colors.accent : "rgba(255,255,255,0.85)" }}
               />
             ))}
@@ -244,7 +245,7 @@ function StickerSheet({ onPick, onClose }: { onPick: (id: string) => void; onClo
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Press onPress={onClose} accessibilityLabel="Fermer les stickers" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }} />
+        <Press onPress={onClose} accessibilityLabel={tr("Fermer les stickers")} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }} />
         <View style={{ height: "55%", backgroundColor: colors.tray, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 8, paddingBottom: insets.bottom }}>
           <View style={{ alignItems: "center", paddingBottom: 8 }}>
             <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.hair }} />
@@ -252,7 +253,7 @@ function StickerSheet({ onPick, onClose }: { onPick: (id: string) => void; onClo
           <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingBottom: 8 }}>
             {(["moji", "wippie"] as const).map((id) => (
               <Press key={id} onPress={() => setTab(id)} style={{ paddingHorizontal: 16, height: 34, borderRadius: 17, justifyContent: "center", backgroundColor: tab === id ? colors.accent : colors.surface2 }}>
-                <Text style={{ color: tab === id ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{id === "moji" ? "Wippmoji" : "Wippie"}</Text>
+                <Text style={{ color: tab === id ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{id === "moji" ? tr("Wippmoji") : tr("Wippie")}</Text>
               </Press>
             ))}
           </View>
@@ -318,15 +319,15 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
 
       <View pointerEvents="box-none" style={{ position: "absolute", top: topInset + 8, right: 12, gap: 12, alignItems: "center" }}>
         <Press
-          accessibilityLabel="Ajouter un texte"
+          accessibilityLabel={tr("Ajouter un texte")}
           disabled={layers.length >= MAX_LAYERS}
           onPress={() => setEditing({ index: null })}
           style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}
         >
-          <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 19 }}>Aa</Text>
+          <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 19 }}>{tr("Aa")}</Text>
         </Press>
         <Press
-          accessibilityLabel="Ajouter un sticker"
+          accessibilityLabel={tr("Ajouter un sticker")}
           disabled={stickers >= MAX_STICKERS || layers.length >= MAX_LAYERS}
           onPress={() => setPicking(true)}
           style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)", opacity: stickers >= MAX_STICKERS ? 0.5 : 1 }}

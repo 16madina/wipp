@@ -10,6 +10,7 @@ import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { errorText } from "../lib/error-fr";
 import type { LiveSummary } from "../lib/event-live";
+import { tr } from "../lib/tr";
 
 const GOLD = "#e3c068";
 const CARD = "#1f2638";
@@ -43,7 +44,7 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
       await saveLiveReview(eventId, rating, text);
       setSent(true);
     } catch (err) {
-      Alert.alert("Avis", errorText(err, "Avis non envoyé."));
+      Alert.alert(tr("Avis"), errorText(err, tr("Avis non envoyé.")));
     } finally {
       setBusy(false);
     }
@@ -59,10 +60,10 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
             <CheckCheck size={28} color={GOLD} />
           </View>
           <Text style={{ marginTop: 18, color: "#fff", fontSize: 24, textAlign: "center", fontFamily: "Inter_700Bold" }}>
-            {sum?.isOwner ? "Ta conférence est terminée" : "La conférence est terminée"}
+            {sum?.isOwner ? tr("Ta conférence est terminée") : tr("La conférence est terminée")}
           </Text>
           <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.7)", textAlign: "center", fontSize: 15 }}>
-            {sum?.isOwner ? "Bravo, et merci d’avoir animé ce direct !" : "Merci d’avoir participé !"}
+            {sum?.isOwner ? tr("Bravo, et merci d’avoir animé ce direct !") : tr("Merci d’avoir participé !")}
           </Text>
 
           {!sum ? (
@@ -73,7 +74,7 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
                 <Avatar user={{ displayName: sum.organizer.name, avatar: sum.organizer.avatar ?? undefined }} size={46} />
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={2} style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" }}>{sum.title}</Text>
-                  <Text style={{ marginTop: 2, color: "rgba(255,255,255,0.65)", fontSize: 13 }}>Animée par {sum.organizer.name}</Text>
+                  <Text style={{ marginTop: 2, color: "rgba(255,255,255,0.65)", fontSize: 13 }}>{tr("Animée par")} {sum.organizer.name}</Text>
                 </View>
               </View>
               <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginVertical: 14 }} />
@@ -82,17 +83,17 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
                 <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
                   <Stat value={String(sum.stats.attendees)} label={sum.stats.attendees > 1 ? "participants" : "participant"} />
                   <Stat value={String(sum.stats.questions)} label={sum.stats.questions > 1 ? "questions" : "question"} />
-                  <Stat value={sum.stats.average != null ? `${sum.stats.average} ★` : "—"} label={`${sum.stats.reviews} avis`} />
+                  <Stat value={sum.stats.average != null ? `${sum.stats.average} ★` : "—"} label={tr("{0} avis", sum.stats.reviews)} />
                 </View>
               ) : sum.canReview ? (
                 sent ? (
-                  <Text style={{ color: GOLD, textAlign: "center", paddingVertical: 12, fontFamily: "Inter_600SemiBold" }}>✓ Merci pour ton avis !</Text>
+                  <Text style={{ color: GOLD, textAlign: "center", paddingVertical: 12, fontFamily: "Inter_600SemiBold" }}>{tr("✓ Merci pour ton avis !")}</Text>
                 ) : (
                   <>
-                    <Text style={{ color: "#fff", textAlign: "center", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Qu’as-tu pensé de cette conférence ?</Text>
+                    <Text style={{ color: "#fff", textAlign: "center", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Qu’as-tu pensé de cette conférence ?")}</Text>
                     <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "center", gap: 10 }}>
                       {[1, 2, 3, 4, 5].map((n) => (
-                        <Press key={n} accessibilityLabel={`${n} étoile${n > 1 ? "s" : ""}`} onPress={() => setRating(rating === n ? null : n)} style={{ padding: 2 }}>
+                        <Press key={n} accessibilityLabel={tr("{0} étoile{1}", n, n > 1 ? "s" : "")} onPress={() => setRating(rating === n ? null : n)} style={{ padding: 2 }}>
                           <Star size={30} color={rating && n <= rating ? GOLD : "rgba(255,255,255,0.45)"} fill={rating && n <= rating ? GOLD : "transparent"} />
                         </Press>
                       ))}
@@ -100,27 +101,27 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
                     <TextInput
                       value={text}
                       onChangeText={(v) => setText(v.slice(0, 500))}
-                      placeholder="Laisse un commentaire à l’organisateur…"
+                      placeholder={tr("Laisse un commentaire à l’organisateur…")}
                       placeholderTextColor="rgba(255,255,255,0.45)"
                       multiline
                       style={{ marginTop: 12, minHeight: 84, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", color: "#fff", padding: 12, fontSize: 15, textAlignVertical: "top" }}
                     />
                     <Press disabled={!can || busy} onPress={() => void send()} style={{ marginTop: 10, height: 48, borderRadius: 24, backgroundColor: can ? "#3a4258" : "#2a3142", alignItems: "center", justifyContent: "center" }}>
-                      <Text style={{ color: can ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{busy ? "Envoi…" : sum.myReview ? "Modifier mon avis" : "Envoyer mon avis"}</Text>
+                      <Text style={{ color: can ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{busy ? tr("Envoi…") : sum.myReview ? tr("Modifier mon avis") : tr("Envoyer mon avis")}</Text>
                     </Press>
                     <Press onPress={onBack} style={{ alignSelf: "center", padding: 10 }}>
-                      <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 14 }}>Passer</Text>
+                      <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 14 }}>{tr("Passer")}</Text>
                     </Press>
                   </>
                 )
               ) : (
-                <Text style={{ color: "rgba(255,255,255,0.6)", textAlign: "center", fontSize: 13 }}>Il n’y a pas de rediffusion. À bientôt sur WIPP !</Text>
+                <Text style={{ color: "rgba(255,255,255,0.6)", textAlign: "center", fontSize: 13 }}>{tr("Il n’y a pas de rediffusion. À bientôt sur WIPP !")}</Text>
               )}
             </View>
           )}
 
           <Press onPress={onBack} style={{ marginTop: 18, height: 54, borderRadius: 16, backgroundColor: GOLD, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: "#111725", fontSize: 16, fontFamily: "Inter_700Bold" }}>Retour aux événements</Text>
+            <Text style={{ color: "#111725", fontSize: 16, fontFamily: "Inter_700Bold" }}>{tr("Retour aux événements")}</Text>
           </Press>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { Platform } from "react-native";
 import { FileSystemSessionType, FileSystemUploadType, createUploadTask } from "expo-file-system/legacy";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./firebase-config";
@@ -283,7 +284,7 @@ export async function uploadBusinessImageFile(
   role: "cover" | "logo" | "photo",
   onProgress?: (sent: number, total: number) => void,
 ) {
-  if (!mime.startsWith("image/")) throw new Error("Choisis une image");
+  if (!mime.startsWith("image/")) throw new Error(tr("Choisis une image"));
   if (Platform.OS !== "web") {
     // The bucket accepts JPEG/PNG/WebP up to 8 MB. iPhone photos are often HEIC or a 48 MP JPEG:
     // they were refused (400, « Envoi de l’image impossible »). Always send a resized JPEG.
@@ -292,7 +293,7 @@ export async function uploadBusinessImageFile(
     mime = "image/jpeg";
   }
   const token = await firebaseIdToken();
-  if (!token) throw new Error("Session requise");
+  if (!token) throw new Error(tr("Session requise"));
   const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
   const path = `${profileId}/${role}-${crypto.randomUUID()}.${ext}`;
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-business-cards/${path}`;
@@ -307,7 +308,7 @@ export async function uploadBusinessImageFile(
     const body = await (await fetch(uri)).blob();
     onProgress?.(0, body.size);
     const res = await fetch(endpoint, { method: "POST", headers, body });
-    if (!res.ok) throw new Error("Envoi de l’image impossible");
+    if (!res.ok) throw new Error(tr("Envoi de l’image impossible"));
     onProgress?.(body.size, body.size);
     try {
       return { path, url: await signBusinessImage(path) };
@@ -334,7 +335,7 @@ export async function uploadBusinessImageFile(
     },
   );
   const result = await task.uploadAsync();
-  if (!result || result.status < 200 || result.status >= 300) throw new Error("Envoi de l’image impossible");
+  if (!result || result.status < 200 || result.status >= 300) throw new Error(tr("Envoi de l’image impossible"));
   try {
     return { path, url: await signBusinessImage(path) };
   } catch {
@@ -345,9 +346,9 @@ export async function uploadBusinessImageFile(
 /** Opens the normal 1:1 conversation with the card owner. Does not create a business inbox. */
 export async function messageCardOwner(ownerProfileId: string) {
   const id = ownerProfileId.replace(/^srvuser:/, "");
-  if (!id) throw new Error("Profil WIPP introuvable.");
+  if (!id) throw new Error(tr("Profil WIPP introuvable."));
   const { data, error } = await supabase.from("wipp_public_profiles").select("username").eq("id", id).maybeSingle();
-  if (error || !data?.username) throw new Error("Profil WIPP introuvable.");
+  if (error || !data?.username) throw new Error(tr("Profil WIPP introuvable."));
   const { useWippStore } = await import("./store");
   await useWippStore.getState().openServerDm(data.username);
 }

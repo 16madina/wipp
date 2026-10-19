@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
-import { colors, themeName } from "../theme";
+import { colors, skinName, themeName, type SkinName } from "../theme";
+import { tr } from "../lib/tr";
 
 export function WippMark({
   size = 56,
@@ -30,13 +31,20 @@ export function WippMark({
 
 const LOGO_DARK = require("../../assets/wipp-logo.png");
 const LOGO_LIGHT = require("../../assets/wipp-logo-light.png");
+// Same wordmark, the dot and the smile take the colour of the set (made by recolouring the two official files).
+const LOGO_BY_SKIN: Partial<Record<SkinName, number>> = {
+  rose: require("../../assets/wipp-logo-rose.png"),
+  teal: require("../../assets/wipp-logo-teal.png"),
+  glacier: require("../../assets/wipp-logo-glacier.png"),
+};
 
 export function WippWordmark({ size = 22, variant }: { size?: number; color?: string; variant?: "dark" | "light" }) {
   // Logo officiel (PNG fourni). Sombre : lettres blanches + sourire jaune.
   // Clair : lettres bleu nuit + point et sourire bleus. `variant` force l'un ou l'autre (écrans immersifs).
   const h = size * 1.35;
   const light = (variant ?? themeName) === "light";
-  return <Image source={light ? LOGO_LIGHT : LOGO_DARK} style={{ width: h * (402 / 165), height: h }} resizeMode="contain" accessibilityLabel="WIPP" />;
+  const source = variant ? (light ? LOGO_LIGHT : LOGO_DARK) : (LOGO_BY_SKIN[skinName] ?? (light ? LOGO_LIGHT : LOGO_DARK));
+  return <Image source={source} style={{ width: h * (402 / 165), height: h }} resizeMode="contain" accessibilityLabel="WIPP" />;
 }
 
 export function WippPhonesGlyph({ size = 28, color = colors.navy }: { size?: number; color?: string }) {
@@ -105,7 +113,7 @@ export function TouchHero({ width = 92, height = 78 }: { width?: number; height?
           leftStyle,
         ]}
       >
-        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>WIPP</Text>
+        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>{tr("WIPP")}</Text>
       </Animated.View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 2, zIndex: 2 }}>
         <View style={{ width: 4, height: 7, borderRightWidth: 1.4, borderTopWidth: 1.4, borderBottomWidth: 1.4, borderColor: colors.accent, borderTopRightRadius: 8, borderBottomRightRadius: 8 }} />
@@ -129,7 +137,7 @@ export function TouchHero({ width = 92, height = 78 }: { width?: number; height?
           rightStyle,
         ]}
       >
-        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>WIPP</Text>
+        <Text style={{ color: colors.accent, fontSize: 7, fontFamily: "Inter_800ExtraBold", letterSpacing: 0.4 }}>{tr("WIPP")}</Text>
       </Animated.View>
     </View>
   );

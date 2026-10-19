@@ -11,6 +11,7 @@ import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import { errorText } from "../lib/error-fr";
 import type { LiveStage, StagePerson } from "../lib/event-live";
+import { tr } from "../lib/tr";
 
 const GOLD = "#d4a017";
 const RTCView = Platform.OS === "web" ? View : (require("@livekit/react-native-webrtc") as typeof import("@livekit/react-native-webrtc")).RTCView;
@@ -198,7 +199,7 @@ function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 
       ) : (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#111727" }}>
           <Avatar user={{ displayName: t.name, avatar: t.avatar }} size={small ? 40 : 64} />
-          {!small ? <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.55)", fontSize: 11 }}>Caméra éteinte</Text> : null}
+          {!small ? <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.55)", fontSize: 11 }}>{tr("Caméra éteinte")}</Text> : null}
         </View>
       )}
       {/* Who is speaking: a discreet gold frame (drawn over the video so the size never jumps). */}
@@ -211,7 +212,7 @@ function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 
             <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: small ? 10 : 12, fontFamily: "Inter_600SemiBold" }}>{t.name}</Text>
             {t.organizer && !small ? (
               <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, backgroundColor: GOLD }}>
-                <Text style={{ color: "#0b1220", fontSize: 9, fontFamily: "Inter_700Bold" }}>HOST</Text>
+                <Text style={{ color: "#0b1220", fontSize: 9, fontFamily: "Inter_700Bold" }}>{tr("HOST")}</Text>
               </View>
             ) : null}
           </View>
@@ -219,7 +220,7 @@ function Tile({ t, style, small, label = true, onMenu, menuTop = 6, labelLift = 
       ) : null}
       {menu ? (
         <Press
-          accessibilityLabel={`Options pour ${t.name}`}
+          accessibilityLabel={tr("Options pour {0}", t.name)}
           onPress={() => onMenu!(t)}
           hitSlop={10}
           style={{ position: "absolute", ...(menuLeft ? { left: 6 } : { right: 6 }), top: menuTop, width: small ? 30 : 36, height: small ? 30 : 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)", alignItems: "center", justifyContent: "center" }}
@@ -244,14 +245,14 @@ export function StageInviteCard({ invitedAt, onJoin, onRefuse }: { invitedAt: nu
       <View style={{ alignSelf: "center", width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(212,160,23,0.18)", alignItems: "center", justifyContent: "center" }}>
         <Mic size={22} color={GOLD} />
       </View>
-      <Text style={{ marginTop: 10, color: "#fff", fontSize: 17, textAlign: "center", fontFamily: "Inter_700Bold" }}>L’organisateur t’invite à prendre la parole.</Text>
-      <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center" }}>Tu choisiras ensuite d’activer ton micro et ta caméra. ({left} s)</Text>
+      <Text style={{ marginTop: 10, color: "#fff", fontSize: 17, textAlign: "center", fontFamily: "Inter_700Bold" }}>{tr("L’organisateur t’invite à prendre la parole.")}</Text>
+      <Text style={{ marginTop: 6, color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center" }}>{tr("Tu choisiras ensuite d’activer ton micro et ta caméra. (")}{left} {tr("s)")}</Text>
       <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
         <Press onPress={onRefuse} style={{ flex: 1, height: 46, borderRadius: 23, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>Refuser</Text>
+          <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>{tr("Refuser")}</Text>
         </Press>
         <Press onPress={onJoin} style={{ flex: 1.3, height: 46, borderRadius: 23, backgroundColor: GOLD, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: "#0b1220", fontFamily: "Inter_700Bold" }}>Rejoindre</Text>
+          <Text style={{ color: "#0b1220", fontFamily: "Inter_700Bold" }}>{tr("Rejoindre")}</Text>
         </Press>
       </View>
     </View>
@@ -278,54 +279,54 @@ export function StageSheet({
       const { stageAction } = await import("../lib/event-live");
       onChanged(await stageAction(eventId, body));
     } catch (err) {
-      Alert.alert("Scène", errorText(err, "Action impossible."));
+      Alert.alert(tr("Scène"), errorText(err, tr("Action impossible.")));
     }
   }
   const seats = stage ? stage.maxSpeakers - stage.freeSeats : 1;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
-      <Press accessibilityLabel="Fermer" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }} />
+      <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }} />
       <View style={{ maxHeight: "68%", paddingHorizontal: 18, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 14), borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: "rgba(9,12,24,0.97)", borderTopWidth: 1, borderColor: "rgba(212,160,23,0.35)" }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>Scène · {seats}/{stage?.maxSpeakers ?? 5}</Text>
-          <Press accessibilityLabel="Fermer" onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ flex: 1, color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" }}>{tr("Scène ·")} {seats}/{stage?.maxSpeakers ?? 5}</Text>
+          <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <X size={20} color="#fff" />
           </Press>
         </View>
         {stage?.speakers.length ? (
           <Press
             onPress={() =>
-              Alert.alert("Revenir au mode Conférence", "Tous les intervenants redescendront parmi les spectateurs. Leur micro et leur caméra seront coupés.", [
-                { text: "Annuler", style: "cancel" },
-                { text: "Revenir au mode Conférence", style: "destructive", onPress: () => void act({ action: "mode", mode: "conference" }) },
+              Alert.alert(tr("Revenir au mode Conférence"), tr("Tous les intervenants redescendront parmi les spectateurs. Leur micro et leur caméra seront coupés."), [
+                { text: tr("Annuler"), style: "cancel" },
+                { text: tr("Revenir au mode Conférence"), style: "destructive", onPress: () => void act({ action: "mode", mode: "conference" }) },
               ])
             }
             style={{ marginTop: 12, height: 46, borderRadius: 14, backgroundColor: "rgba(229,56,59,0.15)", borderWidth: 1, borderColor: "#e5383b", alignItems: "center", justifyContent: "center" }}
           >
-            <Text style={{ color: "#ff6b6b", fontFamily: "Inter_700Bold" }}>Revenir au mode Conférence</Text>
+            <Text style={{ color: "#ff6b6b", fontFamily: "Inter_700Bold" }}>{tr("Revenir au mode Conférence")}</Text>
           </Press>
         ) : null}
         <ScrollView>
-          <Section title={`Demandes de parole (${stage?.hands.length ?? 0})`}>
-            {!stage?.hands.length ? <Empty text="Aucune main levée." /> : null}
+          <Section title={tr("Demandes de parole ({0})", stage?.hands.length ?? 0)}>
+            {!stage?.hands.length ? <Empty text={tr("Aucune main levée.")} /> : null}
             {stage?.hands.map((p) => (
               <Row key={p.pid} p={p} sub={p.at ? `✋ ${hhmm(p.at)}` : undefined}>
-                <Small label="Refuser" onPress={() => void act({ action: "dismiss", pid: p.pid })} />
-                <Small label="Accepter" gold disabled={!stage.freeSeats} onPress={() => void act({ action: "invite", pid: p.pid })} />
+                <Small label={tr("Refuser")} onPress={() => void act({ action: "dismiss", pid: p.pid })} />
+                <Small label={tr("Accepter")} gold disabled={!stage.freeSeats} onPress={() => void act({ action: "invite", pid: p.pid })} />
               </Row>
             ))}
           </Section>
           {stage?.invites.length ? (
-            <Section title="Invitations en attente">
+            <Section title={tr("Invitations en attente")}>
               {stage.invites.map((p) => (
-                <Row key={p.pid} p={p} sub="Invitation envoyée…">
-                  <Small label="Annuler" onPress={() => void act({ action: "dismiss", pid: p.pid })} />
+                <Row key={p.pid} p={p} sub={tr("Invitation envoyée…")}>
+                  <Small label={tr("Annuler")} onPress={() => void act({ action: "dismiss", pid: p.pid })} />
                 </Row>
               ))}
             </Section>
           ) : null}
-          <Section title="Sur scène">
-            {!stage?.speakers.length ? <Empty text="Tu es seul(e) sur scène." /> : null}
+          <Section title={tr("Sur scène")}>
+            {!stage?.speakers.length ? <Empty text={tr("Tu es seul(e) sur scène.")} /> : null}
             {stage?.speakers.map((p) => {
               const isFeatured = stage.featured === p.identity;
               return (
@@ -333,17 +334,17 @@ export function StageSheet({
                   <Row p={p} />
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                     {isFeatured || stage.speakers.length > 1 ? (
-                      <Icon label={isFeatured ? "Grille" : "En avant"} onPress={() => void act({ action: "feature", identity: isFeatured ? null : p.identity })}>
+                      <Icon label={isFeatured ? tr("Grille") : tr("En avant")} onPress={() => void act({ action: "feature", identity: isFeatured ? null : p.identity })}>
                         {isFeatured ? <Minimize2 size={14} color="#fff" /> : <Maximize2 size={14} color="#fff" />}
                       </Icon>
                     ) : null}
-                    <Icon label={p.micRevoked ? "Rendre le micro" : "Couper le micro"} onPress={() => void act({ action: "media", pid: p.pid, micRevoked: !p.micRevoked })}>
+                    <Icon label={p.micRevoked ? tr("Rendre le micro") : tr("Couper le micro")} onPress={() => void act({ action: "media", pid: p.pid, micRevoked: !p.micRevoked })}>
                       {p.micRevoked ? <MicOff size={14} color="#ff6b6b" /> : <Mic size={14} color="#fff" />}
                     </Icon>
-                    <Icon label={p.camRevoked ? "Rendre la caméra" : "Couper la caméra"} onPress={() => void act({ action: "media", pid: p.pid, camRevoked: !p.camRevoked })}>
+                    <Icon label={p.camRevoked ? tr("Rendre la caméra") : tr("Couper la caméra")} onPress={() => void act({ action: "media", pid: p.pid, camRevoked: !p.camRevoked })}>
                       {p.camRevoked ? <VideoOff size={14} color="#ff6b6b" /> : <Video size={14} color="#fff" />}
                     </Icon>
-                    <Icon label="Retirer" onPress={() => void act({ action: "leave", pid: p.pid })}>
+                    <Icon label={tr("Retirer")} onPress={() => void act({ action: "leave", pid: p.pid })}>
                       <UserMinus size={14} color="#ff6b6b" />
                     </Icon>
                   </View>
@@ -352,12 +353,12 @@ export function StageSheet({
             })}
             {stage?.featured ? (
               <Press onPress={() => void act({ action: "feature", identity: null })} style={{ marginTop: 8, alignSelf: "flex-start" }}>
-                <Text style={{ color: GOLD, fontSize: 13 }}>Revenir à la grille</Text>
+                <Text style={{ color: GOLD, fontSize: 13 }}>{tr("Revenir à la grille")}</Text>
               </Press>
             ) : null}
           </Section>
           <Press onPress={onInviteSomeone} disabled={!stage?.freeSeats} style={{ marginTop: 14, height: 44, borderRadius: 14, borderWidth: 1, borderColor: GOLD, alignItems: "center", justifyContent: "center", opacity: stage?.freeSeats ? 1 : 0.4 }}>
-            <Text style={{ color: GOLD, fontFamily: "Inter_600SemiBold" }}>{stage?.freeSeats ? "Inviter un participant" : "La scène est complète"}</Text>
+            <Text style={{ color: GOLD, fontFamily: "Inter_600SemiBold" }}>{stage?.freeSeats ? tr("Inviter un participant") : tr("La scène est complète")}</Text>
           </Press>
 
         </ScrollView>

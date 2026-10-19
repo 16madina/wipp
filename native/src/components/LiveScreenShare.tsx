@@ -12,6 +12,7 @@ import { MonitorUp, X } from "lucide-react-native";
 import { Avatar } from "./Avatar";
 import { Press } from "./ui";
 import type { StageTile } from "./LiveStage";
+import { tr } from "../lib/tr";
 
 const GOLD = "#d4a017";
 const native = Platform.OS === "web" ? null : (require("@livekit/react-native-webrtc") as typeof import("@livekit/react-native-webrtc"));
@@ -28,7 +29,7 @@ export const ScreenPicker = forwardRef<{ open: () => Promise<void> }>(function S
       if (Platform.OS !== "ios") return;
       const tag = findNodeHandle(pickerRef.current);
       const manager = NativeModules.ScreenCapturePickerViewManager as { show?: (tag: number | null) => Promise<void> } | undefined;
-      if (!tag || !manager?.show) throw new Error("Le partage d’écran n’est pas disponible sur cet appareil.");
+      if (!tag || !manager?.show) throw new Error(tr("Le partage d’écran n’est pas disponible sur cet appareil."));
       await manager.show(tag);
     },
   }));
@@ -253,7 +254,7 @@ export function ScreenStage({
             <View pointerEvents="none" style={{ position: "absolute", left: 10, top: 44, right: 90, flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(212,160,23,0.5)" }}>
               <MonitorUp size={18} color={GOLD} />
               <Text style={{ flex: 1, color: "#fff", fontSize: 12, lineHeight: 16 }}>
-                <Text style={{ fontFamily: "Inter_700Bold" }}>Les spectateurs voient ton écran.</Text> Ouvre ta présentation, un site ou une app.
+                <Text style={{ fontFamily: "Inter_700Bold" }}>{tr("Les spectateurs voient ton écran.")}</Text> {tr("Ouvre ta présentation, un site ou une app.")}
               </Text>
             </View>
           </View>
@@ -263,7 +264,7 @@ export function ScreenStage({
           </>
         ) : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: "rgba(255,255,255,0.6)" }}>Chargement du partage…</Text>
+            <Text style={{ color: "rgba(255,255,255,0.6)" }}>{tr("Chargement du partage…")}</Text>
           </View>
         )}
         <FloatingPeople people={floating} area={area} thumbW={thumbW} home={home} row={landscape} padTop={immersive ? topSafe + 54 : 6} padBottom={immersive ? bottomPad + 8 : 6} />
@@ -303,16 +304,16 @@ export function ScreenFullscreen({
       {chrome ? (
         <>
           <Press
-            accessibilityLabel="Revenir à la conférence"
+            accessibilityLabel={tr("Revenir à la conférence")}
             onPress={onClose}
             hitSlop={10}
             style={{ position: "absolute", top: insets.top + 8, right: 12, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 1, borderColor: "rgba(212,160,23,0.7)" }}
           >
             <X size={16} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Revenir à la conférence</Text>
+            <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("Revenir à la conférence")}</Text>
           </Press>
           <Text pointerEvents="none" style={{ position: "absolute", bottom: insets.bottom + 10, alignSelf: "center", color: "rgba(255,255,255,0.55)", fontSize: 11 }}>
-            {landscape ? "Tourne ton téléphone · pince pour zoomer" : "Pince avec deux doigts pour zoomer"}
+            {landscape ? tr("Tourne ton téléphone · pince pour zoomer") : tr("Pince avec deux doigts pour zoomer")}
           </Text>
         </>
       ) : null}
@@ -325,10 +326,10 @@ export function SharingBanner({ top, onStop }: { top: number; onStop: () => void
   return (
     <View style={{ position: "absolute", top, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 12, paddingRight: 4, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(229,56,59,0.92)" }}>
       <MonitorUp size={14} color="#fff" />
-      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" }}>Partage d’écran en cours</Text>
-      <Press accessibilityLabel="Arrêter le partage d’écran" onPress={onStop} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.35)" }}>
+      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" }}>{tr("Partage d’écran en cours")}</Text>
+      <Press accessibilityLabel={tr("Arrêter le partage d’écran")} onPress={onStop} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.35)" }}>
         <X size={13} color="#fff" />
-        <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Arrêter</Text>
+        <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{tr("Arrêter")}</Text>
       </Press>
     </View>
   );
@@ -372,7 +373,7 @@ export function MiniLive({ url, mirror, label, onOpen, onClose }: { url: string 
   return (
     <Animated.View
       {...pan.panHandlers}
-      accessibilityLabel="Revenir au direct"
+      accessibilityLabel={tr("Revenir au direct")}
       style={{ position: "absolute", left: 0, top: 0, width: W, height: H, borderRadius: 16, overflow: "hidden", backgroundColor: "#0b1020", borderWidth: 1.5, borderColor: GOLD, transform: pos.getTranslateTransform(), shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 10, elevation: 12 }}
     >
       {url ? (
@@ -386,7 +387,7 @@ export function MiniLive({ url, mirror, label, onOpen, onClose }: { url: string 
         <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#fff" }} />
         <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" }}>{label}</Text>
       </View>
-      <Pressable accessibilityLabel="Quitter le direct" onPress={onClose} hitSlop={8} style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)" }}>
+      <Pressable accessibilityLabel={tr("Quitter le direct")} onPress={onClose} hitSlop={8} style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)" }}>
         <X size={14} color="#fff" />
       </Pressable>
     </Animated.View>

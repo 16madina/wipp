@@ -6,6 +6,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { bootPoster, bootVideo } from "../lib/assets";
 import { useT } from "../lib/store";
 import { palettes } from "../theme";
+import { tr } from "../lib/tr";
 
 /** Écran immersif (photo, vidéo, caméra ou appel) : toujours en couleurs sombres, quel que soit le thème. */
 const colors = palettes.dark;
@@ -53,7 +54,7 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
 
   return (
     <Pressable
-      accessibilityLabel="Wipp"
+      accessibilityLabel={tr("Wipp")}
       onPress={unlockSound}
       style={{ flex: 1, backgroundColor: colors.introBg, justifyContent: "flex-end", alignItems: "center" }}
     >

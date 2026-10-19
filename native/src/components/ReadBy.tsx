@@ -7,6 +7,7 @@ import { Sheet } from "./card-editor-parts";
 import { colors } from "../theme";
 import { formatFullStamp } from "../lib/format";
 import type { Message, User } from "../lib/types";
+import { tr } from "../lib/tr";
 
 const FACES = 3;
 const FACE = 18;
@@ -41,7 +42,7 @@ export function ReadByFaces({ m, users, memberIds }: { m: Message; users: Record
       <View key={key} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}>
         <Avatar user={u ?? { displayName: "?" }} size={40} />
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{u?.displayName || (u?.username ? `@${u.username}` : "Membre")}</Text>
+          <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{u?.displayName || (u?.username ? `@${u.username}` : tr("Membre"))}</Text>
           {u?.username ? <Text style={{ color: colors.muted, fontSize: 12 }}>@{u.username}</Text> : null}
         </View>
         {when ? <Text style={{ color: colors.muted, fontSize: 12 }}>{formatFullStamp(when, "fr")}</Text> : null}
@@ -53,7 +54,7 @@ export function ReadByFaces({ m, users, memberIds }: { m: Message; users: Record
     <>
       <Press
         onPress={() => setOpen(true)}
-        accessibilityLabel={`Lu par ${readers.length} membre${readers.length > 1 ? "s" : ""}. Voir la liste`}
+        accessibilityLabel={tr("Lu par {0} membre{1}. Voir la liste", readers.length, readers.length > 1 ? "s" : "")}
         style={{ flexDirection: "row", alignItems: "center", marginRight: 2, paddingVertical: 4, paddingLeft: 6 }}
       >
         <View style={{ flexDirection: "row" }}>
@@ -66,23 +67,23 @@ export function ReadByFaces({ m, users, memberIds }: { m: Message; users: Record
         {extra > 0 ? <Text style={{ marginLeft: 3, color: colors.muted, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>+{extra}</Text> : null}
         <ChevronRight size={12} color={colors.muted} style={{ marginLeft: 1 }} />
       </Press>
-      <Sheet open={open} title="Infos du message" onClose={() => setOpen(false)}>
+      <Sheet open={open} title={tr("Infos du message")} onClose={() => setOpen(false)}>
         <ScrollView style={{ maxHeight: 460 }}>
-          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 2 }}>Lu par · {readers.length}</Text>
+          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 2 }}>{tr("Lu par ·")} {readers.length}</Text>
           {readers.map((r) => row(r.userId, r.readAt, `r-${r.userId}`))}
           {receivedOnly.length ? (
             <>
-              <Text style={{ color: colors.muted, fontSize: 13, fontFamily: "Inter_600SemiBold", marginTop: 14, marginBottom: 2 }}>Reçu par · {receivedOnly.length}</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, fontFamily: "Inter_600SemiBold", marginTop: 14, marginBottom: 2 }}>{tr("Reçu par ·")} {receivedOnly.length}</Text>
               {receivedOnly.map((r) => row(r.userId, r.deliveredAt, `d-${r.userId}`))}
             </>
           ) : null}
           {waiting.length ? (
             <Text style={{ color: colors.muted, fontSize: 12, marginTop: 14 }}>
-              Pas encore reçu par {waiting.length} membre{waiting.length > 1 ? "s" : ""}.
+              {tr("Pas encore reçu par")} {waiting.length} {tr("membre")}{waiting.length > 1 ? "s" : ""}.
             </Text>
           ) : null}
           <Text style={{ color: colors.muted, fontSize: 11, marginTop: 14, lineHeight: 15 }}>
-            Une personne qui a désactivé les accusés de lecture apparaît seulement dans « Reçu par ».
+            {tr("Une personne qui a désactivé les accusés de lecture apparaît seulement dans « Reçu par ».")}
           </Text>
         </ScrollView>
       </Sheet>

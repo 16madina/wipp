@@ -1,0 +1,230 @@
+0|WIPP Touch
+1|Bring your phones together
+2|Admin
+3|Action not possible
+4|Moderation
+5|Admin panel
+6|Restricted access
+7|This area is reserved for WIPP administration.
+8|Loading…
+9|📱 Your admin number
+10|The sign-in number of this administrator account.
+11|Save the number
+12|Number saved.
+13|No messages
+14|The last 50 messages. Private conversations are end-to-end encrypted: their content cannot be read, even by the admin. For a reported message, use “Reports”.
+15|Message
+16|· conversation
+17|No referrers
+18|Nobody has been invited with a code yet.
+19|Invited = entered the code · Active = in contact with the referrer · 30 d = became active this month (20 max).
+20| · ⚠️ to check
+21|invited
+22|active ·
+23|/ 30 d
+24|Name or @username
+25|· joined on
+26|No users.
+27|Administrator
+28|Moderator
+29|User
+30| · suspended on {0}{1}
+31|Remove verification (gold badge)
+32|Verification removed.
+33|✅ Verify (gold badge)
+34|@{0} is now verified.
+35|Remove the moderator role
+36|🛡️ Make moderator
+37|Restore the account
+38|Reason for the suspension (optional)
+39|⛔ Suspend the account
+40|Suspend
+41|Suspend @{0}? They will no longer be able to use WIPP.
+42|Open
+43|All
+44|No reports
+45|User reports will appear here.
+46|Report
+47|from @{0}
+48|· reported by
+49|See the message
+50|Remove the content
+51|{0} will no longer be visible to anyone.
+52|Handled
+53|Dismiss
+54|Suspend the account
+55|{0} will no longer be able to use WIPP. You can restore the account in “Suspended”.
+56|No suspended accounts
+57|Suspended on
+58| by @{0}
+59|Templates (editable)
+60|+ New
+61|Title
+62|PREVIEW · WIPP · now
+63|Save the template
+64|Template saved.
+65|Recipients
+66|One user
+67|All users
+68|Sending…
+69|Send the notification
+70|Send
+71|Send to ALL reachable users?
+72|Send to {0}?
+73|Sent: {0} device(s) for {1} user(s).
+74|History
+75|No actions
+76|by @
+77|Back
+78|Country
+79|Close the keyboard
+80|Done
+81|Create an account
+82|I already have an account
+83|Terms of Use
+84|Privacy Policy
+85|Enter a valid phone number.
+86|Phone number
+87|Country: {0} ({1})
+88|Continue
+89|Good
+90|to see you
+91|Find your WIPP again
+92|Enter the number linked to your account. We will send you a code by SMS to check that it is really you.
+93|By continuing, you accept the
+94|and the
+95|I don’t have an account yet
+96|Unable to sign in.
+97|Unable to sign in. Try again when the network is back.
+98|Verification failed. Start again.
+99|Welcome back!
+100|This number already has a WIPP account{0}. We signed you in to that account.
+101|Verify your
+102|number
+103|We sent you a code by SMS at
+104|Change my number
+105|Didn’t get the code?
+106|Resend the code in 00:{0}
+107|Resend the code
+108|Allow access to photos to choose your profile photo.
+109|SMS code expired. Start the verification again.
+110|Enter your first name, your last name and a valid username.
+111|@{0} is already taken. Choose another username.
+112|Unable to check the username. Check your connection and try again.
+113|This number already has a WIPP account. For another person, enter another number. To come back to this one, choose “I already have an account”.
+114|Sign-up failed. Try again.
+115|Complete your
+116|Profile photo
+117|Choose a photo
+118|Change the photo
+119|Add a photo
+120|Optional · visible to your contacts
+121|First name
+122|Last name
+123|Your WIPP · this is how people will find you
+124|Invitation code (optional)
+125|Welcome to WIPP ✨
+126|Your WIPP is ready.
+127|Connect your life.
+128|Name or @username
+129|Group · 
+130|Declined · 
+131|Missed · 
+132|1 hour
+133|24 hours
+134|7 days
+135|Call link
+136|Unable to create the link.
+137|Video call
+138|Audio call
+139|· expires in
+140|Link copied ✓
+141|Copy the link
+142|Share the link
+143|Join the call now
+144|Create another link
+145|Share this link: anyone who has WIPP can join the call. Several people can join at the same time.
+146|Call type
+147|The link expires after
+148|Creating…
+149|Create the link
+150|My active links
+151|Expires in
+152| · {0} in the call
+153|Cancel the link
+154|The link will stop working and the current call will end.
+155|Cancel
+156|Unable to check the link.
+157|Checking the link…
+158|{0} participant{1} in the call
+159|Nobody is in the call yet
+160|Connecting…
+161|Join the call
+162|Unable to join the call.
+163|This call link has expired.
+164|This call link has been cancelled.
+165|Invalid call link.
+166|Try again in {0} s.
+167|Archived
+168|Conversation
+169|Mute
+170|Turn on WIPP Privé in Privacy.
+171|Hide and lock
+172|This conversation will disappear from Chats. It will only stay in WIPP Privé.
+173|Open the conversation
+174|See the story
+175|Business
+176|WIPP Touch request received
+177|Demo
+178|Request received (Invisible mode)
+179|This user is in Invisible mode.
+180|Decline
+181|Block
+182|How do you want to connect?
+183|Connect · {0}
+184|Choose a valid duration
+185|Archives
+186|Locked conversation
+187|Create a group
+188|You don’t have a group yet. Create the first one!
+189|Group
+190|Unable to edit for now.
+191|Group photo
+192|Unable to change the photo for now.
+193|Action not possible.
+194|Remove from the group
+195|Remove {0} from the group?
+196|The creator of the group cannot be removed.
+197|Leave the group
+198|Leave “{0}”? You will no longer receive its messages.
+199|Unable to leave the group for now.
+200|Group info
+201|Contact info
+202|Change the group photo
+203|See the photo
+204|Public group
+205|Private group
+206|Edit the group
+207|Edit the name · Add a description
+208|Audio
+209|Video
+210|Share
+211|Search
+212|{0}’s business card
+213|{0}’s business
+214|Media and documents
+215|No photos or videos shared yet.
+216|Pin the chat
+217|Chat theme
+218|Disappearing messages
+219|Group permissions
+220|Unlock the conversation
+221|Lock the conversation
+222|End-to-end encryption
+223|Add members
+224|Invite with a link or a QR code
+225|Membership requests
+226|You
+227|Report the group
+228|Do you also want to leave the group?
+229|⏳ Temporary contact · expires in {0}

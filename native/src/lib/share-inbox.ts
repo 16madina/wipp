@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import * as FileSystem from "expo-file-system/legacy";
 import type { ShareIntent, ShareIntentFile } from "expo-share-intent";
 import { LIMITS } from "./messaging/media-crypto";
@@ -42,13 +43,13 @@ export const SHARE_MAX_FILES = 10;
 async function fileDraft(file: ShareIntentFile): Promise<ShareDraft> {
   const mime = mimeOf(file);
   const kind = IMAGE.has(mime) ? "image" : VIDEO.has(mime) ? "video" : null;
-  if (!kind) throw new Error("Ce type de fichier n’est pas pris en charge.");
+  if (!kind) throw new Error(tr("Ce type de fichier n’est pas pris en charge."));
   const ext = kind === "video" ? "mp4" : mime.includes("png") ? "png" : "jpg";
   const uri = await localFile(file.path, ext);
   const size = await byteSize(uri, file.size);
   const limit = kind === "video" ? LIMITS.video : LIMITS.image;
-  if (!size) throw new Error("Fichier introuvable.");
-  if (size > limit) throw new Error(kind === "video" ? "Une vidéo dépasse 100 Mo." : "Une image dépasse 16 Mo.");
+  if (!size) throw new Error(tr("Fichier introuvable."));
+  if (size > limit) throw new Error(kind === "video" ? tr("Une vidéo dépasse 100 Mo.") : tr("Une image dépasse 16 Mo."));
   return { kind, uri, mime, name: file.fileName || (kind === "video" ? "video.mp4" : "image.jpg"), size };
 }
 
@@ -70,11 +71,11 @@ export async function draftsFromShare(intent: ShareIntent): Promise<{ drafts: Sh
         lastError = err;
       }
     }
-    if (!drafts.length) throw lastError instanceof Error ? lastError : new Error("Rien à envoyer.");
+    if (!drafts.length) throw lastError instanceof Error ? lastError : new Error(tr("Rien à envoyer."));
     return { drafts, skipped };
   }
   const text = (intent.webUrl || intent.text || "").trim();
-  if (!text) throw new Error("Rien à envoyer.");
-  if (text.length > 8000) throw new Error("Ce texte est trop long.");
+  if (!text) throw new Error(tr("Rien à envoyer."));
+  if (text.length > 8000) throw new Error(tr("Ce texte est trop long."));
   return { drafts: [{ kind: "text", text }], skipped: 0 };
 }

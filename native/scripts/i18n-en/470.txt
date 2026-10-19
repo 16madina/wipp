@@ -1,0 +1,250 @@
+470|Open now
+471|Open 24/7
+472|Open around you
+473|🟢 Open now
+474|🕐 Open 24/7
+475|More useful services are coming.
+476| · On duty
+477|Remove from favourites
+478|Add to favourites
+479|Favourites
+480|Unable to save.
+481|Nail salon
+482|Hair
+483|Beauty
+484|Restaurant
+485|Fashion
+486|Pastry
+487|Café
+488|Services
+489|Unable to load the businesses.
+490|Businesses nearby
+491|See all ›
+492|Pinned
+493|Popular categories
+494|No businesses for now
+495|Create my business
+496|Unable to load the events.
+497|Events
+498|Discover, take part and live experiences on WIPP.
+499|Create an event
+500|Search for an event, a city…
+501|Results
+502|Events near you
+503|Upcoming
+504|No events found
+505|No upcoming events
+506|Listing
+507|Report the listing
+508|Block this person?
+509|Saved
+510|Negotiable
+511|City to be confirmed
+512|Scheduled {0}
+513|Published {0}
+514|WIPP member
+515|Rating
+516|Unable to rate.
+517|Not rated yet
+518| · {0} listing{1}
+519|Deleting…
+520|WIPP chat
+521|Quick reply
+522|Call
+523|Make an offer
+524|Saved
+525|Description
+526|No description.
+527|Place
+528|To be confirmed by message
+529|from your position
+530|Report or hide this listing
+531|Similar listings
+532|Rate {0} out of 5
+533|© OpenStreetMap
+534|On duty until {0}
+535|Write on WIPP
+536|Unable to open the conversation
+537|Organized by
+538|{0} interested
+539|Nobody is interested yet.
+540|✓ Interested ({0})
+541|I’m interested{0}
+542|Event
+543|Remove from saved
+544|Delete the event
+545|Delete this event?
+546|Unable to delete.
+547|Report the event
+548|City
+549|Price
+550|Date YYYY-MM-DD (optional)
+551|The title is required.
+552|The title and the city are required.
+553|Businesses go through the business card.
+554|Unable to save
+555|Create a business
+556|Not found
+557|Delete this story?
+558|Story options
+559|Story
+560|Report the story
+561|Thank you. The WIPP team will review it. This story will no longer be shown to you.⏎⏎Do you also want to block this person?
+562|Next story
+563|Previous story
+564|Views
+565|Reply to the story…
+566|Wippmoji
+567|Like the story
+568|Close the Wippmojis
+569|Surprises are sent from the conversation.
+570|No views
+571|The group is created, but some of the settings could not be saved. You can redo them in Group info.
+572|Unable to create for now.
+573|(optional)
+574|Change the group photo
+575|Add a group photo
+576|E.g. Family, Team, Masterclass…
+577|Tell people about your group…
+578|Choose a category
+579|Search contacts…
+580|Selected members
+581|Invite contacts
+582|No contacts found.
+583|You don’t have WIPP contacts yet. You can invite with the link once the group is created.
+584|You don’t have WIPP contacts yet. You can add members later from the group info.
+585|What members can do. Can be changed at any time in Group info.
+586|✓ Group created
+587|Public
+588|Private
+589| · disappearing messages ({0})
+590|End-to-end encrypted messages
+591|Next →
+592|Continue without members →
+593|Create the group
+594|Open the group
+595|Share an invitation link
+596|Category
+597|No category
+598|Remove
+599|Group QR
+600|Search for a contact
+601|All your WIPP contacts are already in this group, or you don’t have contacts yet.
+602|Adding…
+603|Add {0} member{1}
+604|Permissions
+605|Only admins can change these settings.
+606|Visibility
+607|When switching to Private, all existing invitation links will stop working.
+608|What members can do
+609|Requests
+610|No pending requests.
+611|Through the invitation link
+612|Added by {0}
+613|Approve
+614|Invitation link
+615|Anyone with this link can join the group (valid 7 days, 50 uses).
+616|Reset the link
+617|The old link and the old QR will stop working.
+618|Creating the link…
+619|Only the group admins can create an invitation link.
+620|Invitations by link are turned off for this group.
+621|Link unavailable for now.
+622|Invitation
+623|WIPP group
+624|✓ Request sent. A group admin must approve it; you will see the group as soon as it is accepted.
+625|Join the group
+626|Unique QR
+627|Generating…
+628|Introduce
+629|Introduction
+630|By
+631|Wipp
+632|Change the profile photo
+633|Photo
+634|Unable to send
+635|Edit my line
+636|Your line ✎
+637|18 and over
+638|About
+639|WIPP — messaging and calls, 18+, no ads.
+640|Contact:
+641|Your line
+642|A short personal message shown on your profile.
+643|characters maximum.
+644|Good Vibes Only
+645|E.g. Good Vibes Only
+646|Clear
+647|Your name cannot be empty.
+648|@{0} is already taken. Choose another username.
+649|The @username must be 3 to 20 characters: letters, numbers or _.
+650|Checking the @username. Try again in a moment.
+651|Your @username could not be changed. Try again.
+652|Your profile could not be saved. Try again.
+653|✓ Available
+654|Checking…
+655|Already taken
+656|3 to 20 characters: letters, numbers or _
+657|Unable to check
+658|Your old @username will be released. Your old profile links and QR codes will stop working.
+659|Gender (optional)
+660|Notifications
+661|Message preview
+662|The beginning of the message is shown in the notification. It is decrypted on this phone: WIPP cannot read it.
+663|Notifications only show “New message”.
+664|Nearby devices
+665|Nearby interactions
+666|Nearby permission is off. WIPP Touch uses “Nearby devices” to confirm that the two phones are really close. Settings → Apps → WIPP → Permissions → Nearby devices.
+667|WIPP Touch uses your iPhone’s nearby interactions to confirm that the two phones are really close. Settings → WIPP → Nearby Interactions.
+668|Turn on in Settings
+669|Turn on in the iPhone’s Settings
+670|Use this device’s biometrics to open WIPP Privé?
+671|The code has been changed. Your private conversations are unchanged.
+672|To open WIPP Privé, hold the WIPP logo for 3 seconds.
+673|The code must contain at least 4 characters.
+674|Choose a WIPP Privé code. It is separate from the phone’s PIN.
+675|Confirm the WIPP Privé code.
+676|New code
+677|Confirm
+678|The two codes do not match.
+679|Change the code
+680|Create the code
+681|Wrong code. Try again in {0} s.
+682|Biometrics
+683|Forgot the code?
+684|Forgotten code
+685|Without valid biometrics, this code cannot be recovered. No SMS, email or server copy. The vault stays sealed on this device.
+686|Discreet space. No WIPP Privé button on the Chats screen. Hold the WIPP logo for 3 seconds to open it.
+687|Lock code
+688|DEV · permission
+689|granted
+690|not granted
+691|Dark
+692|Black and yellow
+693|Light
+694|White and blue
+695|Automatic
+696|Same as the phone
+697|Switch to the dark theme
+698|Switch to the light theme
+699|Theme
+700|Calls, the camera and stories always stay in dark colours.
+701|Haptic feedback
+702|This device
+703|Secure multi-device list not connected yet. No fake devices.
+704|How do I add someone on WIPP?
+705|Three ways: scan their WIPP QR code, search for their @username, or use WIPP Touch by bringing your two phones together. Your phone number is never shared.
+706|I’m not getting the SMS code
+707|Check the country (dialling code) and your number, wait 45 seconds, then tap “Resend the code”. If nothing arrives, write to us from the Support tab with your country and your carrier.
+708|I forgot my lock code
+709|Go to Me › Settings › Privacy › Lock code, then tap “Forgot the code?”. WIPP asks for Face ID or your iPhone passcode to confirm that it is you, then you create a new code. Same for WIPP Privé.
+710|How do I lock a conversation?
+711|First create your code in Me › Settings › Privacy › Lock code. Then press and hold the conversation in Chats (or ⋯ in the conversation) and choose Lock. Its content and notifications are hidden.
+712|I changed phones: where are my old messages?
+713|Your messages are end-to-end encrypted with a key that stays on your phone. On a new phone, your contacts, groups and profile are there, but old messages show as “encrypted for another device”. New messages read normally.
+714|How do I change my name or my @username?
+715|Me › Edit my profile. Your @username can change if it is available; the old one is then released and your old profile links or QR code stop working.
+716|How do I create my business page?
+717|Me › My business card. Add the name, category, city, a cover, a logo, your photos, opening hours, services and social networks. Your page gets its own QR code, different from your personal QR, and customers write to you in a separate “Business” conversation.
+718|How do I report or block someone?
+719|In a conversation, a story, a profile, a group, a listing or a business page, tap ⋯ then “Report” or “Block”. Reported content disappears for you right away, and the WIPP team reviews every report.

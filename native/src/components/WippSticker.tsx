@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { STICKER_FOCUS } from "../generated/sticker-focus";
 import { Asset } from "expo-asset";
 import { cacheDirectory, copyAsync, getInfoAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
 import { Image } from "expo-image";
@@ -127,15 +128,18 @@ let sent=false, told=false;
 function tell(m){ if(told) return; told=true; try{ window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('error '+m); }catch(e){} }
 window.onerror=function(m){ tell(String(m)); };
 function fit(){ const w=window.innerWidth,h=window.innerHeight; if(w<2||h<2) return false; const d=Math.min(2,window.devicePixelRatio||1); const W=Math.round(w*d),H=Math.round(h*d); if(c.width!==W||c.height!==H){ c.width=W; c.height=H; } return true; }
-function key(px){ const p=px.data; for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
+let blue=null;
+// A sticker that holds green (frog, green text) is filmed on a blue background: the corner of the first image tells which.
+function key(px){ const p=px.data; if(blue===null){ blue=p[2]-Math.max(p[0],p[1])>40; }
+ for(let i=0;i<p.length;i+=4){ const r=p[i],g=blue?p[i+2]:p[i+1],b=blue?p[i+1]:p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
  if(g>48&&lead>14&&g>(r+b)*0.42){ const spill=Math.min(1,lead/36); p[i+3]=Math.round(p[i+3]*Math.max(0,1-spill*1.35)); }
- else if(g>r&&g>b&&lead>6){ p[i+1]=maxRB+Math.round(lead*0.25); } } }
+ else if(g>r&&g>b&&lead>6){ p[blue?i+2:i+1]=maxRB+Math.round(lead*0.25); } } }
 function frame(){ try{ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } }catch(e){ tell('draw '+(e&&e.message||e)); return; } requestAnimationFrame(frame); }
 v.playbackRate=${loop ? "0.92" : "1"};
 v.addEventListener('loadeddata',()=>{ const p=v.play(); if(p&&p.catch) p.catch(function(e){ tell('play '+(e&&e.name||e)); }); });
 v.addEventListener('error',()=>{ tell('video '+(v.error&&v.error.code)); });
 setTimeout(()=>{ if(!sent) tell('late ready='+v.readyState+' paused='+v.paused+' net='+v.networkState+' size='+window.innerWidth+'x'+window.innerHeight+' t='+v.currentTime); },4000);
-${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=3.05) v.pause(); });"}
+${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
 requestAnimationFrame(frame);
 </script></body></html>`;
 }
@@ -207,6 +211,28 @@ export function WippSticker({
 
   if (still) {
     if (!poster) return <View style={box} />;
+    // The picture keeps room around the character for its animation: zoom the still on the character,
+    // so every emoji of a row looks the same size.
+    const focus = fill ? undefined : STICKER_FOCUS[id];
+    if (focus) {
+      const [ratio, x0, y0, x1, y1] = focus;
+      const w = ratio < 1 ? size * ratio : size;
+      const h = ratio < 1 ? size : size / ratio;
+      const k = (size * 0.94) / Math.max((x1 - x0) * w, (y1 - y0) * h);
+      return (
+        <View style={{ width: size, height: size, overflow: "hidden" }}>
+          <Image
+            recyclingKey={`still-${id}`}
+            source={typeof poster === "number" ? poster : { uri: poster.uri, isAnimated: false }}
+            style={{ position: "absolute", width: w * k, height: h * k, left: size / 2 - ((x0 + x1) / 2) * w * k, top: size / 2 - ((y0 + y1) / 2) * h * k }}
+            contentFit="fill"
+            autoplay={false}
+            allowDownscaling
+            cachePolicy="memory-disk"
+          />
+        </View>
+      );
+    }
     return (
       <Image
         recyclingKey={`still-${id}`}
@@ -235,14 +261,21 @@ export function WippSticker({
 
   if (shown) {
     const animate = imageAnim && !broken;
-    return (
+    // Same zoom as the still picture (no jump when it starts moving); the animation may spill over the frame.
+    const focus = fill ? undefined : STICKER_FOCUS[id];
+    const [ratio, x0, y0, x1, y1] = focus ?? [1, 0, 0, 1, 1];
+    const w = ratio < 1 ? size * ratio : size;
+    const h = ratio < 1 ? size : size / ratio;
+    const k = (size * 0.94) / Math.max((x1 - x0) * w, (y1 - y0) * h);
+    const zoomed = { position: "absolute" as const, width: w * k, height: h * k, left: size / 2 - ((x0 + x1) / 2) * w * k, top: size / 2 - ((y0 + y1) / 2) * h * k };
+    const picture = (
       <Image
         ref={img}
         recyclingKey={id}
         source={animate ? animatedSource(shown) : shown}
         placeholder={poster}
-        style={box}
-        contentFit="contain"
+        style={focus ? zoomed : box}
+        contentFit={focus ? "fill" : "contain"}
         autoplay={animate}
         useAppleWebpCodec={false}
         allowDownscaling={!animate}
@@ -255,6 +288,7 @@ export function WippSticker({
         }}
       />
     );
+    return focus ? <View style={{ width: size, height: size, overflow: "visible" }}>{picture}</View> : picture;
   }
   return (
     <View style={{ ...box, alignItems: "center", justifyContent: "center" }}>

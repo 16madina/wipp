@@ -67,6 +67,7 @@ import { isStoryLive, type MediaItem, type Message } from "../lib/types";
 import { colors, fgA, fixed, whiteA } from "../theme";
 import { errorText } from "../lib/error-fr";
 import { setScratching, useScratching } from "../lib/scratch-state";
+import { tr, trSystem } from "../lib/tr";
 
 const QUICK_MOJI = stickersInPack("moji").filter((s) => s.src.endsWith(".webp"));
 const NO_MESSAGES: Message[] = [];
@@ -96,7 +97,7 @@ function LinkedText({ text, linkColor }: { text: string; linkColor?: string }) {
       {parts.map((part, i) =>
         /^https?:\/\//.test(part) ? (
           <Text key={i} onPress={() => void Linking.openURL(part)} style={{ textDecorationLine: "underline", color: linkColor ?? colors.accent }}>
-            {/maps\.google\.com/.test(part) ? "Voir sur la carte" : part.replace(/^https?:\/\//, "")}
+            {/maps\.google\.com/.test(part) ? tr("Voir sur la carte") : part.replace(/^https?:\/\//, "")}
           </Text>
         ) : (
           <Text key={i}>{part}</Text>
@@ -206,7 +207,7 @@ function VoiceBubble({ uri, duration, wave, seed, mine, tone, sending }: { uri?:
       <Press
         onPress={() => void toggle()}
         disabled={sending && !uri}
-        accessibilityLabel={playing ? "Mettre en pause" : "Écouter le message vocal"}
+        accessibilityLabel={playing ? tr("Mettre en pause") : tr("Écouter le message vocal")}
         style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: mine ? "rgba(255,255,255,0.18)" : colors.navy }}
       >
         {sending ? (
@@ -221,7 +222,7 @@ function VoiceBubble({ uri, duration, wave, seed, mine, tone, sending }: { uri?:
         <Pressable
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           onPress={(e) => void seek(e.nativeEvent.locationX)}
-          accessibilityLabel="Aller à un moment du message"
+          accessibilityLabel={tr("Aller à un moment du message")}
           style={{ height: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
         >
           {bars.map((lv, i) => (
@@ -233,7 +234,7 @@ function VoiceBubble({ uri, duration, wave, seed, mine, tone, sending }: { uri?:
         </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
           <Text style={{ fontSize: 11, color: muted, fontVariant: ["tabular-nums"] }}>{`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`}</Text>
-          <Press onPress={() => void cycleSpeed()} accessibilityLabel="Vitesse de lecture" hitSlop={6} style={{ paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: mine ? "rgba(255,255,255,0.16)" : colors.surface2 }}>
+          <Press onPress={() => void cycleSpeed()} accessibilityLabel={tr("Vitesse de lecture")} hitSlop={6} style={{ paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: mine ? "rgba(255,255,255,0.16)" : colors.surface2 }}>
             <Text style={{ fontSize: 11, color: fg, fontFamily: "Inter_600SemiBold" }}>{speed === 1.5 ? "1,5×" : `${speed}×`}</Text>
           </Press>
         </View>
@@ -253,23 +254,23 @@ function StoryCiteCard({
 }) {
   const live = stories.find((story) => story.id === cite.id && isStoryLive(story));
   const caption = !live
-    ? "Story expirée"
+    ? tr("Story expirée")
     : cite.mode === "like"
       ? mine
-        ? "Tu as aimé la story"
-        : "A aimé votre story"
+        ? tr("Tu as aimé la story")
+        : tr("A aimé votre story")
       : cite.mode === "reaction"
       ? mine
-        ? "Réaction à la story"
-        : "Réaction à votre story"
+        ? tr("Réaction à la story")
+        : tr("Réaction à votre story")
       : mine
-        ? "Réponse à la story"
-        : "Réponse à votre story";
+        ? tr("Réponse à la story")
+        : tr("Réponse à votre story");
   const open = () => {
     if (live) useWippStore.getState().push({ name: "stories", userId: live.userId, storyId: live.id });
   };
   return (
-    <Press accessibilityLabel={live ? "Voir la story" : caption} disabled={!live} onPress={open} style={{ marginBottom: 6, width: 132, borderRadius: 10, overflow: "hidden", backgroundColor: "rgba(0,0,0,0.16)" }}>
+    <Press accessibilityLabel={live ? tr("Voir la story") : caption} disabled={!live} onPress={open} style={{ marginBottom: 6, width: 132, borderRadius: 10, overflow: "hidden", backgroundColor: "rgba(0,0,0,0.16)" }}>
       {live?.type === "image" && live.imageUrl ? (
         <Image source={{ uri: live.imageUrl }} style={{ width: 132, height: 74 }} contentFit="cover" />
       ) : live?.type === "text" ? (
@@ -546,9 +547,9 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const shopFace = shop && clientSide ? { displayName: shop.name, avatar: shop.logo || shop.image, online: true } : undefined;
   const title = chat.type === "group" ? chat.name : shop && clientSide ? shop.name : peer?.displayName;
   const subtitle = typing
-    ? "écrit…"
+    ? tr("écrit…")
     : chat.type === "group"
-      ? `${chat.participantIds.length} personnes`
+      ? tr("{0} personnes", chat.participantIds.length)
       : shop
         ? undefined
         : peer
@@ -693,12 +694,12 @@ function ConversationInner({ chatId }: { chatId: string }) {
     const { getMyPosition, reverseGeocode } = await import("../lib/geo");
     const pos = await getMyPosition();
     if (!pos) {
-      Alert.alert("Localisation", "Position indisponible. Autorise la localisation de WIPP dans les réglages.");
+      Alert.alert(tr("Localisation"), tr("Position indisponible. Autorise la localisation de WIPP dans les réglages."));
       return;
     }
     const place = await reverseGeocode(pos).catch(() => null);
     const label = [place?.area, place?.city].filter(Boolean).join(", ");
-    sendText(chatId, `📍 ${label || "Ma position"}\nhttps://maps.google.com/?q=${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`);
+    sendText(chatId, `📍 ${label || tr("Ma position")}\nhttps://maps.google.com/?q=${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`);
   }
 
   /** Documents: decrypt/download when needed, then open with the system viewer. */
@@ -717,7 +718,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
       const Sharing = await import("expo-sharing");
       await Sharing.shareAsync(uri, { mimeType: m.file?.mime || undefined, dialogTitle: m.file?.name });
     } catch (err) {
-      Alert.alert("Document", errorText(err, "Impossible d’ouvrir ce document."));
+      Alert.alert(tr("Document"), errorText(err, tr("Impossible d’ouvrir ce document.")));
     }
   }
 
@@ -791,7 +792,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
     if (m.type === "system") {
       return (
         <Text style={{ marginBottom: 10, paddingHorizontal: 24, textAlign: "center", fontSize: 12, lineHeight: 17, color: colors.muted }}>
-          {m.text}
+          {trSystem(m.text ?? "")}
         </Text>
       );
     }
@@ -845,12 +846,12 @@ function ConversationInner({ chatId }: { chatId: string }) {
                 borderColor: colors.accent,
               }}
             >
-              {m.forwarded ? <Text style={{ fontSize: 11, color: (onMe ? mb.muted : colors.muted), marginBottom: 4 }}>Transféré</Text> : null}
+              {m.forwarded ? <Text style={{ fontSize: 11, color: (onMe ? mb.muted : colors.muted), marginBottom: 4 }}>{tr("Transféré")}</Text> : null}
               {m.storyRef ? <StoryCiteCard cite={m.storyRef} mine={mine} stories={stories} /> : null}
               {m.replyTo ? (
                 <Press onPress={() => jumpTo(m.replyTo!)} style={{ marginBottom: 6, borderLeftWidth: 2, borderLeftColor: (onMe ? mb.accent : colors.accent), paddingLeft: 8 }}>
                   <Text numberOfLines={2} style={{ fontSize: 12, color: (onMe ? mb.muted : colors.muted) }}>
-                    {m.replyPreview || "Message"}
+                    {m.replyPreview || tr("Message")}
                   </Text>
                 </Press>
               ) : null}
@@ -858,7 +859,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 }}>
                   <Eye size={16} color={(onMe ? mb.accent : colors.accent)} />
                   <Text style={{ color: mine ? mb.fg : colors.fg }}>
-                    {m.type === "voice" ? (m.viewed ? "Vocal écouté" : "Vocal éphémère · toucher pour écouter") : m.viewed ? t("viewOnceOpened") : t("viewOnceOpen")}
+                    {m.type === "voice" ? (m.viewed ? tr("Vocal écouté") : tr("Vocal éphémère · toucher pour écouter")) : m.viewed ? t("viewOnceOpened") : t("viewOnceOpen")}
                   </Text>
                 </View>
               ) : null}
@@ -881,14 +882,14 @@ function ConversationInner({ chatId }: { chatId: string }) {
               ) : null}
               {m.type === "voice" && !m.viewOnce ? <VoiceBubble uri={m.audioUrl} duration={m.duration} wave={m.waveform} seed={m.localKey ?? m.id} mine={mine} tone={mb} sending={m.status === "sending" && (m.mediaState === "uploading" || m.mediaState === "preparing")} /> : null}
               {m.type === "file" && m.file ? (
-                <Press onPress={() => void openFile(m)} accessibilityLabel={`Ouvrir ${m.file.name}`}>
+                <Press onPress={() => void openFile(m)} accessibilityLabel={tr("Ouvrir {0}", m.file.name)}>
                   <Text style={{ color: mine ? mb.fg : colors.fg, fontFamily: "Inter_500Medium" }}>{m.file.name}</Text>
                   <Text style={{ color: (onMe ? mb.muted : colors.muted), fontSize: 12 }}>
-                    {m.file.mime || "Document"}
-                    {m.file.size ? ` · ${Math.round(m.file.size / 1024)} Ko` : ""}
+                    {m.file.mime || tr("Document")}
+                    {m.file.size ? tr(" · {0} Ko", Math.round(m.file.size / 1024)) : ""}
                     {m.mediaState === "uploading" ? ` · ${Math.round((m.progress ?? 0) * 100)}%` : ""}
                   </Text>
-                  <Text style={{ marginTop: 4, color: (onMe ? mb.accent : colors.accent), fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
+                  <Text style={{ marginTop: 4, color: (onMe ? mb.accent : colors.accent), fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{tr("Ouvrir")}</Text>
                 </Press>
               ) : null}
               {m.type === "scratch" ? <SurpriseReveal surprise={surpriseFromMessage(m)} onReveal={() => useWippStore.getState().markScratch(chatId, m.id)} onPlayAnimation={(id) => setSurprisePlay({ id, n: ++surpriseSequence.current })} /> : null}
@@ -900,14 +901,14 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     </View>
                   )}
                   <Text style={{ color: mine ? mb.fg : colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{m.text}</Text>
-                  <Text style={{ marginTop: 2, color: (onMe ? mb.muted : colors.muted), fontSize: 12 }}>Carte professionnelle</Text>
-                  <Text style={{ marginTop: 8, color: (onMe ? mb.accent : colors.accent), fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Ouvrir</Text>
+                  <Text style={{ marginTop: 2, color: (onMe ? mb.muted : colors.muted), fontSize: 12 }}>{tr("Carte professionnelle")}</Text>
+                  <Text style={{ marginTop: 8, color: (onMe ? mb.accent : colors.accent), fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("Ouvrir")}</Text>
                 </View>
               ) : null}
               {m.type !== "scratch" && m.type !== "sticker" && m.type !== "voice" && m.type !== "shop" && m.text ? (
-                <Text style={{ color: mine ? mb.fg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? "Message supprimé" : <LinkedText text={m.text} linkColor={onMe ? mb.accent : undefined} />}</Text>
+                <Text style={{ color: mine ? mb.fg : colors.fg, fontSize: 15, lineHeight: 20 }}>{m.deletedForAll ? tr("Message supprimé") : <LinkedText text={m.text} linkColor={onMe ? mb.accent : undefined} />}</Text>
               ) : null}
-              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted), fontStyle: "italic" }}>🔒 Message chiffré pour un autre appareil</Text> : null}
+              {m.encFailed && !m.text ? <Text style={{ color: (onMe ? mb.muted : colors.muted), fontStyle: "italic" }}>{tr("🔒 Message chiffré pour un autre appareil")}</Text> : null}
               {m.type === "event" && m.groupEvent ? (
                 <EventBubble chatId={chatId} m={m} users={users} onMe={onMe} fg={mine ? mb.fg : colors.fg} muted={onMe ? mb.muted : colors.muted} accent={onMe ? mb.accent : colors.accent} />
               ) : null}
@@ -917,7 +918,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
                 <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
               ) : m.type === "sticker" ? (
-                <WippSticker id={m.stickerId ?? ""} size={96} still={!liveStickers.has(m.localKey ?? m.id)} />
+                <WippSticker id={m.stickerId ?? ""} size={stickerById(m.stickerId)?.pack === "moji" ? 88 : 150} still={!liveStickers.has(m.localKey ?? m.id)} />
               ) : null}
               {m.geo ? (
                 <Text style={{ color: mine ? mb.fg : colors.fg }}>
@@ -926,7 +927,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               ) : null}
               {(m.mediaState === "uploading" || m.mediaState === "preparing") && m.status === "sending" && m.type !== "voice" ? <ActivityIndicator color={(onMe ? mb.accent : colors.accent)} style={{ marginTop: 6 }} /> : null}
               <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
-                {m.editedAt ? <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted), marginRight: 4 }}>modifié</Text> : null}
+                {m.editedAt ? <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted), marginRight: 4 }}>{tr("modifié")}</Text> : null}
                 <Text style={{ fontSize: 10, color: (onMe ? mb.muted : colors.muted) }}>{formatClock(m.createdAt)}</Text>
               </View>
             </View>
@@ -964,7 +965,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   </Press>
                 ) : (
                   <Press
-                    accessibilityLabel={headerRing === "none" ? "Voir le profil" : "Voir la story"}
+                    accessibilityLabel={headerRing === "none" ? tr("Voir le profil") : tr("Voir la story")}
                     onPress={() => {
                       if (headerRing !== "none" && peer) push({ name: "stories", userId: peer.id });
                       else push({ name: "chat-info", chatId });
@@ -982,7 +983,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     {!shop && chat?.type !== "group" ? <WippBadge badge={peer?.badge} size={15} /> : null}
                     {shop ? (
                       <View style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 6, paddingVertical: 1 }}>
-                        <Text style={{ fontSize: 10, color: colors.accent, fontFamily: "Inter_500Medium" }}>Professionnel</Text>
+                        <Text style={{ fontSize: 10, color: colors.accent, fontFamily: "Inter_500Medium" }}>{tr("Professionnel")}</Text>
                       </View>
                     ) : null}
                   </View>
@@ -999,17 +1000,17 @@ function ConversationInner({ chatId }: { chatId: string }) {
           right={
             <View style={{ flexDirection: "row", flexShrink: 0 }}>
               {canCall ? (
-                <IconBtn size={headerIcon} label={t("audioCall") ?? "Appel"} onPress={() => push({ name: "active-call", userId: chat.type === "group" ? chat.id : peer!.id, kind: "audio", dir: "out", group: chat.type === "group", chatId: chat.type === "group" ? chat.id : undefined })}>
+                <IconBtn size={headerIcon} label={t("audioCall") ?? tr("Appel")} onPress={() => push({ name: "active-call", userId: chat.type === "group" ? chat.id : peer!.id, kind: "audio", dir: "out", group: chat.type === "group", chatId: chat.type === "group" ? chat.id : undefined })}>
                   <Phone size={20} color={colors.fg} />
                 </IconBtn>
               ) : null}
               {canCall ? (
-                <IconBtn size={headerIcon} label={t("videoCall") ?? "Caméra"} onPress={() => push({ name: "active-call", userId: chat.type === "group" ? chat.id : peer!.id, kind: "video", dir: "out", group: chat.type === "group", chatId: chat.type === "group" ? chat.id : undefined })}>
+                <IconBtn size={headerIcon} label={t("videoCall") ?? tr("Caméra")} onPress={() => push({ name: "active-call", userId: chat.type === "group" ? chat.id : peer!.id, kind: "video", dir: "out", group: chat.type === "group", chatId: chat.type === "group" ? chat.id : undefined })}>
                   <Video size={20} color={colors.fg} />
                 </IconBtn>
               ) : null}
               {!sealed && !compact ? (
-                <IconBtn size={headerIcon} label="Plus" onPress={() => push({ name: "chat-info", chatId })}>
+                <IconBtn size={headerIcon} label={tr("Plus")} onPress={() => push({ name: "chat-info", chatId })}>
                   <MoreHorizontal size={20} color={colors.fg} />
                 </IconBtn>
               ) : null}
@@ -1021,7 +1022,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
       {pinned.length ? (
         <Press onPress={() => jumpTo(pinned[0]!.id)} style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 10, backgroundColor: colors.glassCard, paddingHorizontal: 12, paddingVertical: 8 }}>
           <Text numberOfLines={1} style={{ color: colors.fg, fontSize: 13 }}>
-            Épinglé · {pinned[0]?.text || "Média"}
+            {tr("Épinglé ·")} {pinned[0]?.text || tr("Média")}
           </Text>
         </Press>
       ) : null}
@@ -1042,8 +1043,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
         <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 14, backgroundColor: colors.navy, paddingHorizontal: 12, paddingVertical: 10 }}>
           <Text style={{ color: fgA(0.72), fontSize: 13, lineHeight: 18 }}>
             {shop.ownerId === "me"
-              ? `Un client vous écrit à propos de ${shop.name}.`
-              : `Ce compte représente une activité professionnelle sur WIPP. Vous discutez avec ${shop.name}.`}
+              ? tr("Un client vous écrit à propos de {0}.", shop.name)
+              : tr("Ce compte représente une activité professionnelle sur WIPP. Vous discutez avec {0}.", shop.name)}
           </Text>
         </View>
       ) : null}
@@ -1067,14 +1068,14 @@ function ConversationInner({ chatId }: { chatId: string }) {
         ) : chat?.type === "group" && chat.groupSettings?.membersCanSend === false && !(chat.adminIds ?? []).includes("me") ? (
           // Announcement group: only admins write (the server refuses the others anyway).
           <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12), alignItems: "center", borderTopWidth: 1, borderTopColor: colors.hair }}>
-            <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>Seuls les admins peuvent envoyer des messages dans ce groupe.</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>{tr("Seuls les admins peuvent envoyer des messages dans ce groupe.")}</Text>
           </View>
         ) : (
           <View style={{ paddingBottom: stickerBar ? 0 : Math.max(insets.bottom, 8) }}>
             {reply || editing ? (
               <View style={{ marginHorizontal: 12, marginBottom: 4, borderRadius: 12, backgroundColor: colors.surface2, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: colors.accent }}>{editing ? "Modifier" : "Réponse"}</Text>
+                  <Text style={{ fontSize: 11, color: colors.accent }}>{editing ? tr("Modifier") : tr("Réponse")}</Text>
                   <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13 }}>
                     {(editing ?? reply)?.text}
                   </Text>
@@ -1128,7 +1129,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {voiceActive ? null : (
                 <>
                   <Press
-                    accessibilityLabel="Plus"
+                    accessibilityLabel={tr("Plus")}
                     onPress={() => openShare("share")}
                     onLongPress={() => openShare("compose")}
                     style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, borderRadius: composerIcon / 2, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}
@@ -1158,7 +1159,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                         setEmojiBar(false);
                         setStickerBar((v) => !v);
                       }}
-                      accessibilityLabel="Stickers"
+                      accessibilityLabel={tr("Stickers")}
                       hitSlop={6}
                       style={{ width: Math.round(mascotSize * 1.3), height: 44, flexShrink: 0, marginRight: 6, alignItems: "center", justifyContent: "center" }}
                     >
@@ -1169,7 +1170,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     </Press>
                   </View>
                   <Press
-                    accessibilityLabel={t("shareCamera") ?? "Caméra"}
+                    accessibilityLabel={t("shareCamera") ?? tr("Caméra")}
                     onPress={() => void pickCamera()}
                     style={{ width: composerIcon, height: composerIcon, flexShrink: 0, marginBottom: 4, alignItems: "center", justifyContent: "center" }}
                   >
@@ -1287,7 +1288,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
         <Press onPress={() => setGifOpen(false)} style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
           <Press onPress={() => undefined} style={{ backgroundColor: colors.surface, padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
             <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold" }}>
-              {gifProviderConfigured() ? "GIF" : GIF_INTEGRATION_PENDING}
+              {gifProviderConfigured() ? "GIF" : tr(GIF_INTEGRATION_PENDING)}
             </Text>
             <GifSearch
               onPick={(gif) => {
@@ -1296,7 +1297,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               }}
             />
             <Btnish
-              label="Importer un GIF local"
+              label={tr("Importer un GIF local")}
               onPress={async () => {
                 const res = await DocumentPicker.getDocumentAsync({ type: "image/gif", copyToCacheDirectory: true });
                 if (res.canceled || !res.assets?.[0]) return;
@@ -1319,7 +1320,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
       <Modal visible={Boolean(forwardMsg)} transparent animationType="fade" onRequestClose={() => setForwardMsg(null)}>
         <Press onPress={() => setForwardMsg(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
           <View style={{ maxHeight: "60%", backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 }}>
-            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>Transférer</Text>
+            <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", marginBottom: 12 }}>{tr("Transférer")}</Text>
             <FlatList
               data={chats}
               keyExtractor={(c) => c.id}
@@ -1358,10 +1359,10 @@ function ConversationInner({ chatId }: { chatId: string }) {
       {onceVoice ? (
         // Ephemeral voice message: listened here once, then gone.
         <Modal visible transparent animationType="fade" onRequestClose={() => closeOnceVoice()}>
-          <Press onPress={() => closeOnceVoice()} accessibilityLabel="Fermer" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <Press onPress={() => closeOnceVoice()} accessibilityLabel={tr("Fermer")} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: 24 }}>
             <Pressable onPress={() => undefined} style={{ alignSelf: "stretch", borderRadius: 22, backgroundColor: colors.surface, padding: 18, gap: 12, alignItems: "center" }}>
-              <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>Message vocal éphémère</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>Il disparaîtra quand tu fermeras cette fenêtre.</Text>
+              <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{tr("Message vocal éphémère")}</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>{tr("Il disparaîtra quand tu fermeras cette fenêtre.")}</Text>
               <VoiceBubble uri={onceVoice} seed={onceVoice} mine={false} tone={mb} />
             </Pressable>
           </Press>
@@ -1374,22 +1375,22 @@ function ConversationInner({ chatId }: { chatId: string }) {
         actions={
           picked
             ? [
-                ...(!picked.deletedForAll ? [{ key: "reply", label: "Répondre", onSelect: () => setReply(picked) }] : []),
+                ...(!picked.deletedForAll ? [{ key: "reply", label: tr("Répondre"), onSelect: () => setReply(picked) }] : []),
                 ...(!picked.deletedForAll && !picked.viewOnce && picked.type !== "system"
-                  ? [{ key: "forward", label: "Transférer", onSelect: () => setForwardMsg(picked) }]
+                  ? [{ key: "forward", label: tr("Transférer"), onSelect: () => setForwardMsg(picked) }]
                   : []),
                 ...(picked.text && picked.type === "text" && !picked.deletedForAll
                   ? [
                       {
                         key: "copy",
-                        label: "Copier",
+                        label: tr("Copier"),
                         onSelect: () => {
                           if (picked.text) void Clipboard.setStringAsync(picked.text);
                         },
                       },
                       {
                         key: "share",
-                        label: "Partager",
+                        label: tr("Partager"),
                         onSelect: () => {
                           if (picked.text) void shareWippPublic(picked.text);
                         },
@@ -1398,15 +1399,15 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   : []),
                 {
                   key: "pin",
-                  label: picked.pinned ? "Désépingler" : "Épingler",
+                  label: picked.pinned ? tr("Désépingler") : tr("Épingler"),
                   onSelect: () => useWippStore.getState().pinMessage(chatId, picked.id, !picked.pinned),
                 },
-                { key: "delete", label: "Supprimer pour moi", danger: true, onSelect: () => useWippStore.getState().deleteMessage(chatId, picked.id) },
+                { key: "delete", label: tr("Supprimer pour moi"), danger: true, onSelect: () => useWippStore.getState().deleteMessage(chatId, picked.id) },
                 ...(picked.fromId === "me" && picked.type === "text" && !picked.deletedForAll && Date.now() - picked.createdAt < EDIT_WINDOW_MS
                   ? [
                       {
                         key: "edit",
-                        label: "Modifier",
+                        label: tr("Modifier"),
                         onSelect: () => {
                           setEditing(picked);
                           setDraftPersist(picked.text ?? "");
@@ -1415,20 +1416,20 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     ]
                   : []),
                 ...(picked.fromId === "me" && !picked.deletedForAll
-                  ? [{ key: "delete-all", label: "Supprimer pour tout le monde", danger: true, onSelect: () => useWippStore.getState().tombstoneMessage(chatId, picked.id) }]
+                  ? [{ key: "delete-all", label: tr("Supprimer pour tout le monde"), danger: true, onSelect: () => useWippStore.getState().tombstoneMessage(chatId, picked.id) }]
                   : []),
                 ...(picked.fromId !== "me"
                   ? [
                       {
                         key: "report",
-                        label: "Signaler le message",
+                        label: tr("Signaler le message"),
                         onSelect: () => {
                           Alert.alert(
-                            "Signaler le message",
-                            "Le contenu chiffré n’est pas copié. Seuls l’identifiant du message et la raison sont envoyés.",
+                            tr("Signaler le message"),
+                            tr("Le contenu chiffré n’est pas copié. Seuls l’identifiant du message et la raison sont envoyés."),
                             [
                               ...["Contenu inapproprié", "Harcèlement", "Spam ou arnaque", "Autre"].map((reason) => ({
-                                text: reason,
+                                text: tr(reason),
                                 onPress: () => {
                                   void import("../lib/safety").then(({ submitContentReport }) =>
                                     submitContentReport({
@@ -1438,25 +1439,25 @@ function ConversationInner({ chatId }: { chatId: string }) {
                                       reason,
                                     }),
                                   ).then(
-                                    () => Alert.alert("Signalement", "Signalement envoyé."),
-                                    (err) => Alert.alert("Signalement", errorText(err, "Signalement impossible.")),
+                                    () => Alert.alert(tr("Signalement"), tr("Signalement envoyé.")),
+                                    (err) => Alert.alert(tr("Signalement"), errorText(err, tr("Signalement impossible."))),
                                   );
                                 },
                               })),
-                              { text: "Annuler", style: "cancel" as const },
+                              { text: tr("Annuler"), style: "cancel" as const },
                             ],
                           );
                         },
                       },
                       {
                         key: "block",
-                        label: "Bloquer cet utilisateur",
+                        label: tr("Bloquer cet utilisateur"),
                         danger: true,
                         onSelect: () => {
-                          Alert.alert("Bloquer", "Bloquer cet utilisateur ?", [
-                            { text: "Annuler", style: "cancel" },
+                          Alert.alert(tr("Bloquer"), tr("Bloquer cet utilisateur ?"), [
+                            { text: tr("Annuler"), style: "cancel" },
                             {
-                              text: "Bloquer",
+                              text: tr("Bloquer"),
                               style: "destructive",
                               onPress: () => {
                                 useWippStore.getState().blockUser(picked.fromId);
@@ -1487,13 +1488,13 @@ function Btnish({ label, onPress }: { label: string; onPress: () => void }) {
 function GifSearch({ onPick }: { onPick: (gif: LocalGif) => void }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<LocalGif[]>(() => loadGifs());
-  const [note, setNote] = useState(gifProviderConfigured() ? "" : "Ajoute EXPO_PUBLIC_GIF_API_KEY pour Tenor. Aucune clé n’est dans l’application.");
+  const [note, setNote] = useState(gifProviderConfigured() ? "" : tr("Ajoute EXPO_PUBLIC_GIF_API_KEY pour Tenor. Aucune clé n’est dans l’application."));
   return (
     <View>
       <TextInput
         value={q}
         onChangeText={setQ}
-        placeholder="Rechercher un GIF"
+        placeholder={tr("Rechercher un GIF")}
         placeholderTextColor={colors.muted}
         onSubmitEditing={() => {
           void searchGifs(q)
@@ -1501,7 +1502,7 @@ function GifSearch({ onPick }: { onPick: (gif: LocalGif) => void }) {
               setHits(rows.length ? rows : loadGifs());
               if (!gifProviderConfigured()) setNote("GIF PROVIDER CREDENTIAL = EXTERNAL BLOCKER");
             })
-            .catch(() => setNote("Recherche GIF impossible."));
+            .catch(() => setNote(tr("Recherche GIF impossible.")));
         }}
         style={{ marginTop: 8, height: 40, borderRadius: 8, backgroundColor: colors.surface2, color: colors.fg, paddingHorizontal: 10 }}
       />
@@ -1522,12 +1523,12 @@ export function E2eInfoScreen({ chatId }: { chatId: string }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Chiffrement de bout en bout" onBack={pop} />
+        <Header title={tr("Chiffrement de bout en bout")} onBack={pop} />
       </GlassHeader>
       <Text style={{ padding: 16, color: colors.muted, lineHeight: 20 }}>
         {useWippStore.getState().chats.find((c) => c.id === chatId)?.type === "group" || chatId.includes(":g_") || chatId.startsWith("g_")
-          ? "Les messages de ce groupe, photos, vidéos et vocaux compris, sont chiffrés de bout en bout sur les téléphones des membres. Une clé de groupe est partagée uniquement avec les membres actuels : quand quelqu’un quitte le groupe, une nouvelle clé est créée et il ne peut plus lire les nouveaux messages. Un nouveau membre ne voit pas les messages envoyés avant son arrivée. Les messages envoyés avant l’activation du chiffrement restent tels quels."
-          : "Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages."}
+          ? tr("Les messages de ce groupe, photos, vidéos et vocaux compris, sont chiffrés de bout en bout sur les téléphones des membres. Une clé de groupe est partagée uniquement avec les membres actuels : quand quelqu’un quitte le groupe, une nouvelle clé est créée et il ne peut plus lire les nouveaux messages. Un nouveau membre ne voit pas les messages envoyés avant son arrivée. Les messages envoyés avant l’activation du chiffrement restent tels quels.")
+          : tr("Les conversations privées (DM) prises en charge par le système E2EE de WIPP sont chiffrées. WIPP ne conserve pas les clés privées de manière à lire ces messages.")}
       </Text>
     </ScreenRoot>
   );

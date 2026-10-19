@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 import { uploadFileToStorage } from "../upload-file";
 import { SUPABASE_URL } from "../firebase-config";
 import { firebaseIdToken } from "../firebase-phone";
@@ -620,8 +621,8 @@ export function splitEventCopy(description: string) {
 
 export function packEventCopy(description: string, category: string, endsAt: string) {
   const head = [
-    category.trim() ? `Catégorie : ${category.trim()}` : "",
-    endsAt.trim() ? `Fin : ${endsAt.trim()}` : "",
+    category.trim() ? tr("Catégorie : {0}", category.trim()) : "",
+    endsAt.trim() ? tr("Fin : {0}", endsAt.trim()) : "",
   ].filter(Boolean);
   const body = description.trim();
   return head.length ? `${head.join("\n")}\n${body}` : body;
@@ -656,8 +657,8 @@ function mapEvent(row: EventRow, me: string | null, image: string): LifestyleIte
     image,
     coverPath: row.photo_url || "",
     note: [
-      category ? `Catégorie : ${category}` : "",
-      endsAt ? `Fin : ${Number.isNaN(Date.parse(endsAt)) ? endsAt : new Date(endsAt).toLocaleString()}` : "",
+      category ? tr("Catégorie : {0}", category) : "",
+      endsAt ? tr("Fin : {0}", Number.isNaN(Date.parse(endsAt)) ? endsAt : new Date(endsAt).toLocaleString()) : "",
       copy.description,
       contact,
     ].filter(Boolean).join("\n"),
@@ -847,7 +848,7 @@ export async function uploadPublicMediaFile(
   onProgress?: (sent: number, total: number) => void,
 ) {
   const token = await firebaseIdToken();
-  if (!token) throw new Error("Session requise");
+  if (!token) throw new Error(tr("Session requise"));
   const endpoint = `${SUPABASE_URL}/storage/v1/object/wipp-public-media/${path}`;
   await uploadFileToStorage(endpoint, uri, mime, token, onProgress);
   return path;

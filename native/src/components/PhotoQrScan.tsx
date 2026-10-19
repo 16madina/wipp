@@ -6,6 +6,7 @@ import { Btn } from "./ui";
 import { colors } from "../theme";
 import { goToQrDestination, openWippLink } from "../lib/deep-links";
 import { resolveWippQr } from "../lib/qr-resolver";
+import { tr } from "../lib/tr";
 
 type Phase = { kind: "scanning" } | { kind: "error"; title: string; body: string };
 
@@ -41,7 +42,7 @@ export function PhotoQrScan({ uri, onClose, onRetry }: { uri: string | null; onC
         const found = await scanFromURLAsync(uri, ["qr"]);
         const data = found.find((r) => r.data)?.data;
         if (!data) {
-          next = { kind: "error", title: "Aucun code QR trouvé", body: "Choisis une photo où le code QR est bien visible et net." };
+          next = { kind: "error", title: tr("Aucun code QR trouvé"), body: tr("Choisis une photo où le code QR est bien visible et net.") };
         } else if (/^wipp:\/\//i.test(data)) {
           await wait();
           if (off) return;
@@ -58,11 +59,11 @@ export function PhotoQrScan({ uri, onClose, onRetry }: { uri: string | null; onC
             return;
           }
           next = /propre/i.test(dest.error)
-            ? { kind: "error", title: "C’est ton propre code WIPP 🙂", body: "Partage-le pour que les autres te trouvent. Pour tester, importe le code d’une autre personne." }
-            : { kind: "error", title: "Code non reconnu", body: dest.error };
+            ? { kind: "error", title: tr("C’est ton propre code WIPP 🙂"), body: tr("Partage-le pour que les autres te trouvent. Pour tester, importe le code d’une autre personne.") }
+            : { kind: "error", title: tr("Code non reconnu"), body: dest.error };
         }
       } catch {
-        next = { kind: "error", title: "Lecture impossible", body: "Cette image n’a pas pu être lue. Essaie avec une autre photo." };
+        next = { kind: "error", title: tr("Lecture impossible"), body: tr("Cette image n’a pas pu être lue. Essaie avec une autre photo.") };
       }
       await wait();
       if (!off && next) setPhase(next);
@@ -99,14 +100,14 @@ export function PhotoQrScan({ uri, onClose, onRetry }: { uri: string | null; onC
         {scanning ? (
           <View style={{ marginTop: 22, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <ScanLine size={18} color={colors.accent} />
-            <Text style={{ color: "#f7f9fc", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>Analyse du code QR…</Text>
+            <Text style={{ color: "#f7f9fc", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{tr("Analyse du code QR…")}</Text>
           </View>
         ) : phase.kind === "error" ? (
           <View style={{ marginTop: 22, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <Text style={{ color: "#f7f9fc", fontSize: 18, fontFamily: "Inter_700Bold", textAlign: "center" }}>{phase.title}</Text>
             <Text style={{ marginTop: 8, color: "rgba(247,249,252,0.72)", fontSize: 14, lineHeight: 20, textAlign: "center" }}>{phase.body}</Text>
-            <Btn label="Choisir une autre photo" onPress={onRetry} style={{ marginTop: 20, alignSelf: "stretch" }} />
-            <Btn label="Fermer" variant="secondary" onPress={onClose} style={{ marginTop: 8, alignSelf: "stretch" }} />
+            <Btn label={tr("Choisir une autre photo")} onPress={onRetry} style={{ marginTop: 20, alignSelf: "stretch" }} />
+            <Btn label={tr("Fermer")} variant="secondary" onPress={onClose} style={{ marginTop: 8, alignSelf: "stretch" }} />
           </View>
         ) : null}
       </View>

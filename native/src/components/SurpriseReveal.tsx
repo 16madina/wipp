@@ -8,12 +8,13 @@ import { Press } from "./ui";
 import { ScratchFoil } from "./ScratchFoil";
 import { GiftParcel } from "./GiftParcel";
 import { SurpriseAnimOverlay } from "./SurpriseAnimOverlay";
+import { tr } from "../lib/tr";
 
 const KIND_LABEL: Record<Surprise["surpriseType"], string> = {
-  scratch: "Carte à gratter",
-  countdown: "Compte à rebours",
-  gift: "Message cadeau",
-  confetti: "Confettis",
+  get scratch() { return tr("Carte à gratter"); },
+  get countdown() { return tr("Compte à rebours"); },
+  get gift() { return tr("Message cadeau"); },
+  get confetti() { return tr("Confettis"); },
 };
 
 const MOTIFS: Record<string, string> = {
@@ -132,7 +133,7 @@ export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { 
               {surprise.message}
             </Text>
             {phase === "open" ? (
-              <Text style={{ marginTop: 6, fontSize: 10, color: "rgba(10,11,16,0.7)" }}>Surprise découverte</Text>
+              <Text style={{ marginTop: 6, fontSize: 10, color: "rgba(10,11,16,0.7)" }}>{tr("Surprise découverte")}</Text>
             ) : null}
           </View>
         ) : null}
@@ -146,7 +147,7 @@ export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { 
             kindLabel={KIND_LABEL[surprise.surpriseType]}
             locked={locked}
             footer={
-              locked ? `S’ouvre dans ${countdownText(left)}` : "Touche pour ouvrir"
+              locked ? tr("S’ouvre dans {0}", countdownText(left)) : tr("Touche pour ouvrir")
             }
             onPress={() => {
               if (locked) return;
@@ -172,11 +173,11 @@ export function SurpriseReveal({ surprise, demo, onReveal, onPlayAnimation }: { 
               setPhase("scratch");
             } else setPhase("sealed");
           }}
-          accessibilityLabel="Revoir la surprise"
+          accessibilityLabel={tr("Revoir la surprise")}
           style={{ marginTop: 6, paddingHorizontal: 14, height: 30, borderRadius: 999, borderWidth: 1, borderColor: colors.surpriseGold, flexDirection: "row", alignItems: "center", gap: 6 }}
         >
           <RotateCcw size={13} color={colors.surpriseGold} />
-          <Text style={{ color: colors.surpriseGold, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Revoir</Text>
+          <Text style={{ color: colors.surpriseGold, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{tr("Revoir")}</Text>
         </Press>
       ) : null}
       <SurpriseAnimOverlay

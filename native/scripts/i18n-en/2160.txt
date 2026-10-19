@@ -1,0 +1,8 @@
+2160|The {0} name isn’t valid.
+2161|Couldn’t save your networks.
+2162|Edit my networks
+2163|+ My networks
+2164|My networks
+2165|Add your username. Your contacts will see the icons on your profile and can open your page.
+2166|name
+2167|+ Networks

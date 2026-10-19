@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 import { countdownChoices, type SurpriseOptions } from "../lib/surprise";
 import { colors } from "../theme";
 import { Press } from "./ui";
+import { tr, trLocale } from "../lib/tr";
 
 type Value = NonNullable<SurpriseOptions["countdown"]>;
 
@@ -17,7 +18,7 @@ function dayStart(offset: number) {
   return d;
 }
 const dayLabel = (offset: number) =>
-  offset === 0 ? "Aujourd’hui" : offset === 1 ? "Demain" : dayStart(offset).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  offset === 0 ? tr("Aujourd’hui") : offset === 1 ? tr("Demain") : dayStart(offset).toLocaleDateString(trLocale(), { weekday: "short", day: "numeric", month: "short" });
 
 function Chip({ label, on, onPress, wide }: { label: string; on: boolean; onPress: () => void; wide?: boolean }) {
   return (
@@ -59,21 +60,21 @@ export function CountdownPicker({ value, onChange }: { value: Value; onChange: (
 
   const past = Boolean(value.at) && value.at! <= Date.now() + 30_000;
   const when = value.at
-    ? new Date(value.at).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+    ? new Date(value.at).toLocaleString(trLocale(), { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
     : null;
 
   return (
     <View>
-      <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 4 }}>Quand le paquet s’ouvre</Text>
-      <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 10 }}>Il reste verrouillé jusque-là, puis la personne le touche pour l’ouvrir.</Text>
+      <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 4 }}>{tr("Quand le paquet s’ouvre")}</Text>
+      <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 10 }}>{tr("Il reste verrouillé jusque-là, puis la personne le touche pour l’ouvrir.")}</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {countdownChoices.map((choice) => (
-          <Chip key={choice.seconds} wide label={`Dans ${choice.label}`} on={!value.at && value.seconds === choice.seconds} onPress={() => onChange({ seconds: choice.seconds })} />
+          <Chip key={choice.seconds} wide label={tr("Dans {0}", choice.label)} on={!value.at && value.seconds === choice.seconds} onPress={() => onChange({ seconds: choice.seconds })} />
         ))}
-        <Chip wide label="Ce soir à minuit" on={value.at === midnight} onPress={() => onChange({ seconds: Math.max(60, Math.round((midnight - Date.now()) / 1000)), at: midnight })} />
+        <Chip wide label={tr("Ce soir à minuit")} on={value.at === midnight} onPress={() => onChange({ seconds: Math.max(60, Math.round((midnight - Date.now()) / 1000)), at: midnight })} />
       </View>
 
-      <Text style={{ marginTop: 18, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 8 }}>Ou choisis le jour et l’heure</Text>
+      <Text style={{ marginTop: 18, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg, marginBottom: 8 }}>{tr("Ou choisis le jour et l’heure")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {Array.from({ length: DAYS }, (_, offset) => (
           <Chip key={offset} wide label={dayLabel(offset)} on={custom && day === offset} onPress={() => pick(offset, hour, minute)} />
@@ -92,7 +93,7 @@ export function CountdownPicker({ value, onChange }: { value: Value; onChange: (
 
       {when ? (
         <Text style={{ marginTop: 14, fontSize: 13, color: past ? "#FF8A8A" : colors.surpriseBright }}>
-          {past ? "Cette heure est déjà passée : choisis un moment plus tard." : `S’ouvrira ${when}.`}
+          {past ? tr("Cette heure est déjà passée : choisis un moment plus tard.") : tr("S’ouvrira {0}.", when)}
         </Text>
       ) : null}
     </View>

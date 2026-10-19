@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /**
  * Règle de confidentialité pour les notifications WIPP Privé.
  * Le serveur envoie déjà une copie générique (killed / background).
@@ -17,7 +18,7 @@ export function redactNotification(notice: IncomingNotice, isPrivate: boolean): 
   if (!isPrivate) return notice;
   return {
     title: PRIVATE_NOTICE_TITLE,
-    body: PRIVATE_NOTICE_BODY,
+    body: tr(PRIVATE_NOTICE_BODY),
     avatar: undefined,
     chatId: notice.chatId,
   };

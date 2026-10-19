@@ -19,14 +19,15 @@ import {
   verifyLockCode,
 } from "../lib/chat-lock";
 import { authenticateBiometric, authenticateDeviceOwner, inspectBiometricHardware } from "../lib/private-vault";
+import { tr } from "../lib/tr";
 
 export const LOCK_MIN = 4;
 
 export function useLockPinAsk() {
-  return usePrivatePinAsk({ title: "Code de verrouillage", hint: "Entre ton code de verrouillage.", numeric: true });
+  return usePrivatePinAsk({ title: tr("Code de verrouillage"), hint: tr("Entre ton code de verrouillage."), numeric: true });
 }
 
-const waitText = () => `Code incorrect. Réessaie dans ${Math.max(1, Math.ceil(lastLockWaitMs() / 1000))} s.`;
+const waitText = () => tr("Code incorrect. Réessaie dans {0} s.", Math.max(1, Math.ceil(lastLockWaitMs() / 1000)));
 
 /** Confidentialité › Code de verrouillage : créer / modifier le code, biométrie. */
 export function ChatLockSettings({ onBack }: { onBack: () => void }) {
@@ -46,17 +47,17 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
     return (
       <ScreenRoot>
         <GlassHeader>
-          <Header title="Code de verrouillage" onBack={() => { setStep("home"); setDraft(""); setFirst(""); }} />
+          <Header title={tr("Code de verrouillage")} onBack={() => { setStep("home"); setDraft(""); setFirst(""); }} />
         </GlassHeader>
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
             {step === "create"
-              ? "Choisis un code d’au moins 4 chiffres, facile à retenir pour toi. Il est différent du code de WIPP Privé et du code du téléphone."
-              : "Entre le même code une deuxième fois."}
+              ? tr("Choisis un code d’au moins 4 chiffres, facile à retenir pour toi. Il est différent du code de WIPP Privé et du code du téléphone.")
+              : tr("Entre le même code une deuxième fois.")}
           </Text>
-          <Field label={step === "create" ? "Nouveau code" : "Confirmer le code"} value={draft} onChangeText={(v) => setDraft(v.replace(/\D/g, ""))} secureTextEntry keyboardType="number-pad" />
+          <Field label={step === "create" ? tr("Nouveau code") : tr("Confirmer le code")} value={draft} onChangeText={(v) => setDraft(v.replace(/\D/g, ""))} secureTextEntry keyboardType="number-pad" />
           <Btn
-            label={busy ? "Enregistrement…" : "Continuer"}
+            label={busy ? tr("Enregistrement…") : tr("Continuer")}
             disabled={busy || draft.length < LOCK_MIN}
             onPress={() => {
               if (step === "create") {
@@ -66,7 +67,7 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
                 return;
               }
               if (draft !== first) {
-                Alert.alert("Code de verrouillage", "Les deux codes ne correspondent pas.");
+                Alert.alert(tr("Code de verrouillage"), tr("Les deux codes ne correspondent pas."));
                 setDraft("");
                 setStep("create");
                 return;
@@ -79,10 +80,10 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
                 setDraft("");
                 setFirst("");
                 Alert.alert(
-                  "Code de verrouillage",
+                  tr("Code de verrouillage"),
                   existed
-                    ? "Le code a été modifié."
-                    : "Code créé. Pour verrouiller une conversation : ⋯ dans la conversation, ou appui long sur la conversation dans Chats.",
+                    ? tr("Le code a été modifié.")
+                    : tr("Code créé. Pour verrouiller une conversation : ⋯ dans la conversation, ou appui long sur la conversation dans Chats."),
                 );
               });
             }}
@@ -95,19 +96,19 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
   return (
     <ScreenRoot>
       <GlassHeader>
-        <Header title="Code de verrouillage" onBack={onBack} />
+        <Header title={tr("Code de verrouillage")} onBack={onBack} />
       </GlassHeader>
       <ScrollView>
         <Section title="">
           <Row
-            label={hasLockCode() ? "Modifier le code" : "Créer le code"}
+            label={hasLockCode() ? tr("Modifier le code") : tr("Créer le code")}
             onPress={() => {
               void (async () => {
                 if (hasLockCode()) {
                   const old = await askPin();
                   if (!old) return;
                   if (!(await verifyLockCode(old)).ok) {
-                    Alert.alert("Code de verrouillage", waitText());
+                    Alert.alert(tr("Code de verrouillage"), waitText());
                     return;
                   }
                 }
@@ -117,13 +118,13 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
           />
           {hasLockCode() && bioHw ? (
             <Row
-              label="Ouvrir avec Face ID / empreinte"
+              label={tr("Ouvrir avec Face ID / empreinte")}
               trailing={
                 <Toggle
                   value={lockBiometricOn()}
                   onChange={(v) => {
                     void (async () => {
-                      if (v && (await authenticateBiometric("Activer Face ID pour les conversations verrouillées")) !== "success") return;
+                      if (v && (await authenticateBiometric(tr("Activer Face ID pour les conversations verrouillées"))) !== "success") return;
                       await setLockBiometric(v);
                     })();
                   }}
@@ -133,18 +134,18 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
           ) : null}
           {hasLockCode() ? (
             <Row
-              label="Code oublié ?"
+              label={tr("Code oublié ?")}
               onPress={() => {
                 void (async () => {
-                  const r = await authenticateDeviceOwner("Confirme que c’est toi pour créer un nouveau code");
+                  const r = await authenticateDeviceOwner(tr("Confirme que c’est toi pour créer un nouveau code"));
                   if (r === "success") {
                     setStep("create");
                     return;
                   }
                   if (r === "unavailable") {
                     Alert.alert(
-                      "Code oublié",
-                      "Aucun Face ID ni code n’est activé sur ce téléphone, donc le code ne peut pas être réinitialisé. Active le code de l’iPhone dans Réglages › Face ID et code, puis réessaie.",
+                      tr("Code oublié"),
+                      tr("Aucun Face ID ni code n’est activé sur ce téléphone, donc le code ne peut pas être réinitialisé. Active le code de l’iPhone dans Réglages › Face ID et code, puis réessaie."),
                     );
                   }
                 })();
@@ -153,7 +154,7 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
           ) : null}
         </Section>
         <Text style={{ paddingHorizontal: 16, paddingTop: 12, color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-          Une conversation verrouillée reste visible dans Chats, mais son contenu et ses notifications sont masqués. Le code est demandé à chaque ouverture.
+          {tr("Une conversation verrouillée reste visible dans Chats, mais son contenu et ses notifications sont masqués. Le code est demandé à chaque ouverture.")}
         </Text>
       </ScrollView>
       {gate}
@@ -164,16 +165,16 @@ export function ChatLockSettings({ onBack }: { onBack: () => void }) {
 /** Lock or unlock a conversation (asks the code; offers to create it first). */
 export function toggleChatLock(chatId: string, askPin: () => Promise<string | null>) {
   if (!hasLockCode()) {
-    Alert.alert("Code de verrouillage", "Crée d’abord ton code dans Moi › Paramètres › Confidentialité › Code de verrouillage.", [
-      { text: "Plus tard", style: "cancel" },
-      { text: "Créer le code", onPress: () => useWippStore.getState().push({ name: "privacy" }) },
+    Alert.alert(tr("Code de verrouillage"), tr("Crée d’abord ton code dans Moi › Paramètres › Confidentialité › Code de verrouillage."), [
+      { text: tr("Plus tard"), style: "cancel" },
+      { text: tr("Créer le code"), onPress: () => useWippStore.getState().push({ name: "privacy" }) },
     ]);
     return;
   }
   const locked = isChatLocked(chatId);
   void (locked ? unlockChatForGood(chatId, askPin) : lockChat(chatId, askPin)).then((ok) => {
-    if (ok) Alert.alert("Code de verrouillage", locked ? "Conversation déverrouillée." : "Conversation verrouillée. Le code sera demandé à chaque ouverture.");
-    else if (lastLockWaitMs() > 0) Alert.alert("Code de verrouillage", waitText());
+    if (ok) Alert.alert(tr("Code de verrouillage"), locked ? tr("Conversation déverrouillée.") : tr("Conversation verrouillée. Le code sera demandé à chaque ouverture."));
+    else if (lastLockWaitMs() > 0) Alert.alert(tr("Code de verrouillage"), waitText());
   });
 }
 
@@ -201,11 +202,11 @@ export function ChatLockGate({ chatId, title, onBack }: { chatId: string; title:
         <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
           <Lock size={30} color={colors.accent} />
         </View>
-        <Text style={{ marginTop: 16, color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>Conversation verrouillée</Text>
-        <Text style={{ marginTop: 6, color: colors.muted, fontSize: 13, textAlign: "center" }}>Entre ton code de verrouillage pour l’ouvrir.</Text>
+        <Text style={{ marginTop: 16, color: colors.fg, fontSize: 17, fontFamily: "Inter_600SemiBold" }}>{tr("Conversation verrouillée")}</Text>
+        <Text style={{ marginTop: 6, color: colors.muted, fontSize: 13, textAlign: "center" }}>{tr("Entre ton code de verrouillage pour l’ouvrir.")}</Text>
         {error ? <Text style={{ marginTop: 12, color: colors.danger, fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
         <View style={{ marginTop: 20, alignSelf: "stretch" }}>
-          <Btn label="Déverrouiller" onPress={open} />
+          <Btn label={tr("Déverrouiller")} onPress={open} />
         </View>
       </View>
       {gate}

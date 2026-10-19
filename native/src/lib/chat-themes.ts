@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
@@ -8,14 +9,14 @@ import { colors } from "../theme";
  * wallpaper); "default" follows the app theme (navy in dark, WIPP blue in light).
  */
 export const CHAT_THEMES = [
-  { id: "default", label: "Par défaut", color: null },
-  { id: "blue", label: "Bleu", color: "#1a6bd9" },
-  { id: "violet", label: "Violet", color: "#7c4dff" },
-  { id: "pink", label: "Rose", color: "#e0457b" },
-  { id: "green", label: "Vert", color: "#1f9d6c" },
-  { id: "orange", label: "Orange", color: "#f08a24" },
-  { id: "gold", label: "Or", color: "#b8891a" },
-  { id: "graphite", label: "Graphite", color: "#3a4256" },
+  { id: "default", get label() { return tr("Par défaut"); }, color: null },
+  { id: "blue", get label() { return tr("Bleu"); }, color: "#1a6bd9" },
+  { id: "violet", get label() { return tr("Violet"); }, color: "#7c4dff" },
+  { id: "pink", get label() { return tr("Rose"); }, color: "#e0457b" },
+  { id: "green", get label() { return tr("Vert"); }, color: "#1f9d6c" },
+  { id: "orange", get label() { return tr("Orange"); }, color: "#f08a24" },
+  { id: "gold", get label() { return tr("Or"); }, color: "#b8891a" },
+  { id: "graphite", get label() { return tr("Graphite"); }, color: "#3a4256" },
 ] as const;
 
 export type ChatThemeId = (typeof CHAT_THEMES)[number]["id"];

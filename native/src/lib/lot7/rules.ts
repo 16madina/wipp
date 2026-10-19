@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 /** Product rules mirrored by migrations/0014. The server is the authority. */
 
 export const STORY_SERVER_TTL_MS = 86_400_000;
@@ -39,18 +40,18 @@ export function groupPreview(body: string) {
     try {
       const parsed = JSON.parse(trimmed) as { k?: string; type?: string; text?: string; name?: string; e2e?: boolean };
       // End-to-end encrypted (group key): the phone shows the real text once decrypted.
-      if (parsed.e2e === true) return "Message chiffré";
+      if (parsed.e2e === true) return tr("Message chiffré");
       if (parsed.k === "wipp-group-media") {
         // A surprise never shows its secret in a preview.
-        if (parsed.type === "scratch") return "Surprise ✨";
+        if (parsed.type === "scratch") return tr("Surprise ✨");
         if (parsed.text) return parsed.text.slice(0, 140);
-        if (parsed.type === "image") return "Photo";
-        if (parsed.type === "video") return "Vidéo";
-        if (parsed.type === "voice") return "Message vocal";
-        if (parsed.type === "file") return parsed.name || "Document";
-        if (parsed.type === "sticker") return "Sticker";
-        if (parsed.type === "poll") return "Sondage";
-        if (parsed.type === "event") return "Événement";
+        if (parsed.type === "image") return tr("Photo");
+        if (parsed.type === "video") return tr("Vidéo");
+        if (parsed.type === "voice") return tr("Message vocal");
+        if (parsed.type === "file") return parsed.name || tr("Document");
+        if (parsed.type === "sticker") return tr("Sticker");
+        if (parsed.type === "poll") return tr("Sondage");
+        if (parsed.type === "event") return tr("Événement");
       }
     } catch {
       /* plain */

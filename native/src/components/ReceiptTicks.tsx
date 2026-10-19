@@ -1,3 +1,4 @@
+import { tr } from "../lib/tr";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
@@ -19,7 +20,7 @@ const SMILE = `M${LEFT.x - 0.5} 8.1 Q8 11.4 ${RIGHT.x + 0.5} 8.1`;
 const SMILE_LEN = 10;
 
 const LABELS = {
-  fr: { sending: "Envoi en cours", sent: "Envoyé", delivered: "Reçu", read: "Lu", failed: "Échec d’envoi" },
+  fr: { get sending() { return tr("Envoi en cours"); }, get sent() { return tr("Envoyé"); }, get delivered() { return tr("Reçu"); }, get read() { return tr("Lu"); }, get failed() { return tr("Échec d’envoi"); } },
   en: { sending: "Sending", sent: "Sent", delivered: "Delivered", read: "Read", failed: "Failed to send" },
 } as const;
 

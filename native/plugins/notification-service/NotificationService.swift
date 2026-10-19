@@ -234,18 +234,22 @@ enum WippPreview {
     return trimmed.isEmpty ? nil : clip(trimmed)
   }
 
+  /// Language chosen in WIPP, shared by the app through the App Group keychain (src/lib/language-pref.ts).
+  static var english: Bool { keychainString("wipp-nse-lang") == "en" }
+
   static func mediaLabel(_ kind: String) -> String {
+    let en = english
     switch kind {
     case "image": return "📷 Photo"
-    case "video": return "🎥 Vidéo"
+    case "video": return en ? "🎥 Video" : "🎥 Vidéo"
     case "file": return "📄 Document"
-    case "voice": return "🎤 Message vocal"
+    case "voice": return en ? "🎤 Voice message" : "🎤 Message vocal"
     case "gif": return "GIF"
     case "sticker": return "Sticker"
     case "contact": return "👤 Contact"
-    case "location": return "📍 Position"
-    case "link": return "🔗 Lien"
-    default: return "Nouveau message"
+    case "location": return en ? "📍 Location" : "📍 Position"
+    case "link": return en ? "🔗 Link" : "🔗 Lien"
+    default: return en ? "New message" : "Nouveau message"
     }
   }
 

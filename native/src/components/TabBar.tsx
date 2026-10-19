@@ -8,6 +8,7 @@ import { isPrivateChat, useT, useWippStore } from "../lib/store";
 import { colors, layout, accentA, whiteA } from "../theme";
 import { TouchHero, WippPhonesGlyph, WippWordmark } from "./Logo";
 import { Press } from "./ui";
+import { tr } from "../lib/tr";
 
 const TABS = [
   { name: "chats" as const, key: "tabChats" as const },
@@ -139,7 +140,7 @@ export function TabBar({ active }: { active: string }) {
               <View style={{ marginRight: 28, marginBottom: 10 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <WippWordmark size={22} color={colors.accent} />
-                  <Text style={{ fontSize: compact ? 18 : 20, fontFamily: "Inter_700Bold", color: colors.fg }}>Connect</Text>
+                  <Text style={{ fontSize: compact ? 18 : 20, fontFamily: "Inter_700Bold", color: colors.fg }}>{tr("Connect")}</Text>
                 </View>
                 <Text style={{ marginTop: 4, fontSize: 12.5, lineHeight: 17, color: whiteA(0.55) }}>{t("wippConnectSub")}</Text>
                 <Press
@@ -293,7 +294,7 @@ export function TabBar({ active }: { active: string }) {
           }}
           delayLongPress={450}
           accessibilityLabel={t("tabConnect")}
-          accessibilityHint="Appui long : WIPP Touch" style={{ alignItems: "center", marginTop: -46, width: 76, flexShrink: 0 }}>
+          accessibilityHint={tr("Appui long : WIPP Touch")} style={{ alignItems: "center", marginTop: -46, width: 76, flexShrink: 0 }}>
           <View style={{ width: 76, height: 74, alignItems: "center", justifyContent: "center" }}>
             <Animated.View
               pointerEvents="none"

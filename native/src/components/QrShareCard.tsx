@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef } from "react";
 import { View } from "react-native";
 import Svg, { Circle, G, Image as SvgImage, Path, Rect, Text as SvgText } from "react-native-svg";
 import { qrGrid } from "../lib/qr";
+import { tr } from "../lib/tr";
 
 /** Design size (viewBox). The card is laid out at 2× and exported as-is (× screen scale = sharp image). */
 const W = 360;
@@ -76,13 +77,13 @@ export const QrShareCard = forwardRef<QrShareCardHandle, { value: string; name: 
           strokeLinecap="round"
         />
         <SvgText x={W / 2} y={qrY + qrBox + 36} fill="rgba(247,249,252,0.7)" fontSize={14} fontFamily="Inter_400Regular" textAnchor="middle">
-          Scanne le code ou ouvre le lien
+          {tr("Scanne le code ou ouvre le lien")}
         </SvgText>
         <SvgText x={W / 2} y={qrY + qrBox + 68} fill="#f7f9fc" fontSize={21} fontWeight="700" fontFamily="Inter_700Bold" textAnchor="middle">
           {link}
         </SvgText>
         <SvgText x={W / 2} y={H - 18} fill="rgba(247,249,252,0.5)" fontSize={12} fontFamily="Inter_400Regular" textAnchor="middle">
-          Ni numéro, ni e-mail · Connecte-toi sur WIPP
+          {tr("Ni numéro, ni e-mail · Connecte-toi sur WIPP")}
         </SvgText>
       </Svg>
     </View>

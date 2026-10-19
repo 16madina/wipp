@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 /** WIPP online events (conference / masterclass): calls to the WIPP server. Every right is checked there. */
 
 export type LiveInfo = {
@@ -128,7 +129,7 @@ export function parseLiveLink(raw: string) {
 export function liveBadge(live: { state: string } | undefined) {
   if (!live) return null;
   if (live.state === "live") return "EN DIRECT";
-  if (live.state === "ended") return "Terminé";
-  if (live.state === "cancelled") return "Annulé";
-  return "À venir";
+  if (live.state === "ended") return tr("Terminé");
+  if (live.state === "cancelled") return tr("Annulé");
+  return tr("À venir");
 }

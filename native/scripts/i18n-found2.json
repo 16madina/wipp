@@ -1,0 +1,102 @@
+{
+ "unique": [
+  "DISCUTE · PARTAGE · DÉCOUVRE",
+  "revoir",
+  "profil",
+  "de",
+  "membre",
+  "membres",
+  "document",
+  "EN DIRECT",
+  "vue",
+  "TERMINÉ",
+  "participant",
+  "inscrit",
+  "🌙 DE GARDE",
+  "QUESTION DU PUBLIC",
+  "HOST",
+  "WIPP",
+  "vote",
+  "Galerie",
+  "Caméra",
+  "Stickers",
+  "Document",
+  "Localisation",
+  "Contact",
+  "Sondage",
+  "Événement",
+  "OK"
+ ],
+ "byFile": {
+  "src/screens/auth.tsx": [
+   "DISCUTE · PARTAGE · DÉCOUVRE",
+   "revoir",
+   "profil"
+  ],
+  "src/screens/calls.tsx": [
+   "de"
+  ],
+  "src/screens/chats.tsx": [
+   "membre",
+   "membres",
+   "document",
+   "membre"
+  ],
+  "src/screens/event-live-room.tsx": [
+   "EN DIRECT"
+  ],
+  "src/screens/explore.tsx": [
+   "vue"
+  ],
+  "src/screens/extra.tsx": [
+   "membre",
+   "membre"
+  ],
+  "src/screens/me.tsx": [
+   "TERMINÉ",
+   "participant",
+   "inscrit"
+  ],
+  "src/screens/pharmacies.tsx": [
+   "🌙 DE GARDE"
+  ],
+  "src/components/CallScreen.tsx": [
+   "participant"
+  ],
+  "src/components/EventLiveActions.tsx": [
+   "inscrit"
+  ],
+  "src/components/GroupCallBanner.tsx": [
+   "participant"
+  ],
+  "src/components/LiveQuestions.tsx": [
+   "QUESTION DU PUBLIC"
+  ],
+  "src/components/LiveStage.tsx": [
+   "HOST"
+  ],
+  "src/components/Logo.tsx": [
+   "WIPP",
+   "WIPP"
+  ],
+  "src/components/Poll.tsx": [
+   "vote"
+  ],
+  "src/components/ReadBy.tsx": [
+   "membre"
+  ],
+  "src/components/ShareSurpriseSheet.tsx": [
+   "Galerie",
+   "Caméra",
+   "Stickers",
+   "Document",
+   "Localisation",
+   "Contact",
+   "Sondage",
+   "Événement"
+  ],
+  "src/components/card-editor-parts.tsx": [
+   "OK"
+  ]
+ }
+}

@@ -7,6 +7,7 @@ import { colors } from "../theme";
 import { useWippStore } from "../lib/store";
 import { useCallSession } from "../lib/calls/session";
 import type { ActiveGroupCall } from "../lib/calls/livekit-client";
+import { tr } from "../lib/tr";
 
 /** « Appel en cours · Rejoindre » at the top of a group conversation while a group call is live. */
 export function GroupCallBanner({ chatId }: { chatId: string }) {
@@ -39,7 +40,7 @@ export function GroupCallBanner({ chatId }: { chatId: string }) {
         <Icon size={18} color={colors.accentFg} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{call.kind === "video" ? "Appel vidéo en cours" : "Appel audio en cours"}</Text>
+        <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{call.kind === "video" ? tr("Appel vidéo en cours") : tr("Appel audio en cours")}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
           {faces.map((u, i) => (
             <View key={i} style={{ marginLeft: i ? -6 : 0, borderRadius: 12, borderWidth: 1.5, borderColor: colors.surface }}>
@@ -47,7 +48,7 @@ export function GroupCallBanner({ chatId }: { chatId: string }) {
             </View>
           ))}
           <Text style={{ marginLeft: 6, color: colors.muted, fontSize: 12 }}>
-            {call.participantIds.length} participant{call.participantIds.length > 1 ? "s" : ""}
+            {call.participantIds.length} {tr("participant")}{call.participantIds.length > 1 ? "s" : ""}
           </Text>
         </View>
       </View>
@@ -61,7 +62,7 @@ export function GroupCallBanner({ chatId }: { chatId: string }) {
         }}
         style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.accent }}
       >
-        <Text style={{ color: colors.accentFg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{inThisCall ? "Retour à l’appel" : "Rejoindre"}</Text>
+        <Text style={{ color: colors.accentFg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{inThisCall ? tr("Retour à l’appel") : tr("Rejoindre")}</Text>
       </Press>
     </View>
   );

@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { supabase } from "./supabase";
 
 export type RealRequest = {
@@ -196,17 +197,17 @@ export function durationLabel(minutes: number) {
   if (minutes < 1440) return minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60}` : `${minutes / 60} h`;
   const d = Math.floor(minutes / 1440);
   const h = Math.round((minutes % 1440) / 60);
-  return `${d} jour${d > 1 ? "s" : ""}${h ? ` ${h} h` : ""}`;
+  return `${d > 1 ? tr("{0} jours", d) : tr("1 jour")}${h ? ` ${h} h` : ""}`;
 }
 
 /** "23 h 42 min", "2 j 4 h", "12 min" — computed from the SERVER's expires_at and the current time. */
 export function remainingLabel(expiresAt: number, now = Date.now()) {
   const total = Math.max(0, Math.ceil((expiresAt - now) / 60000));
-  if (total < 1) return "moins d’une minute";
+  if (total < 1) return tr("moins d’une minute");
   const d = Math.floor(total / 1440);
   const h = Math.floor((total % 1440) / 60);
   const m = total % 60;
-  if (d) return `${d} j${h ? ` ${h} h` : ""}`;
+  if (d) return `${tr("{0} j", d)}${h ? ` ${h} h` : ""}`;
   if (h) return `${h} h${m ? ` ${m} min` : ""}`;
   return `${m} min`;
 }
@@ -281,21 +282,21 @@ export async function getRelation(peerId: string): Promise<Relation> {
 }
 
 export const STATUS_FR: Record<string, string> = {
-  sent: "Demande envoyée",
-  already_pending: "Demande déjà en attente",
-  already_connected: "Vous êtes déjà connectés",
-  accepted_existing: "Vous êtes maintenant connectés",
-  not_found: "Profil introuvable",
-  rate_limited: "Trop de demandes aujourd'hui, réessaie demain",
-  paused: "Demandes en pause avec cette personne",
-  invalid: "Demande impossible",
-  unavailable: "Impossible d’envoyer cette demande.",
-  blocked: "Impossible d’envoyer cette demande.",
-  no_session: "Connecte-toi avec un vrai compte",
-  error: "Une erreur est survenue",
-  accepted: "Vous êtes connectés",
-  declined: "Demande refusée",
-  ignored: "Demande ignorée",
-  already_handled: "Demande déjà traitée",
-  expired: "Demande expirée",
+  get sent() { return tr("Demande envoyée"); },
+  get already_pending() { return tr("Demande déjà en attente"); },
+  get already_connected() { return tr("Vous êtes déjà connectés"); },
+  get accepted_existing() { return tr("Vous êtes maintenant connectés"); },
+  get not_found() { return tr("Profil introuvable"); },
+  get rate_limited() { return tr("Trop de demandes aujourd'hui, réessaie demain"); },
+  get paused() { return tr("Demandes en pause avec cette personne"); },
+  get invalid() { return tr("Demande impossible"); },
+  get unavailable() { return tr("Impossible d’envoyer cette demande."); },
+  get blocked() { return tr("Impossible d’envoyer cette demande."); },
+  get no_session() { return tr("Connecte-toi avec un vrai compte"); },
+  get error() { return tr("Une erreur est survenue"); },
+  get accepted() { return tr("Vous êtes connectés"); },
+  get declined() { return tr("Demande refusée"); },
+  get ignored() { return tr("Demande ignorée"); },
+  get already_handled() { return tr("Demande déjà traitée"); },
+  get expired() { return tr("Demande expirée"); },
 };

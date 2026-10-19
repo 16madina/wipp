@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { Btn } from "./ui";
 import { colors } from "../theme";
 import { logAppError } from "../lib/crash-log";
+import { tr } from "../lib/tr";
 
 /**
  * One broken screen must not kill the whole app: show a calm message with « Revenir » instead.
@@ -22,7 +23,7 @@ export class ScreenErrorBoundary extends Component<{ resetKey: string; onBack: (
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     // The component names (first lines of the stack) say which part of the screen failed.
     const where = (info.componentStack ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4).join(" < ");
-    logAppError(error, false, `écran ${where}`.slice(0, 200));
+    logAppError(error, false, tr("écran {0}", where).slice(0, 200));
   }
 
   render() {
@@ -30,10 +31,10 @@ export class ScreenErrorBoundary extends Component<{ resetKey: string; onBack: (
     if (this.props.silent) return null;
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: 32 }}>
-        <Text style={{ color: colors.fg, fontSize: 18, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>Un problème est survenu</Text>
-        <Text style={{ marginTop: 8, color: colors.muted, fontSize: 14, textAlign: "center" }}>Cet écran n’a pas pu s’afficher. Le reste de WIPP fonctionne.</Text>
+        <Text style={{ color: colors.fg, fontSize: 18, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{tr("Un problème est survenu")}</Text>
+        <Text style={{ marginTop: 8, color: colors.muted, fontSize: 14, textAlign: "center" }}>{tr("Cet écran n’a pas pu s’afficher. Le reste de WIPP fonctionne.")}</Text>
         <View style={{ marginTop: 22, alignSelf: "stretch" }}>
-          <Btn label="Revenir" onPress={() => this.props.onBack()} />
+          <Btn label={tr("Revenir")} onPress={() => this.props.onBack()} />
         </View>
       </View>
     );

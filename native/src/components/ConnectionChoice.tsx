@@ -4,6 +4,7 @@ import { Press } from "./ui";
 import { colors, accentA } from "../theme";
 import { durationLabel } from "../lib/connections";
 import type { ConnectionChoice } from "../lib/types";
+import { tr } from "../lib/tr";
 
 /** 15 min, 1 h, 24 h, 7 jours — the server re-validates everything (15 min … 30 jours). */
 export const PRESETS = [15, 60, 1440, 10080] as const;
@@ -54,8 +55,8 @@ export function ConnectionChoicePicker({
         <View style={{ flexDirection: "row", gap: 10 }}>
           {(
             [
-              ["permanent", "♾️", "Permanent", "Sans date de fin"],
-              ["ephemeral", "⏳", "Éphémère", "Pour une durée choisie"],
+              ["permanent", "♾️", tr("Permanent"), tr("Sans date de fin")],
+              ["ephemeral", "⏳", tr("Éphémère"), tr("Pour une durée choisie")],
             ] as const
           ).map(([id, icon, title, sub]) => (
             <Press
@@ -72,7 +73,7 @@ export function ConnectionChoicePicker({
       ) : null}
       {type === "ephemeral" ? (
         <View style={{ gap: 10 }}>
-          <Text style={{ color: colors.muted, fontSize: 13 }}>Combien de temps souhaitez-vous rester connectés ?</Text>
+          <Text style={{ color: colors.muted, fontSize: 13 }}>{tr("Combien de temps souhaitez-vous rester connectés ?")}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {PRESETS.map((m) => (
               <Press
@@ -93,7 +94,7 @@ export function ConnectionChoicePicker({
               }}
               style={chip(custom)}
             >
-              <Text style={{ color: custom ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold" }}>Personnalisé</Text>
+              <Text style={{ color: custom ? colors.accentFg : colors.fg, fontFamily: "Inter_600SemiBold" }}>{tr("Personnalisé")}</Text>
             </Press>
           </View>
           {custom ? (
@@ -123,7 +124,7 @@ export function ConnectionChoicePicker({
                 ))}
               </View>
               <Text style={{ color: value ? colors.muted : colors.danger, fontSize: 12 }}>
-                {value?.type === "ephemeral" ? `Durée : ${durationLabel(value.minutes)}` : "Entre 15 minutes et 30 jours."}
+                {value?.type === "ephemeral" ? tr("Durée : {0}", durationLabel(value.minutes)) : tr("Entre 15 minutes et 30 jours.")}
               </Text>
             </View>
           ) : null}
@@ -134,5 +135,5 @@ export function ConnectionChoicePicker({
 }
 
 export function choiceLabel(c: ConnectionChoice) {
-  return c.type === "permanent" ? "♾️ Contact permanent" : `⏳ Contact éphémère · ${durationLabel(c.minutes)}`;
+  return c.type === "permanent" ? tr("♾️ Contact permanent") : tr("⏳ Contact éphémère · {0}", durationLabel(c.minutes));
 }

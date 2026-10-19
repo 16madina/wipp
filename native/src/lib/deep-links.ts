@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { useWippStore } from "./store";
 import { upsertRemoteProfile } from "./public-profiles";
 import { resolveWippQr, type QrDestination } from "./qr-resolver";
@@ -28,7 +29,7 @@ export async function openWippLink(raw: string, mode: "push" | "replace" = "push
       useWippStore.setState({ lifestyle: await fetchEvents(st.serverProfileId) });
     } catch (err) {
       const { errorText } = await import("./error-fr");
-      return { ok: false as const, error: errorText(err, "Invitation invalide.") };
+      return { ok: false as const, error: errorText(err, tr("Invitation invalide.")) };
     }
     (mode === "replace" ? st.replace : st.push)({ name: "lifestyle", itemId: liveLink.eventId });
     return { ok: true as const, kind: "internal" as const };
@@ -61,7 +62,7 @@ export async function openWippLink(raw: string, mode: "push" | "replace" = "push
         /* ignore */
       }
       if (!useWippStore.getState().chats.some((c) => c.id === internal.chatId)) {
-        return { ok: false as const, error: "Conversation introuvable" };
+        return { ok: false as const, error: tr("Conversation introuvable") };
       }
     }
     const go = mode === "replace" ? st.replace : st.push;

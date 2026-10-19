@@ -1,3 +1,4 @@
+import { tr } from "./tr";
 import { WEEK_DAYS, type WeekHours } from "./business-card";
 
 const toMin = (hhmm: string) => {
@@ -16,16 +17,16 @@ export function openState(week: WeekHours | null | undefined, now = new Date()):
   const today = week[WEEK_DAYS[dayIndex]!];
   const yesterday = week[WEEK_DAYS[(dayIndex + 6) % 7]!];
   if (yesterday && toMin(yesterday.c) < toMin(yesterday.o) && minutes < toMin(yesterday.c)) {
-    return { open: true, label: "Ouvert maintenant" };
+    return { open: true, label: tr("Ouvert maintenant") };
   }
   if (today) {
     const o = toMin(today.o);
     const c = toMin(today.c);
     const open = c > o ? minutes >= o && minutes < c : minutes >= o || minutes < c;
-    if (open) return { open: true, label: "Ouvert maintenant" };
-    if (minutes < o) return { open: false, label: `Ouvre à ${today.o}` };
+    if (open) return { open: true, label: tr("Ouvert maintenant") };
+    if (minutes < o) return { open: false, label: tr("Ouvre à {0}", today.o) };
   }
-  return { open: false, label: "Fermé" };
+  return { open: false, label: tr("Fermé") };
 }
 
 /** Profile links from the handles saved on the card. */

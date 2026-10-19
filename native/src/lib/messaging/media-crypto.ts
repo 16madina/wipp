@@ -1,3 +1,4 @@
+import { tr } from "../tr";
 /**
  * wipp-media-v1. Separate from encryptText / the chat text envelope.
  * Each chunk: unique 96-bit nonce, AES-256-GCM, AAD binds attachment id + index.
@@ -130,15 +131,15 @@ export function parseMedia(value: string): MediaEnvelope | null {
 }
 
 const MEDIA_LABEL: Record<MediaEnvelope["kind"], string> = {
-  image: "Photo",
-  video: "Vidéo",
-  file: "Document",
-  voice: "Message vocal",
+  get image() { return tr("Photo"); },
+  get video() { return tr("Vidéo"); },
+  get file() { return tr("Document"); },
+  get voice() { return tr("Message vocal"); },
   gif: "GIF",
-  sticker: "Sticker",
-  contact: "Contact",
-  location: "Position",
-  link: "Lien",
+  get sticker() { return tr("Sticker"); },
+  get contact() { return tr("Contact"); },
+  get location() { return tr("Position"); },
+  get link() { return tr("Lien"); },
 };
 
 export function mediaLabel(kind: MediaEnvelope["kind"]) {
