@@ -1,6 +1,6 @@
 import type { Lang } from "./types";
 
-export const LEGAL_VERSION = "2026-10-07";
+export const LEGAL_VERSION = "2026-10-21";
 export const LEGAL_CONTACT = "lazoneclient@gmail.com";
 
 export type LegalDocId = "privacy" | "terms" | "age";
@@ -19,20 +19,21 @@ export type LegalDocument = {
 
 const privacyFr: LegalDocument = {
   title: "Politique de confidentialité",
-  updated: "7 octobre 2026",
+  updated: "21 octobre 2026",
   intro:
     "Cette politique explique comment WIPP, exploité au Canada par DeeDigital et, pour les activités concernées en Afrique, par Dee Digital Group, recueille, utilise, communique, conserve et supprime vos renseignements personnels. Contact : lazoneclient@gmail.com.",
   sections: [
     {
       title: "1. Principes",
       paragraphs: [
-        "Nous limitons la collecte à ce qui est nécessaire. Les paramètres de confidentialité sont, lorsque la loi l’exige, au niveau le plus élevé par défaut. Caméra, micro, photos, localisation, contacts, Bluetooth et notifications ne sont demandés qu’au moment où une fonction en a besoin. Vous pouvez refuser ou retirer une permission dans les réglages de l’appareil.",
+        "Nous limitons la collecte à ce qui est nécessaire. Les paramètres de confidentialité sont, lorsque la loi l’exige, au niveau le plus élevé par défaut. Caméra, micro, photos, localisation, contacts, appareils à proximité, partage d’écran et notifications ne sont demandés qu’au moment où une fonction en a besoin. Vous pouvez refuser ou retirer une permission dans les réglages de l’appareil.",
       ],
     },
     {
       title: "2. Renseignements que nous pouvons traiter",
       paragraphs: [
         "Compte : nom, prénom, date de naissance, nom d’utilisateur, numéro de téléphone, courriel, pays, ville, photo, biographie.",
+        "Connexion : WIPP n’utilise pas de mot de passe. Vous vous connectez avec votre numéro de téléphone et un code reçu par SMS (Firebase Authentication de Google).",
         "Sécurité : identifiants techniques, jetons de session, appareils, journaux de connexion et mesures anti-fraude.",
         "Communications : messages, pièces jointes, stickers, réactions, appels audio/vidéo et métadonnées d’acheminement (heure, durée, appels manqués). Lorsque le chiffrement de bout en bout s’applique, le contenu n’est lisible que par les participants autorisés.",
         "Social : Stories (photos et vidéos d’au plus une minute, y compris une musique superposée), groupes, demandes de connexion, QR, liens d’invitation.",
@@ -64,6 +65,7 @@ const privacyFr: LegalDocument = {
         "Un appel utilise caméra et/ou microphone avec votre permission. WIPP et son fournisseur d’appels (LiveKit) traitent le flux technique nécessaire à l’acheminement. WIPP n’enregistre pas vos appels.",
         "Si vous quittez l’application pendant un appel, le système d’exploitation peut afficher un mini-lecteur ou un indicateur (point vert, pastille). Cela fait partie de l’appareil, pas d’une publication WIPP.",
         "Il est interdit d’enregistrer un appel ou de le diffuser sans le consentement requis par la loi applicable.",
+        "Partage d’écran : pendant un direct, l’organisateur peut choisir de partager son écran avec les spectateurs. Le partage ne démarre qu’après son accord dans la fenêtre du système, une notification reste visible tant qu’il dure, et il peut l’arrêter à tout moment. L’écran est diffusé en temps réel et n’est pas enregistré par WIPP.",
       ],
     },
     {
@@ -71,7 +73,7 @@ const privacyFr: LegalDocument = {
       paragraphs: [
         "WIPP Touch privilégie des jetons temporaires. La proximité de deux téléphones n’est jamais un consentement : chaque personne accepte ou refuse.",
         "Un QR ou un lien de groupe peut être partagé hors de WIPP. Quiconque le reçoit peut tenter de rejoindre le groupe. L’administrateur est responsable des invitations qu’il diffuse.",
-        "La découvrabilité Bluetooth s’arrête lorsque vous quittez la fonction, sous réserve des capacités de l’appareil.",
+        "WIPP Touch utilise les capteurs de mouvement du téléphone et, lorsque les deux appareils le permettent, la mesure de distance UWB (« Appareils à proximité »). Il n’utilise ni Bluetooth ni NFC, et s’arrête lorsque vous quittez la fonction. Le Bluetooth sert uniquement au son des appels (écouteurs, kit mains libres).",
       ],
     },
     {
@@ -96,6 +98,7 @@ const privacyFr: LegalDocument = {
       title: "10. Fournisseurs",
       paragraphs: [
         "Supabase : compte, base de données, stockage, temps réel.",
+        "Firebase (Google) : connexion par numéro de téléphone et code SMS, notifications Android.",
         "LiveKit : appels audio/vidéo.",
         "Google Maps Platform : cartes et lieux.",
         "Magasins d’applications Apple et Google : distribution, achats éventuels, notifications.",
@@ -108,7 +111,7 @@ const privacyFr: LegalDocument = {
       paragraphs: [
         "Des fournisseurs peuvent traiter des données hors du Québec, du Canada ou de votre pays. Lorsque la loi l’exige, WIPP met en place des mesures contractuelles et techniques avant ces transferts.",
         "Conservation limitée aux finalités, à la sécurité, aux litiges et aux obligations légales. Exemples indicatifs : compte tant qu’il est actif; Stories selon la durée choisie (24 h ou 48 h); messages éphémères selon le délai du chat; journaux de sécurité jusqu’à 12 mois; signalements le temps de l’examen.",
-        "Vous pouvez supprimer le compte depuis Moi > Compte > Supprimer mon compte. Une ressource Web sera aussi offerte pour les exigences Apple et Google Play. Une désactivation n’équivaut pas à une suppression.",
+        "Vous pouvez supprimer le compte depuis Moi > Compte > Supprimer mon compte. Vous pouvez aussi la demander sur https://wippapp.com/delete-account. Une désactivation n’équivaut pas à une suppression.",
       ],
     },
     {
@@ -139,7 +142,7 @@ const privacyFr: LegalDocument = {
 
 const termsFr: LegalDocument = {
   title: "Conditions d’utilisation",
-  updated: "7 octobre 2026",
+  updated: "21 octobre 2026",
   intro:
     "En créant un compte WIPP, vous acceptez ces Conditions et reconnaissez avoir lu la Politique de confidentialité. Exploitants : DeeDigital (Canada) et Dee Digital Group (activités concernées en Afrique). Contact : lazoneclient@gmail.com.",
   sections: [
@@ -232,20 +235,21 @@ const termsFr: LegalDocument = {
 
 const privacyEn: LegalDocument = {
   title: "Privacy Policy",
-  updated: "7 October 2026",
+  updated: "21 October 2026",
   intro:
     "This policy explains how WIPP — operated in Canada by DeeDigital and, for relevant activities in Africa, by Dee Digital Group — collects, uses, shares, keeps and deletes personal information. Contact: lazoneclient@gmail.com.",
   sections: [
     {
       title: "1. Principles",
       paragraphs: [
-        "We collect only what we need. Privacy settings default to the highest level where the law requires it. Camera, mic, photos, location, contacts, Bluetooth and notifications are requested only when a feature needs them. You can refuse or revoke them in device settings.",
+        "We collect only what we need. Privacy settings default to the highest level where the law requires it. Camera, mic, photos, location, contacts, nearby devices, screen sharing and notifications are requested only when a feature needs them. You can refuse or revoke them in device settings.",
       ],
     },
     {
       title: "2. Information we may process",
       paragraphs: [
         "Account: name, birthday, username, phone, email, country, city, photo, bio.",
+        "Sign-in: WIPP does not use passwords. You sign in with your phone number and a code sent by SMS (Google Firebase Authentication).",
         "Security: technical IDs, session tokens, devices, sign-in logs, anti-fraud signals.",
         "Communications: messages, attachments, stickers, reactions, audio/video calls and routing metadata (time, duration, missed calls). Where end-to-end encryption applies, content is readable only by authorised participants.",
         "Social: Stories (photos and videos up to one minute, including overlay music), groups, connection requests, QR codes, invite links.",
@@ -277,6 +281,7 @@ const privacyEn: LegalDocument = {
         "A call uses camera and/or microphone with your permission. WIPP and its call provider (LiveKit) handle the technical stream. WIPP does not record your calls.",
         "If you leave the app during a call, the operating system may show a mini player or a status indicator. That is the device, not a WIPP post.",
         "Recording or broadcasting a call without the consent required by law is prohibited.",
+        "Screen sharing: during a live, the host can choose to share their screen with viewers. It starts only after they accept the system prompt, a notification stays visible while it lasts, and they can stop it at any time. The screen is streamed in real time and is not recorded by WIPP.",
       ],
     },
     {
@@ -284,7 +289,7 @@ const privacyEn: LegalDocument = {
       paragraphs: [
         "WIPP Touch prefers short-lived tokens. Two phones being close is never consent — each person accepts or declines.",
         "A group QR or link can be shared outside WIPP. Anyone who gets it may try to join. Admins are responsible for the invites they spread.",
-        "Bluetooth discoverability stops when you leave the feature, subject to the device.",
+        "WIPP Touch uses the phone motion sensors and, when both devices support it, UWB distance measurement (“Nearby devices”). It uses neither Bluetooth nor NFC and stops when you leave the feature. Bluetooth is only used for call audio (headphones, car kits).",
       ],
     },
     {
@@ -309,6 +314,7 @@ const privacyEn: LegalDocument = {
       title: "10. Providers",
       paragraphs: [
         "Supabase: account, database, storage, realtime.",
+        "Firebase (Google): phone number and SMS code sign-in, Android notifications.",
         "LiveKit: audio/video calls.",
         "Google Maps Platform: maps and places.",
         "Apple and Google app stores: distribution, future purchases, notifications.",
@@ -321,7 +327,7 @@ const privacyEn: LegalDocument = {
       paragraphs: [
         "Providers may process data outside Québec, Canada or your country. Where the law requires it, WIPP puts contractual and technical safeguards in place first.",
         "We keep data only for the stated purposes, security, disputes and legal duties. Indicative periods: account while active; Stories for the duration you choose (24 h or 48 h); disappearing messages per the chat timer; security logs up to 12 months; reports for the time needed to review them.",
-        "You can delete your account in Me > Account > Delete my account. A web path will also be offered for Apple and Google Play rules. Deactivation is not deletion.",
+        "You can delete your account in Me > Account > Delete my account. You can also request it at https://wippapp.com/delete-account. Deactivation is not deletion.",
       ],
     },
     {
