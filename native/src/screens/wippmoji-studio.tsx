@@ -368,7 +368,7 @@ export function WippmojiStudioScreen() {
               </View>
             }
           >
-            <Title title={tr("Aperçu de ton Wippmoji")} sub={tr("Voici ton personnage ! Il sera utilisé pour toutes tes créations.")} />
+            <Title title={pop ? tr("Aperçu de ton WippPop") : tr("Aperçu de ton Wippmoji")} sub={tr("Voici ton personnage ! Il sera utilisé pour toutes tes créations.")} />
             <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, alignItems: "center", paddingVertical: 12 }}>
               <Image source={{ uri: avatar.referenceUrl }} style={{ width: "88%", aspectRatio: 1 }} contentFit="contain" transition={200} />
               <View style={{ position: "absolute", top: 14, left: 16 }}>

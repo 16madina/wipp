@@ -1232,6 +1232,7 @@ export const TR_EN: Record<string, string> = {
   "Salut": "Hi",
   "MDR": "LOL",
   "Des WIPP Moments : tes WippPop auront le même style, avec ton personnage.": "WIPP Moments: your WippPops will have the same style, with your character.",
+  "Aperçu de ton WippPop": "Your WippPop preview",
   "♾️ Contact permanent": "♾️ Permanent contact",
   "Bloquer {0}": "Block {0}",
   "{0} ne pourra plus vous contacter.": "{0} will no longer be able to contact you.",
