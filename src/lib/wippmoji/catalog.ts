@@ -156,6 +156,37 @@ const MORE_POPS: WippPopAnimation[] = [
 
 WIPPPOP_ANIMATIONS.push(...MORE_POPS);
 
+/** How WIPP moves a WippPop across the screen (the clip itself stays centered): way in, way out. */
+export type PopSide = "left" | "right" | "top" | "bottom" | "zoom" | "none";
+export const POP_PATHS: Record<string, { enter: PopSide; exit: PopSide }> = {
+  coucou: { enter: "left", exit: "right" },
+  bisous: { enter: "bottom", exit: "top" },
+  bravo: { enter: "bottom", exit: "bottom" },
+  "je-taime": { enter: "zoom", exit: "zoom" },
+  anniversaire: { enter: "bottom", exit: "top" },
+  "bonne-nuit": { enter: "top", exit: "bottom" },
+  bonjour: { enter: "bottom", exit: "top" },
+  merci: { enter: "right", exit: "left" },
+  mdr: { enter: "left", exit: "right" },
+  felicitations: { enter: "zoom", exit: "top" },
+  "tu-me-manques": { enter: "right", exit: "left" },
+  jarrive: { enter: "left", exit: "right" },
+  "on-dit-quoi": { enter: "right", exit: "left" },
+  enjailler: { enter: "bottom", exit: "bottom" },
+  "cest-gate": { enter: "top", exit: "bottom" },
+  garba: { enter: "top", exit: "bottom" },
+  moisi: { enter: "left", exit: "left" },
+  yako: { enter: "zoom", exit: "zoom" },
+  sapee: { enter: "right", exit: "left" },
+  kpakpato: { enter: "left", exit: "right" },
+  "ya-foyi": { enter: "bottom", exit: "bottom" },
+  "bonne-journee": { enter: "left", exit: "right" },
+  "bon-courage": { enter: "bottom", exit: "top" },
+  pardon: { enter: "right", exit: "right" },
+  "gros-bisous": { enter: "bottom", exit: "top" },
+  "le-boss": { enter: "zoom", exit: "zoom" },
+};
+
 export function popReferencePrompt() {
   return [
     "Turn the person in the attached photo into a cute premium 3D chibi doll character, Pixar quality, exactly like a collectible toy figure: big head, big shiny expressive eyes, small body, full body from head to sneakers.",

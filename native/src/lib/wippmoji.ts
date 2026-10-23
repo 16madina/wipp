@@ -7,7 +7,7 @@ export type WippmojiStyle = "cartoon" | "realistic";
 export type WippmojiKind = "moji" | "pop";
 export type WippmojiChoice = { id: string; fr: string; en: string; cat?: string };
 export type WippmojiStatus = { allowed: boolean; prices?: { moji: Record<string, string>; pop: Record<string, string> }; characterLimit?: number; charactersLeft?: { moji: number; pop: number }; provider: "xai" | "mock"; packSize: number; expressions: WippmojiChoice[]; pop?: { packSize: number; animations: WippmojiChoice[] } };
-export type WippmojiSticker = { id: string; expression: string; label: string | null; text?: string | null; start?: number; status: "pending" | "ready" | "failed" | "deleted"; path: string | null; url: string | null };
+export type WippmojiSticker = { id: string; expression: string; label: string | null; text?: string | null; start?: number; enter?: string | null; exit?: string | null; status: "pending" | "ready" | "failed" | "deleted"; path: string | null; url: string | null };
 export type WippmojiPack = { id: string; type?: "expressions" | "wipppop"; status: "generating" | "ready" | "partial" | "deleted"; posterUrl: string; stickers: WippmojiSticker[] };
 export type WippmojiAvatar = { id: string; style: WippmojiStyle; kind?: WippmojiKind; referenceUrl: string };
 
@@ -39,7 +39,7 @@ export function createWippmojiPack(avatarId: string, expressions: string[], lang
 export function wippmojiStickerDef(s: WippmojiSticker, pop = false): StickerDef | null {
   if (s.status !== "ready" || !s.path) return null;
   // After "#": "pop" (a WippPop, played over the whole chat like a WIPP Moment), the words WIPP draws, the start offset.
-  const flags = [pop ? "pop" : "", s.text ? `t=${encodeURIComponent(s.text)}` : "", s.start ? `s=${s.start}` : ""].filter(Boolean).join("&");
+  const flags = [pop ? "pop" : "", s.text ? `t=${encodeURIComponent(s.text)}` : "", s.start ? `s=${s.start}` : "", pop && s.enter ? `e=${s.enter}` : "", pop && s.exit ? `x=${s.exit}` : ""].filter(Boolean).join("&");
   return { id: `wm:${s.path}${flags ? `#${flags}` : ""}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
 }
 

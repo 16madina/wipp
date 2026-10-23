@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { Platform, StyleSheet, View } from "react-native";
+import { Animated, Easing, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { wippSrc } from "../lib/assets";
 import { stickerById } from "../lib/stickers";
 import { isWippPopId } from "../lib/wippmoji";
-import { WippSticker } from "./WippSticker";
+import { parseWippmojiId, WippSticker } from "./WippSticker";
 
 const POP_MS = 6000;
+const MOVE_MS = 650;
 
 export function WippMomentOverlay({
   stickerId,
@@ -27,16 +28,24 @@ export function WippMomentOverlay({
   const done = useRef(onDone);
   done.current = onDone;
 
+  const { width, height } = useWindowDimensions();
+  const info = pop && stickerId ? parseWippmojiId(stickerId) : null;
+  const total = Math.max(2500, POP_MS - (info?.start ?? 0) * 1000);
+  const move = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (!pop) return;
     setFade(false);
-    const fadeAt = setTimeout(() => setFade(true), POP_MS);
-    const end = setTimeout(() => done.current(), POP_MS + 420);
-    return () => {
-      clearTimeout(fadeAt);
-      clearTimeout(end);
-    };
-  }, [stickerId, playKey, pop]);
+    // 0 → 1: comes in from its side; 1 → 2: stays in the middle; 2 → 3: goes out (WIPP moves the clip, Grok does not).
+    move.setValue(0);
+    const anim = Animated.sequence([
+      Animated.timing(move, { toValue: 1, duration: MOVE_MS, easing: Easing.out(Easing.back(1.2)), useNativeDriver: true }),
+      Animated.timing(move, { toValue: 2, duration: Math.max(500, total - 2 * MOVE_MS), easing: Easing.linear, useNativeDriver: true }),
+      Animated.timing(move, { toValue: 3, duration: MOVE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+    ]);
+    anim.start(() => done.current());
+    return () => anim.stop();
+  }, [stickerId, playKey, pop, total, move]);
 
   useEffect(() => {
     if (!row?.playMs) return;
@@ -56,12 +65,25 @@ export function WippMomentOverlay({
   }, [stickerId, playKey, row?.playMs]);
 
   if (pop && stickerId) {
-    // A WippPop: the user's own animated character, big over the chat.
+    // A WippPop: the user's own animated character, big over the chat, moved across the screen.
+    const side = (k?: string) => {
+      const far = { left: [-width, 0], right: [width, 0], top: [0, -height], bottom: [0, height] } as Record<string, number[]>;
+      return far[k ?? ""] ?? [0, 0];
+    };
+    const [ix, iy] = side(info?.enter);
+    const [ox, oy] = side(info?.exit);
+    const translateX = move.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [ix, 0, 0, ox] });
+    const translateY = move.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [iy, 0, 0, oy] });
+    const scale = move.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [info?.enter === "zoom" ? 0.2 : 1, 1, 1, info?.exit === "zoom" ? 0.2 : 1] });
+    const opacity = move.interpolate({
+      inputRange: [0, 0.4, 1, 2, 2.6, 3],
+      outputRange: [info?.enter === "zoom" || info?.enter === "none" || !info?.enter ? 0 : 1, 1, 1, 1, 1, info?.exit === "zoom" || info?.exit === "none" || !info?.exit ? 0 : 1],
+    });
     return (
-      <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.layer, { opacity: fade ? 0 : 1, justifyContent: "center" }]}>
-        <View key={`${stickerId}-${playKey}`} style={{ width: "100%", aspectRatio: 1 }}>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.layer, { justifyContent: "center" }]}>
+        <Animated.View key={`${stickerId}-${playKey}`} style={{ width: "100%", aspectRatio: 1, opacity, transform: [{ translateX }, { translateY }, { scale }] }}>
           <WippSticker id={stickerId} size={400} fill />
-        </View>
+        </Animated.View>
       </View>
     );
   }

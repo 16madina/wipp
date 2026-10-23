@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
-import { PACK_SIZE, PACK_SIZES, WIPPMOJI_EXPRESSIONS, WIPPPOP_ANIMATIONS, WIPPPOP_SECONDS, WIPPPOP_SIZE, WIPPPOP_SIZES, expressionPrompt, popPrompt, popReferencePrompt, referencePrompt, type WippmojiStyle } from "./catalog";
+import { PACK_SIZE, PACK_SIZES, WIPPMOJI_EXPRESSIONS, WIPPPOP_ANIMATIONS, WIPPPOP_SECONDS, WIPPPOP_SIZE, WIPPPOP_SIZES, POP_PATHS, expressionPrompt, popPrompt, popReferencePrompt, referencePrompt, type WippmojiStyle } from "./catalog";
 import { wippmojiProvider } from "./providers";
 
 const VIDEO_SECONDS = Number(process.env.WIPPMOJI_VIDEO_SECONDS || 6);
@@ -40,12 +40,15 @@ type StudioSettings = {
   models: { moji: string; pop: string };
   /** Seconds skipped at the start of new clips, per kind (each clip can then be changed in wippmoji_assets.start_offset). */
   startOffset: { moji: number; pop: number };
+  /** WippPop way in / way out per animation id (overrides the defaults in POP_PATHS). */
+  popPaths: Record<string, { enter?: string; exit?: string }>;
 };
 const DEFAULT_SETTINGS: StudioSettings = {
   prices: { moji: { "5": "4,99 $ CAD", "10": "7,99 $ CAD" }, pop: { "3": "4,99 $ CAD", "7": "9,99 $ CAD" } },
   characterLimit: 2,
   models: { moji: "", pop: "" },
   startOffset: { moji: 0, pop: 0 },
+  popPaths: {},
 };
 let settingsCache: { at: number; value: StudioSettings } | null = null;
 
@@ -60,6 +63,7 @@ export async function studioSettings(): Promise<StudioSettings> {
       if (r.key === "prices" && r.value && typeof r.value === "object") value.prices = { ...value.prices, ...(r.value as StudioSettings["prices"]) };
       if (r.key === "character_limit" && Number(r.value) > 0) value.characterLimit = Number(r.value);
       if (r.key === "models" && r.value && typeof r.value === "object") value.models = { ...value.models, ...(r.value as StudioSettings["models"]) };
+      if (r.key === "pop_paths" && r.value && typeof r.value === "object") value.popPaths = r.value as StudioSettings["popPaths"];
       if (r.key === "start_offset" && r.value && typeof r.value === "object") value.startOffset = { ...value.startOffset, ...(r.value as StudioSettings["startOffset"]) };
     }
   } catch {
@@ -229,13 +233,15 @@ export async function getWippmojiPack(profileId: string, packId: string) {
     await sql`update wippmoji_packs set status = ${next}, completed_at = now() where id = ${packId}`;
     pack.status = next;
   }
+  const paths = (await studioSettings()).popPaths;
+  const pathOf = (id: string) => (pack.pack_type === "wipppop" ? { ...POP_PATHS[id], ...paths[id] } : null);
   return {
     id: pack.id,
     type: pack.pack_type === "wipppop" ? ("wipppop" as const) : ("expressions" as const),
     status: pack.status,
     posterUrl: await wippmojiPublicUrl(pack.reference_path),
     stickers: await Promise.all(
-      assets.map(async (a) => ({ id: a.id, expression: a.expression_id, label: a.label, text: a.overlay_text, start: Number(a.start_offset) || 0, status: a.status, path: a.media_path, url: a.media_path ? await wippmojiPublicUrl(a.media_path) : null })),
+      assets.map(async (a) => ({ id: a.id, expression: a.expression_id, label: a.label, text: a.overlay_text, start: Number(a.start_offset) || 0, enter: pathOf(a.expression_id)?.enter ?? null, exit: pathOf(a.expression_id)?.exit ?? null, status: a.status, path: a.media_path, url: a.media_path ? await wippmojiPublicUrl(a.media_path) : null })),
     ),
   };
 }

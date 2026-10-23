@@ -8,12 +8,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ArrowRight, Camera, Check, ChevronLeft, Crown, ImageIcon, Lightbulb, Minus, Plus, RotateCcw, Smile, Sparkles, Star } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { WippSticker } from "../components/WippSticker";
+import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { useWippStore } from "../lib/store";
 import { tr, trLang } from "../lib/tr";
 import {
   createWippmojiAvatar,
   createWippmojiPack,
   forgetMyWippmojis,
+  isWippPopId,
   preparePhoto,
   wippmojiLibrary,
   wippmojiPack,
@@ -607,7 +609,11 @@ export function WippmojiStudioScreen() {
           </Page>
         ) : null}
       </Animated.View>
-      {demoPop ? <PopDemo key={demoPop.n} uri={demoPop.uri} onDone={() => setDemoPop(null)} /> : null}
+      {demoPop && isWippPopId(demoPop.uri) ? (
+        <WippMomentOverlay stickerId={demoPop.uri} playKey={demoPop.n} onDone={() => setDemoPop(null)} />
+      ) : demoPop ? (
+        <PopDemo key={demoPop.n} uri={demoPop.uri} onDone={() => setDemoPop(null)} />
+      ) : null}
     </View>
   );
 }

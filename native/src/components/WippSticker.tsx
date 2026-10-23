@@ -207,7 +207,7 @@ export function parseWippmojiId(id: string) {
     const p = parts.find((x) => x.startsWith(`${k}=`));
     return p ? decodeURIComponent(p.slice(k.length + 1)) : undefined;
   };
-  return { path, pop: parts.includes("pop"), text: get("t"), start: Number(get("s")) || 0 };
+  return { path, pop: parts.includes("pop"), text: get("t"), start: Number(get("s")) || 0, enter: get("e"), exit: get("x") };
 }
 
 export function wippmojiClipUrl(id: string) {
