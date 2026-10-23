@@ -7,6 +7,9 @@ import Svg, { Circle } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { ArrowRight, Camera, Check, ChevronLeft, Crown, ImageIcon, Lightbulb, Minus, Plus, RotateCcw, Smile, Sparkles, Star } from "lucide-react-native";
 import { Press } from "../components/ui";
+import { SurpriseAnimOverlay } from "../components/SurpriseAnimOverlay";
+import { wippSrc } from "../lib/assets";
+import { findAnimation } from "../lib/surprise";
 import { WippSticker } from "../components/WippSticker";
 import { useWippStore } from "../lib/store";
 import { tr, trLang } from "../lib/tr";
@@ -55,6 +58,12 @@ const EXPRESSION_ART: Record<string, number> = {
   ok: require("../../assets/wippmoji-studio/expr-ok.jpg"),
 };
 
+/* Examples under the packs. Wippmoji: stickers made by the WIPP team in the Studio. WippPop: WIPP's own full-screen animations. */
+const MOJI_EXAMPLES = ["wms_17e3489145504988bc53", "wms_4010bdbc4062400b9228", "wms_41cdf024fbdf45fe9570", "wms_bea069660db34da1acc2"].map(
+  (f) => `wm:u_16a91279cf7c26e1d7b64bdd/wma_3cf91e77db1a43f09c86/${f}.mp4`,
+);
+const POP_EXAMPLES = ["bonjour-coucou", "amour-je-taime", "anniversaire-gateau", "amour-bisou"];
+
 type Step = "intro" | "kind" | "photo" | "crop" | "style" | "making-avatar" | "preview" | "packs" | "expressions" | "making-pack" | "done";
 type Photo = { uri: string; width: number; height: number };
 type StepState = "done" | "active" | "todo";
@@ -77,6 +86,8 @@ export function WippmojiStudioScreen() {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>("intro");
   const [kind, setKind] = useState<WippmojiKind>("moji");
+  const [popSize, setPopSize] = useState(3);
+  const [demoPop, setDemoPop] = useState<{ id: string; n: number } | null>(null);
   const [status, setStatus] = useState<WippmojiStatus | null>(null);
   const [packs, setPacks] = useState<WippmojiPack[]>([]);
   const [avatars, setAvatars] = useState<WippmojiAvatar[]>([]);
@@ -117,7 +128,7 @@ export function WippmojiStudioScreen() {
   };
 
   const pop = kind === "pop";
-  const packSize = pop ? (status?.pop?.packSize ?? 3) : (status?.packSize ?? 10);
+  const packSize = pop ? popSize : (status?.packSize ?? 10);
   const choices = pop ? (status?.pop?.animations ?? []) : (status?.expressions ?? []);
 
   async function pick(camera: boolean) {
@@ -411,28 +422,62 @@ export function WippmojiStudioScreen() {
           <Page bottomInset={insets.bottom} error={error} footer={null}>
             <Title title={tr("Choisis ton pack")} sub={tr("Sélectionne le pack qui te correspond.")} />
             {!pop ? (
-              <PackCard
-                art={ART.packExpressions}
-                title={tr("Wippmoji Expressions")}
-                sub={tr("{0} stickers animés personnalisés", status?.packSize ?? 10)}
-                price="2,99 $ CAD"
-                note={status?.allowed ? tr("Offert pendant les essais") : null}
-                icon={<Smile size={16} color={colors.accent} />}
-                onPress={() => go("photo")}
-              />
+              <>
+                <PackCard
+                  art={ART.packExpressions}
+                  title={tr("Wippmoji Expressions")}
+                  sub={tr("{0} stickers animés personnalisés", status?.packSize ?? 10)}
+                  price="2,99 $ CAD"
+                  note={status?.allowed ? tr("Offert pendant les essais") : null}
+                  icon={<Smile size={16} color={colors.accent} />}
+                  onPress={() => go("photo")}
+                />
+                <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", marginTop: 6 }}>{tr("À quoi ça ressemble")}</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  {MOJI_EXAMPLES.map((id) => (
+                    <View key={id} style={{ width: "23%", aspectRatio: 1, borderRadius: 14, backgroundColor: colors.surface, overflow: "hidden" }}>
+                      <WippSticker id={id} size={80} fill />
+                    </View>
+                  ))}
+                </View>
+                <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Des stickers animés créés avec le Studio : les tiens seront à ton image.")}</Text>
+              </>
             ) : (
-              <PackCard
-                art={ART.packWippPop}
-                title={tr("WippPop Premium")}
-                sub={tr("{0} grandes animations plein écran", status?.pop?.packSize ?? 3)}
-                price="4,99 $ CAD"
-                note={status?.allowed ? tr("Offert pendant les essais") : null}
-                icon={<Star size={16} color={colors.accent} />}
-                onPress={() => go("photo")}
-              />
+              <>
+                {[3, 7].map((n) => (
+                  <PackCard
+                    key={n}
+                    art={ART.packWippPop}
+                    title={n === 3 ? tr("WippPop Découverte") : tr("WippPop Premium")}
+                    sub={tr("{0} grandes animations plein écran", n)}
+                    price={tr("Prix à venir")}
+                    note={status?.allowed ? tr("Offert pendant les essais") : null}
+                    icon={<Star size={16} color={colors.accent} />}
+                    onPress={() => {
+                      setPopSize(n);
+                      go("photo");
+                    }}
+                  />
+                ))}
+                <Text style={{ color: colors.fg, fontSize: 16, fontFamily: "Inter_700Bold", marginTop: 6 }}>{tr("Touche pour voir un exemple")}</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  {POP_EXAMPLES.map((id) => {
+                    const a = findAnimation(id);
+                    if (!a) return null;
+                    return (
+                      <Press key={id} onPress={() => setDemoPop((d) => ({ id, n: (d?.n ?? 0) + 1 }))} style={{ width: "23%", gap: 4, alignItems: "center" }}>
+                        <View style={{ width: "100%", aspectRatio: 9 / 14, borderRadius: 14, backgroundColor: colors.surface, overflow: "hidden" }}>
+                          <Image source={wippSrc(a.art)} style={{ width: "100%", height: "100%" }} contentFit="contain" />
+                        </View>
+                        <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11 }}>{a.label}</Text>
+                      </Press>
+                    );
+                  })}
+                </View>
+                <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Des WippPop de WIPP : les tiens auront ton personnage cartoon.")}</Text>
+              </>
             )}
-            <PackCard art={ART.packUltimate} title={tr("WIPP Ultimate")} sub={tr("10 Wippmojis + 6 WippPop")} price="6,99 $ CAD" badge={tr("Meilleure offre")} soon icon={<Crown size={16} color={colors.accent} />} />
-            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", lineHeight: 16 }}>{tr("Prix indicatifs. Le paiement dans l’application arrive bientôt.")}</Text>
+            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", lineHeight: 16 }}>{tr("Le paiement dans l’application arrive bientôt.")}</Text>
           </Page>
         ) : null}
 
@@ -504,6 +549,7 @@ export function WippmojiStudioScreen() {
           </Page>
         ) : null}
       </Animated.View>
+      {demoPop ? <SurpriseAnimOverlay centered animationId={demoPop.id} playKey={demoPop.n} onDone={() => setDemoPop(null)} /> : null}
     </View>
   );
 }

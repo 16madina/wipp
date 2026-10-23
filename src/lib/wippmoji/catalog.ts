@@ -75,7 +75,9 @@ export function referencePrompt(style: WippmojiStyle, framing: WippmojiFraming =
 
 /* ——— WippPop: full-screen animations with your own cartoon character (played over the chat, black is removed). ——— */
 
-export const WIPPPOP_SIZE = Number(process.env.WIPPPOP_PACK_SIZE || 3);
+/** The two WippPop packs: 3 or 7 animations. */
+export const WIPPPOP_SIZES = [3, 7];
+export const WIPPPOP_SIZE = WIPPPOP_SIZES[0];
 export const WIPPPOP_SECONDS = 8;
 
 export type WippPopAnimation = { id: string; fr: string; en: string; action: string };
