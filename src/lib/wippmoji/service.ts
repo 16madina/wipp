@@ -110,7 +110,7 @@ export async function wippmojiStatus(profileId: string) {
   }
   const settings = await studioSettings();
   const left = async (k: "moji" | "pop") => Math.max(0, settings.characterLimit - (await charactersUsed(profileId, k).catch(() => 0)));
-  return { allowed, prices: settings.prices, characterLimit: settings.characterLimit, charactersLeft: { moji: await left("moji"), pop: await left("pop") }, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en }) => ({ id, fr, en })) } };
+  return { allowed, prices: settings.prices, characterLimit: settings.characterLimit, charactersLeft: { moji: await left("moji"), pop: await left("pop") }, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en, cat }) => ({ id, fr, en, cat })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en, cat }) => ({ id, fr, en, cat })) } };
 }
 
 export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string; kind?: string }) {

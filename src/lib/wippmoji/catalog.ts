@@ -17,7 +17,7 @@ export const WIPPMOJI_STYLES: Record<WippmojiStyle, { reference: string; video: 
   },
 };
 
-export type WippmojiExpression = { id: string; fr: string; en: string; motion: string };
+export type WippmojiExpression = { id: string; fr: string; en: string; motion: string; cat?: string };
 
 export const WIPPMOJI_EXPRESSIONS: WippmojiExpression[] = [
   { id: "mdr", fr: "MDR !", en: "LOL!", motion: "bursts into a huge uncontrollable laugh, throws the head back, eyes squeezed shut, shoulders shaking, one hand on the belly" },
@@ -41,6 +41,44 @@ export const WIPPMOJI_EXPRESSIONS: WippmojiExpression[] = [
   { id: "trop-drole", fr: "Trop drôle", en: "So funny", motion: "laughs so hard that tears of joy fly, slaps the knee" },
   { id: "merci-beaucoup", fr: "Merci beaucoup", en: "Thanks a lot", motion: "sends many small hearts with both hands, beaming smile" },
 ];
+
+
+/** More choices: Ivorian (nouchi) words, love, moods. `cat` groups them in the app. */
+const MORE_EXPRESSIONS: WippmojiExpression[] = [
+  { id: "on-dit-quoi", fr: "On dit quoi ?", en: "What’s up?", cat: "ivoirien", motion: "tilts the head with a cool smile and raises the chin as a greeting, one hand open" },
+  { id: "yako", fr: "Yako", en: "Yako", cat: "ivoirien", motion: "puts a hand on the heart with a gentle sympathetic face and nods slowly, comforting" },
+  { id: "cest-gate", fr: "C’est gâté !", en: "It’s ruined!", cat: "ivoirien", motion: "puts both hands on the head in dramatic despair, then shrugs and laughs" },
+  { id: "ya-foyi", fr: "Ya foyi", en: "No worries", cat: "ivoirien", motion: "waves a hand casually, relaxed big smile, totally chill" },
+  { id: "enjailler", fr: "On va s’enjailler !", en: "Let’s party!", cat: "ivoirien", motion: "dances happily with both arms up, shoulders bouncing to the beat" },
+  { id: "moisi", fr: "Je suis moisi", en: "I’m broke", cat: "ivoirien", motion: "turns the empty pockets inside out with a funny sad face" },
+  { id: "dans-drap", fr: "Je suis dans drap", en: "I’m in trouble", cat: "ivoirien", motion: "bites the nails nervously, eyes wide, looking left and right" },
+  { id: "je-science", fr: "Je science…", en: "Thinking…", cat: "ivoirien", motion: "rubs the chin, looks up thinking hard, one eyebrow raised" },
+  { id: "garba", fr: "Garba !", en: "Garba!", cat: "ivoirien", motion: "rubs the belly with a hungry delighted face and licks the lips" },
+  { id: "ma-go", fr: "Ma go", en: "My girl", cat: "ivoirien", motion: "points at the viewer with a charming wink and a big smile" },
+  { id: "mon-mogo", fr: "Mon mogo", en: "My bro", cat: "ivoirien", motion: "does a friendly fist bump toward the camera with a big grin" },
+  { id: "goumin", fr: "Goumin…", en: "Heartbroken…", cat: "ivoirien", motion: "holds the heart with both hands, sad puppy eyes, a small tear" },
+  { id: "kpakpato", fr: "Kpakpato", en: "Gossip", cat: "ivoirien", motion: "leans in and covers the mouth with one hand as if whispering a juicy secret, eyes sparkling" },
+  { id: "boucantier", fr: "Boucantier", en: "Show-off", cat: "ivoirien", motion: "adjusts imaginary sunglasses and poses proudly, chin up, very stylish" },
+  { id: "sapee", fr: "Sapé(e) !", en: "Looking sharp!", cat: "ivoirien", motion: "spins around proudly showing off the outfit, then strikes a pose" },
+  { id: "toi-la", fr: "Toi là !", en: "You there!", cat: "ivoirien", motion: "points at the viewer with a mock-serious face, then laughs" },
+  { id: "tchip", fr: "Tchip !", en: "Tsk!", cat: "ivoirien", motion: "sucks the teeth, rolls the eyes and turns the head away, annoyed" },
+  { id: "bon-appetit", fr: "Bon appétit !", en: "Enjoy your meal!", motion: "holds a fork and knife happily, mouth watering" },
+  { id: "bonne-journee", fr: "Bonne journée !", en: "Have a nice day!", cat: "salut", motion: "waves cheerfully with a radiant smile, bright and energetic" },
+  { id: "bon-matin", fr: "Bon matin !", en: "Good morning!", cat: "salut", motion: "stretches the arms up, yawns a little and smiles brightly" },
+  { id: "on-se-capte", fr: "On se capte !", en: "Talk soon!", cat: "salut", motion: "makes a phone sign with the hand next to the ear and winks" },
+  { id: "tes-la", fr: "T’es là ?", en: "You there?", cat: "salut", motion: "peeks forward curiously and knocks on an invisible door" },
+  { id: "gros-bisous", fr: "Gros bisous !", en: "Big kisses!", cat: "amour", motion: "blows several kisses with both hands, little hearts appearing" },
+  { id: "trop-mignon", fr: "Trop mignon !", en: "So cute!", cat: "amour", motion: "clasps the hands next to the cheek, melting with an adoring smile" },
+  { id: "jadore", fr: "J’adore !", en: "Love it!", cat: "amour", motion: "makes heart eyes and claps the hands excitedly" },
+  { id: "respect", fr: "Respect !", en: "Respect!", cat: "humeur", motion: "puts a fist on the chest and nods with respect" },
+  { id: "le-boss", fr: "Le boss !", en: "The boss!", cat: "humeur", motion: "crosses the arms confidently with a proud smirk" },
+  { id: "serieusement", fr: "Sérieusement ?!", en: "Seriously?!", cat: "humeur", motion: "raises one eyebrow, unimpressed, arms crossed" },
+  { id: "laisse-tomber", fr: "Laisse tomber !", en: "Forget it!", cat: "humeur", motion: "waves both hands dismissively and turns the head away" },
+  { id: "grosse-fatigue", fr: "Grosse fatigue !", en: "So tired!", cat: "humeur", motion: "slumps the shoulders, droopy eyes, a big exhausted sigh" },
+  { id: "jai-faim", fr: "J’ai faim !", en: "I’m hungry!", cat: "humeur", motion: "holds the belly, which growls, with a pleading face" },
+];
+
+WIPPMOJI_EXPRESSIONS.push(...MORE_EXPRESSIONS);
 
 export const PACK_SIZE = 10;
 /** The two Wippmoji packs: 5 or 10 stickers. */
@@ -80,7 +118,7 @@ export const WIPPPOP_SIZES = [3, 7];
 export const WIPPPOP_SIZE = WIPPPOP_SIZES[0];
 export const WIPPPOP_SECONDS = 6;
 
-export type WippPopAnimation = { id: string; fr: string; en: string; action: string };
+export type WippPopAnimation = { id: string; fr: string; en: string; action: string; cat?: string };
 
 export const WIPPPOP_ANIMATIONS: WippPopAnimation[] = [
   { id: "coucou", fr: "Coucou !", en: "Hey!", action: "waves hello with a huge smile and a playful wink, bouncing happily on the spot" },
@@ -98,6 +136,26 @@ export const WIPPPOP_ANIMATIONS: WippPopAnimation[] = [
 ];
 
 /** Same look as the WIPP Moments: a 3D chibi doll (big head, big eyes, small body), full body, on green. */
+
+const MORE_POPS: WippPopAnimation[] = [
+  { id: "on-dit-quoi", fr: "On dit quoi ?", en: "What’s up?", cat: "ivoirien", action: "tilts the head with a cool smile, raises the chin as a greeting and does a little dance step" },
+  { id: "enjailler", fr: "On va s’enjailler !", en: "Let’s party!", cat: "ivoirien", action: "dances joyfully with both arms up while colorful disco lights and confetti swirl around" },
+  { id: "cest-gate", fr: "C’est gâté !", en: "It’s ruined!", cat: "ivoirien", action: "puts both hands on the head in dramatic despair, then bursts out laughing" },
+  { id: "garba", fr: "Garba !", en: "Garba!", cat: "ivoirien", action: "holds a steaming plate of attiéké with fried fish, sniffs it happily and rubs the belly" },
+  { id: "moisi", fr: "Je suis moisi", en: "I’m broke", cat: "ivoirien", action: "turns the empty pockets inside out, a single moth flies out, funny sad face" },
+  { id: "yako", fr: "Yako", en: "Yako", cat: "ivoirien", action: "puts a hand on the heart with a gentle face, small soft hearts float around" },
+  { id: "sapee", fr: "Sapé(e) !", en: "Looking sharp!", cat: "ivoirien", action: "spins around proudly showing off the outfit, sparkles burst, then strikes a pose" },
+  { id: "kpakpato", fr: "Kpakpato", en: "Gossip", cat: "ivoirien", action: "leans in whispering a juicy secret with a hand by the mouth, little speech bubbles pop around" },
+  { id: "ya-foyi", fr: "Ya foyi", en: "No worries", cat: "ivoirien", action: "relaxes with a big chill smile, waves a hand casually, little music notes float" },
+  { id: "bonne-journee", fr: "Bonne journée !", en: "Have a nice day!", cat: "salut", action: "waves cheerfully while a smiling sun shines and flowers pop around" },
+  { id: "bon-courage", fr: "Bon courage !", en: "Good luck!", action: "flexes both arms like a champion with a determined smile, stars burst around" },
+  { id: "pardon", fr: "Pardon…", en: "Sorry…", cat: "amour", action: "holds out a small bouquet with puppy eyes and an apologetic smile" },
+  { id: "gros-bisous", fr: "Gros bisous !", en: "Big kisses!", cat: "amour", action: "blows many kisses with both hands, big red hearts fly toward the camera" },
+  { id: "le-boss", fr: "Le boss !", en: "The boss!", action: "puts on sunglasses, a golden crown appears on the head, crosses the arms proudly" },
+];
+
+WIPPPOP_ANIMATIONS.push(...MORE_POPS);
+
 export function popReferencePrompt() {
   return [
     "Turn the person in the attached photo into a cute premium 3D chibi doll character, Pixar quality, exactly like a collectible toy figure: big head, big shiny expressive eyes, small body, full body from head to sneakers.",

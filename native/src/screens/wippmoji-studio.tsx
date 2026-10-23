@@ -108,6 +108,7 @@ export function WippmojiStudioScreen() {
   const [style, setStyle] = useState<WippmojiStyle>("realistic");
   const [avatar, setAvatar] = useState<WippmojiAvatar | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
+  const [choiceCat, setChoiceCat] = useState("tous");
   const [language, setLanguage] = useState<"fr" | "en" | null>(trLang() === "en" ? "en" : "fr");
   const [pack, setPack] = useState<WippmojiPack | null>(null);
   const [error, setError] = useState("");
@@ -528,8 +529,28 @@ export function WippmojiStudioScreen() {
               title={pop ? tr("Choisis tes {0} animations", packSize) : tr("Choisis tes {0} expressions", packSize)}
               sub={pop ? tr("Elles entreront dans l’écran de tes amis, avec ton personnage.") : tr("Sélectionne les stickers que tu utilises le plus souvent.")}
             />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {(
+                [
+                  ["tous", tr("Tous")],
+                  ["ivoirien", tr("Ivoirien")],
+                  ["salut", tr("Salut")],
+                  ["amour", tr("Amour")],
+                  ["humeur", tr("Humeur")],
+                  ["classique", tr("Classiques")],
+                ] as const
+              ).map(([id, label]) => (
+                <Press
+                  key={id}
+                  onPress={() => setChoiceCat(id)}
+                  style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, justifyContent: "center", backgroundColor: choiceCat === id ? colors.accent : colors.surface, borderWidth: 1, borderColor: choiceCat === id ? colors.accent : colors.hair }}
+                >
+                  <Text style={{ color: choiceCat === id ? colors.accentFg : colors.fg, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{label}</Text>
+                </Press>
+              ))}
+            </ScrollView>
             <ExpressionGrid
-              expressions={choices}
+              expressions={choiceCat === "tous" ? choices : choices.filter((c) => (c.cat ?? "classique") === choiceCat)}
               demo={!pop}
               chosen={chosen}
               fallback={avatar?.referenceUrl ?? null}
