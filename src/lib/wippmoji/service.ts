@@ -64,7 +64,7 @@ export async function wippmojiStatus(profileId: string) {
   return { allowed, provider: wippmojiProvider().name, packSize: PACK_SIZE, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })) };
 }
 
-export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean }) {
+export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string }) {
   await assertAllowed(profileId);
   if (!input.consent) throw new WippHttpError(400, "consent_required", "Ton accord est nécessaire.");
   const style: WippmojiStyle = input.style === "realistic" ? "realistic" : "cartoon";
@@ -73,7 +73,7 @@ export async function createWippmojiAvatar(profileId: string, input: { photo?: s
   if (photo.length > 4_000_000) throw new WippHttpError(413, "photo_too_big", "Photo trop lourde.");
   if ((await usedToday(profileId, "reference")) >= LIMITS.referencesPerDay) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
   const provider = wippmojiProvider();
-  const made = await provider.createReference(photo, referencePrompt(style));
+  const made = await provider.createReference(photo, referencePrompt(style, input.framing === "face" || input.framing === "full" ? input.framing : "bust"));
   const id = uid("wma");
   const path = `${profileId}/${id}/reference.${provider.name === "mock" ? "webp" : "jpg"}`;
   await keep(made.url, path, provider.name === "mock" ? "image/webp" : "image/jpeg");

@@ -14,15 +14,19 @@ export const wippmojiLibrary = () => wippApi<{ avatars: (WippmojiAvatar & { crea
 export const wippmojiPack = (id: string) => wippApi<WippmojiPack>(`wippmoji/packs/${encodeURIComponent(id)}`);
 export const deleteWippmojiAvatar = (id: string) => wippApi<{ ok: true }>(`wippmoji/avatars/${encodeURIComponent(id)}/delete`, { method: "POST" });
 
-/** Square, 1024 px, JPEG: what the AI needs, and nothing else from the original file (no location or camera data). */
-export async function preparePhoto(uri: string) {
-  const out = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1024 } }], { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG, base64: true });
+export type WippmojiFraming = "face" | "bust" | "full";
+export type PhotoCrop = { originX: number; originY: number; width: number; height: number };
+
+/** The chosen frame of the photo, 1024 px wide, JPEG: what the AI needs, and nothing else from the original file (no location or camera data). */
+export async function preparePhoto(uri: string, crop?: PhotoCrop) {
+  const actions: ImageManipulator.Action[] = crop ? [{ crop }, { resize: { width: Math.min(1024, Math.round(crop.width)) } }] : [{ resize: { width: 1024 } }];
+  const out = await ImageManipulator.manipulateAsync(uri, actions, { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG, base64: true });
   if (!out.base64) throw new Error("photo");
   return `data:image/jpeg;base64,${out.base64}`;
 }
 
-export function createWippmojiAvatar(photo: string, style: WippmojiStyle) {
-  return wippApi<WippmojiAvatar>("wippmoji/avatars", { method: "POST", body: JSON.stringify({ photo, style, consent: true }) });
+export function createWippmojiAvatar(photo: string, style: WippmojiStyle, framing: WippmojiFraming = "bust") {
+  return wippApi<WippmojiAvatar>("wippmoji/avatars", { method: "POST", body: JSON.stringify({ photo, style, framing, consent: true }) });
 }
 
 export function createWippmojiPack(avatarId: string, expressions: string[], language: "fr" | "en" | null) {

@@ -1,0 +1,52 @@
+2207|Face
+2208|Bust
+2209|Full body
+2210|Creating your character
+2211|Creating the animations
+2212|Optimizing the files
+2213|Finishing your pack
+2214|Wippmoji Expressions
+2215|Generating
+2216|Add your photo
+2217|Use a selfie, a face photo or a full-body photo.
+2218|First tick the box below.
+2219|Tap to choose a photo or take one now.
+2220|Example illustration
+2221|Camera
+2222|That's really me in the photo. I agree that it is sent to xAI (Grok Imagine) to create my character. WIPP does not keep my original photo.
+2223|Crop your photo
+2224|Position and adjust the area for a better result.
+2225|Choose your style
+2226|Two unique looks, based on your photo.
+2227|A cartoon-style character, fun and expressive.
+2228|Your real face, natural expressions.
+2229|Example illustrations. Your character will be created from your photo.
+2230|About 20 to 40 seconds.
+2231|Confirm my character
+2232|Your Wippmoji preview
+2233|Here's your character! It will be used for all your creations.
+2234|Your characters: tap to choose
+2235|Choose your pack
+2236|Pick the pack that suits you.
+2237|10 personalized animated stickers
+2238|Free during testing
+2239|WippPop Premium
+2240|6 big full-screen animations
+2241|WIPP Ultimate
+2242|10 Wippmojis + 6 WippPop
+2243|Best value
+2244|Indicative prices. In-app payment is coming soon.
+2245|Choose your {0} expressions
+2246|Pick the stickers you use most often.
+2247|Example thumbnails: your stickers will be made with your character.
+2248|This can take a few minutes. You can leave this screen: your pack will be waiting in “My Wippmojis”.
+2249|Turn into a
+2250|Wippmoji!
+2251|One photo is all it takes to create your own stickers and animations.
+2252|Your emotions
+2253|Your world
+2254|Being created: tap to follow
+2255|Start
+2256|Leave, I'll come back later
+2257|Soon
+2258|Drag to move, zoom with + and −

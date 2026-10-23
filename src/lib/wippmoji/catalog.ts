@@ -58,10 +58,17 @@ export function expressionPrompt(style: WippmojiStyle, e: WippmojiExpression, wo
   ].join(" ");
 }
 
-export function referencePrompt(style: WippmojiStyle) {
+export type WippmojiFraming = "face" | "bust" | "full";
+const FRAMING: Record<WippmojiFraming, string> = {
+  face: "Show the head and shoulders, like the photo.",
+  bust: "Show them from the waist up, like the photo.",
+  full: "Show the whole body from head to feet, with the same outfit and shoes as the photo.",
+};
+
+export function referencePrompt(style: WippmojiStyle, framing: WippmojiFraming = "bust") {
   return [
     WIPPMOJI_STYLES[style].reference,
-    "Keep the same framing as the photo: if the whole body is visible, show the whole body from head to feet with the same outfit; if it is a close-up, show the head and shoulders. Facing the camera with a warm smile. Thick clean white sticker outline around the whole person. No text and no letters anywhere.",
+    `${FRAMING[framing]} Facing the camera with a warm smile. Thick clean white sticker outline around the whole person. No text and no letters anywhere.`,
     "Centered and fully inside the frame with margin. Perfectly flat, solid pure green background (#00FF00): no shadow, no glow, no gradient, and no green on the person or the clothes.",
   ].join(" ");
 }

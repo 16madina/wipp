@@ -204,7 +204,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
       if (method === "GET" && b === "status") return json(await w.wippmojiStatus(me.id));
       if (method === "GET" && b === "library") return json(await w.listWippmojiLibrary(me.id));
       if (method === "POST" && b === "avatars" && !c) {
-        return json(await w.createWippmojiAvatar(me.id, await readBody<{ photo?: string; style?: string; consent?: boolean }>(request)));
+        return json(await w.createWippmojiAvatar(me.id, await readBody<{ photo?: string; style?: string; consent?: boolean; framing?: string }>(request)));
       }
       if (method === "POST" && b === "avatars" && c && d === "delete") return json(await w.deleteWippmojiAvatar(me.id, c));
       if (method === "POST" && b === "packs" && !c) {
