@@ -21,6 +21,7 @@ import { Route as CTokenRouteImport } from './routes/c.$token'
 import { Route as EEventIdRouteImport } from './routes/e.$eventId'
 import { Route as GTokenRouteImport } from './routes/g.$token'
 import { Route as TCodeRouteImport } from './routes/t.$code'
+import { Route as WmSplatRouteImport } from './routes/wm.$'
 import { Route as ApiWippSplatRouteImport } from './routes/api/wipp/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -83,6 +84,11 @@ const TCodeRoute = TCodeRouteImport.update({
   path: '/t/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WmSplatRoute = WmSplatRouteImport.update({
+  id: '/wm/$',
+  path: '/wm/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWippSplatRoute = ApiWippSplatRouteImport.update({
   id: '/api/wipp/$',
   path: '/api/wipp/$',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/e/$eventId': typeof EEventIdRoute
   '/g/$token': typeof GTokenRoute
   '/t/$code': typeof TCodeRoute
+  '/wm/$': typeof WmSplatRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/e/$eventId': typeof EEventIdRoute
   '/g/$token': typeof GTokenRoute
   '/t/$code': typeof TCodeRoute
+  '/wm/$': typeof WmSplatRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/e/$eventId': typeof EEventIdRoute
   '/g/$token': typeof GTokenRoute
   '/t/$code': typeof TCodeRoute
+  '/wm/$': typeof WmSplatRoute
   '/api/wipp/$': typeof ApiWippSplatRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/e/$eventId'
     | '/g/$token'
     | '/t/$code'
+    | '/wm/$'
     | '/api/wipp/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/e/$eventId'
     | '/g/$token'
     | '/t/$code'
+    | '/wm/$'
     | '/api/wipp/$'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/e/$eventId'
     | '/g/$token'
     | '/t/$code'
+    | '/wm/$'
     | '/api/wipp/$'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   EEventIdRoute: typeof EEventIdRoute
   GTokenRoute: typeof GTokenRoute
   TCodeRoute: typeof TCodeRoute
+  WmSplatRoute: typeof WmSplatRoute
   ApiWippSplatRoute: typeof ApiWippSplatRoute
 }
 
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wm/$': {
+      id: '/wm/$'
+      path: '/wm/$'
+      fullPath: '/wm/$'
+      preLoaderRoute: typeof WmSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/wipp/$': {
       id: '/api/wipp/$'
       path: '/api/wipp/$'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   EEventIdRoute: EEventIdRoute,
   GTokenRoute: GTokenRoute,
   TCodeRoute: TCodeRoute,
+  WmSplatRoute: WmSplatRoute,
   ApiWippSplatRoute: ApiWippSplatRoute,
 }
 export const routeTree = rootRouteImport

@@ -8,7 +8,6 @@ import { WebView } from "react-native-webview";
 import { wippSrc } from "../lib/assets";
 import { stickerById, stickerLabel } from "../lib/stickers";
 import { colors } from "../theme";
-import { SUPABASE_URL } from "../lib/firebase-config";
 
 function isAnimatedImage(path?: string) {
   return Boolean(path && /\.(webp|gif)(\?|$)/i.test(path));
@@ -186,7 +185,7 @@ function MotionPoster({ source, motion, box }: { source: number | { uri: string 
 /** Personal Wippmoji made in the Studio: « wm:<path of the clip> » in the public « wippmoji » storage. */
 export function wippmojiClipUrl(id: string) {
   const path = id.slice(3).split("#")[0] ?? "";
-  return `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/wippmoji/${path.split("/").map(encodeURIComponent).join("/")}`;
+  return `https://wippapp.com/wm/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 function PersonalSticker({ id, size, fill, still }: { id: string; size: number; fill?: boolean; still?: boolean }) {

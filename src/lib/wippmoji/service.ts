@@ -9,7 +9,6 @@ import { WippHttpError } from "@/lib/messaging/server";
 import { PACK_SIZE, WIPPMOJI_EXPRESSIONS, expressionPrompt, referencePrompt, type WippmojiStyle } from "./catalog";
 import { wippmojiProvider } from "./providers";
 
-const BUCKET = "wippmoji";
 const VIDEO_SECONDS = Number(process.env.WIPPMOJI_VIDEO_SECONDS || 6);
 const MAX_ATTEMPTS = 2;
 const LIMITS = { referencesPerDay: Number(process.env.WIPPMOJI_REFS_PER_DAY || 6), packsPerDay: Number(process.env.WIPPMOJI_PACKS_PER_DAY || 2) };
@@ -18,29 +17,20 @@ const COST = { reference: 0.07, videoPerSecond: (process.env.WIPPMOJI_VIDEO_MODE
 
 const uid = (p: string) => `${p}_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
 
-async function storageBase() {
-  const { SUPABASE_URL } = await import("@/lib/supabase/config");
-  return SUPABASE_URL.replace(/\/$/, "");
-}
-
 export async function wippmojiPublicUrl(path: string) {
-  return `${await storageBase()}/storage/v1/object/public/${BUCKET}/${path}`;
+  const base = (process.env.WIPP_PUBLIC_ORIGIN || "https://wippapp.com").replace(/\/$/, "");
+  return `${base}/wm/${path}`;
 }
 
-/** Copies a file the provider made (temporary URL) into our bucket. */
+/** Copies a file the provider made (temporary URL) into our database. */
 async function keep(sourceUrl: string, path: string, contentType: string) {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new WippHttpError(503, "storage_unavailable", "Stockage indisponible.");
   const src = await fetch(sourceUrl);
   if (!src.ok) throw new Error(`download_${src.status}`);
-  const bytes = new Uint8Array(await src.arrayBuffer());
+  const bytes = Buffer.from(await src.arrayBuffer());
   if (bytes.byteLength > 15 * 1024 * 1024) throw new Error("file_too_big");
-  const res = await fetch(`${await storageBase()}/storage/v1/object/${BUCKET}/${path}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, apikey: key, "Content-Type": contentType, "x-upsert": "true" },
-    body: bytes,
-  });
-  if (!res.ok) throw new Error(`upload_${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const sql = await getSql();
+  await sql`insert into wippmoji_media (path, content_type, bytes) values (${path}, ${contentType}, ${bytes})
+    on conflict (path) do update set content_type = excluded.content_type, bytes = excluded.bytes`;
 }
 
 /** Until in-app purchases exist, only the team and the listed testers may generate (real generations cost money). */
