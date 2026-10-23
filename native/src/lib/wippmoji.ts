@@ -42,13 +42,22 @@ export function wippmojiStickerDef(s: WippmojiSticker, pop = false): StickerDef 
   return { id: `wm:${s.path}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
 }
 
-let cache: StickerDef[] | null = null;
-/** My finished Wippmojis (kept in memory while the app is open). */
-export async function myWippmojis(refresh = false): Promise<StickerDef[]> {
+let cache: { stickers: StickerDef[]; pops: StickerDef[] } | null = null;
+async function mine(refresh: boolean) {
   if (cache && !refresh) return cache;
   const lib = await wippmojiLibrary();
-  cache = lib.packs.filter((p) => p.type !== "wipppop").flatMap((p) => p.stickers.map((s) => wippmojiStickerDef(s)).filter((x): x is StickerDef => x !== null));
+  const defs = (pop: boolean) =>
+    lib.packs.filter((p) => (p.type === "wipppop") === pop).flatMap((p) => p.stickers.map((s) => wippmojiStickerDef(s)).filter((x): x is StickerDef => x !== null));
+  cache = { stickers: defs(false), pops: defs(true) };
   return cache;
+}
+/** My finished Wippmoji stickers (kept in memory while the app is open). */
+export async function myWippmojis(refresh = false): Promise<StickerDef[]> {
+  return (await mine(refresh)).stickers;
+}
+/** My finished WippPop animations. */
+export async function myWippPops(refresh = false): Promise<StickerDef[]> {
+  return (await mine(refresh)).pops;
 }
 export function forgetMyWippmojis() {
   cache = null;

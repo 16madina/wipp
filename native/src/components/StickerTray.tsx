@@ -11,10 +11,12 @@ import { colors } from "../theme";
 import { Press } from "./ui";
 import { WippSticker } from "./WippSticker";
 import { WippmojiTrayHeader } from "./WippmojiTrayHeader";
+import { myWippPops, myWippmojis } from "../lib/wippmoji";
 import { tr } from "../lib/tr";
 
 type Tab = "recent" | "moji" | "wippie" | "emo" | "pop" | "moment";
-type Wippie = "tous" | "femme" | "homme" | "comique";
+type Wippie = "tous" | "femme" | "homme" | "comique" | "mine";
+type PopChip = "wipp" | "mine";
 
 /** Bottom bar, left to right. `label` = search placeholder, `short` = name under the icon. */
 const TABS = [
@@ -22,7 +24,7 @@ const TABS = [
   { id: "moji", get label() { return tr("Wippmoji"); }, short: "Wippmoji", icon: Smile },
   { id: "wippie", get label() { return tr("Wippie"); }, short: "Wippie", icon: User },
   { id: "emo", label: "EMO", short: "EMO", icon: Drama },
-  { id: "pop", get label() { return tr("WIPP Moments"); }, short: "Moments", icon: Clapperboard },
+  { id: "pop", get label() { return tr("WippPop"); }, short: "WippPop", icon: Clapperboard },
   { id: "moment", get label() { return tr("Surprises"); }, short: "Surprises", icon: Gift },
 ] as const satisfies readonly { id: Tab; label: string; short: string; icon: unknown }[];
 
@@ -107,6 +109,13 @@ export function StickerTray({
   const { tablet, contentWidth, height } = useDeviceLayout();
   const [tab, setTab] = useState<Tab>("moji");
   const [wippie, setWippie] = useState<Wippie>("tous");
+  const [popChip, setPopChip] = useState<PopChip>("wipp");
+  const [myStickers, setMyStickers] = useState<StickerDef[]>([]);
+  const [myPops, setMyPops] = useState<StickerDef[]>([]);
+  useEffect(() => {
+    void myWippmojis().then(setMyStickers).catch(() => undefined);
+    void myWippPops().then(setMyPops).catch(() => undefined);
+  }, []);
   const [search, setSearch] = useState(false);
   const [q, setQ] = useState("");
   const [closing, setClosing] = useState(false);
@@ -117,7 +126,7 @@ export function StickerTray({
   const moji = stickersInPack("moji");
   const moments = stickersInPack("ani");
   const emo = stickersInPack("emo");
-  const wippies = wippieStickers(wippie);
+  const wippies = wippie === "mine" ? myStickers : wippieStickers(wippie);
   const recents = [...moji.slice(0, 8), ...wippies.slice(0, 8)];
   const query = q.trim();
   // The search stays inside the open tab (Wippie: the chosen chip); « Récents » searches every sticker.
@@ -133,7 +142,9 @@ export function StickerTray({
           : tab === "emo"
             ? emo
             : tab === "pop"
-              ? moments
+              ? popChip === "mine"
+                ? myPops
+                : moments
               : [];
   const shown = query ? searchStickers(tabStickers, query) : tabStickers;
   const title = tab === "recent" ? tr("tous les stickers") : TABS.find((item) => item.id === tab)?.label ?? tr("Stickers");
@@ -304,7 +315,7 @@ export function StickerTray({
           style={{ flexGrow: 0, flexShrink: 0, height: 36 }}
           contentContainerStyle={{ gap: 6, alignItems: "center", paddingBottom: 6 }}
         >
-          {(["tous", "femme", "homme", "comique"] as const).map((id) => (
+          {(["tous", "femme", "homme", "comique", "mine"] as const).map((id) => (
             <Press
               key={id}
               onPress={() => setWippie(id)}
@@ -317,11 +328,26 @@ export function StickerTray({
               }}
             >
               <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: wippie === id ? colors.accentFg : colors.muted }}>
-                {id === "tous" ? tr("Tous") : id === "femme" ? tr("Elle") : id === "homme" ? tr("Lui") : tr("Comique")}
+                {id === "tous" ? tr("Tous") : id === "femme" ? tr("Elle") : id === "homme" ? tr("Lui") : id === "comique" ? tr("Comique") : tr("Mes Wippie")}
               </Text>
             </Press>
           ))}
         </ScrollView>
+      ) : null}
+      {tab === "pop" ? (
+        <View style={{ flexDirection: "row", gap: 6, height: 36, alignItems: "center", paddingBottom: 6 }}>
+          {(["wipp", "mine"] as const).map((id) => (
+            <Press
+              key={id}
+              onPress={() => setPopChip(id)}
+              style={{ height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: popChip === id ? colors.accent : colors.navy, justifyContent: "center" }}
+            >
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: popChip === id ? colors.accentFg : colors.muted }}>
+                {id === "wipp" ? tr("WippPop WIPP") : tr("Mes WippPop")}
+              </Text>
+            </Press>
+          ))}
+        </View>
       ) : null}
       {tab === "moment" ? (
         <ScrollView style={{ flex: 1 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
@@ -354,7 +380,7 @@ export function StickerTray({
           columnWrapperStyle={cols > 1 ? { gap: 4 } : undefined}
           contentContainerStyle={{ paddingBottom: 8 }}
           ListEmptyComponent={query ? <NoResult query={query} /> : null}
-          ListHeaderComponent={tab === "moji" && !query ? <WippmojiTrayHeader onPick={onPick} onOpenStudio={() => undefined} /> : null}
+          ListHeaderComponent={!query && (tab === "moji" || (tab === "wippie" && wippie === "mine") || (tab === "pop" && popChip === "mine")) ? <WippmojiTrayHeader onPick={onPick} onOpenStudio={() => undefined} pop={tab === "pop"} /> : null}
           onViewableItemsChanged={onViewable}
           viewabilityConfig={VIEWABILITY}
           extraData={live}
