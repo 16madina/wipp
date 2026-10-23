@@ -96,6 +96,7 @@ import {
 } from "./extra";
 import { useEffect, useState } from "react";
 import { colors } from "../theme";
+import { WippmojiStudioScreen } from "./wippmoji-studio";
 import { useAppearance } from "../lib/appearance";
 import { AppState, Platform, View } from "react-native";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
@@ -225,6 +226,8 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
       return <NotificationsScreen />;
     case "appearance":
       return <AppearanceScreen />;
+    case "wippmoji-studio":
+      return <WippmojiStudioScreen />;
     case "business-card":
       return <BusinessCardScreen />;
     case "business-card-editor":

@@ -132,6 +132,7 @@ export type ScreenName =
   | "security"
   | "notifications"
   | "appearance"
+  | "wippmoji-studio"
   | "business-card"
   | "business-card-editor"
   | "business-card-view"
@@ -210,6 +211,7 @@ export type Screen =
   | { name: "security" }
   | { name: "notifications" }
   | { name: "appearance" }
+  | { name: "wippmoji-studio" }
   | { name: "business-card" }
   | { name: "business-card-editor" }
   | { name: "business-card-view"; publicId: string }

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { STICKER_FOCUS } from "../generated/sticker-focus";
 import { Asset } from "expo-asset";
-import { cacheDirectory, copyAsync, getInfoAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
+import { cacheDirectory, copyAsync, downloadAsync, getInfoAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { Animated, Easing, Platform, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { wippSrc } from "../lib/assets";
 import { stickerById, stickerLabel } from "../lib/stickers";
 import { colors } from "../theme";
+import { SUPABASE_URL } from "../lib/firebase-config";
 
 function isAnimatedImage(path?: string) {
   return Boolean(path && /\.(webp|gif)(\?|$)/i.test(path));
@@ -28,7 +29,7 @@ function clipHtml(file: string, loop?: boolean) {
 }
 
 /** Navigateur (aperçu web) : même lecteur fond vert, dans une iframe (pas de WebView ni de fichiers locaux). */
-function ChromaClipWeb({ source, loop, onReady }: { source: number | string; loop?: boolean; onReady: () => void }) {
+function ChromaClipWeb({ source, loop, still, onReady }: { source: number | string; loop?: boolean; still?: boolean; onReady: () => void }) {
   const ready = useRef(onReady);
   ready.current = onReady;
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -41,7 +42,7 @@ function ChromaClipWeb({ source, loop, onReady }: { source: number | string; loo
     return () => window.removeEventListener("message", onMsg);
   }, []);
   // opacity 0 : le navigateur joue quand même la vidéo (sur iPhone il faut 0.02), sans laisser de rectangle visible.
-  const html = (clipHtml(uri, loop) + CLIP_SCRIPT(loop)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
+  const html = (clipHtml(uri, loop) + CLIP_SCRIPT(loop, still)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
     "window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready');",
     "window.parent.postMessage('wipp-clip-ready','*');",
   );
@@ -55,34 +56,38 @@ function ChromaClipWeb({ source, loop, onReady }: { source: number | string; loo
   );
 }
 
-function ChromaClip({ source, loop, onReady }: { source: number | string; loop?: boolean; onReady: () => void }) {
-  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} onReady={onReady} />;
-  if (typeof source !== "number") return null;
-  return <ChromaClipNative source={source} loop={loop} onReady={onReady} />;
+function ChromaClip({ source, loop, still, onReady }: { source: number | string; loop?: boolean; still?: boolean; onReady: () => void }) {
+  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} onReady={onReady} />;
+  return <ChromaClipNative source={source} loop={loop} still={still} onReady={onReady} />;
 }
 
-function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: boolean; onReady: () => void }) {
+function ChromaClipNative({ source, loop, still, onReady }: { source: number | string; loop?: boolean; still?: boolean; onReady: () => void }) {
   const [page, setPage] = useState<string | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const ready = useRef(onReady);
   ready.current = onReady;
   useEffect(() => {
     let live = true;
-    const asset = Asset.fromModule(source);
-    void asset.downloadAsync().then(async () => {
+    // A personal Wippmoji comes from the internet (an address); the built-in stickers ship inside the app.
+    const asset = typeof source === "number" ? Asset.fromModule(source) : null;
+    void (asset ? asset.downloadAsync() : Promise.resolve(null)).then(async () => {
       if (!live) return;
-      const uri = asset.localUri ?? asset.uri;
+      const uri = asset ? (asset.localUri ?? asset.uri) : (source as string);
       if (!uri || !cacheDirectory) return;
       // In the installed app the clip sits inside the app itself, where nothing can be written. The player
       // page and a copy of the clip go side by side in the cache folder instead (the web view may only
       // read one folder), otherwise the page is never created and the sticker stays on its first image.
       const folder = `${cacheDirectory}wipp-clips/`;
       await makeDirectoryAsync(folder, { intermediates: true }).catch(() => undefined);
-      const file = `${(asset.hash || (uri.split("?")[0] ?? uri).split("/").pop() || "clip").replace(/[^a-zA-Z0-9]/g, "")}.${asset.type || "mp4"}`;
+      const name = asset ? asset.hash || (uri.split("?")[0] ?? uri).split("/").pop() || "clip" : (uri.split("?")[0] ?? uri).split("/").slice(-2).join("");
+      const file = `${name.replace(/[^a-zA-Z0-9]/g, "")}.${asset?.type || "mp4"}`;
       const info = await getInfoAsync(folder + file);
-      if (!info.exists) await copyAsync({ from: uri, to: folder + file });
-      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}.html`;
-      await writeAsStringAsync(htmlUri, clipHtml(file, loop) + CLIP_SCRIPT(loop));
+      if (!info.exists) {
+        if (asset) await copyAsync({ from: uri, to: folder + file });
+        else await downloadAsync(uri, folder + file);
+      }
+      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${still ? "-still" : ""}.html`;
+      await writeAsStringAsync(htmlUri, clipHtml(file, loop) + CLIP_SCRIPT(loop, still));
       if (!live) return;
       setDir(folder);
       setPage(htmlUri);
@@ -92,7 +97,7 @@ function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: bo
     return () => {
       live = false;
     };
-  }, [source, loop]);
+  }, [source, loop, still]);
   if (!page || !dir) return null;
   return (
     <WebView
@@ -120,7 +125,7 @@ function ChromaClipNative({ source, loop, onReady }: { source: number; loop?: bo
   );
 }
 
-function CLIP_SCRIPT(loop?: boolean) {
+function CLIP_SCRIPT(loop?: boolean, still?: boolean) {
   return `
 const v=document.getElementById('v'); const c=document.getElementById('c');
 const ctx=c.getContext('2d',{willReadFrequently:true});
@@ -140,6 +145,7 @@ v.addEventListener('loadeddata',()=>{ const p=v.play(); if(p&&p.catch) p.catch(f
 v.addEventListener('error',()=>{ tell('video '+(v.error&&v.error.code)); });
 setTimeout(()=>{ if(!sent) tell('late ready='+v.readyState+' paused='+v.paused+' net='+v.networkState+' size='+window.innerWidth+'x'+window.innerHeight+' t='+v.currentTime); },4000);
 ${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
+${still ? "v.addEventListener('playing',()=>setTimeout(()=>v.pause(),120));" : ""}
 requestAnimationFrame(frame);
 </script></body></html>`;
 }
@@ -177,7 +183,27 @@ function MotionPoster({ source, motion, box }: { source: number | { uri: string 
   );
 }
 
-export function WippSticker({
+/** Personal Wippmoji made in the Studio: « wm:<path of the clip> » in the public « wippmoji » storage. */
+export function wippmojiClipUrl(id: string) {
+  const path = id.slice(3).split("#")[0] ?? "";
+  return `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/wippmoji/${path.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function PersonalSticker({ id, size, fill, still }: { id: string; size: number; fill?: boolean; still?: boolean }) {
+  const box = fill ? { width: "100%" as const, height: "100%" as const } : { width: size, height: size };
+  return (
+    <View style={box}>
+      <ChromaClip source={wippmojiClipUrl(id)} still={still} onReady={() => undefined} />
+    </View>
+  );
+}
+
+export function WippSticker(props: { id: string; size?: number; loop?: boolean; fill?: boolean; still?: boolean }) {
+  if (props.id.startsWith("wm:")) return <PersonalSticker id={props.id} size={props.size ?? 48} fill={props.fill} still={props.still} />;
+  return <BuiltInSticker {...props} />;
+}
+
+function BuiltInSticker({
   id,
   size = 48,
   fill = false,

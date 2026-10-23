@@ -10,6 +10,7 @@ import { stickersInPack, wippieStickers, type StickerDef } from "../lib/stickers
 import { colors } from "../theme";
 import { Press } from "./ui";
 import { WippSticker } from "./WippSticker";
+import { WippmojiTrayHeader } from "./WippmojiTrayHeader";
 import { tr } from "../lib/tr";
 
 type Tab = "recent" | "moji" | "wippie" | "emo" | "pop" | "moment";
@@ -353,6 +354,7 @@ export function StickerTray({
           columnWrapperStyle={cols > 1 ? { gap: 4 } : undefined}
           contentContainerStyle={{ paddingBottom: 8 }}
           ListEmptyComponent={query ? <NoResult query={query} /> : null}
+          ListHeaderComponent={tab === "moji" && !query ? <WippmojiTrayHeader onPick={onPick} onOpenStudio={() => undefined} /> : null}
           onViewableItemsChanged={onViewable}
           viewabilityConfig={VIEWABILITY}
           extraData={live}

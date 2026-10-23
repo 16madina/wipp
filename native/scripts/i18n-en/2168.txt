@@ -1,0 +1,39 @@
+2168|Wippmoji Studio
+2169|Create your Wippmojis
+2170|Your face. Your emotions. Your Wippmojis.
+2171|My Wippmojis
+2172|Realistic
+2173|Your real face, your real expressions
+2174|3D Cartoon
+2175|Your character, cartoon style
+2176|Allow the camera in Settings.
+2177|Allow access to photos in Settings.
+2178|Your own animated stickers
+2179|One photo of you is enough: WIPP creates your character, then 10 animated stickers with your expressions, to send in your chats.
+2180|Create my Wippmojis
+2181|Trial mode: the pictures are samples, nothing is charged.
+2182|You don’t have any Wippmojis yet.
+2183|Before you start
+2184|Your photo is sent to xAI (Grok Imagine), the artificial intelligence service that creates your character and animations. WIPP doesn’t keep your original photo: only your character and stickers are kept, and you can delete them at any time.
+2185|Only use a photo of yourself. Making stickers of someone else without their consent is forbidden and can be reported.
+2186|It’s really me in the photo, and I agree that it is sent to xAI to create my Wippmojis.
+2187|Facing the camera, well lit, face clearly visible.
+2188|Take a selfie
+2189|My gallery
+2190|Your style
+2191|Create my character
+2192|Creating your character…
+2193|Creating your Wippmojis…
+2194|About 20 seconds.
+2195|A few minutes. You can leave this screen: your stickers will arrive in “My Wippmojis”.
+2196|{0} of {1} ready
+2197|Here is your character
+2198|The green background will disappear on your stickers.
+2199|That’s me!
+2200|Pick {0} expressions ({1}/{0})
+2201|Text on the stickers
+2202|No text
+2203|Create my {0} Wippmojis
+2204|Your Wippmojis are ready!
+2205|Some of your Wippmojis are ready
+2206|Find them in the sticker panel, Wippmoji tab, to send them.

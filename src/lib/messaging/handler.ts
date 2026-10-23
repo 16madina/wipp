@@ -197,6 +197,23 @@ export async function handleWippApi(request: Request): Promise<Response> {
       });
     }
 
+    // Wippmoji Studio (personal animated stickers).
+    if (a === "wippmoji") {
+      const me = await resolveSession(bearer(request));
+      const w = await import("@/lib/wippmoji/service");
+      if (method === "GET" && b === "status") return json(await w.wippmojiStatus(me.id));
+      if (method === "GET" && b === "library") return json(await w.listWippmojiLibrary(me.id));
+      if (method === "POST" && b === "avatars" && !c) {
+        return json(await w.createWippmojiAvatar(me.id, await readBody<{ photo?: string; style?: string; consent?: boolean }>(request)));
+      }
+      if (method === "POST" && b === "avatars" && c && d === "delete") return json(await w.deleteWippmojiAvatar(me.id, c));
+      if (method === "POST" && b === "packs" && !c) {
+        return json(await w.createWippmojiPack(me.id, await readBody<{ avatarId?: string; expressions?: string[]; language?: string | null }>(request)));
+      }
+      if (method === "GET" && b === "packs" && c) return json(await w.getWippmojiPack(me.id, c));
+      throw new WippHttpError(404, "not_found", "Route inconnue.");
+    }
+
     if (method === "GET" && a === "calls" && b === "config") {
       return json(liveKitPublicConfig());
     }
