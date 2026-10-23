@@ -270,7 +270,7 @@ export function WippmojiStudioScreen() {
 
       <Animated.View style={{ flex: 1, opacity: fade, transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
         {step === "intro" ? (
-          <Intro status={status} packs={packs} onBack={leave} onStart={() => go("packs")} onOpenPack={follow} topInset={insets.top} bottomInset={insets.bottom} />
+          <Intro status={status} packs={packs} onBack={leave} onStart={() => go("packs")} onOpenPack={follow} onPlay={(id) => setDemoPop((d) => ({ uri: id, n: (d?.n ?? 0) + 1 }))} topInset={insets.top} bottomInset={insets.bottom} />
         ) : null}
 
         {step === "photo" ? (
@@ -538,10 +538,10 @@ export function WippmojiStudioScreen() {
             }
           >
             <Title
-              title={pack.status === "ready" ? tr("Tes Wippmojis sont prêts !") : tr("Une partie de tes Wippmojis est prête")}
-              sub={tr("Retrouve-les dans le panneau des stickers, onglet Wippmoji, pour les envoyer.")}
+              title={pack.type === "wipppop" ? (pack.status === "ready" ? tr("Tes WippPop sont prêts !") : tr("Une partie de tes WippPop est prête")) : pack.status === "ready" ? tr("Tes Wippmojis sont prêts !") : tr("Une partie de tes Wippmojis est prête")}
+              sub={pack.type === "wipppop" ? tr("Touche une animation pour la voir en grand.") : tr("Retrouve-les dans le panneau des stickers, onglet Wippmoji, pour les envoyer. Touche un sticker pour le voir en grand.")}
             />
-            <StickerGrid pack={pack} />
+            <StickerGrid pack={pack} onPlay={(id) => setDemoPop((d) => ({ uri: id, n: (d?.n ?? 0) + 1 }))} />
           </Page>
         ) : null}
       </Animated.View>
@@ -558,6 +558,7 @@ function Intro({
   onBack,
   onStart,
   onOpenPack,
+  onPlay,
   topInset,
   bottomInset,
 }: {
@@ -566,6 +567,7 @@ function Intro({
   onBack: () => void;
   onStart: () => void;
   onOpenPack: (p: WippmojiPack) => void;
+  onPlay: (stickerId: string) => void;
   topInset: number;
   bottomInset: number;
 }) {
@@ -588,7 +590,7 @@ function Intro({
           {packs.map((p) => (
             <Press key={p.id} onPress={() => onOpenPack(p)} style={{ borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 12, gap: 8 }}>
               {p.status === "generating" ? <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("En cours de création : touche pour suivre")}</Text> : null}
-              <StickerGrid pack={p} />
+              <StickerGrid pack={p} onPlay={onPlay} />
             </Press>
           ))}
         </ScrollView>
@@ -641,7 +643,7 @@ function Intro({
               {packs.map((p) => (
                 <Press key={p.id} onPress={() => onOpenPack(p)} style={{ borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 12, gap: 8 }}>
                   {p.status === "generating" ? <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("En cours de création : touche pour suivre")}</Text> : null}
-                  <StickerGrid pack={p} />
+                  <StickerGrid pack={p} onPlay={onPlay} />
                 </Press>
               ))}
             </View>
@@ -1054,7 +1056,7 @@ function Cropper({ photo, framing, onCrop }: { photo: Photo; framing: WippmojiFr
 }
 
 /** The stickers of a pack: each shows its first image until it is ready. */
-function StickerGrid({ pack }: { pack: WippmojiPack }) {
+function StickerGrid({ pack, onPlay }: { pack: WippmojiPack; onPlay?: (stickerId: string) => void }) {
   const pop = pack.type === "wipppop";
   const h = 84;
   return (
@@ -1062,14 +1064,14 @@ function StickerGrid({ pack }: { pack: WippmojiPack }) {
       {pack.stickers.map((s) => {
         const def = wippmojiStickerDef(s, pop);
         return (
-          <View key={s.id} style={{ width: 92, alignItems: "center", gap: 4 }}>
+          <Press key={s.id} onPress={def && onPlay ? () => onPlay(def.id) : undefined} style={{ width: 92, alignItems: "center", gap: 4 }}>
             <View style={{ width: 84, height: h, borderRadius: 14, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
               {def ? <WippSticker id={def.id} size={84} fill={pop} /> : s.status === "failed" ? <RotateCcw size={22} color={colors.muted} /> : <ActivityIndicator color={colors.accent} />}
             </View>
             <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11 }}>
               {s.label ?? ""}
             </Text>
-          </View>
+          </Press>
         );
       })}
     </View>
