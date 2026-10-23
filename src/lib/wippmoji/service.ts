@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
-import { PACK_SIZE, WIPPMOJI_EXPRESSIONS, WIPPPOP_ANIMATIONS, WIPPPOP_SECONDS, WIPPPOP_SIZE, WIPPPOP_SIZES, expressionPrompt, popPrompt, popReferencePrompt, referencePrompt, type WippmojiStyle } from "./catalog";
+import { PACK_SIZE, PACK_SIZES, WIPPMOJI_EXPRESSIONS, WIPPPOP_ANIMATIONS, WIPPPOP_SECONDS, WIPPPOP_SIZE, WIPPPOP_SIZES, expressionPrompt, popPrompt, popReferencePrompt, referencePrompt, type WippmojiStyle } from "./catalog";
 import { wippmojiProvider } from "./providers";
 
 const VIDEO_SECONDS = Number(process.env.WIPPMOJI_VIDEO_SECONDS || 6);
@@ -61,7 +61,7 @@ export async function wippmojiStatus(profileId: string) {
   } catch {
     allowed = false;
   }
-  return { allowed, provider: wippmojiProvider().name, packSize: PACK_SIZE, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en }) => ({ id, fr, en })) } };
+  return { allowed, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en }) => ({ id, fr, en })) } };
 }
 
 export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string; kind?: string }) {
@@ -96,8 +96,9 @@ export async function createWippmojiPack(profileId: string, input: { avatarId?: 
   const catalog: { id: string; fr: string; en: string }[] = pop ? WIPPPOP_ANIMATIONS : WIPPMOJI_EXPRESSIONS;
   const ids = [...new Set(input.expressions ?? [])];
   const chosen = ids.map((id) => catalog.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => Boolean(e));
-  const size = pop ? (WIPPPOP_SIZES.includes(chosen.length) ? chosen.length : WIPPPOP_SIZE) : PACK_SIZE;
-  if (chosen.length !== size) throw new WippHttpError(400, "pack_size", pop ? `Choisis ${WIPPPOP_SIZES.join(" ou ")} animations.` : `Choisis exactement ${size} expressions.`);
+  const sizes = pop ? WIPPPOP_SIZES : PACK_SIZES;
+  const size = sizes.includes(chosen.length) ? chosen.length : sizes[sizes.length - 1];
+  if (chosen.length !== size) throw new WippHttpError(400, "pack_size", `Choisis ${sizes.join(" ou ")} ${pop ? "animations" : "expressions"}.`);
   if ((await usedToday(profileId, "video")) + size > LIMITS.packsPerDay * PACK_SIZE) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
   const language = input.language === "fr" || input.language === "en" ? input.language : null;
   const packId = uid("wmp");

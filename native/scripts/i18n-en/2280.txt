@@ -1,0 +1,11 @@
+2280|WIPP Studio
+2281|Hey!
+2282|Bravo!
+2283|Big animations with your cartoon character, bursting across your friends' screens.
+2284|Animated stickers that look like you, to send in your chats.
+2285|{0} big animations
+2286|{0} stickers
+2287|Full-screen WippPop with your character
+2288|Animated Wippmojis, cartoon or realistic
+2289|Cartoon
+2290|Tap an example to see it cross the screen.

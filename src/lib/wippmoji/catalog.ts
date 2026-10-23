@@ -43,6 +43,8 @@ export const WIPPMOJI_EXPRESSIONS: WippmojiExpression[] = [
 ];
 
 export const PACK_SIZE = 10;
+/** The two Wippmoji packs: 5 or 10 stickers. */
+export const PACK_SIZES = [5, 10];
 
 /** One sticker = one short video starting from the reference image, on a green background the app removes. */
 export function expressionPrompt(style: WippmojiStyle, e: WippmojiExpression, words: string | null) {

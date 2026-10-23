@@ -323,3 +323,8 @@ function BuiltInSticker({
     </View>
   );
 }
+
+/** A WippPop clip (filmed on black), played once over the whole area it is given. */
+export function PopClip({ uri, still }: { uri: string; still?: boolean }) {
+  return <ChromaClip source={uri} black still={still} onReady={() => undefined} />;
+}

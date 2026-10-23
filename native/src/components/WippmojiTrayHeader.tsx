@@ -19,7 +19,7 @@ export function WippmojiTrayHeader({ onPick, onOpenStudio }: { onPick: (s: Stick
   return (
     <View style={{ paddingHorizontal: 4, paddingBottom: 8, gap: 8 }}>
       <Press
-        accessibilityLabel={tr("Wippmoji Studio")}
+        accessibilityLabel={tr("WIPP Studio")}
         onPress={() => {
           onOpenStudio();
           push({ name: "wippmoji-studio" });
