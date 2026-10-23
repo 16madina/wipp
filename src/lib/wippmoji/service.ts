@@ -33,6 +33,42 @@ async function keep(sourceUrl: string, path: string, contentType: string) {
     on conflict (path) do update set content_type = excluded.content_type, bytes = excluded.bytes`;
 }
 
+type StudioSettings = { prices: { moji: Record<string, string>; pop: Record<string, string> }; characterLimit: number };
+const DEFAULT_SETTINGS: StudioSettings = {
+  prices: { moji: { "5": "4,99 $ CAD", "10": "7,99 $ CAD" }, pop: { "3": "4,99 $ CAD", "7": "9,99 $ CAD" } },
+  characterLimit: 2,
+};
+let settingsCache: { at: number; value: StudioSettings } | null = null;
+
+/** Prices shown and characters included per purchase, read from the wippmoji_settings table (changed without a new app). */
+export async function studioSettings(): Promise<StudioSettings> {
+  if (settingsCache && Date.now() - settingsCache.at < 60_000) return settingsCache.value;
+  const value: StudioSettings = { ...DEFAULT_SETTINGS, prices: { ...DEFAULT_SETTINGS.prices } };
+  try {
+    const sql = await getSql();
+    const rows = await sql<{ key: string; value: unknown }>`select key, value from wippmoji_settings`;
+    for (const r of rows) {
+      if (r.key === "prices" && r.value && typeof r.value === "object") value.prices = { ...value.prices, ...(r.value as StudioSettings["prices"]) };
+      if (r.key === "character_limit" && Number(r.value) > 0) value.characterLimit = Number(r.value);
+    }
+  } catch {
+    // Table not there yet: defaults.
+  }
+  settingsCache = { at: Date.now(), value };
+  return value;
+}
+
+/** Characters made for this kind since the last pack of that kind: a purchase includes `characterLimit` of them. */
+async function charactersUsed(profileId: string, kind: "moji" | "pop") {
+  const sql = await getSql();
+  const type = kind === "pop" ? "wipppop" : "expressions";
+  const rows = await sql<{ n: number }>`
+    select count(*)::int as n from wippmoji_avatars a
+    where a.profile_id = ${profileId} and a.kind = ${kind}
+      and a.created_at > coalesce((select max(created_at) from wippmoji_packs where profile_id = ${profileId} and pack_type = ${type}), 'epoch'::timestamptz)`;
+  return rows[0]?.n ?? 0;
+}
+
 /** Until in-app purchases exist, only the team and the listed testers may generate (real generations cost money). */
 async function assertAllowed(profileId: string) {
   const testers = (process.env.WIPPMOJI_TESTERS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -61,7 +97,9 @@ export async function wippmojiStatus(profileId: string) {
   } catch {
     allowed = false;
   }
-  return { allowed, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en }) => ({ id, fr, en })) } };
+  const settings = await studioSettings();
+  const left = async (k: "moji" | "pop") => Math.max(0, settings.characterLimit - (await charactersUsed(profileId, k).catch(() => 0)));
+  return { allowed, prices: settings.prices, characterLimit: settings.characterLimit, charactersLeft: { moji: await left("moji"), pop: await left("pop") }, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en }) => ({ id, fr, en })) } };
 }
 
 export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string; kind?: string }) {
@@ -72,6 +110,10 @@ export async function createWippmojiAvatar(profileId: string, input: { photo?: s
   const photo = input.photo ?? "";
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(photo)) throw new WippHttpError(400, "bad_photo", "Photo invalide.");
   if (photo.length > 4_000_000) throw new WippHttpError(413, "photo_too_big", "Photo trop lourde.");
+  const { characterLimit } = await studioSettings();
+  if ((await charactersUsed(profileId, kind)) >= characterLimit) {
+    throw new WippHttpError(403, "character_limit", `Tu as déjà créé tes ${characterLimit} personnages inclus. Choisis l’un d’eux pour continuer.`);
+  }
   if ((await usedToday(profileId, "reference")) >= LIMITS.referencesPerDay) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
   const provider = wippmojiProvider();
   const made = await provider.createReference(photo, kind === "pop" ? popReferencePrompt() : referencePrompt(style, input.framing === "face" || input.framing === "full" ? input.framing : "bust"));

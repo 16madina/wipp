@@ -1471,6 +1471,7 @@ export const TR_EN: Record<string, string> = {
   "Pleurs": "Tears",
   "Argent": "Money",
   "Quotidien": "Everyday",
+  "Recommencer ({0} restant)": "Start over ({0} left)",
   "Ouvertes maintenant": "Open now",
   "Ouvertes 24 h/24": "Open 24/7",
   "Ouvertes autour de vous": "Open around you",

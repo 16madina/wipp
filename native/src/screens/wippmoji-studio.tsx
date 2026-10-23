@@ -132,6 +132,7 @@ export function WippmojiStudioScreen() {
 
   const pop = kind === "pop";
   const packSize = pop ? popSize : mojiSize;
+  const charactersLeft = status?.charactersLeft ? status.charactersLeft[kind] : null;
   const choices = pop ? (status?.pop?.animations ?? []) : (status?.expressions ?? []);
 
   async function pick(camera: boolean) {
@@ -162,6 +163,7 @@ export function WippmojiStudioScreen() {
     try {
       const made = await createWippmojiAvatar(await preparePhoto(photo.uri, crop ?? undefined), pop ? "cartoon" : style, framing, kind);
       setAvatar(made);
+      setStatus((st) => (st?.charactersLeft ? { ...st, charactersLeft: { ...st.charactersLeft, [kind]: Math.max(0, st.charactersLeft[kind] - 1) } } : st));
       setAvatars((list) => [made, ...list.filter((x) => x.id !== made.id)]);
       go("preview");
     } catch (err) {
@@ -363,7 +365,7 @@ export function WippmojiStudioScreen() {
             tallFooter
             footer={
               <View style={{ gap: 10 }}>
-                <MainButton label={tr("Recommencer")} variant="secondary" icon={<RotateCcw size={18} color={colors.fg} />} onPress={() => go("crop")} />
+                <MainButton label={charactersLeft === null ? tr("Recommencer") : tr("Recommencer ({0} restant)", charactersLeft)} disabled={charactersLeft === 0} variant="secondary" icon={<RotateCcw size={18} color={colors.fg} />} onPress={() => go("crop")} />
                 <MainButton label={tr("Valider mon personnage")} icon={<Check size={18} color={colors.accentFg} />} onPress={() => { setChosen([]); go("expressions"); }} />
               </View>
             }
@@ -414,10 +416,19 @@ export function WippmojiStudioScreen() {
                 art={pop ? ART.packWippPop : ART.packExpressions}
                 title={pop ? tr("{0} grandes animations", n) : tr("{0} stickers", n)}
                 sub={pop ? tr("WippPop plein écran avec ton personnage") : tr("Wippmojis animés, cartoon ou réalistes")}
-                price={tr("Prix à venir")}
+                price={(pop ? status?.prices?.pop : status?.prices?.moji)?.[String(n)] ?? tr("Prix à venir")}
                 note={status?.allowed ? tr("Offert pendant les essais") : null}
                 icon={pop ? <Star size={16} color={colors.accent} /> : <Smile size={16} color={colors.accent} />}
                 onPress={() => {
+                  // Characters included already used: continue with one of them.
+                  const mineOfKind = avatars.filter((a) => (a.kind ?? "moji") === kind);
+                  if (charactersLeft === 0 && mineOfKind.length) {
+                    if (pop) setPopSize(n);
+                    else setMojiSize(n);
+                    setAvatar(mineOfKind[0]);
+                    go("preview");
+                    return;
+                  }
                   if (pop) {
                     setPopSize(n);
                     setStyle("cartoon");
