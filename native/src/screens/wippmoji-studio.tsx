@@ -7,7 +7,7 @@ import Svg, { Circle } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { ArrowRight, Camera, Check, ChevronLeft, Crown, ImageIcon, Lightbulb, Minus, Plus, RotateCcw, Smile, Sparkles, Star } from "lucide-react-native";
 import { Press } from "../components/ui";
-import { PopClip, WippSticker } from "../components/WippSticker";
+import { WippSticker } from "../components/WippSticker";
 import { useWippStore } from "../lib/store";
 import { tr, trLang } from "../lib/tr";
 import {
@@ -59,12 +59,12 @@ const EXPRESSION_ART: Record<string, number> = {
 const MOJI_EXAMPLES = ["wms_17e3489145504988bc53", "wms_4010bdbc4062400b9228", "wms_41cdf024fbdf45fe9570", "wms_bea069660db34da1acc2"].map(
   (f) => `wm:u_16a91279cf7c26e1d7b64bdd/wma_3cf91e77db1a43f09c86/${f}.mp4`,
 );
-const POP_BASE = "https://wippapp.com/wipp-media/wipppop-exemples";
+/* WippPop look = the WIPP Moments (3D chibi character, effects around): WIPP's own Moments are shown as examples. */
 const POP_EXAMPLES = [
-  { id: "coucou", label: () => tr("Coucou !") },
-  { id: "bisous", label: () => tr("Bisous") },
-  { id: "bravo", label: () => tr("Bravo !") },
-].map((e) => ({ ...e, uri: `${POP_BASE}/${e.id}.mp4` }));
+  { id: "moment-01", label: () => tr("Salut") },
+  { id: "moment-03", label: () => tr("Cœurs") },
+  { id: "moment-02", label: () => tr("MDR") },
+];
 
 type Step = "intro" | "kind" | "photo" | "crop" | "style" | "making-avatar" | "preview" | "packs" | "expressions" | "making-pack" | "done";
 type Photo = { uri: string; width: number; height: number };
@@ -459,9 +459,9 @@ export function WippmojiStudioScreen() {
               <>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   {POP_EXAMPLES.map((ex) => (
-                    <Press key={ex.id} onPress={() => setDemoPop((d) => ({ uri: ex.uri, n: (d?.n ?? 0) + 1 }))} style={{ width: "31%", gap: 4, alignItems: "center" }}>
-                      <View style={{ width: "100%", aspectRatio: 9 / 14, borderRadius: 14, backgroundColor: colors.surface, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                        <PopClip uri={ex.uri} still />
+                    <Press key={ex.id} onPress={() => setDemoPop((d) => ({ uri: ex.id, n: (d?.n ?? 0) + 1 }))} style={{ width: "31%", gap: 4, alignItems: "center" }}>
+                      <View style={{ width: "100%", aspectRatio: 1, borderRadius: 14, backgroundColor: colors.surface, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+                        <WippSticker id={ex.id} size={100} fill still />
                         <View style={{ position: "absolute", width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
                           <ArrowRight size={18} color="#fff" />
                         </View>
@@ -470,7 +470,7 @@ export function WippmojiStudioScreen() {
                     </Press>
                   ))}
                 </View>
-                <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Touche un exemple pour le voir traverser l’écran.")}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Des WIPP Moments : tes WippPop auront le même style, avec ton personnage.")}</Text>
               </>
             )}
             <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", lineHeight: 16 }}>{tr("Le paiement dans l’application arrive bientôt.")}</Text>
@@ -827,13 +827,15 @@ function Tabs({ value, options, onChange, small }: { value: string; options: [st
 
 /** Example WippPop played over the whole screen, then gone. */
 function PopDemo({ uri, onDone }: { uri: string; onDone: () => void }) {
+  const { width } = useWindowDimensions();
   useEffect(() => {
-    const t = setTimeout(onDone, 8600);
+    const t = setTimeout(onDone, 6400);
     return () => clearTimeout(t);
   }, [onDone]);
+  const size = Math.min(width, 520);
   return (
-    <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}>
-      <PopClip uri={uri} />
+    <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+      <WippSticker id={uri} size={size} />
     </View>
   );
 }
@@ -1054,7 +1056,7 @@ function Cropper({ photo, framing, onCrop }: { photo: Photo; framing: WippmojiFr
 /** The stickers of a pack: each shows its first image until it is ready. */
 function StickerGrid({ pack }: { pack: WippmojiPack }) {
   const pop = pack.type === "wipppop";
-  const h = pop ? 150 : 84;
+  const h = 84;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
       {pack.stickers.map((s) => {

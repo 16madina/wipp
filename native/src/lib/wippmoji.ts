@@ -38,7 +38,8 @@ export function createWippmojiPack(avatarId: string, expressions: string[], lang
 /** A finished sticker, ready to be sent like the built-in ones (the id carries where the clip is). */
 export function wippmojiStickerDef(s: WippmojiSticker, pop = false): StickerDef | null {
   if (s.status !== "ready" || !s.path) return null;
-  return { id: `wm:${s.path}${pop ? "#pop" : ""}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
+  void pop; // WippPop clips are on green too, like the stickers
+  return { id: `wm:${s.path}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
 }
 
 let cache: StickerDef[] | null = null;

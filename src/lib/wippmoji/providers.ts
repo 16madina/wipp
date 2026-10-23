@@ -36,10 +36,10 @@ class XAIProvider implements WippmojiProvider {
     return { url };
   }
   async startVideo(imageUrl: string, prompt: string, seconds: number, vertical = false) {
-    const extra = vertical ? { aspect_ratio: "9:16", resolution: "480p" } : {};
+    void vertical; // the video follows the shape of the starting image (square for WippPop)
     const data = await this.call<{ request_id?: string }>("/videos/generations", {
       method: "POST",
-      body: JSON.stringify({ model: this.videoModel, prompt, image: { url: imageUrl }, duration: seconds, ...extra }),
+      body: JSON.stringify({ model: this.videoModel, prompt, image: { url: imageUrl }, duration: seconds }),
     });
     if (!data.request_id) throw new Error("xai_no_request_id");
     return { requestId: data.request_id };

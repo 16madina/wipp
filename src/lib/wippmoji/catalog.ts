@@ -80,7 +80,7 @@ export function referencePrompt(style: WippmojiStyle, framing: WippmojiFraming =
 /** The two WippPop packs: 3 or 7 animations. */
 export const WIPPPOP_SIZES = [3, 7];
 export const WIPPPOP_SIZE = WIPPPOP_SIZES[0];
-export const WIPPPOP_SECONDS = 8;
+export const WIPPPOP_SECONDS = 6;
 
 export type WippPopAnimation = { id: string; fr: string; en: string; action: string };
 
@@ -99,20 +99,21 @@ export const WIPPPOP_ANIMATIONS: WippPopAnimation[] = [
   { id: "jarrive", fr: "J’arrive !", en: "On my way!", action: "zooms in riding a small scooter from the left, brakes in the center, waves, then zooms out to the right" },
 ];
 
+/** Same look as the WIPP Moments: a 3D chibi doll (big head, big eyes, small body), full body, on green. */
 export function popReferencePrompt() {
   return [
-    WIPPMOJI_STYLES.cartoon.reference,
-    "Full body from head to feet, standing, friendly smile, centered and small in the frame with lots of empty space around. Vertical 9:16 composition.",
-    "Perfectly flat pure black background (#000000), no shadow, no floor, no outline. Bright, colorful clothes (no black clothing). No text.",
+    "Turn the person in the attached photo into a cute premium 3D chibi doll character, Pixar quality, exactly like a collectible toy figure: big head, big shiny expressive eyes, small body, full body from head to sneakers.",
+    "Keep their real likeness so they are instantly recognizable: same face shape, skin tone, hairstyle and hair color, same kind of outfit in bright colors.",
+    "Standing, friendly smile, centered, small in a square frame with lots of empty space around. Perfectly flat solid pure green background (#00FF00), no shadow, no floor, no green on the character. No text.",
   ].join(" ");
 }
 
 export function popPrompt(a: WippPopAnimation, words: string | null) {
   return [
     "Use ONLY the attached image as the starting frame and only subject.",
-    "Premium 3D Pixar-quality cartoon animation, joyful, lots of movement across the whole vertical 9:16 screen.",
-    `The character ${a.action}.`,
+    "Premium 3D Pixar-quality chibi animation, cute and joyful, big expressive cartoon acting, like an animated WIPP Moment.",
+    `The character ${a.action}. Colorful effects (hearts, stars, confetti, sparkles) burst around the character, never green.`,
     words ? `Then the big bold glossy words "${words}" with a white outline bounce in, centered and fully visible with a wide margin from every edge; the spelling never changes.` : "No text and no letters anywhere.",
-    "Keep the same face, hair and clothes. The background stays perfectly flat pure black (#000000) the whole time: no floor, no glow, no gradient. Static camera.",
+    "The character and every effect stay fully inside the square frame. Keep the same face, hair and clothes. The background stays a perfectly flat, solid pure green (#00FF00) the whole time: no shadows, no glow, no gradient. Static camera.",
   ].join(" ");
 }
