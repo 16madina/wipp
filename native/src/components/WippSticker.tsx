@@ -24,7 +24,7 @@ function animatedSource(src: number | { uri: string }) {
 
 /** Green-screen sticker clip. The WebP posters have no motion; the mp4 does. */
 function clipHtml(file: string, loop?: boolean) {
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent;overflow:hidden}canvas,video{position:absolute;inset:0;width:100%;height:100%}video{opacity:0.02}</style></head><body><video id="v" src="${file}" muted playsinline webkit-playsinline ${loop ? "loop" : ""} autoplay></video><canvas id="c"></canvas><script>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent;overflow:hidden}canvas,video{position:absolute;inset:0;width:100%;height:100%}video{opacity:0.02}</style></head><body><video id="v" src="${file}"${/^https?:/.test(file) ? ' crossorigin="anonymous"' : ""} muted playsinline webkit-playsinline ${loop ? "loop" : ""} autoplay></video><canvas id="c"></canvas><script>`;
 }
 
 /** Navigateur (aperçu web) : même lecteur fond vert, dans une iframe (pas de WebView ni de fichiers locaux). */
