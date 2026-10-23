@@ -1,0 +1,3 @@
+2313|Use a character you already made
+2314|Use this character
+2315|Or add a new photo:

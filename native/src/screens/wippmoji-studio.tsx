@@ -217,7 +217,7 @@ export function WippmojiStudioScreen() {
 
   const back = () => {
     if (poll.current && step === "making-pack") clearInterval(poll.current);
-    const prev: Partial<Record<Step, Step>> = { packs: "intro", style: "packs", photo: pop ? "packs" : "style", crop: "photo", preview: "crop", expressions: "preview", done: "intro" };
+    const prev: Partial<Record<Step, Step>> = { packs: "intro", style: "packs", photo: pop ? "packs" : "style", crop: "photo", preview: photo ? "crop" : "photo", expressions: "preview", done: "intro" };
     const to = prev[step];
     if (!to) leave();
     else go(to);
@@ -285,6 +285,29 @@ export function WippmojiStudioScreen() {
         {step === "photo" ? (
           <Page bottomInset={insets.bottom} error={error} footer={null}>
             <Title title={tr("Ajoute ta photo")} sub={tr("Utilise un selfie, une photo du visage ou une photo en pied.")} />
+            {avatars.some((x) => (x.kind ?? "moji") === kind && (pop || x.style === style)) ? (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold" }}>{tr("Utiliser un personnage déjà créé")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                  {avatars
+                    .filter((x) => (x.kind ?? "moji") === kind && (pop || x.style === style))
+                    .map((x) => (
+                      <Press
+                        key={x.id}
+                        accessibilityLabel={tr("Utiliser ce personnage")}
+                        onPress={() => {
+                          setAvatar(x);
+                          go("preview");
+                        }}
+                        style={{ width: 78, height: 78, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair }}
+                      >
+                        <Image source={{ uri: x.referenceUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" contentPosition="top" />
+                      </Press>
+                    ))}
+                </ScrollView>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Ou ajoute une nouvelle photo :")}</Text>
+              </View>
+            ) : null}
             <Press
               onPress={() => (agreed ? void pick(false) : setError(tr("Coche d’abord la case ci-dessous.")))}
               style={{ borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 16, alignItems: "center", gap: 8 }}
@@ -372,7 +395,7 @@ export function WippmojiStudioScreen() {
             tallFooter
             footer={
               <View style={{ gap: 10 }}>
-                <MainButton label={charactersLeft === null ? tr("Recommencer") : tr("Recommencer ({0} restant)", charactersLeft)} disabled={charactersLeft === 0} variant="secondary" icon={<RotateCcw size={18} color={colors.fg} />} onPress={() => go("crop")} />
+                <MainButton label={charactersLeft === null ? tr("Recommencer") : tr("Recommencer ({0} restant)", charactersLeft)} disabled={charactersLeft === 0} variant="secondary" icon={<RotateCcw size={18} color={colors.fg} />} onPress={() => go(photo ? "crop" : "photo")} />
                 <MainButton label={tr("Valider mon personnage")} icon={<Check size={18} color={colors.accentFg} />} onPress={() => { setChosen([]); go("expressions"); }} />
               </View>
             }
