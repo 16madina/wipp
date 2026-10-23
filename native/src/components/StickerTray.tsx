@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Animated, FlatList, ScrollView, Text, TextInput, View } from "react-native";
-import { Clapperboard, Clock, Drama, Gift, Search, SendHorizontal, Smile, User, X } from "lucide-react-native";
+import { Clapperboard, Clock, Gift, Search, SendHorizontal, Smile, User, X } from "lucide-react-native";
 import { useDeviceLayout } from "../lib/device-layout";
 import { haptic } from "../lib/haptics";
 import { stickerRemoteUri } from "../lib/sticker-cdn";
@@ -16,14 +16,27 @@ import { tr } from "../lib/tr";
 
 type Tab = "recent" | "moji" | "wippie" | "emo" | "pop" | "moment";
 type Wippie = "tous" | "femme" | "homme" | "comique" | "mine";
-type PopChip = "wipp" | "mine";
+type PopChip = "tous" | "mine" | "salut" | "amour" | "rire" | "pleurs" | "surprise" | "argent" | "boss" | "quotidien";
+
+/** WippPop categories (WIPP Moments + the former EMO tab), by French name of the animation. */
+const POP_CATS: { id: PopChip; label: () => string; names?: string[] }[] = [
+  { id: "mine", label: () => tr("Mes WippPop") },
+  { id: "tous", label: () => tr("Tous") },
+  { id: "salut", label: () => tr("Salut"), names: ["Salut", "Yo", "Café", "Je te vois", "Cachée", "Stop !"] },
+  { id: "amour", label: () => tr("Amour"), names: ["Bisou", "Cœurs", "Pluie de cœurs", "Cupidon", "Coup de cœur", "Câlin", "Gros cœur"] },
+  { id: "rire", label: () => tr("Rire"), names: ["MDR", "Oops", "Savage", "Roast", "Ça passe", "Banane", "Majeur"] },
+  { id: "pleurs", label: () => tr("Pleurs"), names: ["Mouchoirs", "Oignon", "Sac nuage", "Averse", "Pas fan"] },
+  { id: "surprise", label: () => tr("Surprise"), names: ["Quoi ?!", "Alerte", "Méfiante", "Panique", "Boum", "Loupe"] },
+  { id: "argent", label: () => tr("Argent"), names: ["Jackpot", "Mallette", "Billets", "Gros sac", "Riche", "Fortune", "Shopping"] },
+  { id: "boss", label: () => tr("Boss"), names: ["Champion", "Roi", "Reine", "Boss", "En feu", "Moves", "Jonglage", "Magie", "Action"] },
+  { id: "quotidien", label: () => tr("Quotidien"), names: ["Cinéma", "Pop-corn", "Miam", "Trop chaud", "Ménage", "L’heure", "L'heure", "Valise"] },
+];
 
 /** Bottom bar, left to right. `label` = search placeholder, `short` = name under the icon. */
 const TABS = [
   { id: "recent", get label() { return tr("Récents"); }, get short() { return tr("Récents"); }, icon: Clock },
   { id: "moji", get label() { return tr("Wippmoji"); }, short: "Wippmoji", icon: Smile },
   { id: "wippie", get label() { return tr("Wippie"); }, short: "Wippie", icon: User },
-  { id: "emo", label: "EMO", short: "EMO", icon: Drama },
   { id: "pop", get label() { return tr("WippPop"); }, short: "WippPop", icon: Clapperboard },
   { id: "moment", get label() { return tr("Surprises"); }, short: "Surprises", icon: Gift },
 ] as const satisfies readonly { id: Tab; label: string; short: string; icon: unknown }[];
@@ -109,7 +122,7 @@ export function StickerTray({
   const { tablet, contentWidth, height } = useDeviceLayout();
   const [tab, setTab] = useState<Tab>("moji");
   const [wippie, setWippie] = useState<Wippie>("tous");
-  const [popChip, setPopChip] = useState<PopChip>("wipp");
+  const [popChip, setPopChip] = useState<PopChip>("tous");
   const [myStickers, setMyStickers] = useState<StickerDef[]>([]);
   const [myPops, setMyPops] = useState<StickerDef[]>([]);
   useEffect(() => {
@@ -144,7 +157,9 @@ export function StickerTray({
             : tab === "pop"
               ? popChip === "mine"
                 ? myPops
-                : moments
+                : popChip === "tous"
+                  ? [...moments, ...emo]
+                  : [...moments, ...emo].filter((x) => POP_CATS.find((c) => c.id === popChip)?.names?.includes(x.labelFr))
               : [];
   const shown = query ? searchStickers(tabStickers, query) : tabStickers;
   const title = tab === "recent" ? tr("tous les stickers") : TABS.find((item) => item.id === tab)?.label ?? tr("Stickers");
@@ -335,19 +350,23 @@ export function StickerTray({
         </ScrollView>
       ) : null}
       {tab === "pop" ? (
-        <View style={{ flexDirection: "row", gap: 6, height: 36, alignItems: "center", paddingBottom: 6 }}>
-          {(["wipp", "mine"] as const).map((id) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ flexGrow: 0, flexShrink: 0, height: 36 }}
+          contentContainerStyle={{ gap: 6, alignItems: "center", paddingBottom: 6 }}
+        >
+          {POP_CATS.map((c) => (
             <Press
-              key={id}
-              onPress={() => setPopChip(id)}
-              style={{ height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: popChip === id ? colors.accent : colors.navy, justifyContent: "center" }}
+              key={c.id}
+              onPress={() => setPopChip(c.id)}
+              style={{ height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: popChip === c.id ? colors.accent : colors.navy, justifyContent: "center" }}
             >
-              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: popChip === id ? colors.accentFg : colors.muted }}>
-                {id === "wipp" ? tr("WippPop WIPP") : tr("Mes WippPop")}
-              </Text>
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: popChip === c.id ? colors.accentFg : colors.muted }}>{c.label()}</Text>
             </Press>
           ))}
-        </View>
+        </ScrollView>
       ) : null}
       {tab === "moment" ? (
         <ScrollView style={{ flex: 1 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>

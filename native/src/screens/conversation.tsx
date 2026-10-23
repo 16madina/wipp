@@ -916,9 +916,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               {m.type === "poll" && m.poll ? (
                 <PollBubble chatId={chatId} m={m} users={users} onMe={onMe} fg={mine ? mb.fg : colors.fg} muted={onMe ? mb.muted : colors.muted} accent={onMe ? mb.accent : colors.accent} />
               ) : null}
-              {m.type === "sticker" && stickerById(m.stickerId)?.pack === "emo" ? (
-                <Text style={{ fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingVertical: 6 }}>{stickerLabel(m.stickerId, "fr")}</Text>
-              ) : m.type === "sticker" ? (
+              {m.type === "sticker" ? (
                 <WippSticker id={m.stickerId ?? ""} size={m.stickerId?.startsWith("wm:") ? 118 : stickerById(m.stickerId)?.pack === "moji" ? 88 : 150} still={!liveStickers.has(m.localKey ?? m.id)} />
               ) : null}
               {m.geo ? (
