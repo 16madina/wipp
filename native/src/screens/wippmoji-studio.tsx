@@ -39,6 +39,13 @@ const ART = {
   packExpressions: require("../../assets/wippmoji-studio/pack-expressions.jpg"),
   packWippPop: require("../../assets/wippmoji-studio/pack-wipppop.jpg"),
   packUltimate: require("../../assets/wippmoji-studio/pack-ultimate.jpg"),
+  /* Pack covers: WIPP's own Wippie stickers and Moments characters. */
+  packs: {
+    moji5: require("../../assets/wippmoji-studio/pack-moji-5.png"),
+    moji10: require("../../assets/wippmoji-studio/pack-moji-10.png"),
+    pop3: require("../../assets/wippmoji-studio/pack-pop-3.png"),
+    pop7: require("../../assets/wippmoji-studio/pack-pop-7.png"),
+  },
 };
 const EXPRESSION_ART: Record<string, number> = {
   mdr: require("../../assets/wippmoji-studio/expr-mdr.jpg"),
@@ -413,7 +420,7 @@ export function WippmojiStudioScreen() {
             {(pop ? [3, 7] : [5, 10]).map((n) => (
               <PackCard
                 key={n}
-                art={pop ? ART.packWippPop : ART.packExpressions}
+                art={pop ? (n === 3 ? ART.packs.pop3 : ART.packs.pop7) : n === 5 ? ART.packs.moji5 : ART.packs.moji10}
                 title={pop ? tr("{0} grandes animations", n) : tr("{0} stickers", n)}
                 sub={pop ? tr("WippPop plein écran avec ton personnage") : tr("Wippmojis animés, cartoon ou réalistes")}
                 price={(pop ? status?.prices?.pop : status?.prices?.moji)?.[String(n)] ?? tr("Prix à venir")}
@@ -940,16 +947,12 @@ function PackCard({
           <View style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: soon ? colors.chip : colors.accent }}>
             <Text style={{ color: soon ? colors.fg : colors.accentFg, fontSize: 14, fontFamily: "Inter_700Bold" }}>{price}</Text>
           </View>
-          {soon ? <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Bientôt")}</Text> : note ? <Text style={{ color: colors.accent, fontSize: 12, flex: 1 }}>{note}</Text> : null}
+          {soon ? <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Bientôt")}</Text> : <ArrowRight size={18} color={colors.accent} />}
         </View>
+        {!soon && note ? <Text style={{ color: colors.accent, fontSize: 12 }}>{note}</Text> : null}
       </View>
-      <View style={{ width: 128, opacity: soon ? 0.75 : 1 }}>
-        <Image source={art} style={{ width: "100%", height: "100%" }} contentFit="cover" contentPosition="top" />
-        {!soon ? (
-          <View style={{ position: "absolute", right: 10, bottom: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
-            <ArrowRight size={18} color="#fff" />
-          </View>
-        ) : null}
+      <View style={{ width: 140, padding: 8, opacity: soon ? 0.75 : 1, backgroundColor: accentA(0.08) }}>
+        <Image source={art} style={{ width: "100%", height: "100%" }} contentFit="contain" />
       </View>
     </Press>
   );
