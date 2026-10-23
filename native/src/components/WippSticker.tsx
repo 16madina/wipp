@@ -188,17 +188,17 @@ export function wippmojiClipUrl(id: string) {
   return `https://wippapp.com/wm/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-function PersonalSticker({ id, size, fill, still }: { id: string; size: number; fill?: boolean; still?: boolean }) {
+function PersonalSticker({ id, size, fill, still, loop }: { id: string; size: number; fill?: boolean; still?: boolean; loop?: boolean }) {
   const box = fill ? { width: "100%" as const, height: "100%" as const } : { width: size, height: size };
   return (
     <View style={box}>
-      <ChromaClip source={wippmojiClipUrl(id)} still={still} onReady={() => undefined} />
+      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} onReady={() => undefined} />
     </View>
   );
 }
 
 export function WippSticker(props: { id: string; size?: number; loop?: boolean; fill?: boolean; still?: boolean }) {
-  if (props.id.startsWith("wm:")) return <PersonalSticker id={props.id} size={props.size ?? 48} fill={props.fill} still={props.still} />;
+  if (props.id.startsWith("wm:")) return <PersonalSticker id={props.id} size={props.size ?? 48} fill={props.fill} still={props.still} loop={props.loop} />;
   return <BuiltInSticker {...props} />;
 }
 
