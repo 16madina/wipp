@@ -1201,6 +1201,8 @@ export const TR_EN: Record<string, string> = {
   "Quitter, je reviendrai plus tard": "Leave, I'll come back later",
   "Bientôt": "Soon",
   "Glisse pour déplacer, zoome avec + et −": "Drag to move, zoom with + and −",
+  "Pour les envoyer : dans une conversation, ouvre le panneau des stickers, onglet Wippmoji.": "To send them: in a conversation, open the sticker panel, Wippmoji tab.",
+  "Créer d’autres Wippmojis": "Create more Wippmojis",
   "♾️ Contact permanent": "♾️ Permanent contact",
   "Bloquer {0}": "Block {0}",
   "{0} ne pourra plus vous contacter.": "{0} will no longer be able to contact you.",

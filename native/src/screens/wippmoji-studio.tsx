@@ -443,6 +443,7 @@ export function WippmojiStudioScreen() {
               <MainButton
                 label={tr("Terminé")}
                 onPress={() => {
+                  setPacks((list) => [pack, ...list.filter((x) => x.id !== pack.id)]);
                   void refreshLibrary();
                   go("intro");
                 }}
@@ -482,6 +483,35 @@ function Intro({
 }) {
   const { height } = useWindowDimensions();
   const closed = status && !status.allowed;
+  // Once you have Wippmojis, the Studio opens on them; creating more is the secondary action.
+  if (packs.length > 0) {
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={{ paddingTop: topInset + 6, paddingHorizontal: 12, paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Press onPress={onBack} hitSlop={10} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+            <ChevronLeft size={26} color={colors.fg} />
+          </Press>
+          <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("Mes Wippmojis")}</Text>
+        </View>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 8, gap: 14, paddingBottom: 110 + bottomInset }}>
+          <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}>
+            {tr("Pour les envoyer : dans une conversation, ouvre le panneau des stickers, onglet Wippmoji.")}
+          </Text>
+          {packs.map((p) => (
+            <Press key={p.id} onPress={() => onOpenPack(p)} style={{ borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 12, gap: 8 }}>
+              {p.status === "generating" ? <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("En cours de création : touche pour suivre")}</Text> : null}
+              <StickerGrid pack={p} />
+            </Press>
+          ))}
+        </ScrollView>
+        {!closed ? (
+          <View style={{ position: "absolute", left: 20, right: 20, bottom: bottomInset + 16 }}>
+            <MainButton label={tr("Créer d’autres Wippmojis")} icon={<Plus size={20} color={colors.accentFg} />} onPress={onStart} />
+          </View>
+        ) : null}
+      </View>
+    );
+  }
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 110 + bottomInset }}>
