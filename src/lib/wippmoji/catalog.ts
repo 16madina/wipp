@@ -47,13 +47,13 @@ export const PACK_SIZE = 10;
 /** One sticker = one short video starting from the reference image, on a green background the app removes. */
 export function expressionPrompt(style: WippmojiStyle, e: WippmojiExpression, words: string | null) {
   const text = words
-    ? `The words "${words}" pop in below in big bold glossy yellow letters with a black outline; the spelling never changes and stays sharp and readable.`
+    ? `The words "${words}" pop in below in big bold glossy yellow letters with a black outline, centered and fully visible with a wide margin from every edge (never cut off); the spelling never changes and stays sharp and readable.`
     : "No text and no letters anywhere.";
   return [
     "Use ONLY the attached image as the starting frame and only subject.",
     `${WIPPMOJI_STYLES[style].video} The person ${e.motion}.`,
     text,
-    "Keep the same face, hair, clothes and white sticker outline. The whole sticker stays centered and fully inside the frame. Static camera.",
+    "Keep the same face, hair, clothes and white sticker outline. The whole sticker, hands and text included, stays centered and fully inside the frame with a wide margin on every side; nothing is ever cut by the edges. Static camera.",
     "The background must stay a perfectly flat, solid pure green (#00FF00) for the entire video: no shadows, no glow, no gradient, no particles, no green on the person.",
   ].join(" ");
 }
