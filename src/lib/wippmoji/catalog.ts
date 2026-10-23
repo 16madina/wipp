@@ -61,7 +61,7 @@ export function expressionPrompt(style: WippmojiStyle, e: WippmojiExpression, wo
 export function referencePrompt(style: WippmojiStyle) {
   return [
     WIPPMOJI_STYLES[style].reference,
-    "Show them from the waist up, facing the camera with a warm smile. Thick clean white sticker outline around the whole person. No text and no letters anywhere.",
+    "Keep the same framing as the photo: if the whole body is visible, show the whole body from head to feet with the same outfit; if it is a close-up, show the head and shoulders. Facing the camera with a warm smile. Thick clean white sticker outline around the whole person. No text and no letters anywhere.",
     "Centered and fully inside the frame with margin. Perfectly flat, solid pure green background (#00FF00): no shadow, no glow, no gradient, and no green on the person or the clothes.",
   ].join(" ");
 }

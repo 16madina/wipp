@@ -67,7 +67,7 @@ export function WippmojiStudioScreen() {
       setError(camera ? tr("Autorise l’appareil photo dans Réglages.") : tr("Autorise l’accès aux photos dans Réglages."));
       return;
     }
-    const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.9, exif: false };
+    const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], allowsEditing: false, quality: 0.9, exif: false };
     const res = camera ? await ImagePicker.launchCameraAsync({ ...opts, cameraType: ImagePicker.CameraType.front }) : await ImagePicker.launchImageLibraryAsync(opts);
     if (!res.canceled && res.assets[0]?.uri) setPhotoUri(res.assets[0].uri);
   }
@@ -192,7 +192,7 @@ export function WippmojiStudioScreen() {
           <>
             <View style={[card, { alignItems: "center", gap: 12 }]}>
               {photoUri ? (
-                <Image source={{ uri: photoUri }} style={{ width: 180, height: 180, borderRadius: 90 }} contentFit="cover" />
+                <Image source={{ uri: photoUri }} style={{ width: 240, height: 300, borderRadius: 18 }} contentFit="contain" />
               ) : (
                 <View style={{ width: 180, height: 180, borderRadius: 90, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
                   <Camera size={42} color={colors.muted} />
