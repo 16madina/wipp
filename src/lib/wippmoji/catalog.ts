@@ -47,16 +47,14 @@ export const PACK_SIZE = 10;
 export const PACK_SIZES = [5, 10];
 
 /** One sticker = one short video starting from the reference image, on a green background the app removes. */
-export function expressionPrompt(style: WippmojiStyle, e: WippmojiExpression, words: string | null) {
-  const text = words
-    ? `The words "${words}" pop in below in big bold glossy yellow letters with a black outline, centered and fully visible with a wide margin from every edge (never cut off); the spelling never changes and stays sharp and readable.`
-    : "No text and no letters anywhere.";
+/** The words are drawn by WIPP over the clip (always readable, never cut): the video itself has no text. */
+export function expressionPrompt(style: WippmojiStyle, e: WippmojiExpression, _words: string | null = null) {
   return [
-    "Use ONLY the attached image as the starting frame and only subject.",
+    "Use ONLY the attached image as the starting frame and only subject. Exactly one person in the whole video, never duplicated.",
     `${WIPPMOJI_STYLES[style].video} The person ${e.motion}.`,
-    text,
-    "Keep the same face, hair, clothes and white sticker outline. The whole sticker, hands and text included, stays centered and fully inside the frame with a wide margin on every side; nothing is ever cut by the edges. Static camera.",
-    "The background must stay a perfectly flat, solid pure green (#00FF00) for the entire video: no shadows, no glow, no gradient, no particles, no green on the person.",
+    "No text at all: no letters, no words, no numbers, no signs anywhere in the video.",
+    "Keep the same face, hair, clothes and white sticker outline. The person is there from the very first frame and stays centered and fully inside the frame with a wide margin on every side; hands are never cut by the edges. Smooth continuous motion. Static camera.",
+    "The background must stay a perfectly flat, solid, uniform pure green (#00FF00) for the entire video: no shadows, no floor, no glow, no gradient, no green on the person.",
   ].join(" ");
 }
 
@@ -85,18 +83,18 @@ export const WIPPPOP_SECONDS = 6;
 export type WippPopAnimation = { id: string; fr: string; en: string; action: string };
 
 export const WIPPPOP_ANIMATIONS: WippPopAnimation[] = [
-  { id: "coucou", fr: "Coucou !", en: "Hey!", action: "runs in from the left edge of the screen, stops in the center, waves hello with a huge smile and a playful wink" },
-  { id: "bisous", fr: "Bisous", en: "Kisses", action: "walks in from the right edge, blows a big kiss toward the viewer and many small red hearts fly toward the camera and fill the screen" },
-  { id: "bravo", fr: "Bravo !", en: "Bravo!", action: "jumps in from the bottom of the screen, claps enthusiastically, then throws both arms up in victory while colorful confetti bursts around" },
-  { id: "je-taime", fr: "Je t’aime", en: "Love you", action: "slides in holding a giant red heart, hugs it tenderly, then the heart bursts into many little hearts that float up" },
-  { id: "anniversaire", fr: "Joyeux anniversaire !", en: "Happy birthday!", action: "walks in carrying a birthday cake with lit candles, blows the candles out, and balloons float up from the bottom" },
-  { id: "bonne-nuit", fr: "Bonne nuit", en: "Good night", action: "floats in sitting on a crescent moon, yawns, waves sleepily and falls asleep while small stars twinkle around" },
-  { id: "bonjour", fr: "Bonjour !", en: "Good morning!", action: "pops up from the bottom holding a steaming cup of coffee, stretches happily and a smiling sun rises behind" },
-  { id: "merci", fr: "Merci !", en: "Thank you!", action: "runs in holding a bouquet of flowers, offers it to the viewer with a little bow and a warm smile" },
-  { id: "mdr", fr: "MDR !", en: "LOL!", action: "rolls in laughing so hard, falls on the floor holding the belly, legs kicking, tears of joy flying" },
-  { id: "felicitations", fr: "Félicitations !", en: "Congrats!", action: "pops a party popper toward the camera, streamers fly everywhere, then dances a little victory dance" },
-  { id: "tu-me-manques", fr: "Tu me manques", en: "Miss you", action: "walks in slowly hugging a big pillow, looks at the viewer with sad tender eyes, then opens the arms for a hug" },
-  { id: "jarrive", fr: "J’arrive !", en: "On my way!", action: "zooms in riding a small scooter from the left, brakes in the center, waves, then zooms out to the right" },
+  { id: "coucou", fr: "Coucou !", en: "Hey!", action: "waves hello with a huge smile and a playful wink, bouncing happily on the spot" },
+  { id: "bisous", fr: "Bisous", en: "Kisses", action: "blows a big kiss toward the viewer and many small red hearts fly toward the camera and fill the screen" },
+  { id: "bravo", fr: "Bravo !", en: "Bravo!", action: "claps enthusiastically, then throws both arms up in victory while colorful confetti bursts around" },
+  { id: "je-taime", fr: "Je t’aime", en: "Love you", action: "holds a giant red heart, hugs it tenderly, then the heart bursts into many little hearts that float up" },
+  { id: "anniversaire", fr: "Joyeux anniversaire !", en: "Happy birthday!", action: "holds a birthday cake with lit candles, blows the candles out, and balloons float up around" },
+  { id: "bonne-nuit", fr: "Bonne nuit", en: "Good night", action: "yawns, a crescent moon appears behind, waves sleepily and falls asleep standing while small stars twinkle around" },
+  { id: "bonjour", fr: "Bonjour !", en: "Good morning!", action: "holds a steaming cup of coffee, stretches happily and a smiling sun rises behind" },
+  { id: "merci", fr: "Merci !", en: "Thank you!", action: "holds out a bouquet of flowers to the viewer with a little bow and a warm smile" },
+  { id: "mdr", fr: "MDR !", en: "LOL!", action: "laughs so hard, bends over holding the belly, tears of joy flying" },
+  { id: "felicitations", fr: "Félicitations !", en: "Congrats!", action: "pops a party popper toward the camera, streamers fly everywhere, then dances a little victory dance on the spot" },
+  { id: "tu-me-manques", fr: "Tu me manques", en: "Miss you", action: "hugs a big pillow, looks at the viewer with sad tender eyes, then opens the arms for a hug" },
+  { id: "jarrive", fr: "J’arrive !", en: "On my way!", action: "sits on a small scooter in the center, revs it, waves excitedly and bounces as if ready to go" },
 ];
 
 /** Same look as the WIPP Moments: a 3D chibi doll (big head, big eyes, small body), full body, on green. */
@@ -108,12 +106,15 @@ export function popReferencePrompt() {
   ].join(" ");
 }
 
-export function popPrompt(a: WippPopAnimation, words: string | null) {
+/** WippPop: one character, there from the first image, no text (WIPP draws the words). Built to work with Grok Lite too. */
+export function popPrompt(a: WippPopAnimation, _words: string | null = null) {
   return [
-    "Use ONLY the attached image as the starting frame and only subject.",
-    "Premium 3D Pixar-quality chibi animation, cute and joyful, big expressive cartoon acting, like an animated WIPP Moment.",
-    `The character ${a.action}. Colorful effects (hearts, stars, confetti, sparkles) burst around the character, never green.`,
-    words ? `Then the big bold glossy words "${words}" with a white outline bounce in, centered and fully visible with a wide margin from every edge; the spelling never changes.` : "No text and no letters anywhere.",
-    "The character and every effect stay fully inside the square frame. Keep the same face, hair and clothes. The background stays a perfectly flat, solid pure green (#00FF00) the whole time: no shadows, no glow, no gradient. Static camera.",
+    "Use ONLY the attached image as the first frame: the video starts exactly on this image, with the character already in place, centered.",
+    "There is exactly ONE character in the whole video: the same one as in the image. Never duplicate it: no second character, no clone, no ghost, no transparency, no fade in, no cross-fade, no reflection, no other people or animals.",
+    "Premium 3D Pixar-quality chibi animation, cute and joyful, smooth continuous motion with no cuts and no jumps.",
+    `The character ${a.action}. A few small colorful effects (hearts, stars, confetti, sparkles) may appear around, never green.`,
+    "No text at all: no letters, no words, no numbers, no signs anywhere in the video.",
+    "The character stays centered and fully inside the square frame for the whole video. Keep the same face, hair and clothes.",
+    "The background stays a perfectly flat, solid, uniform pure green (#00FF00) the whole time: no shadows, no floor, no glow, no gradient, no vignette. Static camera.",
   ].join(" ");
 }

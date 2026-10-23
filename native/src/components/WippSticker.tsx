@@ -28,7 +28,7 @@ function clipHtml(file: string, loop?: boolean) {
 }
 
 /** Navigateur (aperçu web) : même lecteur fond vert, dans une iframe (pas de WebView ni de fichiers locaux). */
-function ChromaClipWeb({ source, loop, still, black, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; onReady: () => void }) {
+function ChromaClipWeb({ source, loop, still, black, extra, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; onReady: () => void }) {
   const ready = useRef(onReady);
   ready.current = onReady;
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -41,7 +41,7 @@ function ChromaClipWeb({ source, loop, still, black, onReady }: { source: number
     return () => window.removeEventListener("message", onMsg);
   }, []);
   // opacity 0 : le navigateur joue quand même la vidéo (sur iPhone il faut 0.02), sans laisser de rectangle visible.
-  const html = (clipHtml(uri, loop) + CLIP_SCRIPT(loop, still, black)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
+  const html = (clipHtml(uri, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
     "window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready');",
     "window.parent.postMessage('wipp-clip-ready','*');",
   );
@@ -55,12 +55,15 @@ function ChromaClipWeb({ source, loop, still, black, onReady }: { source: number
   );
 }
 
-function ChromaClip({ source, loop, still, black, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; onReady: () => void }) {
-  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} black={black} onReady={onReady} />;
-  return <ChromaClipNative source={source} loop={loop} still={still} black={black} onReady={onReady} />;
+/** Personal clips: words drawn by WIPP over the video, and seconds skipped at the start. */
+type ClipExtra = { start?: number; text?: string; pop?: boolean };
+
+function ChromaClip({ source, loop, still, black, extra, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; onReady: () => void }) {
+  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} black={black} extra={extra} onReady={onReady} />;
+  return <ChromaClipNative source={source} loop={loop} still={still} black={black} extra={extra} onReady={onReady} />;
 }
 
-function ChromaClipNative({ source, loop, still, black, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; onReady: () => void }) {
+function ChromaClipNative({ source, loop, still, black, extra, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; onReady: () => void }) {
   const [page, setPage] = useState<string | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const ready = useRef(onReady);
@@ -85,8 +88,9 @@ function ChromaClipNative({ source, loop, still, black, onReady }: { source: num
         if (asset) await copyAsync({ from: uri, to: folder + file });
         else await downloadAsync(uri, folder + file);
       }
-      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${still ? "-still" : ""}${black ? "-black" : ""}.html`;
-      await writeAsStringAsync(htmlUri, clipHtml(file, loop) + CLIP_SCRIPT(loop, still, black));
+      const tag = extra ? `-x${Math.abs([...JSON.stringify(extra)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7))}` : "";
+      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${still ? "-still" : ""}${black ? "-black" : ""}${tag}.html`;
+      await writeAsStringAsync(htmlUri, clipHtml(file, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra));
       if (!live) return;
       setDir(folder);
       setPage(htmlUri);
@@ -96,7 +100,7 @@ function ChromaClipNative({ source, loop, still, black, onReady }: { source: num
     return () => {
       live = false;
     };
-  }, [source, loop, still, black]);
+  }, [source, loop, still, black, extra?.start, extra?.text, extra?.pop]);
   if (!page || !dir) return null;
   return (
     <WebView
@@ -124,7 +128,9 @@ function ChromaClipNative({ source, loop, still, black, onReady }: { source: num
   );
 }
 
-function CLIP_SCRIPT(loop?: boolean, still?: boolean, black?: boolean) {
+function CLIP_SCRIPT(loop?: boolean, still?: boolean, black?: boolean, extra?: ClipExtra) {
+  const start = Math.max(0, extra?.start ?? 0);
+  const words = extra?.text ? JSON.stringify(extra.text) : "null";
   return `
 const v=document.getElementById('v'); const c=document.getElementById('c');
 const ctx=c.getContext('2d',{willReadFrequently:true});
@@ -133,17 +139,27 @@ function tell(m){ if(told) return; told=true; try{ window.ReactNativeWebView&&wi
 window.onerror=function(m){ tell(String(m)); };
 function fit(){ const w=window.innerWidth,h=window.innerHeight; if(w<2||h<2) return false; const d=Math.min(2,window.devicePixelRatio||1); const W=Math.round(w*d),H=Math.round(h*d); if(c.width!==W||c.height!==H){ c.width=W; c.height=H; } return true; }
 let blue=null;
+const START=${start}, WORDS=${words}, POP=${extra?.pop ? "true" : "false"};
+// The words are drawn by WIPP (never in the video): always readable, sized to the sticker, never cut.
+function drawWords(dx,dy,dw,dh){ if(!WORDS) return; const dur=(v.duration||6)-START; const t=v.currentTime-START; const at=Math.max(0.6,dur*0.3); if(!${still ? "true" : "false"}&&t<at) return;
+ const k=Math.min(1,(t-at)/0.28); const s=${still ? "1" : "(k<1?0.6+0.55*k-0.15*k*k:1)"};
+ let fs=Math.round(dh*(POP?0.15:0.19)); const fam='"Arial Rounded MT Bold","Arial Black","Helvetica Neue",Arial,sans-serif';
+ ctx.font='900 '+fs+'px '+fam; while(ctx.measureText(WORDS).width>dw*0.86&&fs>8){ fs-=1; ctx.font='900 '+fs+'px '+fam; }
+ const x=dx+dw/2, y=dy+dh*(POP?0.86:0.83);
+ ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
+ ctx.lineWidth=Math.max(2,fs*0.2); ctx.strokeStyle=POP?'#ffffff':'#111111'; ctx.shadowColor='rgba(0,0,0,0.35)'; ctx.shadowBlur=fs*0.15; ctx.shadowOffsetY=fs*0.05;
+ ctx.strokeText(WORDS,0,0); ctx.shadowColor='transparent'; ctx.fillStyle=POP?'#EC2880':'#FFD84D'; ctx.fillText(WORDS,0,0); ctx.restore(); }
 // A sticker that holds green (frog, green text) is filmed on a blue background: the corner of the first image tells which.
 function key(px){ const p=px.data; ${black ? "for(let i=0;i<p.length;i+=4){ const m=Math.max(p[i],p[i+1],p[i+2]); if(m<22) p[i+3]=0; else if(m<70) p[i+3]=Math.round(p[i+3]*(m-22)/48); } return;" : ""} if(blue===null){ blue=p[2]-Math.max(p[0],p[1])>40; }
  for(let i=0;i<p.length;i+=4){ const r=p[i],g=blue?p[i+2]:p[i+1],b=blue?p[i+1]:p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
  if(g>48&&lead>14&&g>(r+b)*0.42){ const spill=Math.min(1,lead/36); p[i+3]=Math.round(p[i+3]*Math.max(0,1-spill*1.35)); }
  else if(g>r&&g>b&&lead>6){ p[blue?i+2:i+1]=maxRB+Math.round(lead*0.25); } } }
-function frame(){ try{ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } }catch(e){ tell('draw '+(e&&e.message||e)); return; } requestAnimationFrame(frame); }
+function frame(){ try{ if(v.readyState>=2 && fit()){ ctx.clearRect(0,0,c.width,c.height); const vw=v.videoWidth||c.width,vh=v.videoHeight||c.height,k=Math.min(c.width/vw,c.height/vh),dw=Math.round(vw*k),dh=Math.round(vh*k),dx=Math.round((c.width-dw)/2),dy=Math.round((c.height-dh)/2); ctx.drawImage(v,dx,dy,dw,dh); const img=ctx.getImageData(dx,dy,dw,dh); key(img); ctx.putImageData(img,dx,dy); drawWords(dx,dy,dw,dh); if(!sent){ sent=true; window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready'); } } }catch(e){ tell('draw '+(e&&e.message||e)); return; } requestAnimationFrame(frame); }
 v.playbackRate=${loop ? "0.92" : "1"};
-v.addEventListener('loadeddata',()=>{ const p=v.play(); if(p&&p.catch) p.catch(function(e){ tell('play '+(e&&e.name||e)); }); });
+v.addEventListener('loadeddata',()=>{ if(START>0&&v.currentTime<START) v.currentTime=START; const p=v.play(); if(p&&p.catch) p.catch(function(e){ tell('play '+(e&&e.name||e)); }); });
 v.addEventListener('error',()=>{ tell('video '+(v.error&&v.error.code)); });
 setTimeout(()=>{ if(!sent) tell('late ready='+v.readyState+' paused='+v.paused+' net='+v.networkState+' size='+window.innerWidth+'x'+window.innerHeight+' t='+v.currentTime); },4000);
-${loop ? "" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
+${loop ? (start ? "v.addEventListener('ended',()=>{ v.currentTime=START; v.play(); });" : "") : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
 ${still ? "v.addEventListener('playing',()=>setTimeout(()=>v.pause(),120));" : ""}
 requestAnimationFrame(frame);
 </script></body></html>`;
@@ -183,16 +199,32 @@ function MotionPoster({ source, motion, box }: { source: number | { uri: string 
 }
 
 /** Personal Wippmoji made in the Studio: « wm:<path of the clip> » in the public « wippmoji » storage. */
+/** "wm:<path>#pop&t=<words>&s=<seconds>": the clip, whether it is a WippPop, its words and its start offset. */
+export function parseWippmojiId(id: string) {
+  const [path = "", flags = ""] = id.slice(3).split("#");
+  const parts = flags.split("&").filter(Boolean);
+  const get = (k: string) => {
+    const p = parts.find((x) => x.startsWith(`${k}=`));
+    return p ? decodeURIComponent(p.slice(k.length + 1)) : undefined;
+  };
+  return { path, pop: parts.includes("pop"), text: get("t"), start: Number(get("s")) || 0 };
+}
+
 export function wippmojiClipUrl(id: string) {
-  const path = id.slice(3).split("#")[0] ?? "";
+  const { path } = parseWippmojiId(id);
   return `https://wippapp.com/wm/${path.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function personalExtra(id: string): ClipExtra | undefined {
+  const { pop, text, start } = parseWippmojiId(id);
+  return text || start ? { pop, text, start } : undefined;
 }
 
 function PersonalSticker({ id, size, fill, still, loop }: { id: string; size: number; fill?: boolean; still?: boolean; loop?: boolean }) {
   const box = fill ? { width: "100%" as const, height: "100%" as const } : { width: size, height: size };
   return (
     <View style={box}>
-      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} onReady={() => undefined} />
+      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} extra={personalExtra(id)} onReady={() => undefined} />
     </View>
   );
 }
