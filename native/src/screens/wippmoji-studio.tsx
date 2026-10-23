@@ -270,7 +270,7 @@ export function WippmojiStudioScreen() {
 
       <Animated.View style={{ flex: 1, opacity: fade, transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
         {step === "intro" ? (
-          <Intro status={status} packs={packs} onBack={leave} onStart={() => go("packs")} onOpenPack={follow} onPlay={(id) => setDemoPop((d) => ({ uri: id, n: (d?.n ?? 0) + 1 }))} topInset={insets.top} bottomInset={insets.bottom} />
+          <Intro status={status} packs={packs} onBack={leave} onStart={(k?: WippmojiKind) => { if (k) setKind(k); go("packs"); }} onOpenPack={follow} onPlay={(id) => setDemoPop((d) => ({ uri: id, n: (d?.n ?? 0) + 1 }))} topInset={insets.top} bottomInset={insets.bottom} />
         ) : null}
 
         {step === "photo" ? (
@@ -565,7 +565,7 @@ function Intro({
   status: WippmojiStatus | null;
   packs: WippmojiPack[];
   onBack: () => void;
-  onStart: () => void;
+  onStart: (kind?: WippmojiKind) => void;
   onOpenPack: (p: WippmojiPack) => void;
   onPlay: (stickerId: string) => void;
   topInset: number;
@@ -573,21 +573,38 @@ function Intro({
 }) {
   const { height } = useWindowDimensions();
   const closed = status && !status.allowed;
+  const [libTab, setLibTab] = useState<WippmojiKind>("moji");
   // Once you have Wippmojis, the Studio opens on them; creating more is the secondary action.
   if (packs.length > 0) {
+    const shown = packs.filter((p) => (p.type === "wipppop") === (libTab === "pop"));
     return (
       <View style={{ flex: 1 }}>
         <View style={{ paddingTop: topInset + 6, paddingHorizontal: 12, paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Press onPress={onBack} hitSlop={10} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <ChevronLeft size={26} color={colors.fg} />
           </Press>
-          <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("Mes Wippmojis")}</Text>
+          <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("WIPP Studio")}</Text>
         </View>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 8, gap: 14, paddingBottom: 110 + bottomInset }}>
+          <Tabs
+            value={libTab}
+            options={[
+              ["moji", tr("Mes Wippmojis")],
+              ["pop", tr("Mes WippPop")],
+            ]}
+            onChange={(v) => setLibTab(v as WippmojiKind)}
+          />
           <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}>
-            {tr("Pour les envoyer : dans une conversation, ouvre le panneau des stickers, onglet Wippmoji.")}
+            {libTab === "pop"
+              ? tr("Touche un WippPop pour le voir en grand.")
+              : tr("Pour les envoyer : dans une conversation, ouvre le panneau des stickers, onglet Wippmoji. Touche un sticker pour le voir en grand.")}
           </Text>
-          {packs.map((p) => (
+          {shown.length === 0 ? (
+            <Text style={{ color: colors.muted, fontSize: 14, textAlign: "center", marginTop: 20 }}>
+              {libTab === "pop" ? tr("Tu n’as pas encore de WippPop.") : tr("Tu n’as pas encore de Wippmojis.")}
+            </Text>
+          ) : null}
+          {shown.map((p) => (
             <Press key={p.id} onPress={() => onOpenPack(p)} style={{ borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 12, gap: 8 }}>
               {p.status === "generating" ? <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("En cours de création : touche pour suivre")}</Text> : null}
               <StickerGrid pack={p} onPlay={onPlay} />
@@ -596,7 +613,7 @@ function Intro({
         </ScrollView>
         {!closed ? (
           <View style={{ position: "absolute", left: 20, right: 20, bottom: bottomInset + 16 }}>
-            <MainButton label={tr("Créer d’autres Wippmojis")} icon={<Plus size={20} color={colors.accentFg} />} onPress={onStart} />
+            <MainButton label={libTab === "pop" ? tr("Créer d’autres WippPop") : tr("Créer d’autres Wippmojis")} icon={<Plus size={20} color={colors.accentFg} />} onPress={() => onStart(libTab)} />
           </View>
         ) : null}
       </View>
@@ -656,7 +673,7 @@ function Intro({
             <Text style={{ color: colors.accent, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Bientôt disponible")}</Text>
           </View>
         ) : (
-          <MainButton label={tr("Commencer")} disabled={!status} onPress={onStart} />
+          <MainButton label={tr("Commencer")} disabled={!status} onPress={() => onStart()} />
         )}
       </View>
     </View>
