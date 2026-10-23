@@ -28,7 +28,7 @@ function clipHtml(file: string, loop?: boolean) {
 }
 
 /** Navigateur (aperçu web) : même lecteur fond vert, dans une iframe (pas de WebView ni de fichiers locaux). */
-function ChromaClipWeb({ source, loop, still, onReady }: { source: number | string; loop?: boolean; still?: boolean; onReady: () => void }) {
+function ChromaClipWeb({ source, loop, still, black, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; onReady: () => void }) {
   const ready = useRef(onReady);
   ready.current = onReady;
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -41,7 +41,7 @@ function ChromaClipWeb({ source, loop, still, onReady }: { source: number | stri
     return () => window.removeEventListener("message", onMsg);
   }, []);
   // opacity 0 : le navigateur joue quand même la vidéo (sur iPhone il faut 0.02), sans laisser de rectangle visible.
-  const html = (clipHtml(uri, loop) + CLIP_SCRIPT(loop, still)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
+  const html = (clipHtml(uri, loop) + CLIP_SCRIPT(loop, still, black)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
     "window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready');",
     "window.parent.postMessage('wipp-clip-ready','*');",
   );
@@ -55,12 +55,12 @@ function ChromaClipWeb({ source, loop, still, onReady }: { source: number | stri
   );
 }
 
-function ChromaClip({ source, loop, still, onReady }: { source: number | string; loop?: boolean; still?: boolean; onReady: () => void }) {
-  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} onReady={onReady} />;
-  return <ChromaClipNative source={source} loop={loop} still={still} onReady={onReady} />;
+function ChromaClip({ source, loop, still, black, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; onReady: () => void }) {
+  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} black={black} onReady={onReady} />;
+  return <ChromaClipNative source={source} loop={loop} still={still} black={black} onReady={onReady} />;
 }
 
-function ChromaClipNative({ source, loop, still, onReady }: { source: number | string; loop?: boolean; still?: boolean; onReady: () => void }) {
+function ChromaClipNative({ source, loop, still, black, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; onReady: () => void }) {
   const [page, setPage] = useState<string | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const ready = useRef(onReady);
@@ -85,8 +85,8 @@ function ChromaClipNative({ source, loop, still, onReady }: { source: number | s
         if (asset) await copyAsync({ from: uri, to: folder + file });
         else await downloadAsync(uri, folder + file);
       }
-      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${still ? "-still" : ""}.html`;
-      await writeAsStringAsync(htmlUri, clipHtml(file, loop) + CLIP_SCRIPT(loop, still));
+      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${still ? "-still" : ""}${black ? "-black" : ""}.html`;
+      await writeAsStringAsync(htmlUri, clipHtml(file, loop) + CLIP_SCRIPT(loop, still, black));
       if (!live) return;
       setDir(folder);
       setPage(htmlUri);
@@ -96,7 +96,7 @@ function ChromaClipNative({ source, loop, still, onReady }: { source: number | s
     return () => {
       live = false;
     };
-  }, [source, loop, still]);
+  }, [source, loop, still, black]);
   if (!page || !dir) return null;
   return (
     <WebView
@@ -124,7 +124,7 @@ function ChromaClipNative({ source, loop, still, onReady }: { source: number | s
   );
 }
 
-function CLIP_SCRIPT(loop?: boolean, still?: boolean) {
+function CLIP_SCRIPT(loop?: boolean, still?: boolean, black?: boolean) {
   return `
 const v=document.getElementById('v'); const c=document.getElementById('c');
 const ctx=c.getContext('2d',{willReadFrequently:true});
@@ -134,7 +134,7 @@ window.onerror=function(m){ tell(String(m)); };
 function fit(){ const w=window.innerWidth,h=window.innerHeight; if(w<2||h<2) return false; const d=Math.min(2,window.devicePixelRatio||1); const W=Math.round(w*d),H=Math.round(h*d); if(c.width!==W||c.height!==H){ c.width=W; c.height=H; } return true; }
 let blue=null;
 // A sticker that holds green (frog, green text) is filmed on a blue background: the corner of the first image tells which.
-function key(px){ const p=px.data; if(blue===null){ blue=p[2]-Math.max(p[0],p[1])>40; }
+function key(px){ const p=px.data; ${black ? "for(let i=0;i<p.length;i+=4){ const m=Math.max(p[i],p[i+1],p[i+2]); if(m<22) p[i+3]=0; else if(m<70) p[i+3]=Math.round(p[i+3]*(m-22)/48); } return;" : ""} if(blue===null){ blue=p[2]-Math.max(p[0],p[1])>40; }
  for(let i=0;i<p.length;i+=4){ const r=p[i],g=blue?p[i+2]:p[i+1],b=blue?p[i+1]:p[i+2],maxRB=Math.max(r,b),lead=g-maxRB;
  if(g>48&&lead>14&&g>(r+b)*0.42){ const spill=Math.min(1,lead/36); p[i+3]=Math.round(p[i+3]*Math.max(0,1-spill*1.35)); }
  else if(g>r&&g>b&&lead>6){ p[blue?i+2:i+1]=maxRB+Math.round(lead*0.25); } } }
@@ -192,7 +192,7 @@ function PersonalSticker({ id, size, fill, still, loop }: { id: string; size: nu
   const box = fill ? { width: "100%" as const, height: "100%" as const } : { width: size, height: size };
   return (
     <View style={box}>
-      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} onReady={() => undefined} />
+      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} black={id.endsWith("#pop")} onReady={() => undefined} />
     </View>
   );
 }

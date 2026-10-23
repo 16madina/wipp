@@ -8,7 +8,7 @@ export interface WippmojiProvider {
   name: "xai" | "mock";
   /** Reference character from the person's photo (data URI). Returns a temporary URL of the image. */
   createReference(photoDataUri: string, prompt: string): Promise<{ url: string }>;
-  startVideo(imageUrl: string, prompt: string, seconds: number): Promise<{ requestId: string }>;
+  startVideo(imageUrl: string, prompt: string, seconds: number, vertical?: boolean): Promise<{ requestId: string }>;
   videoStatus(requestId: string): Promise<VideoStatus>;
 }
 
@@ -35,10 +35,11 @@ class XAIProvider implements WippmojiProvider {
     if (!url) throw new Error("xai_no_image");
     return { url };
   }
-  async startVideo(imageUrl: string, prompt: string, seconds: number) {
+  async startVideo(imageUrl: string, prompt: string, seconds: number, vertical = false) {
+    const extra = vertical ? { aspect_ratio: "9:16", resolution: "480p" } : {};
     const data = await this.call<{ request_id?: string }>("/videos/generations", {
       method: "POST",
-      body: JSON.stringify({ model: this.videoModel, prompt, image: { url: imageUrl }, duration: seconds }),
+      body: JSON.stringify({ model: this.videoModel, prompt, image: { url: imageUrl }, duration: seconds, ...extra }),
     });
     if (!data.request_id) throw new Error("xai_no_request_id");
     return { requestId: data.request_id };

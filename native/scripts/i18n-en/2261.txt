@@ -1,0 +1,12 @@
+2261|What do you want to create?
+2262|Choose the type of creation. You can make the other one afterwards.
+2263|Animated stickers that look like you, to send in your chats. Cartoon or realistic.
+2264|WippPop
+2265|Full-screen animations with your cartoon character, bursting onto your friends' screens.
+2266|Example illustrations
+2267|{0} personalized animated stickers
+2268|{0} big full-screen animations
+2269|Choose your {0} animations
+2270|They will burst onto your friends' screens, with your character.
+2271|Creating your WippPops…
+2272|Choose

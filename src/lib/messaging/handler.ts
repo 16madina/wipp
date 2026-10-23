@@ -204,11 +204,11 @@ export async function handleWippApi(request: Request): Promise<Response> {
       if (method === "GET" && b === "status") return json(await w.wippmojiStatus(me.id));
       if (method === "GET" && b === "library") return json(await w.listWippmojiLibrary(me.id));
       if (method === "POST" && b === "avatars" && !c) {
-        return json(await w.createWippmojiAvatar(me.id, await readBody<{ photo?: string; style?: string; consent?: boolean; framing?: string }>(request)));
+        return json(await w.createWippmojiAvatar(me.id, await readBody<{ photo?: string; style?: string; consent?: boolean; framing?: string; kind?: string }>(request)));
       }
       if (method === "POST" && b === "avatars" && c && d === "delete") return json(await w.deleteWippmojiAvatar(me.id, c));
       if (method === "POST" && b === "packs" && !c) {
-        return json(await w.createWippmojiPack(me.id, await readBody<{ avatarId?: string; expressions?: string[]; language?: string | null }>(request)));
+        return json(await w.createWippmojiPack(me.id, await readBody<{ avatarId?: string; expressions?: string[]; language?: string | null; type?: string }>(request)));
       }
       if (method === "GET" && b === "packs" && c) return json(await w.getWippmojiPack(me.id, c));
       throw new WippHttpError(404, "not_found", "Route inconnue.");

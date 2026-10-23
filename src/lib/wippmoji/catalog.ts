@@ -72,3 +72,43 @@ export function referencePrompt(style: WippmojiStyle, framing: WippmojiFraming =
     "Centered and fully inside the frame with margin. Perfectly flat, solid pure green background (#00FF00): no shadow, no glow, no gradient, and no green on the person or the clothes.",
   ].join(" ");
 }
+
+/* ——— WippPop: full-screen animations with your own cartoon character (played over the chat, black is removed). ——— */
+
+export const WIPPPOP_SIZE = Number(process.env.WIPPPOP_PACK_SIZE || 3);
+export const WIPPPOP_SECONDS = 8;
+
+export type WippPopAnimation = { id: string; fr: string; en: string; action: string };
+
+export const WIPPPOP_ANIMATIONS: WippPopAnimation[] = [
+  { id: "coucou", fr: "Coucou !", en: "Hey!", action: "runs in from the left edge of the screen, stops in the center, waves hello with a huge smile and a playful wink" },
+  { id: "bisous", fr: "Bisous", en: "Kisses", action: "walks in from the right edge, blows a big kiss toward the viewer and many small red hearts fly toward the camera and fill the screen" },
+  { id: "bravo", fr: "Bravo !", en: "Bravo!", action: "jumps in from the bottom of the screen, claps enthusiastically, then throws both arms up in victory while colorful confetti bursts around" },
+  { id: "je-taime", fr: "Je t’aime", en: "Love you", action: "slides in holding a giant red heart, hugs it tenderly, then the heart bursts into many little hearts that float up" },
+  { id: "anniversaire", fr: "Joyeux anniversaire !", en: "Happy birthday!", action: "walks in carrying a birthday cake with lit candles, blows the candles out, and balloons float up from the bottom" },
+  { id: "bonne-nuit", fr: "Bonne nuit", en: "Good night", action: "floats in sitting on a crescent moon, yawns, waves sleepily and falls asleep while small stars twinkle around" },
+  { id: "bonjour", fr: "Bonjour !", en: "Good morning!", action: "pops up from the bottom holding a steaming cup of coffee, stretches happily and a smiling sun rises behind" },
+  { id: "merci", fr: "Merci !", en: "Thank you!", action: "runs in holding a bouquet of flowers, offers it to the viewer with a little bow and a warm smile" },
+  { id: "mdr", fr: "MDR !", en: "LOL!", action: "rolls in laughing so hard, falls on the floor holding the belly, legs kicking, tears of joy flying" },
+  { id: "felicitations", fr: "Félicitations !", en: "Congrats!", action: "pops a party popper toward the camera, streamers fly everywhere, then dances a little victory dance" },
+  { id: "tu-me-manques", fr: "Tu me manques", en: "Miss you", action: "walks in slowly hugging a big pillow, looks at the viewer with sad tender eyes, then opens the arms for a hug" },
+  { id: "jarrive", fr: "J’arrive !", en: "On my way!", action: "zooms in riding a small scooter from the left, brakes in the center, waves, then zooms out to the right" },
+];
+
+export function popReferencePrompt() {
+  return [
+    WIPPMOJI_STYLES.cartoon.reference,
+    "Full body from head to feet, standing, friendly smile, centered and small in the frame with lots of empty space around. Vertical 9:16 composition.",
+    "Perfectly flat pure black background (#000000), no shadow, no floor, no outline. Bright, colorful clothes (no black clothing). No text.",
+  ].join(" ");
+}
+
+export function popPrompt(a: WippPopAnimation, words: string | null) {
+  return [
+    "Use ONLY the attached image as the starting frame and only subject.",
+    "Premium 3D Pixar-quality cartoon animation, joyful, lots of movement across the whole vertical 9:16 screen.",
+    `The character ${a.action}.`,
+    words ? `Then the big bold glossy words "${words}" with a white outline bounce in, centered and fully visible with a wide margin from every edge; the spelling never changes.` : "No text and no letters anywhere.",
+    "Keep the same face, hair and clothes. The background stays perfectly flat pure black (#000000) the whole time: no floor, no glow, no gradient. Static camera.",
+  ].join(" ");
+}

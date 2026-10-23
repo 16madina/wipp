@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
-import { PACK_SIZE, WIPPMOJI_EXPRESSIONS, expressionPrompt, referencePrompt, type WippmojiStyle } from "./catalog";
+import { PACK_SIZE, WIPPMOJI_EXPRESSIONS, WIPPPOP_ANIMATIONS, WIPPPOP_SECONDS, WIPPPOP_SIZE, expressionPrompt, popPrompt, popReferencePrompt, referencePrompt, type WippmojiStyle } from "./catalog";
 import { wippmojiProvider } from "./providers";
 
 const VIDEO_SECONDS = Number(process.env.WIPPMOJI_VIDEO_SECONDS || 6);
@@ -61,42 +61,47 @@ export async function wippmojiStatus(profileId: string) {
   } catch {
     allowed = false;
   }
-  return { allowed, provider: wippmojiProvider().name, packSize: PACK_SIZE, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })) };
+  return { allowed, provider: wippmojiProvider().name, packSize: PACK_SIZE, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en }) => ({ id, fr, en })), pop: { packSize: WIPPPOP_SIZE, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en }) => ({ id, fr, en })) } };
 }
 
-export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string }) {
+export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string; kind?: string }) {
   await assertAllowed(profileId);
+  const kind = input.kind === "pop" ? "pop" : "moji";
   if (!input.consent) throw new WippHttpError(400, "consent_required", "Ton accord est nécessaire.");
-  const style: WippmojiStyle = input.style === "realistic" ? "realistic" : "cartoon";
+  const style: WippmojiStyle = input.style === "realistic" && kind === "moji" ? "realistic" : "cartoon";
   const photo = input.photo ?? "";
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(photo)) throw new WippHttpError(400, "bad_photo", "Photo invalide.");
   if (photo.length > 4_000_000) throw new WippHttpError(413, "photo_too_big", "Photo trop lourde.");
   if ((await usedToday(profileId, "reference")) >= LIMITS.referencesPerDay) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
   const provider = wippmojiProvider();
-  const made = await provider.createReference(photo, referencePrompt(style, input.framing === "face" || input.framing === "full" ? input.framing : "bust"));
+  const made = await provider.createReference(photo, kind === "pop" ? popReferencePrompt() : referencePrompt(style, input.framing === "face" || input.framing === "full" ? input.framing : "bust"));
   const id = uid("wma");
   const path = `${profileId}/${id}/reference.${provider.name === "mock" ? "webp" : "jpg"}`;
   await keep(made.url, path, provider.name === "mock" ? "image/webp" : "image/jpeg");
   await logUsage(profileId, "reference", provider.name, null, COST.reference);
   const sql = await getSql();
-  await sql`insert into wippmoji_avatars (id, profile_id, style, reference_path, provider) values (${id}, ${profileId}, ${style}, ${path}, ${provider.name})`;
-  return { id, style, referenceUrl: await wippmojiPublicUrl(path) };
+  await sql`insert into wippmoji_avatars (id, profile_id, style, reference_path, provider, kind) values (${id}, ${profileId}, ${style}, ${path}, ${provider.name}, ${kind})`;
+  return { id, style, kind, referenceUrl: await wippmojiPublicUrl(path) };
 }
 
-export async function createWippmojiPack(profileId: string, input: { avatarId?: string; expressions?: string[]; language?: string | null }) {
+export async function createWippmojiPack(profileId: string, input: { avatarId?: string; expressions?: string[]; language?: string | null; type?: string }) {
   await assertAllowed(profileId);
+  const pop = input.type === "wipppop";
   const sql = await getSql();
-  const avatars = await sql<{ id: string; style: WippmojiStyle; reference_path: string }>`
-    select id, style, reference_path from wippmoji_avatars where id = ${input.avatarId ?? ""} and profile_id = ${profileId} and status = 'ready' limit 1`;
+  const avatars = await sql<{ id: string; style: WippmojiStyle; reference_path: string; kind: string }>`
+    select id, style, reference_path, kind from wippmoji_avatars where id = ${input.avatarId ?? ""} and profile_id = ${profileId} and status = 'ready' limit 1`;
   const avatar = avatars[0];
   if (!avatar) throw new WippHttpError(404, "avatar_not_found", "Personnage introuvable.");
+  if (pop !== (avatar.kind === "pop")) throw new WippHttpError(400, "wrong_character", "Ce personnage ne convient pas à ce pack.");
+  const size = pop ? WIPPPOP_SIZE : PACK_SIZE;
+  const catalog: { id: string; fr: string; en: string }[] = pop ? WIPPPOP_ANIMATIONS : WIPPMOJI_EXPRESSIONS;
   const ids = [...new Set(input.expressions ?? [])];
-  const chosen = ids.map((id) => WIPPMOJI_EXPRESSIONS.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => Boolean(e));
-  if (chosen.length !== PACK_SIZE) throw new WippHttpError(400, "pack_size", `Choisis exactement ${PACK_SIZE} expressions.`);
-  if ((await usedToday(profileId, "video")) + PACK_SIZE > LIMITS.packsPerDay * PACK_SIZE) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
+  const chosen = ids.map((id) => catalog.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => Boolean(e));
+  if (chosen.length !== size) throw new WippHttpError(400, "pack_size", `Choisis exactement ${size} animations.`);
+  if ((await usedToday(profileId, "video")) + size > LIMITS.packsPerDay * PACK_SIZE) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
   const language = input.language === "fr" || input.language === "en" ? input.language : null;
   const packId = uid("wmp");
-  await sql`insert into wippmoji_packs (id, profile_id, avatar_id, language) values (${packId}, ${profileId}, ${avatar.id}, ${language})`;
+  await sql`insert into wippmoji_packs (id, profile_id, avatar_id, language, pack_type) values (${packId}, ${profileId}, ${avatar.id}, ${language}, ${pop ? "wipppop" : "expressions"})`;
   const provider = wippmojiProvider();
   const referenceUrl = await wippmojiPublicUrl(avatar.reference_path);
   for (const e of chosen) {
@@ -105,8 +110,9 @@ export async function createWippmojiPack(profileId: string, input: { avatarId?: 
     let requestId: string | null = null;
     let error: string | null = null;
     try {
-      requestId = (await provider.startVideo(referenceUrl, expressionPrompt(avatar.style, e, label), VIDEO_SECONDS)).requestId;
-      await logUsage(profileId, "video", provider.name, VIDEO_SECONDS, VIDEO_SECONDS * COST.videoPerSecond);
+      const secs = pop ? WIPPPOP_SECONDS : VIDEO_SECONDS;
+      requestId = (await provider.startVideo(referenceUrl, videoPrompt(pop, avatar.style, e.id, label), secs, pop)).requestId;
+      await logUsage(profileId, "video", provider.name, secs, secs * COST.videoPerSecond);
     } catch (err) {
       error = err instanceof Error ? err.message.slice(0, 300) : "start_failed";
     }
@@ -116,13 +122,18 @@ export async function createWippmojiPack(profileId: string, input: { avatarId?: 
   return getWippmojiPack(profileId, packId);
 }
 
+function videoPrompt(pop: boolean, style: WippmojiStyle, id: string, label: string | null) {
+  if (pop) return popPrompt(WIPPPOP_ANIMATIONS.find((x) => x.id === id)!, label);
+  return expressionPrompt(style, WIPPMOJI_EXPRESSIONS.find((x) => x.id === id)!, label);
+}
+
 type AssetRow = { id: string; expression_id: string; label: string | null; provider_request_id: string | null; media_path: string | null; status: string; attempts: number };
 
 /** Also moves the generation forward: each call checks the stickers still being made. */
 export async function getWippmojiPack(profileId: string, packId: string) {
   const sql = await getSql();
-  const packs = await sql<{ id: string; avatar_id: string; status: string; language: string | null; reference_path: string; style: WippmojiStyle }>`
-    select p.id, p.avatar_id, p.status, p.language, a.reference_path, a.style from wippmoji_packs p join wippmoji_avatars a on a.id = p.avatar_id
+  const packs = await sql<{ id: string; avatar_id: string; status: string; language: string | null; reference_path: string; style: WippmojiStyle; pack_type: string }>`
+    select p.id, p.avatar_id, p.status, p.language, a.reference_path, a.style, p.pack_type from wippmoji_packs p join wippmoji_avatars a on a.id = p.avatar_id
     where p.id = ${packId} and p.profile_id = ${profileId} and p.status <> 'deleted' limit 1`;
   const pack = packs[0];
   if (!pack) throw new WippHttpError(404, "pack_not_found", "Pack introuvable.");
@@ -138,10 +149,12 @@ export async function getWippmojiPack(profileId: string, packId: string) {
       } else if (st.status === "failed") {
         // One more try with the same reference before giving up on this sticker.
         if (a.attempts < MAX_ATTEMPTS) {
-          const e = WIPPMOJI_EXPRESSIONS.find((x) => x.id === a.expression_id)!;
+          const pop = pack.pack_type === "wipppop";
+          const e = (pop ? WIPPPOP_ANIMATIONS : WIPPMOJI_EXPRESSIONS).find((x) => x.id === a.expression_id)!;
           const label = pack.language === "fr" || pack.language === "en" ? e[pack.language] : null;
-          const { requestId } = await provider.startVideo(await wippmojiPublicUrl(pack.reference_path), expressionPrompt(pack.style, e, label), VIDEO_SECONDS);
-          await logUsage(profileId, "video", provider.name, VIDEO_SECONDS, VIDEO_SECONDS * COST.videoPerSecond);
+          const secs = pop ? WIPPPOP_SECONDS : VIDEO_SECONDS;
+          const { requestId } = await provider.startVideo(await wippmojiPublicUrl(pack.reference_path), videoPrompt(pop, pack.style, e.id, label), secs, pop);
+          await logUsage(profileId, "video", provider.name, secs, secs * COST.videoPerSecond);
           await sql`update wippmoji_assets set provider_request_id = ${requestId}, attempts = attempts + 1, updated_at = now() where id = ${a.id}`;
         } else {
           await sql`update wippmoji_assets set status = 'failed', error = ${st.error ?? "failed"}, updated_at = now() where id = ${a.id}`;
@@ -160,6 +173,7 @@ export async function getWippmojiPack(profileId: string, packId: string) {
   }
   return {
     id: pack.id,
+    type: pack.pack_type === "wipppop" ? ("wipppop" as const) : ("expressions" as const),
     status: pack.status,
     posterUrl: await wippmojiPublicUrl(pack.reference_path),
     stickers: await Promise.all(
@@ -170,11 +184,11 @@ export async function getWippmojiPack(profileId: string, packId: string) {
 
 export async function listWippmojiLibrary(profileId: string) {
   const sql = await getSql();
-  const avatars = await sql<{ id: string; style: string; reference_path: string; created_at: string }>`
-    select id, style, reference_path, created_at::text from wippmoji_avatars where profile_id = ${profileId} and status = 'ready' order by created_at desc limit 20`;
+  const avatars = await sql<{ id: string; style: string; kind: string; reference_path: string; created_at: string }>`
+    select id, style, kind, reference_path, created_at::text from wippmoji_avatars where profile_id = ${profileId} and status = 'ready' order by created_at desc limit 20`;
   const packs = await sql<{ id: string }>`select id from wippmoji_packs where profile_id = ${profileId} and status <> 'deleted' order by created_at desc limit 20`;
   return {
-    avatars: await Promise.all(avatars.map(async (a) => ({ id: a.id, style: a.style, referenceUrl: await wippmojiPublicUrl(a.reference_path), createdAt: a.created_at }))),
+    avatars: await Promise.all(avatars.map(async (a) => ({ id: a.id, style: a.style, kind: a.kind, referenceUrl: await wippmojiPublicUrl(a.reference_path), createdAt: a.created_at }))),
     packs: await Promise.all(packs.map((p) => getWippmojiPack(profileId, p.id))),
   };
 }

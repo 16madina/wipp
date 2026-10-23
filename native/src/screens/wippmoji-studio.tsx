@@ -22,6 +22,7 @@ import {
   type PhotoCrop,
   type WippmojiAvatar,
   type WippmojiFraming,
+  type WippmojiKind,
   type WippmojiPack,
   type WippmojiStatus,
   type WippmojiStyle,
@@ -54,7 +55,7 @@ const EXPRESSION_ART: Record<string, number> = {
   ok: require("../../assets/wippmoji-studio/expr-ok.jpg"),
 };
 
-type Step = "intro" | "photo" | "crop" | "style" | "making-avatar" | "preview" | "packs" | "expressions" | "making-pack" | "done";
+type Step = "intro" | "kind" | "photo" | "crop" | "style" | "making-avatar" | "preview" | "packs" | "expressions" | "making-pack" | "done";
 type Photo = { uri: string; width: number; height: number };
 type StepState = "done" | "active" | "todo";
 
@@ -72,9 +73,10 @@ function errorMessage(err: unknown) {
 
 /** Wippmoji Studio: your photo becomes your character, then a pack of animated stickers. */
 export function WippmojiStudioScreen() {
-  const pop = useWippStore((s) => s.pop);
+  const leave = useWippStore((s) => s.pop);
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>("intro");
+  const [kind, setKind] = useState<WippmojiKind>("moji");
   const [status, setStatus] = useState<WippmojiStatus | null>(null);
   const [packs, setPacks] = useState<WippmojiPack[]>([]);
   const [avatars, setAvatars] = useState<WippmojiAvatar[]>([]);
@@ -114,7 +116,9 @@ export function WippmojiStudioScreen() {
     Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
   };
 
-  const packSize = status?.packSize ?? 10;
+  const pop = kind === "pop";
+  const packSize = pop ? (status?.pop?.packSize ?? 3) : (status?.packSize ?? 10);
+  const choices = pop ? (status?.pop?.animations ?? []) : (status?.expressions ?? []);
 
   async function pick(camera: boolean) {
     setError("");
@@ -134,7 +138,7 @@ export function WippmojiStudioScreen() {
     }
     setPhoto({ uri: a.uri, ...size });
     // A tall photo is most likely a full-body one.
-    setFraming(size.height / size.width > 1.45 ? "full" : "bust");
+    setFraming(pop || size.height / size.width > 1.45 ? "full" : "bust");
     go("crop");
   }
 
@@ -142,12 +146,12 @@ export function WippmojiStudioScreen() {
     if (!photo) return;
     go("making-avatar");
     try {
-      const made = await createWippmojiAvatar(await preparePhoto(photo.uri, crop ?? undefined), style, framing);
+      const made = await createWippmojiAvatar(await preparePhoto(photo.uri, crop ?? undefined), pop ? "cartoon" : style, framing, kind);
       setAvatar(made);
       setAvatars((list) => [made, ...list.filter((x) => x.id !== made.id)]);
       go("preview");
     } catch (err) {
-      go("style");
+      go(pop ? "crop" : "style");
       setError(errorMessage(err));
     }
   }
@@ -181,7 +185,7 @@ export function WippmojiStudioScreen() {
     setPack(null);
     go("making-pack");
     try {
-      follow(await createWippmojiPack(avatar.id, chosen, language));
+      follow(await createWippmojiPack(avatar.id, chosen, language, pop ? "wipppop" : "expressions"));
     } catch (err) {
       go("expressions");
       setError(errorMessage(err));
@@ -190,9 +194,9 @@ export function WippmojiStudioScreen() {
 
   const back = () => {
     if (poll.current && step === "making-pack") clearInterval(poll.current);
-    const prev: Partial<Record<Step, Step>> = { photo: "intro", crop: "photo", style: "crop", preview: "style", packs: "preview", expressions: "packs", done: "intro" };
+    const prev: Partial<Record<Step, Step>> = { kind: "intro", packs: "kind", photo: "packs", crop: "photo", style: "crop", preview: pop ? "crop" : "style", expressions: "preview", done: "intro" };
     const to = prev[step];
-    if (!to) pop();
+    if (!to) leave();
     else go(to);
   };
 
@@ -231,7 +235,7 @@ export function WippmojiStudioScreen() {
           ) : step === "expressions" ? (
             <>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold" }}>{tr("Wippmoji Expressions")}</Text>
+                <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold" }}>{pop ? tr("WippPop Premium") : tr("Wippmoji Expressions")}</Text>
                 <View style={{ marginTop: 6, flexDirection: "row" }}>
                   <ProgressBar value={chosen.length / packSize} />
                 </View>
@@ -251,7 +255,34 @@ export function WippmojiStudioScreen() {
 
       <Animated.View style={{ flex: 1, opacity: fade, transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
         {step === "intro" ? (
-          <Intro status={status} packs={packs} onBack={pop} onStart={() => go("photo")} onOpenPack={follow} topInset={insets.top} bottomInset={insets.bottom} />
+          <Intro status={status} packs={packs} onBack={leave} onStart={() => go("kind")} onOpenPack={follow} topInset={insets.top} bottomInset={insets.bottom} />
+        ) : null}
+
+        {step === "kind" ? (
+          <Page bottomInset={insets.bottom} error={error} footer={null}>
+            <Title title={tr("Que veux-tu créer ?")} sub={tr("Choisis le type de création. Tu pourras faire l’autre ensuite.")} />
+            <KindCard
+              art={EXPRESSION_ART.bisous}
+              title={tr("Wippmoji")}
+              sub={tr("Des stickers animés à ton image, à envoyer dans tes conversations. Cartoon ou réaliste.")}
+              onPress={() => {
+                setKind("moji");
+                go("packs");
+              }}
+            />
+            <KindCard
+              art={ART.packWippPop}
+              title={tr("WippPop")}
+              sub={tr("Des animations plein écran avec ton personnage cartoon, qui entrent dans l’écran de tes amis.")}
+              tall
+              onPress={() => {
+                setKind("pop");
+                setStyle("cartoon");
+                go("packs");
+              }}
+            />
+            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center" }}>{tr("Illustrations d’exemple")}</Text>
+          </Page>
         ) : null}
 
         {step === "photo" ? (
@@ -291,7 +322,7 @@ export function WippmojiStudioScreen() {
         ) : null}
 
         {step === "crop" && photo ? (
-          <Page bottomInset={insets.bottom} error={error} footer={<MainButton label={tr("Continuer")} onPress={() => go("style")} disabled={!crop} />}>
+          <Page bottomInset={insets.bottom} error={error} footer={<MainButton label={tr("Continuer")} onPress={() => (pop ? void makeAvatar() : go("style"))} disabled={!crop} />}>
             <Title title={tr("Recadre ta photo")} sub={tr("Positionne et ajuste la zone pour un meilleur résultat.")} />
             <Cropper photo={photo} framing={framing} onCrop={setCrop} />
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -344,8 +375,8 @@ export function WippmojiStudioScreen() {
             tallFooter
             footer={
               <View style={{ gap: 10 }}>
-                <MainButton label={tr("Recommencer")} variant="secondary" icon={<RotateCcw size={18} color={colors.fg} />} onPress={() => go("style")} />
-                <MainButton label={tr("Valider mon personnage")} icon={<Check size={18} color={colors.accentFg} />} onPress={() => go("packs")} />
+                <MainButton label={tr("Recommencer")} variant="secondary" icon={<RotateCcw size={18} color={colors.fg} />} onPress={() => go(pop ? "crop" : "style")} />
+                <MainButton label={tr("Valider mon personnage")} icon={<Check size={18} color={colors.accentFg} />} onPress={() => { setChosen([]); go("expressions"); }} />
               </View>
             }
           >
@@ -359,11 +390,11 @@ export function WippmojiStudioScreen() {
                 <Sparkles size={16} color={colors.accent} />
               </View>
             </View>
-            {avatars.length > 1 ? (
+            {avatars.filter((a) => (a.kind ?? "moji") === kind).length > 1 ? (
               <>
                 <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Tes personnages créés : touche pour choisir")}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                  {avatars.map((a) => (
+                  {avatars.filter((a) => (a.kind ?? "moji") === kind).map((a) => (
                     <Press key={a.id} onPress={() => setAvatar(a)} style={{ width: 70, height: 70, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 2, borderColor: a.id === avatar.id ? colors.accent : colors.hair }}>
                       <Image source={{ uri: a.referenceUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
                     </Press>
@@ -379,16 +410,27 @@ export function WippmojiStudioScreen() {
         {step === "packs" ? (
           <Page bottomInset={insets.bottom} error={error} footer={null}>
             <Title title={tr("Choisis ton pack")} sub={tr("Sélectionne le pack qui te correspond.")} />
-            <PackCard
-              art={ART.packExpressions}
-              title={tr("Wippmoji Expressions")}
-              sub={tr("10 stickers animés personnalisés")}
-              price="2,99 $ CAD"
-              note={status?.allowed ? tr("Offert pendant les essais") : null}
-              icon={<Smile size={16} color={colors.accent} />}
-              onPress={() => go("expressions")}
-            />
-            <PackCard art={ART.packWippPop} title={tr("WippPop Premium")} sub={tr("6 grandes animations plein écran")} price="4,99 $ CAD" soon icon={<Star size={16} color={colors.accent} />} />
+            {!pop ? (
+              <PackCard
+                art={ART.packExpressions}
+                title={tr("Wippmoji Expressions")}
+                sub={tr("{0} stickers animés personnalisés", status?.packSize ?? 10)}
+                price="2,99 $ CAD"
+                note={status?.allowed ? tr("Offert pendant les essais") : null}
+                icon={<Smile size={16} color={colors.accent} />}
+                onPress={() => go("photo")}
+              />
+            ) : (
+              <PackCard
+                art={ART.packWippPop}
+                title={tr("WippPop Premium")}
+                sub={tr("{0} grandes animations plein écran", status?.pop?.packSize ?? 3)}
+                price="4,99 $ CAD"
+                note={status?.allowed ? tr("Offert pendant les essais") : null}
+                icon={<Star size={16} color={colors.accent} />}
+                onPress={() => go("photo")}
+              />
+            )}
             <PackCard art={ART.packUltimate} title={tr("WIPP Ultimate")} sub={tr("10 Wippmojis + 6 WippPop")} price="6,99 $ CAD" badge={tr("Meilleure offre")} soon icon={<Crown size={16} color={colors.accent} />} />
             <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", lineHeight: 16 }}>{tr("Prix indicatifs. Le paiement dans l’application arrive bientôt.")}</Text>
           </Page>
@@ -400,14 +442,18 @@ export function WippmojiStudioScreen() {
             error={error}
             footer={<MainButton label={`${tr("Continuer")} (${chosen.length}/${packSize})`} disabled={chosen.length !== packSize} onPress={() => void makePack()} />}
           >
-            <Title title={tr("Choisis tes {0} expressions", packSize)} sub={tr("Sélectionne les stickers que tu utilises le plus souvent.")} />
+            <Title
+              title={pop ? tr("Choisis tes {0} animations", packSize) : tr("Choisis tes {0} expressions", packSize)}
+              sub={pop ? tr("Elles entreront dans l’écran de tes amis, avec ton personnage.") : tr("Sélectionne les stickers que tu utilises le plus souvent.")}
+            />
             <ExpressionGrid
-              expressions={status.expressions}
+              expressions={choices}
+              demo={!pop}
               chosen={chosen}
               fallback={avatar?.referenceUrl ?? null}
               onToggle={(id) => setChosen((list) => (list.includes(id) ? list.filter((x) => x !== id) : list.length < packSize ? [...list, id] : list))}
             />
-            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center" }}>{tr("Miniatures d’exemple : tes stickers seront créés avec ton personnage.")}</Text>
+            {!pop ? <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center" }}>{tr("Miniatures d’exemple : tes stickers seront créés avec ton personnage.")}</Text> : null}
             <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 4 }}>{tr("Texte sur les stickers")}</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {([["fr", tr("Français")], ["en", "English"], [null, tr("Sans texte")]] as const).map(([id, label]) => (
@@ -426,11 +472,11 @@ export function WippmojiStudioScreen() {
         {step === "making-pack" ? (
           <Generation
             image={avatar ? { uri: avatar.referenceUrl } : pack ? { uri: pack.posterUrl } : ART.preview}
-            title={tr("Création de tes Wippmojis…")}
+            title={pop ? tr("Création de tes WippPop…") : tr("Création de tes Wippmojis…")}
             progress={pack ? { done: pack.stickers.filter((s) => s.status !== "pending").length, total: pack.stickers.length } : { done: 0, total: packSize }}
             steps={packSteps()}
             note={tr("Cela peut prendre quelques minutes. Tu peux quitter cet écran : ton pack t’attendra dans « Mes Wippmojis ».")}
-            onLeave={pop}
+            onLeave={leave}
             bottomInset={insets.bottom}
           />
         ) : null}
@@ -722,6 +768,24 @@ function SourceButton({ icon, label, onPress, disabled }: { icon: ReactNode; lab
   );
 }
 
+function KindCard({ art, title, sub, onPress, tall }: { art: number; title: string; sub: string; onPress: () => void; tall?: boolean }) {
+  return (
+    <Press onPress={onPress} style={{ borderRadius: 22, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, flexDirection: "row", minHeight: tall ? 170 : 150 }}>
+      <View style={{ width: 130, backgroundColor: colors.surface2 }}>
+        <Image source={art} style={{ width: "100%", height: "100%" }} contentFit="cover" contentPosition="top" />
+      </View>
+      <View style={{ flex: 1, padding: 16, gap: 8, justifyContent: "center" }}>
+        <Text style={{ color: colors.fg, fontSize: 21, fontFamily: "Inter_700Bold" }}>{title}</Text>
+        <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>{sub}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+          <Text style={{ color: colors.accent, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{tr("Choisir")}</Text>
+          <ArrowRight size={16} color={colors.accent} />
+        </View>
+      </View>
+    </Press>
+  );
+}
+
 function StyleCard({ art, title, sub, on, onPress }: { art: number; title: string; sub: string; on: boolean; onPress: () => void }) {
   return (
     <Press onPress={onPress} style={{ borderRadius: 22, overflow: "hidden", backgroundColor: colors.surface, borderWidth: on ? 2 : 1, borderColor: on ? colors.accent : colors.hair }}>
@@ -807,13 +871,13 @@ function PackCard({
   );
 }
 
-function ExpressionGrid({ expressions, chosen, fallback, onToggle }: { expressions: { id: string; fr: string; en: string }[]; chosen: string[]; fallback: string | null; onToggle: (id: string) => void }) {
+function ExpressionGrid({ expressions, chosen, fallback, onToggle, demo = true }: { expressions: { id: string; fr: string; en: string }[]; chosen: string[]; fallback: string | null; onToggle: (id: string) => void; demo?: boolean }) {
   const en = trLang() === "en";
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
       {expressions.map((e) => {
         const on = chosen.includes(e.id);
-        const art = EXPRESSION_ART[e.id];
+        const art = demo ? EXPRESSION_ART[e.id] : undefined;
         return (
           <Press key={e.id} onPress={() => onToggle(e.id)} style={{ width: "31.5%", alignItems: "center", gap: 6 }}>
             <View style={{ width: "100%", aspectRatio: 1, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surface, borderWidth: on ? 2.5 : 1, borderColor: on ? colors.accent : colors.hair }}>
@@ -937,14 +1001,16 @@ function Cropper({ photo, framing, onCrop }: { photo: Photo; framing: WippmojiFr
 
 /** The stickers of a pack: each shows its first image until it is ready. */
 function StickerGrid({ pack }: { pack: WippmojiPack }) {
+  const pop = pack.type === "wipppop";
+  const h = pop ? 150 : 84;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
       {pack.stickers.map((s) => {
-        const def = wippmojiStickerDef(s);
+        const def = wippmojiStickerDef(s, pop);
         return (
           <View key={s.id} style={{ width: 92, alignItems: "center", gap: 4 }}>
-            <View style={{ width: 84, height: 84, borderRadius: 14, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-              {def ? <WippSticker id={def.id} size={84} /> : s.status === "failed" ? <RotateCcw size={22} color={colors.muted} /> : <ActivityIndicator color={colors.accent} />}
+            <View style={{ width: 84, height: h, borderRadius: 14, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              {def ? <WippSticker id={def.id} size={84} fill={pop} /> : s.status === "failed" ? <RotateCcw size={22} color={colors.muted} /> : <ActivityIndicator color={colors.accent} />}
             </View>
             <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11 }}>
               {s.label ?? ""}

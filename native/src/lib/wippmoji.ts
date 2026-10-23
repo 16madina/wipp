@@ -4,10 +4,12 @@ import { wippApi } from "./proximity/wipp-session";
 import type { StickerDef } from "./stickers";
 
 export type WippmojiStyle = "cartoon" | "realistic";
-export type WippmojiStatus = { allowed: boolean; provider: "xai" | "mock"; packSize: number; expressions: { id: string; fr: string; en: string }[] };
+export type WippmojiKind = "moji" | "pop";
+export type WippmojiChoice = { id: string; fr: string; en: string };
+export type WippmojiStatus = { allowed: boolean; provider: "xai" | "mock"; packSize: number; expressions: WippmojiChoice[]; pop?: { packSize: number; animations: WippmojiChoice[] } };
 export type WippmojiSticker = { id: string; expression: string; label: string | null; status: "pending" | "ready" | "failed" | "deleted"; path: string | null; url: string | null };
-export type WippmojiPack = { id: string; status: "generating" | "ready" | "partial" | "deleted"; posterUrl: string; stickers: WippmojiSticker[] };
-export type WippmojiAvatar = { id: string; style: WippmojiStyle; referenceUrl: string };
+export type WippmojiPack = { id: string; type?: "expressions" | "wipppop"; status: "generating" | "ready" | "partial" | "deleted"; posterUrl: string; stickers: WippmojiSticker[] };
+export type WippmojiAvatar = { id: string; style: WippmojiStyle; kind?: WippmojiKind; referenceUrl: string };
 
 export const wippmojiStatus = () => wippApi<WippmojiStatus>("wippmoji/status");
 export const wippmojiLibrary = () => wippApi<{ avatars: (WippmojiAvatar & { createdAt: string })[]; packs: WippmojiPack[] }>("wippmoji/library");
@@ -25,18 +27,18 @@ export async function preparePhoto(uri: string, crop?: PhotoCrop) {
   return `data:image/jpeg;base64,${out.base64}`;
 }
 
-export function createWippmojiAvatar(photo: string, style: WippmojiStyle, framing: WippmojiFraming = "bust") {
-  return wippApi<WippmojiAvatar>("wippmoji/avatars", { method: "POST", body: JSON.stringify({ photo, style, framing, consent: true }) });
+export function createWippmojiAvatar(photo: string, style: WippmojiStyle, framing: WippmojiFraming = "bust", kind: WippmojiKind = "moji") {
+  return wippApi<WippmojiAvatar>("wippmoji/avatars", { method: "POST", body: JSON.stringify({ photo, style, framing, kind, consent: true }) });
 }
 
-export function createWippmojiPack(avatarId: string, expressions: string[], language: "fr" | "en" | null) {
-  return wippApi<WippmojiPack>("wippmoji/packs", { method: "POST", body: JSON.stringify({ avatarId, expressions, language }) });
+export function createWippmojiPack(avatarId: string, expressions: string[], language: "fr" | "en" | null, type: "expressions" | "wipppop" = "expressions") {
+  return wippApi<WippmojiPack>("wippmoji/packs", { method: "POST", body: JSON.stringify({ avatarId, expressions, language, type }) });
 }
 
 /** A finished sticker, ready to be sent like the built-in ones (the id carries where the clip is). */
-export function wippmojiStickerDef(s: WippmojiSticker): StickerDef | null {
+export function wippmojiStickerDef(s: WippmojiSticker, pop = false): StickerDef | null {
   if (s.status !== "ready" || !s.path) return null;
-  return { id: `wm:${s.path}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
+  return { id: `wm:${s.path}${pop ? "#pop" : ""}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
 }
 
 let cache: StickerDef[] | null = null;
@@ -44,7 +46,7 @@ let cache: StickerDef[] | null = null;
 export async function myWippmojis(refresh = false): Promise<StickerDef[]> {
   if (cache && !refresh) return cache;
   const lib = await wippmojiLibrary();
-  cache = lib.packs.flatMap((p) => p.stickers.map(wippmojiStickerDef).filter((x): x is StickerDef => x !== null));
+  cache = lib.packs.filter((p) => p.type !== "wipppop").flatMap((p) => p.stickers.map((s) => wippmojiStickerDef(s)).filter((x): x is StickerDef => x !== null));
   return cache;
 }
 export function forgetMyWippmojis() {
