@@ -3,6 +3,10 @@ import { Image } from "expo-image";
 import { Platform, StyleSheet, View } from "react-native";
 import { wippSrc } from "../lib/assets";
 import { stickerById } from "../lib/stickers";
+import { isWippPopId } from "../lib/wippmoji";
+import { WippSticker } from "./WippSticker";
+
+const POP_MS = 6000;
 
 export function WippMomentOverlay({
   stickerId,
@@ -13,7 +17,8 @@ export function WippMomentOverlay({
   playKey: number;
   onDone: () => void;
 }) {
-  const row = stickerId ? stickerById(stickerId) : undefined;
+  const pop = isWippPopId(stickerId);
+  const row = stickerId && !pop ? stickerById(stickerId) : undefined;
   const poster = row ? wippSrc(row.src) : undefined;
   const anim = row?.anim ? wippSrc(row.anim) : undefined;
   const [fade, setFade] = useState(false);
@@ -21,6 +26,17 @@ export function WippMomentOverlay({
   const img = useRef<Image>(null);
   const done = useRef(onDone);
   done.current = onDone;
+
+  useEffect(() => {
+    if (!pop) return;
+    setFade(false);
+    const fadeAt = setTimeout(() => setFade(true), POP_MS);
+    const end = setTimeout(() => done.current(), POP_MS + 420);
+    return () => {
+      clearTimeout(fadeAt);
+      clearTimeout(end);
+    };
+  }, [stickerId, playKey, pop]);
 
   useEffect(() => {
     if (!row?.playMs) return;
@@ -39,6 +55,16 @@ export function WippMomentOverlay({
     };
   }, [stickerId, playKey, row?.playMs]);
 
+  if (pop && stickerId) {
+    // A WippPop: the user's own animated character, big over the chat.
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.layer, { opacity: fade ? 0 : 1, justifyContent: "center" }]}>
+        <View key={`${stickerId}-${playKey}`} style={{ width: "100%", aspectRatio: 1 }}>
+          <WippSticker id={stickerId} size={400} fill />
+        </View>
+      </View>
+    );
+  }
   if (!stickerId || !row?.playMs) return null;
   const src = usePoster ? poster : (anim ?? poster);
   if (!src) return null;

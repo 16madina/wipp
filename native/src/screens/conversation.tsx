@@ -44,6 +44,7 @@ import { SwipeableBubble } from "../components/SwipeableBubble";
 import { VoiceComposer } from "../components/VoiceComposer";
 import { mentionIdsInText } from "../lib/lot7/api";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
+import { isWippPopId } from "../lib/wippmoji";
 import { WippSticker } from "../components/WippSticker";
 import { GlassHeader, Header, IconBtn, Press, ScreenRoot } from "../components/ui";
 import { wippSrc } from "../lib/assets";
@@ -365,7 +366,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
   const seenMoment = useRef<string | null>(null);
 
   function playMoment(id: string) {
-    if (!stickerById(id)?.playMs) return;
+    if (!stickerById(id)?.playMs && !isWippPopId(id)) return;
     setMomentPlay((prev) => ({ id, n: (prev?.n ?? 0) + 1 }));
   }
 
@@ -419,7 +420,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
     if (!last || key === seenMoment.current) return;
     if (last.type !== "sticker" || !last.stickerId) return;
     if (Date.now() - last.createdAt > 2000) return;
-    if (!stickerById(last.stickerId)?.playMs) return;
+    if (!stickerById(last.stickerId)?.playMs && !isWippPopId(last.stickerId)) return;
     seenMoment.current = key;
     setMomentPlay((prev) => ({ id: last.stickerId as string, n: (prev?.n ?? 0) + 1 }));
   }, [messages]);

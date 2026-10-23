@@ -192,7 +192,7 @@ function PersonalSticker({ id, size, fill, still, loop }: { id: string; size: nu
   const box = fill ? { width: "100%" as const, height: "100%" as const } : { width: size, height: size };
   return (
     <View style={box}>
-      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} black={id.endsWith("#pop")} onReady={() => undefined} />
+      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} onReady={() => undefined} />
     </View>
   );
 }

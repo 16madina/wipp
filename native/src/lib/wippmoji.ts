@@ -38,8 +38,8 @@ export function createWippmojiPack(avatarId: string, expressions: string[], lang
 /** A finished sticker, ready to be sent like the built-in ones (the id carries where the clip is). */
 export function wippmojiStickerDef(s: WippmojiSticker, pop = false): StickerDef | null {
   if (s.status !== "ready" || !s.path) return null;
-  void pop; // WippPop clips are on green too, like the stickers
-  return { id: `wm:${s.path}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
+  // "#pop": a WippPop, played over the whole chat like a WIPP Moment.
+  return { id: `wm:${s.path}${pop ? "#pop" : ""}`, pack: "moji", src: "", labelFr: s.label || "Wippmoji", labelEn: s.label || "Wippmoji" };
 }
 
 let cache: { stickers: StickerDef[]; pops: StickerDef[] } | null = null;
@@ -47,7 +47,7 @@ async function mine(refresh: boolean) {
   if (cache && !refresh) return cache;
   const lib = await wippmojiLibrary();
   const defs = (pop: boolean) =>
-    lib.packs.filter((p) => (p.type === "wipppop") === pop).flatMap((p) => p.stickers.map((s) => wippmojiStickerDef(s)).filter((x): x is StickerDef => x !== null));
+    lib.packs.filter((p) => (p.type === "wipppop") === pop).flatMap((p) => p.stickers.map((s) => wippmojiStickerDef(s, pop)).filter((x): x is StickerDef => x !== null));
   cache = { stickers: defs(false), pops: defs(true) };
   return cache;
 }
@@ -62,3 +62,6 @@ export async function myWippPops(refresh = false): Promise<StickerDef[]> {
 export function forgetMyWippmojis() {
   cache = null;
 }
+
+/** A personal WippPop (sent as a sticker id, played full screen on arrival). */
+export const isWippPopId = (id: string | null | undefined) => Boolean(id && id.startsWith("wm:") && id.endsWith("#pop"));
