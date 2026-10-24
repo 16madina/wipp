@@ -35,6 +35,7 @@ import { accentA, bgA, colors, fgA } from "../theme";
 const ART = {
   hero: require("../../assets/wippmoji-studio/hero.jpg"),
   photoToCharacter: require("../../assets/wippmoji-studio/photo-to-character.png"),
+  photoToStickers: require("../../assets/wippmoji-studio/photo-to-stickers.png"),
   cartoon: require("../../assets/wippmoji-studio/style-cartoon.png"),
   realistic: require("../../assets/wippmoji-studio/style-realistic.png"),
   preview: require("../../assets/wippmoji-studio/preview.jpg"),
@@ -315,7 +316,7 @@ export function WippmojiStudioScreen() {
               onPress={() => (agreed ? void pick(false) : setError(tr("Coche d’abord la case ci-dessous.")))}
               style={{ borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 16, alignItems: "center", gap: 8 }}
             >
-              <Image source={ART.photoToCharacter} style={{ width: "100%", aspectRatio: 900 / 820, borderRadius: 16, backgroundColor: accentA(0.08) }} contentFit="contain" />
+              <Image source={pop ? ART.photoToCharacter : ART.photoToStickers} style={{ width: "100%", aspectRatio: 900 / 820, borderRadius: 16, backgroundColor: accentA(0.08) }} contentFit="contain" />
               <View style={{ marginTop: -40, width: 62, height: 62, borderRadius: 31, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", borderWidth: 4, borderColor: colors.surface }}>
                 <Camera size={26} color={colors.accentFg} />
               </View>
