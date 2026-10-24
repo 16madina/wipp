@@ -625,13 +625,14 @@ function Intro({
   const { height } = useWindowDimensions();
   const closed = status && !status.allowed;
   const [libTab, setLibTab] = useState<WippmojiKind>("moji");
-  // Once you have Wippmojis, the Studio opens on them; creating more is the secondary action.
-  if (packs.length > 0) {
+  const [showLib, setShowLib] = useState(false);
+  // The Studio always opens on its welcome page; « Voir mes créations » opens the library.
+  if (showLib && packs.length > 0) {
     const shown = packs.filter((p) => (p.type === "wipppop") === (libTab === "pop"));
     return (
       <View style={{ flex: 1 }}>
         <View style={{ paddingTop: topInset + 6, paddingHorizontal: 12, paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Press onPress={onBack} hitSlop={10} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <Press onPress={() => setShowLib(false)} hitSlop={10} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
             <ChevronLeft size={26} color={colors.fg} />
           </Press>
           <Text style={{ flex: 1, color: colors.fg, fontSize: 17, fontFamily: "Inter_700Bold" }}>{tr("WIPP Studio")}</Text>
@@ -672,7 +673,7 @@ function Intro({
   }
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 110 + bottomInset }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: (packs.length > 0 ? 180 : 110) + bottomInset }}>
         <View style={{ height: Math.min(height * 0.46, 430), backgroundColor: colors.surface }}>
           <Image source={ART.hero} style={{ width: "100%", height: "100%" }} contentFit="cover" contentPosition="top" />
           <LinearGradient colors={[bgA(0), colors.bg]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110 }} pointerEvents="none" />
@@ -705,17 +706,6 @@ function Intro({
           {status?.provider === "mock" && status.allowed ? (
             <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", marginTop: 8 }}>{tr("Mode essai : les images sont des exemples, rien n’est facturé.")}</Text>
           ) : null}
-          {packs.length > 0 ? (
-            <View style={{ marginTop: 22, gap: 12 }}>
-              <Text style={{ color: colors.fg, fontSize: 18, fontFamily: "Inter_700Bold" }}>{tr("Mes Wippmojis")}</Text>
-              {packs.map((p) => (
-                <Press key={p.id} onPress={() => onOpenPack(p)} style={{ borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 12, gap: 8 }}>
-                  {p.status === "generating" ? <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>{tr("En cours de création : touche pour suivre")}</Text> : null}
-                  <StickerGrid pack={p} onPlay={onPlay} />
-                </Press>
-              ))}
-            </View>
-          ) : null}
         </View>
       </ScrollView>
       <View style={{ position: "absolute", left: 20, right: 20, bottom: bottomInset + 16 }}>
@@ -724,7 +714,12 @@ function Intro({
             <Text style={{ color: colors.accent, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Bientôt disponible")}</Text>
           </View>
         ) : (
-          <MainButton label={tr("Commencer")} disabled={!status} onPress={() => onStart()} />
+          <View style={{ gap: 10 }}>
+            {packs.length > 0 ? (
+              <MainButton label={tr("Voir mes créations ({0})", packs.length)} variant="secondary" onPress={() => setShowLib(true)} />
+            ) : null}
+            <MainButton label={packs.length > 0 ? tr("Créer de nouveaux Wippmojis") : tr("Commencer")} disabled={!status} onPress={() => onStart()} />
+          </View>
         )}
       </View>
     </View>

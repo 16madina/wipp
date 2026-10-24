@@ -1478,6 +1478,8 @@ export const TR_EN: Record<string, string> = {
   "Ivoirien": "Ivorian",
   "Humeur": "Mood",
   "Classiques": "Classics",
+  "Voir mes créations ({0})": "See my creations ({0})",
+  "Créer de nouveaux Wippmojis": "Create new Wippmojis",
   "Ouvertes maintenant": "Open now",
   "Ouvertes 24 h/24": "Open 24/7",
   "Ouvertes autour de vous": "Open around you",
