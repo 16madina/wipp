@@ -38,10 +38,7 @@ const ART = {
   photoToStickers: require("../../assets/wippmoji-studio/photo-to-stickers.png"),
   cartoon: require("../../assets/wippmoji-studio/style-cartoon.png"),
   realistic: require("../../assets/wippmoji-studio/style-realistic.png"),
-  preview: require("../../assets/wippmoji-studio/preview.jpg"),
-  packExpressions: require("../../assets/wippmoji-studio/pack-expressions.jpg"),
-  packWippPop: require("../../assets/wippmoji-studio/pack-wipppop.jpg"),
-  packUltimate: require("../../assets/wippmoji-studio/pack-ultimate.jpg"),
+  preview: require("../../assets/wippmoji-studio/hero.jpg"),
   /* Pack covers: WIPP's own Wippie stickers and Moments characters. */
   packs: {
     moji5: require("../../assets/wippmoji-studio/pack-moji-5.png"),
@@ -49,20 +46,6 @@ const ART = {
     pop3: require("../../assets/wippmoji-studio/pack-pop-3.png"),
     pop7: require("../../assets/wippmoji-studio/pack-pop-7.png"),
   },
-};
-const EXPRESSION_ART: Record<string, number> = {
-  mdr: require("../../assets/wippmoji-studio/expr-mdr.jpg"),
-  bisous: require("../../assets/wippmoji-studio/expr-bisous.jpg"),
-  "je-taime": require("../../assets/wippmoji-studio/expr-je-taime.jpg"),
-  coucou: require("../../assets/wippmoji-studio/expr-coucou.jpg"),
-  merci: require("../../assets/wippmoji-studio/expr-merci.jpg"),
-  bravo: require("../../assets/wippmoji-studio/expr-bravo.jpg"),
-  pfff: require("../../assets/wippmoji-studio/expr-pfff.jpg"),
-  "oh-non": require("../../assets/wippmoji-studio/expr-oh-non.jpg"),
-  "bonne-nuit": require("../../assets/wippmoji-studio/expr-bonne-nuit.jpg"),
-  waouh: require("../../assets/wippmoji-studio/expr-waouh.jpg"),
-  desole: require("../../assets/wippmoji-studio/expr-desole.jpg"),
-  ok: require("../../assets/wippmoji-studio/expr-ok.jpg"),
 };
 
 /* Examples under the packs. Wippmoji: stickers made by the WIPP team in the Studio. WippPop: WIPP's own full-screen animations. */
@@ -554,12 +537,11 @@ export function WippmojiStudioScreen() {
             </ScrollView>
             <ExpressionGrid
               expressions={choiceCat === "tous" ? choices : choices.filter((c) => (c.cat ?? "classique") === choiceCat)}
-              demo={!pop}
               chosen={chosen}
               fallback={avatar?.referenceUrl ?? null}
               onToggle={(id) => setChosen((list) => (list.includes(id) ? list.filter((x) => x !== id) : list.length < packSize ? [...list, id] : list))}
             />
-            {!pop ? <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center" }}>{tr("Miniatures d’exemple : tes stickers seront créés avec ton personnage.")}</Text> : null}
+            
             <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 4 }}>{tr("Texte sur les stickers")}</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {([["fr", tr("Français")], ["en", "English"], [null, tr("Sans texte")]] as const).map(([id, label]) => (
@@ -1011,19 +993,17 @@ function PackCard({
   );
 }
 
-function ExpressionGrid({ expressions, chosen, fallback, onToggle, demo = true }: { expressions: { id: string; fr: string; en: string }[]; chosen: string[]; fallback: string | null; onToggle: (id: string) => void; demo?: boolean }) {
+/** Each choice shows the user's own character (the one the clips will be made with). */
+function ExpressionGrid({ expressions, chosen, fallback, onToggle }: { expressions: { id: string; fr: string; en: string }[]; chosen: string[]; fallback: string | null; onToggle: (id: string) => void }) {
   const en = trLang() === "en";
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
       {expressions.map((e) => {
         const on = chosen.includes(e.id);
-        const art = demo ? EXPRESSION_ART[e.id] : undefined;
         return (
           <Press key={e.id} onPress={() => onToggle(e.id)} style={{ width: "31.5%", alignItems: "center", gap: 6 }}>
             <View style={{ width: "100%", aspectRatio: 1, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surface, borderWidth: on ? 2.5 : 1, borderColor: on ? colors.accent : colors.hair }}>
-              {art ? (
-                <Image source={art} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-              ) : fallback ? (
+              {fallback ? (
                 <Image source={{ uri: fallback }} style={{ width: "100%", height: "100%" }} contentFit="cover" contentPosition="top" />
               ) : null}
               {on ? (
