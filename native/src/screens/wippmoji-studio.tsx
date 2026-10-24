@@ -34,7 +34,7 @@ import { accentA, bgA, colors, fgA } from "../theme";
 /* Demo illustrations (examples only — never presented as the user's own creation). */
 const ART = {
   hero: require("../../assets/wippmoji-studio/hero.jpg"),
-  photoToCharacter: require("../../assets/wippmoji-studio/photo-to-character.jpg"),
+  photoToCharacter: require("../../assets/wippmoji-studio/photo-to-character.png"),
   cartoon: require("../../assets/wippmoji-studio/style-cartoon.png"),
   realistic: require("../../assets/wippmoji-studio/style-realistic.png"),
   preview: require("../../assets/wippmoji-studio/preview.jpg"),
@@ -315,7 +315,7 @@ export function WippmojiStudioScreen() {
               onPress={() => (agreed ? void pick(false) : setError(tr("Coche d’abord la case ci-dessous.")))}
               style={{ borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hair, padding: 16, alignItems: "center", gap: 8 }}
             >
-              <Image source={ART.photoToCharacter} style={{ width: "100%", aspectRatio: 214 / 222, borderRadius: 16 }} contentFit="cover" />
+              <Image source={ART.photoToCharacter} style={{ width: "100%", aspectRatio: 900 / 820, borderRadius: 16, backgroundColor: accentA(0.08) }} contentFit="contain" />
               <View style={{ marginTop: -40, width: 62, height: 62, borderRadius: 31, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", borderWidth: 4, borderColor: colors.surface }}>
                 <Camera size={26} color={colors.accentFg} />
               </View>
@@ -492,9 +492,9 @@ export function WippmojiStudioScreen() {
                           <WippSticker id={id} size={80} fill />
                         </View>
                       ))
-                    : ["mdr", "bisous", "coucou", "bravo"].map((id) => (
+                    : ["mdr", "ca-wipp", "lui-bisous", "elle-hein"].map((id) => (
                         <View key={id} style={{ width: "23%", aspectRatio: 1, borderRadius: 14, backgroundColor: colors.surface, overflow: "hidden" }}>
-                          <Image source={EXPRESSION_ART[id]} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                          <WippSticker id={id} size={80} fill />
                         </View>
                       ))}
                 </View>
