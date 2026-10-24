@@ -35,8 +35,8 @@ import { accentA, bgA, colors, fgA } from "../theme";
 const ART = {
   hero: require("../../assets/wippmoji-studio/hero.jpg"),
   photoToCharacter: require("../../assets/wippmoji-studio/photo-to-character.jpg"),
-  cartoon: require("../../assets/wippmoji-studio/style-cartoon.jpg"),
-  realistic: require("../../assets/wippmoji-studio/style-realistic.jpg"),
+  cartoon: require("../../assets/wippmoji-studio/style-cartoon.png"),
+  realistic: require("../../assets/wippmoji-studio/style-realistic.png"),
   preview: require("../../assets/wippmoji-studio/preview.jpg"),
   packExpressions: require("../../assets/wippmoji-studio/pack-expressions.jpg"),
   packWippPop: require("../../assets/wippmoji-studio/pack-wipppop.jpg"),
@@ -930,7 +930,9 @@ function PopDemo({ uri, onDone }: { uri: string; onDone: () => void }) {
 function StyleCard({ art, title, sub, on, onPress }: { art: number; title: string; sub: string; on: boolean; onPress: () => void }) {
   return (
     <Press onPress={onPress} style={{ borderRadius: 22, overflow: "hidden", backgroundColor: colors.surface, borderWidth: on ? 2 : 1, borderColor: on ? colors.accent : colors.hair }}>
-      <Image source={art} style={{ width: "100%", aspectRatio: 179 / 130 }} contentFit="cover" contentPosition="top" />
+      <View style={{ backgroundColor: accentA(0.08), padding: 10 }}>
+        <Image source={art} style={{ width: "100%", aspectRatio: 900 / 520 }} contentFit="contain" />
+      </View>
       <View
         style={{
           position: "absolute",
