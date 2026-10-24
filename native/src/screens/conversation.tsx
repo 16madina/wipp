@@ -44,6 +44,9 @@ import { SwipeableBubble } from "../components/SwipeableBubble";
 import { VoiceComposer } from "../components/VoiceComposer";
 import { mentionIdsInText } from "../lib/lot7/api";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
+
+/** The Wippmoji shown in the message field to open the stickers. */
+const COMPOSER_MOJI = "moji-08";
 import { isWippPopId } from "../lib/wippmoji";
 import { WippSticker } from "../components/WippSticker";
 import { GlassHeader, Header, IconBtn, Press, ScreenRoot } from "../components/ui";
@@ -1162,9 +1165,9 @@ function ConversationInner({ chatId }: { chatId: string }) {
                       hitSlop={6}
                       style={{ width: Math.round(mascotSize * 1.3), height: 44, flexShrink: 0, marginRight: 6, alignItems: "center", justifyContent: "center" }}
                     >
-                      {/* Discreet, like part of the field; full colour while the stickers are open. */}
-                      <View style={{ opacity: stickerBar ? 1 : 0.65 }}>
-                        <ComposerMascot size={mascotSize} active={stickerBar} />
+                      {/* An animated Wippmoji opens the stickers (« Choqué »: change COMPOSER_MOJI to try another). */}
+                      <View style={{ opacity: stickerBar ? 1 : 0.9 }}>
+                        <WippSticker id={COMPOSER_MOJI} size={Math.round(mascotSize * 1.4)} />
                       </View>
                     </Press>
                   </View>
