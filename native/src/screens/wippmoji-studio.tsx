@@ -981,8 +981,9 @@ function PackCard({
         </View>
         {!soon && note ? <Text style={{ color: colors.accent, fontSize: 12 }}>{note}</Text> : null}
       </View>
-      <View style={{ width: 140, padding: 8, opacity: soon ? 0.75 : 1, backgroundColor: accentA(0.08) }}>
-        <Image source={art} style={{ width: "100%", height: "100%" }} contentFit="contain" />
+      <View style={{ width: 140, opacity: soon ? 0.75 : 1, backgroundColor: accentA(0.08) }}>
+        {/* Absolute: the picture fills the column without stretching the card to its own height. */}
+        <Image source={art} style={{ position: "absolute", top: 8, left: 8, right: 8, bottom: 8 }} contentFit="contain" />
       </View>
     </Press>
   );
