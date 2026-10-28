@@ -5,7 +5,7 @@
 import { Platform } from "react-native";
 
 /** Public RevenueCat SDK keys (safe in the app). Empty = purchases not set up on this platform yet. */
-const KEYS = { ios: "", android: "" };
+const KEYS = { ios: "appl_XOXhlRSfiqjvMRRAbMnLhsMciQb", android: "" };
 
 export const STUDIO_PRODUCTS = {
   moji: { 5: "com.wipp.studio.moji5", 10: "com.wipp.studio.moji10" } as Record<number, string>,
