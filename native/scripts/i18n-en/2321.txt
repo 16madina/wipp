@@ -1,0 +1,2 @@
+2321|Payment is not available on this device yet.
+2322|The payment did not go through. You were not charged.

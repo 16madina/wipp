@@ -1480,6 +1480,8 @@ export const TR_EN: Record<string, string> = {
   "Classiques": "Classics",
   "Voir mes créations ({0})": "See my creations ({0})",
   "Créer de nouveaux Wippmojis": "Create new Wippmojis",
+  "Le paiement n’est pas encore disponible sur cet appareil.": "Payment is not available on this device yet.",
+  "Le paiement n’a pas abouti. Tu n’as pas été débité.": "The payment did not go through. You were not charged.",
   "Ouvertes maintenant": "Open now",
   "Ouvertes 24 h/24": "Open 24/7",
   "Ouvertes autour de vous": "Open around you",

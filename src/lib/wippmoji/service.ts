@@ -8,6 +8,7 @@ import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
 import { PACK_SIZE, PACK_SIZES, WIPPMOJI_EXPRESSIONS, WIPPPOP_ANIMATIONS, WIPPPOP_SECONDS, WIPPPOP_SIZE, WIPPPOP_SIZES, POP_PATHS, expressionPrompt, popPrompt, popReferencePrompt, referencePrompt, type WippmojiStyle } from "./catalog";
 import { wippmojiProvider } from "./providers";
+import { claimPurchase, linkPurchase, type PurchaseProof } from "./purchases";
 
 const VIDEO_SECONDS = Number(process.env.WIPPMOJI_VIDEO_SECONDS || 6);
 const MAX_ATTEMPTS = 2;
@@ -42,6 +43,8 @@ type StudioSettings = {
   startOffset: { moji: number; pop: number };
   /** WippPop way in / way out per animation id (overrides the defaults in POP_PATHS). */
   popPaths: Record<string, { enter?: string; exit?: string }>;
+  /** When true, every pack needs a verified in-app purchase. */
+  requirePurchase: boolean;
 };
 const DEFAULT_SETTINGS: StudioSettings = {
   prices: { moji: { "5": "4,99 $ CAD", "10": "7,99 $ CAD" }, pop: { "3": "4,99 $ CAD", "7": "9,99 $ CAD" } },
@@ -49,6 +52,7 @@ const DEFAULT_SETTINGS: StudioSettings = {
   models: { moji: "", pop: "" },
   startOffset: { moji: 0, pop: 0 },
   popPaths: {},
+  requirePurchase: false,
 };
 let settingsCache: { at: number; value: StudioSettings } | null = null;
 
@@ -61,6 +65,7 @@ export async function studioSettings(): Promise<StudioSettings> {
     const rows = await sql<{ key: string; value: unknown }>`select key, value from wippmoji_settings`;
     for (const r of rows) {
       if (r.key === "prices" && r.value && typeof r.value === "object") value.prices = { ...value.prices, ...(r.value as StudioSettings["prices"]) };
+      if (r.key === "require_purchase") value.requirePurchase = r.value === true || r.value === "true";
       if (r.key === "character_limit" && Number(r.value) > 0) value.characterLimit = Number(r.value);
       if (r.key === "models" && r.value && typeof r.value === "object") value.models = { ...value.models, ...(r.value as StudioSettings["models"]) };
       if (r.key === "pop_paths" && r.value && typeof r.value === "object") value.popPaths = r.value as StudioSettings["popPaths"];
@@ -114,7 +119,7 @@ export async function wippmojiStatus(profileId: string) {
   }
   const settings = await studioSettings();
   const left = async (k: "moji" | "pop") => Math.max(0, settings.characterLimit - (await charactersUsed(profileId, k).catch(() => 0)));
-  return { allowed, prices: settings.prices, characterLimit: settings.characterLimit, charactersLeft: { moji: await left("moji"), pop: await left("pop") }, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en, cat }) => ({ id, fr, en, cat })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en, cat }) => ({ id, fr, en, cat })) } };
+  return { allowed, buyerId: profileId, requirePurchase: settings.requirePurchase, prices: settings.prices, characterLimit: settings.characterLimit, charactersLeft: { moji: await left("moji"), pop: await left("pop") }, provider: wippmojiProvider().name, packSize: PACK_SIZE, packSizes: PACK_SIZES, expressions: WIPPMOJI_EXPRESSIONS.map(({ id, fr, en, cat }) => ({ id, fr, en, cat })), pop: { packSize: WIPPPOP_SIZE, packSizes: WIPPPOP_SIZES, animations: WIPPPOP_ANIMATIONS.map(({ id, fr, en, cat }) => ({ id, fr, en, cat })) } };
 }
 
 export async function createWippmojiAvatar(profileId: string, input: { photo?: string; style?: string; consent?: boolean; framing?: string; kind?: string }) {
@@ -141,9 +146,13 @@ export async function createWippmojiAvatar(profileId: string, input: { photo?: s
   return { id, style, kind, referenceUrl: await wippmojiPublicUrl(path) };
 }
 
-export async function createWippmojiPack(profileId: string, input: { avatarId?: string; expressions?: string[]; language?: string | null; type?: string }) {
-  await assertAllowed(profileId);
+export async function createWippmojiPack(profileId: string, input: { avatarId?: string; expressions?: string[]; language?: string | null; type?: string; purchase?: PurchaseProof }) {
   const pop = input.type === "wipppop";
+  // A verified purchase opens the Studio to anyone; without one, only the team and testers, and only while purchases are off.
+  if (!input.purchase) {
+    await assertAllowed(profileId);
+    if ((await studioSettings()).requirePurchase) throw new WippHttpError(402, "purchase_required", "Achète ce pack pour le créer.");
+  }
   const sql = await getSql();
   const avatars = await sql<{ id: string; style: WippmojiStyle; reference_path: string; kind: string }>`
     select id, style, reference_path, kind from wippmoji_avatars where id = ${input.avatarId ?? ""} and profile_id = ${profileId} and status = 'ready' limit 1`;
@@ -157,9 +166,11 @@ export async function createWippmojiPack(profileId: string, input: { avatarId?: 
   const size = sizes.includes(chosen.length) ? chosen.length : sizes[sizes.length - 1];
   if (chosen.length !== size) throw new WippHttpError(400, "pack_size", `Choisis ${sizes.join(" ou ")} ${pop ? "animations" : "expressions"}.`);
   if ((await usedToday(profileId, "video")) + size > LIMITS.packsPerDay * PACK_SIZE) throw new WippHttpError(429, "daily_limit", "Limite du jour atteinte. Réessaie demain.");
+  const paid = input.purchase ? await claimPurchase(profileId, input.purchase, { pop, size }) : null;
   const language = input.language === "fr" || input.language === "en" ? input.language : null;
   const packId = uid("wmp");
   await sql`insert into wippmoji_packs (id, profile_id, avatar_id, language, pack_type) values (${packId}, ${profileId}, ${avatar.id}, ${language}, ${pop ? "wipppop" : "expressions"})`;
+  if (paid) await linkPurchase(paid, packId);
   const provider = wippmojiProvider();
   const settings = await studioSettings();
   const model = (pop ? settings.models.pop : settings.models.moji) || undefined;

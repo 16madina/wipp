@@ -11,6 +11,7 @@ import { WippSticker } from "../components/WippSticker";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { useWippStore } from "../lib/store";
 import { tr, trLang } from "../lib/tr";
+import { STUDIO_PRODUCTS, buyStudioPack, purchasesAvailable, studioPrices } from "../lib/purchases";
 import {
   createWippmojiAvatar,
   createWippmojiPack,
@@ -85,6 +86,8 @@ export function WippmojiStudioScreen() {
   const [exampleStyle, setExampleStyle] = useState<WippmojiStyle>("cartoon");
   const [demoPop, setDemoPop] = useState<{ uri: string; n: number } | null>(null);
   const [status, setStatus] = useState<WippmojiStatus | null>(null);
+  // Prices from the App Store / Google Play, in the customer's currency (by product id).
+  const [storePrices, setStorePrices] = useState<Record<string, string>>({});
   const [packs, setPacks] = useState<WippmojiPack[]>([]);
   const [avatars, setAvatars] = useState<WippmojiAvatar[]>([]);
   const [agreed, setAgreed] = useState(false);
@@ -110,7 +113,12 @@ export function WippmojiStudioScreen() {
       .catch(() => undefined);
 
   useEffect(() => {
-    void wippmojiStatus().then(setStatus).catch(() => setStatus({ allowed: false, provider: "mock", packSize: 10, expressions: [] }));
+    void wippmojiStatus()
+      .then((st) => {
+        setStatus(st);
+        if (st.buyerId && purchasesAvailable()) void studioPrices(st.buyerId).then(setStorePrices);
+      })
+      .catch(() => setStatus({ allowed: false, provider: "mock", packSize: 10, expressions: [] }));
     void refreshLibrary();
     return () => {
       if (poll.current) clearInterval(poll.current);
@@ -192,10 +200,28 @@ export function WippmojiStudioScreen() {
 
   async function makePack() {
     if (!avatar || chosen.length !== packSize) return;
+    setError("");
+    // Paid packs: the Apple / Google payment sheet first; the server checks the purchase before generating.
+    let purchase: { productId: string; transactionId: string } | undefined;
+    if (status?.requirePurchase) {
+      const productId = (pop ? STUDIO_PRODUCTS.pop : STUDIO_PRODUCTS.moji)[packSize];
+      if (!status.buyerId || !productId || !purchasesAvailable()) {
+        setError(tr("Le paiement n’est pas encore disponible sur cet appareil."));
+        return;
+      }
+      try {
+        const res = await buyStudioPack(status.buyerId, productId);
+        if ("cancelled" in res) return;
+        purchase = res;
+      } catch {
+        setError(tr("Le paiement n’a pas abouti. Tu n’as pas été débité."));
+        return;
+      }
+    }
     setPack(null);
     go("making-pack");
     try {
-      follow(await createWippmojiPack(avatar.id, chosen, language, pop ? "wipppop" : "expressions"));
+      follow(await createWippmojiPack(avatar.id, chosen, language, pop ? "wipppop" : "expressions", purchase));
     } catch (err) {
       go("expressions");
       setError(errorMessage(err));
@@ -433,8 +459,8 @@ export function WippmojiStudioScreen() {
                 art={pop ? (n === 3 ? ART.packs.pop3 : ART.packs.pop7) : n === 5 ? ART.packs.moji5 : ART.packs.moji10}
                 title={pop ? tr("{0} grandes animations", n) : tr("{0} stickers", n)}
                 sub={pop ? tr("WippPop plein écran avec ton personnage") : tr("Wippmojis animés, cartoon ou réalistes")}
-                price={(pop ? status?.prices?.pop : status?.prices?.moji)?.[String(n)] ?? tr("Prix à venir")}
-                note={status?.allowed ? tr("Offert pendant les essais") : null}
+                price={storePrices[(pop ? STUDIO_PRODUCTS.pop : STUDIO_PRODUCTS.moji)[n]] ?? (pop ? status?.prices?.pop : status?.prices?.moji)?.[String(n)] ?? tr("Prix à venir")}
+                note={status?.allowed && !status.requirePurchase ? tr("Offert pendant les essais") : null}
                 icon={pop ? <Star size={16} color={colors.accent} /> : <Smile size={16} color={colors.accent} />}
                 onPress={() => {
                   // Characters included already used: continue with one of them.
