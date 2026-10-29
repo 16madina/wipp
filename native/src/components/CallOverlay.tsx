@@ -171,7 +171,8 @@ export function CallOverlay() {
           const st = (await callStatus(id)).invite.status;
           const live = useCallSession.getState().session;
           if (live?.callId !== id) return;
-          if (st === "ended" || st === "cancelled" || st === "missed" || st === "rejected") {
+          // A call grown to 3-4 people goes on while others are still in the room.
+          if ((st === "ended" || st === "cancelled" || st === "missed" || st === "rejected") && !(roomRef.current?.remoteParticipants.size ?? 0)) {
             void roomRef.current?.disconnect();
             useCallSession.getState().patch({ phase: "ended", url: undefined, token: undefined });
           }
@@ -265,7 +266,7 @@ export function CallOverlay() {
     });
     // Mosaic (group calls): rebuild the list of people on every room change.
     const refreshTiles = () => {
-      if (cancelled || !session.group) return;
+      if (cancelled) return;
       const people = [room.localParticipant, ...room.remoteParticipants.values()];
       setTiles(
         people.map((p) => {
@@ -525,7 +526,8 @@ export function CallOverlay() {
   // Names and photos of the people in a group call (from the contacts list, else a neutral tile).
   const byIdentity = new Map<string, { displayName: string; avatar?: string }>();
   for (const u of Object.values(users)) if (u?.id) byIdentity.set(identityKey(u.id), { displayName: u.displayName || `@${u.username}`, avatar: u.avatar });
-  const groupTiles = session.group
+  // Mosaic for group calls, and for a one-to-one call once a third person has joined.
+  const groupTiles = session.group || tiles.length > 2
     ? tiles.map((tile) => {
         const who = tile.local ? { displayName: tr("Toi"), avatar: me.avatar } : byIdentity.get(tile.identity) ?? { displayName: tr("Membre") };
         return { key: tile.key, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };

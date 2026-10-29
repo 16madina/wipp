@@ -107,3 +107,11 @@ export async function incomingCalls() {
     invites: { id: string; kind: "audio" | "video"; caller: { id: string; displayName: string; username: string } }[];
   }>("calls/incoming");
 }
+
+/** Adds someone to the one-to-one call in progress (they get a normal ringing call into the same room). */
+export async function addToCall(callId: string, peerId: string) {
+  return wippApi<{ invite: { id: string; status: string } }>(`calls/${encodeURIComponent(callId)}/add`, {
+    method: "POST",
+    body: JSON.stringify({ peerId: serverProfileId(peerId) }),
+  });
+}

@@ -740,6 +740,14 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    if (method === "POST" && a === "calls" && b && c === "add") {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ peerId?: string; peerUsername?: string }>(request);
+      const { addToCallInvite } = await import("@/lib/messaging/calls");
+      const invite = await addToCallInvite({ meId: me.id, callId: b, peerId: body.peerId, peerUsername: body.peerUsername });
+      return json({ invite }, 201);
+    }
+
     if (method === "POST" && a === "calls" && b && c === "hangup") {
       const me = await resolveSession(bearer(request));
       const invite = await hangupCallInvite({ meId: me.id, callId: b });

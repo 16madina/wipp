@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
-import { Animated, Easing, Modal, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Alert, Animated, Easing, Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -12,6 +12,7 @@ import {
   Phone,
   PhoneOff,
   SwitchCamera,
+  UserPlus,
   Video,
   VideoOff,
   Volume2,
@@ -314,6 +315,7 @@ export function CallScreen({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [more, setMore] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [controls, setControls] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -323,7 +325,7 @@ export function CallScreen({
   const remoteVid = remoteUrl && !remoteMuted ? remoteUrl : null;
   const localVid = localUrl && video && !session.camOff ? localUrl : null;
   // Group call in progress: mosaic of everyone instead of the 1-to-1 layout.
-  const mosaic = Boolean(session.group && (connected || session.phase === "reconnecting") && groupTiles && groupTiles.length > 0);
+  const mosaic = Boolean((session.group || (groupTiles?.length ?? 0) > 2) && (connected || session.phase === "reconnecting") && groupTiles && groupTiles.length > 0);
   // Each camera is independent: the other person's video shows as soon as it arrives (even if
   // mine is off), and my own preview shows as soon as my camera is on (even if theirs is off).
   const videoLive = !mosaic && connected && (!!remoteVid || !!localVid);
@@ -533,6 +535,12 @@ export function CallScreen({
                 <Text style={{ color: "#fff", fontSize: 15 }}>{c.flip}</Text>
               </Press>
             ) : null}
+            {connected && !session.group && session.callId ? (
+              <Press onPress={() => { setMore(false); setAdding(true); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <UserPlus size={20} color={GOLD} />
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Ajouter une personne")}</Text>
+              </Press>
+            ) : null}
             <Press onPress={() => { setMore(false); onMinimize(); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
               <ChevronDown size={20} color={GOLD} />
               <Text style={{ color: "#fff", fontSize: 15 }}>{c.minimize}</Text>
@@ -543,6 +551,55 @@ export function CallScreen({
           </View>
         </Pressable>
       </Modal>
+      {adding && session.callId ? <AddToCallSheet callId={session.callId} exclude={[session.userId]} onClose={() => setAdding(false)} bottomInset={insets.bottom} /> : null}
     </View>
+  );
+}
+
+/** Contacts to add to a one-to-one call in progress (up to 4 people in the call). */
+function AddToCallSheet({ callId, exclude, onClose, bottomInset }: { callId: string; exclude: string[]; onClose: () => void; bottomInset: number }) {
+  const users = useWippStore((s) => s.users);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [invited, setInvited] = useState<string[]>([]);
+  const contacts = Object.values(users)
+    .filter((u): u is NonNullable<typeof u> => Boolean(u && u.id.startsWith("srvuser:") && u.connected && !exclude.includes(u.id)))
+    .sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
+  const add = async (id: string) => {
+    setBusyId(id);
+    try {
+      const { addToCall } = await import("../lib/calls/livekit-client");
+      await addToCall(callId, id);
+      setInvited((list) => [...list, id]);
+    } catch (err) {
+      Alert.alert(tr("Ajouter une personne"), err instanceof Error && err.message ? err.message : tr("Impossible d’ajouter cette personne pour le moment."));
+    } finally {
+      setBusyId(null);
+    }
+  };
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+        <Pressable onPress={() => undefined} style={{ maxHeight: "70%", backgroundColor: "#0E1320", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: bottomInset + 18 }}>
+          <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{tr("Ajouter une personne")}</Text>
+          <Text style={{ color: GREY, fontSize: 13, marginTop: 4, marginBottom: 10 }}>{tr("Jusqu’à 4 personnes dans l’appel. La personne reçoit un appel WIPP.")}</Text>
+          <ScrollView>
+            {contacts.length === 0 ? <Text style={{ color: GREY, fontSize: 14, paddingVertical: 16 }}>{tr("Aucun autre contact à ajouter.")}</Text> : null}
+            {contacts.map((u) => {
+              const done = invited.includes(u.id);
+              return (
+                <Press key={u.id} disabled={done || busyId !== null} onPress={() => void add(u.id)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
+                  <Avatar user={u} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_500Medium" }} numberOfLines={1}>{u.displayName || `@${u.username}`}</Text>
+                    {u.username ? <Text style={{ color: GREY, fontSize: 12 }} numberOfLines={1}>@{u.username}</Text> : null}
+                  </View>
+                  {busyId === u.id ? <ActivityIndicator color={GOLD} /> : <Text style={{ color: done ? GREY : GOLD, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{done ? tr("Appel en cours…") : tr("Ajouter")}</Text>}
+                </Press>
+              );
+            })}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }

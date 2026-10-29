@@ -610,6 +610,13 @@ export async function hangupCallInvite(input: { meId: string; callId: string }):
     set status = ${next}, answered_at = coalesce(answered_at, now()), ended_at = now()
     where id = ${input.callId}
   `;
+  if (next === "ended") {
+    // A call grown to 3-4 people: my other invites in this room end too, so nobody stays « occupé ».
+    await sql`
+      update wipp_call_invites set status = 'ended', ended_at = now()
+      where room_name = ${invite.roomName} and id <> ${input.callId} and status = 'accepted' and ended_at is null
+        and (caller_id = ${input.meId} or callee_id = ${input.meId})`;
+  }
   const updated = await getCallInvite(input.callId);
   if (!updated) throw new WippHttpError(404, "not_found", "Appel introuvable.");
   const otherId = invite.caller.id === input.meId ? invite.callee.id : invite.caller.id;
@@ -776,6 +783,58 @@ export async function activeGroupCall(meId: string, chatId: string) {
     participantIds: people.map((p) => p.profile_id),
     iAmIn: people.some((p) => p.profile_id === meId),
   };
+}
+
+/** Most people in one call started as a one-to-one call and grown with « Ajouter ». */
+const MAX_IN_CALL = 4;
+
+/**
+ * Adds someone to a one-to-one call in progress: a normal ringing invite to the same LiveKit room,
+ * so the new person gets the usual call screen and joins the people already talking.
+ */
+export async function addToCallInvite(input: { meId: string; callId: string; peerId?: string; peerUsername?: string }): Promise<CallInviteDto> {
+  await ensureMessagingReady();
+  const sql = await getSql();
+  const rows = await sql<{ room_name: string; kind: string; status: string; ended_at: string | null }>`
+    select room_name, kind, status, ended_at::text from wipp_call_invites
+    where id = ${input.callId} and (caller_id = ${input.meId} or callee_id = ${input.meId}) limit 1`;
+  const call = rows[0];
+  if (!call || call.status !== "accepted" || call.ended_at) throw new WippHttpError(410, "call_closed", "Cet appel n’est plus en cours.");
+  const peerId = await resolvePeerId(input.peerUsername, input.peerId);
+  if (peerId === input.meId) throw new WippHttpError(400, "self_call", "Tu es déjà dans l’appel.");
+  await assertNotBlocked(input.meId, peerId);
+  // People already in this room (talking or being called).
+  const people = await sql<{ id: string }>`
+    select distinct p as id from wipp_call_invites, unnest(array[caller_id, callee_id]) as p
+    where room_name = ${call.room_name} and ended_at is null
+      and (status = 'accepted' or (status = 'ringing' and expires_at > now()))`;
+  const ids = new Set(people.map((r) => r.id));
+  if (ids.has(peerId)) throw new WippHttpError(409, "already_in_call", "Cette personne est déjà dans l’appel.");
+  if (ids.size >= MAX_IN_CALL) throw new WippHttpError(409, "call_full", `Un appel peut réunir ${MAX_IN_CALL} personnes au maximum.`);
+  const busy = await sql<{ id: string }>`
+    select id from wipp_call_invites
+    where status = 'accepted' and ended_at is null and created_at >= now() - interval '4 hours'
+      and (caller_id = ${peerId} or callee_id = ${peerId}) limit 1`;
+  if (busy[0]) throw new WippHttpError(409, "busy", "Cette personne est déjà en appel.");
+  const kind = call.kind === "video" ? "video" : "audio";
+  const id = uid("call");
+  const expiresAt = new Date(Date.now() + 60_000);
+  await sql`
+    insert into wipp_call_invites (id, caller_id, callee_id, kind, room_name, status, expires_at)
+    values (${id}, ${input.meId}, ${peerId}, ${kind}, ${call.room_name}, ${"ringing"}, ${expiresAt.toISOString()})`;
+  const dto = await getCallInvite(id);
+  if (!dto) throw new WippHttpError(500, "invite_failed", "Impossible d’ajouter cette personne.");
+  const label = kind === "video" ? "Appel vidéo WIPP" : "Appel audio WIPP";
+  await pushCall(peerId, `${dto.caller.displayName} t’ajoute à un appel · ${label}`, {
+    type: "call",
+    eventId: dto.id,
+    inviteId: dto.id,
+    kind,
+    callerName: `@${dto.caller.username}`,
+    action: "ring",
+    expiresAt: dto.expiresAt,
+  }).catch((err) => console.warn("[wipp-call] push add", err));
+  return dto;
 }
 
 export async function authorizeLiveKitJoin(meId: string, callId: string) {

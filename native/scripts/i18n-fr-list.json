@@ -2325,5 +2325,10 @@
  "Cette demande a expiré.",
  "Cette demande n’est plus disponible.",
  "La demande n’a pas pu être acceptée. Vérifie ta connexion et réessaie.",
- "Action impossible pour le moment. Réessaie."
+ "Action impossible pour le moment. Réessaie.",
+ "Ajouter une personne",
+ "Impossible d’ajouter cette personne pour le moment.",
+ "Jusqu’à 4 personnes dans l’appel. La personne reçoit un appel WIPP.",
+ "Aucun autre contact à ajouter.",
+ "Appel en cours…"
 ]

@@ -1,0 +1,5 @@
+2327|Add someone
+2328|Could not add this person right now.
+2329|Up to 4 people in the call. The person receives a WIPP call.
+2330|No other contact to add.
+2331|Calling…
