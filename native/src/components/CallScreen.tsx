@@ -612,7 +612,7 @@ export function CallScreen({
               </Press>
             ) : null}
             {connected && !session.group && session.callId ? (
-              <Press onPress={() => { setMore(false); setAdding(true); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+              <Press onPress={() => { setMore(false); setTimeout(() => setAdding(true), 400); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
                 <UserPlus size={20} color={GOLD} />
                 <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Ajouter une personne")}</Text>
               </Press>
@@ -696,9 +696,11 @@ function AddToCallSheet({ callId, exclude, onClose, bottomInset }: { callId: str
   const users = useWippStore((s) => s.users);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [invited, setInvited] = useState<string[]>([]);
-  const contacts = Object.values(users)
-    .filter((u): u is NonNullable<typeof u> => Boolean(u && u.id.startsWith("srvuser:") && u.connected && !exclude.includes(u.id)))
-    .sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
+  // Keyed by store id (some entries have no id field): real contacts only, never a crash on a missing name.
+  const contacts = Object.entries(users)
+    .filter(([key, u]) => Boolean(u && key.startsWith("srvuser:") && u.connected && !exclude.includes(key)))
+    .map(([key, u]) => ({ ...u!, id: key, label: String(u!.displayName || (u!.username ? `@${u!.username}` : "") || tr("Contact")) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
   const add = async (id: string) => {
     setBusyId(id);
     try {
@@ -725,7 +727,7 @@ function AddToCallSheet({ callId, exclude, onClose, bottomInset }: { callId: str
                 <Press key={u.id} disabled={done || busyId !== null} onPress={() => void add(u.id)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
                   <Avatar user={u} size={40} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_500Medium" }} numberOfLines={1}>{u.displayName || `@${u.username}`}</Text>
+                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_500Medium" }} numberOfLines={1}>{u.label}</Text>
                     {u.username ? <Text style={{ color: GREY, fontSize: 12 }} numberOfLines={1}>@{u.username}</Text> : null}
                   </View>
                   {busyId === u.id ? <ActivityIndicator color={GOLD} /> : <Text style={{ color: done ? GREY : GOLD, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>{done ? tr("Appel en cours…") : tr("Ajouter")}</Text>}
