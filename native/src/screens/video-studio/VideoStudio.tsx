@@ -815,59 +815,14 @@ function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; to
     else setValue(item.text);
   }
   const step = 0.5;
+  const fontSize = Math.round(item.size * 400);
   return (
     <View style={{ gap: 10 }}>
-      <Press accessibilityLabel={tr("Écrire le texte")} onPress={() => setWriting(true)} style={{ minHeight: 44, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.surface2, justifyContent: "center" }}>
-        <Text numberOfLines={2} style={{ color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{item.text}</Text>
+      <Press accessibilityLabel={tr("Modifier le texte")} onPress={() => setWriting(true)} style={{ minHeight: 48, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.surface2, flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Type size={18} color={colors.accent} />
+        <Text numberOfLines={2} style={{ flex: 1, color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{item.text}</Text>
+        <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Modifier")}</Text>
       </Press>
-      {/* Writing happens at the top of the screen, above the keyboard, so the text stays visible. */}
-      <Modal visible={writing} transparent animationType="fade" onRequestClose={finish}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", paddingTop: insets.top + 8, paddingHorizontal: 20 }}>
-          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-            <Press accessibilityLabel={tr("OK")} onPress={finish} style={{ height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: colors.accent, justifyContent: "center" }}>
-              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("OK")}</Text>
-            </Press>
-          </View>
-          <View style={{ alignItems: "center", marginTop: 40 }}>
-            <TextInput
-              value={value}
-              onChangeText={setValue}
-              autoFocus
-              multiline
-              placeholder={tr("Ton texte")}
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              selectionColor={colors.accent}
-              style={{
-                maxWidth: "100%",
-                maxHeight: 260,
-                textAlign: "center",
-                color: item.color,
-                fontSize: 30,
-                fontFamily: item.font === "bold" ? "Inter_800ExtraBold" : "Inter_600SemiBold",
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 12,
-                backgroundColor: item.style === "box" ? "rgba(0,0,0,0.6)" : "transparent",
-                textShadowColor: item.style === "outline" ? "#000" : "transparent",
-                textShadowRadius: item.style === "outline" ? 4 : 0,
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        <Chip label={tr("Simple")} on={item.style === "plain"} onPress={() => onChange({ style: "plain" })} />
-        <Chip label={tr("Fond")} on={item.style === "box"} onPress={() => onChange({ style: "box" })} />
-        <Chip label={tr("Contour")} on={item.style === "outline"} onPress={() => onChange({ style: "outline" })} />
-        <Chip label={tr("Gras")} on={item.font === "bold"} onPress={() => onChange({ font: item.font === "bold" ? "regular" : "bold" })} />
-        <Chip label="A−" on={false} onPress={() => onChange({ size: item.size - 0.01 })} />
-        <Chip label="A+" on={false} onPress={() => onChange({ size: item.size + 0.01 })} />
-      </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-        {STORY_COLORS.map((c) => (
-          <Press key={c} accessibilityLabel={c} onPress={() => onChange({ color: c })} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: item.color === c ? 3 : 1, borderColor: item.color === c ? colors.accent : "rgba(255,255,255,0.3)" }} />
-        ))}
-      </ScrollView>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Text style={{ color: colors.muted, fontSize: 13, width: 62 }}>{tr("Début")}</Text>
         <Chip label="−" on={false} onPress={() => onChange({ from: item.from - step })} />
@@ -884,6 +839,64 @@ function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; to
           <Trash2 size={18} color={colors.danger} />
         </Press>
       </View>
+      <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Déplace le texte avec le doigt sur la vidéo.")}</Text>
+
+      {/* One screen to write and style the text, like Instagram: live preview at the top, options just above the keyboard. */}
+      <Modal visible={writing} transparent animationType="fade" onRequestClose={finish}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)" }}>
+          <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Press accessibilityLabel={tr("Plus petit")} onPress={() => onChange({ size: item.size - 0.01 })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 }}>A−</Text>
+              </Press>
+              <Press accessibilityLabel={tr("Plus grand")} onPress={() => onChange({ size: item.size + 0.01 })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 17 }}>A+</Text>
+              </Press>
+            </View>
+            <Press accessibilityLabel={tr("Terminé")} onPress={finish} style={{ height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: colors.accent, justifyContent: "center" }}>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Terminé")}</Text>
+            </Press>
+          </View>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
+            <TextInput
+              value={value}
+              onChangeText={setValue}
+              autoFocus
+              multiline
+              placeholder={tr("Ton texte")}
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              selectionColor={colors.accent}
+              style={{
+                maxWidth: "100%",
+                textAlign: "center",
+                color: item.color,
+                fontSize,
+                lineHeight: fontSize * 1.2,
+                fontFamily: item.font === "bold" ? "Inter_800ExtraBold" : "Inter_600SemiBold",
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 12,
+                backgroundColor: item.style === "box" ? "rgba(0,0,0,0.6)" : "transparent",
+                textShadowColor: item.style === "outline" ? "#000" : "transparent",
+                textShadowRadius: item.style === "outline" ? 4 : 0,
+              }}
+            />
+          </View>
+          <View style={{ paddingBottom: 10, gap: 10 }}>
+            <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
+              <Chip label={tr("Simple")} on={item.style === "plain"} onPress={() => onChange({ style: "plain" })} />
+              <Chip label={tr("Fond")} on={item.style === "box"} onPress={() => onChange({ style: "box" })} />
+              <Chip label={tr("Contour")} on={item.style === "outline"} onPress={() => onChange({ style: "outline" })} />
+              <Chip label={tr("Gras")} on={item.font === "bold"} onPress={() => onChange({ font: item.font === "bold" ? "regular" : "bold" })} />
+            </ScrollView>
+            <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
+              {STORY_COLORS.map((c) => (
+                <Press key={c} accessibilityLabel={c} onPress={() => onChange({ color: c })} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: item.color === c ? 3 : 1, borderColor: item.color === c ? colors.accent : "rgba(255,255,255,0.4)" }} />
+              ))}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
