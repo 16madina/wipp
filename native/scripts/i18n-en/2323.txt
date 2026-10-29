@@ -1,0 +1,4 @@
+2323|This request has expired.
+2324|This request is no longer available.
+2325|The request could not be accepted. Check your connection and try again.
+2326|Not possible right now. Try again.

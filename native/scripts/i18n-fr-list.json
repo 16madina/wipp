@@ -2321,5 +2321,9 @@
  "Voir mes créations ({0})",
  "Créer de nouveaux Wippmojis",
  "Le paiement n’est pas encore disponible sur cet appareil.",
- "Le paiement n’a pas abouti. Tu n’as pas été débité."
+ "Le paiement n’a pas abouti. Tu n’as pas été débité.",
+ "Cette demande a expiré.",
+ "Cette demande n’est plus disponible.",
+ "La demande n’a pas pu être acceptée. Vérifie ta connexion et réessaie.",
+ "Action impossible pour le moment. Réessaie."
 ]

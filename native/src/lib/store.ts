@@ -1431,21 +1431,32 @@ export const useWippStore = create<Store>((set, get) => ({
   acceptRequest: (id, choice) => {
     const req = get().requests.find((r) => r.id === id);
     if (!req) return;
-    if (get().serverConnected) {
+    // Real requests always go through the server, even if the last sync failed: accepting only on the
+    // phone made the request come back at the next refresh (seen on Android).
+    if (get().serverConnected || get().serverProfileId || req.fromId.startsWith("srvuser:")) {
       void (async () => {
-        const { respondRequest } = await import("./connections");
-        const status = await respondRequest(id, "accept", choice);
-        if (status === "accepted" || status === "already_handled") {
-          set((s) => ({
-            requests: s.requests.filter((r) => r.id !== id),
-            users: {
-              ...s.users,
-              ...(s.users[req.fromId] ? { [req.fromId]: { ...s.users[req.fromId], connected: true } } : {}),
-            },
-          }));
-          await get().refreshIncomingRequests();
-          // Same as the local path: accepting opens the conversation with the new contact.
-          get().openOrCreateDm(req.fromId);
+        try {
+          const { respondRequest } = await import("./connections");
+          const status = await respondRequest(id, "accept", choice);
+          if (status === "accepted" || status === "accepted_existing" || status === "already_handled") {
+            set((s) => ({
+              requests: s.requests.filter((r) => r.id !== id),
+              users: {
+                ...s.users,
+                ...(s.users[req.fromId] ? { [req.fromId]: { ...s.users[req.fromId], connected: true } } : {}),
+              },
+            }));
+            void get().refreshConnections();
+            await get().refreshIncomingRequests();
+            // Same as the local path: accepting opens the conversation with the new contact.
+            get().openOrCreateDm(req.fromId);
+          } else {
+            set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
+            await get().refreshIncomingRequests();
+            Alert.alert(tr("Demande"), status === "expired" ? tr("Cette demande a expiré.") : tr("Cette demande n’est plus disponible."));
+          }
+        } catch (err) {
+          Alert.alert(tr("Demande"), errorText(err, tr("La demande n’a pas pu être acceptée. Vérifie ta connexion et réessaie.")));
         }
       })();
       return;
@@ -1460,12 +1471,17 @@ export const useWippStore = create<Store>((set, get) => ({
     get().openOrCreateDm(req.fromId);
   },
   ignoreRequest: (id) => {
-    if (get().serverConnected) {
+    const req = get().requests.find((r) => r.id === id);
+    if (get().serverConnected || get().serverProfileId || req?.fromId.startsWith("srvuser:")) {
       void (async () => {
-        const { respondRequest } = await import("./connections");
-        await respondRequest(id, "ignore");
-        set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
-        await get().refreshIncomingRequests();
+        try {
+          const { respondRequest } = await import("./connections");
+          await respondRequest(id, "ignore");
+          set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
+          await get().refreshIncomingRequests();
+        } catch (err) {
+          Alert.alert(tr("Demande"), errorText(err, tr("Action impossible pour le moment. Réessaie.")));
+        }
       })();
       return;
     }
@@ -1474,15 +1490,20 @@ export const useWippStore = create<Store>((set, get) => ({
     }));
   },
   declineRequest: (id) => {
-    if (!get().serverConnected) {
+    const req = get().requests.find((r) => r.id === id);
+    if (!(get().serverConnected || get().serverProfileId || req?.fromId.startsWith("srvuser:"))) {
       get().ignoreRequest(id);
       return;
     }
     void (async () => {
-      const { respondRequest } = await import("./connections");
-      await respondRequest(id, "decline");
-      set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
-      await get().refreshIncomingRequests();
+      try {
+        const { respondRequest } = await import("./connections");
+        await respondRequest(id, "decline");
+        set((s) => ({ requests: s.requests.filter((r) => r.id !== id) }));
+        await get().refreshIncomingRequests();
+      } catch (err) {
+        Alert.alert(tr("Demande"), errorText(err, tr("Action impossible pour le moment. Réessaie.")));
+      }
     })();
   },
   blockUser: (userId) => {
