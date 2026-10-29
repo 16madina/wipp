@@ -26,7 +26,11 @@ async function findInRevenueCat(profileId: string, productId: string, transactio
   });
   if (!res.ok) throw new WippHttpError(502, "payment_check_failed", "Impossible de vérifier l’achat. Réessaie.");
   const json = (await res.json()) as { subscriber?: { non_subscriptions?: Record<string, RcPurchase[]> } };
-  const list = json.subscriber?.non_subscriptions?.[productId] ?? [];
+  // Google Play may list the product as "id:option" (e.g. com.wipp.studio.moji5:standard).
+  const all = json.subscriber?.non_subscriptions ?? {};
+  const list = Object.entries(all)
+    .filter(([k]) => k === productId || k.startsWith(`${productId}:`))
+    .flatMap(([, v]) => v);
   return list.find((p) => p.store_transaction_id === transactionId || p.id === transactionId) ?? null;
 }
 
