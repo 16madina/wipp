@@ -6,6 +6,25 @@ public class WippVideoTrimModule: Module {
   public func definition() -> ModuleDefinition {
     Name("WippVideoTrim")
 
+    Events("onStudioProgress")
+
+    /// Video Studio: joins segments (from up to 2 files), per-segment volume and speed, timed texts burned in.
+    AsyncFunction("exportProject") { (spec: [String: Any]) async throws -> [String: Any] in
+      let result = try await StudioExporter.export(spec: spec) { [weak self] progress in
+        self?.sendEvent("onStudioProgress", ["progress": progress])
+      }
+      return [
+        "uri": result.url.absoluteString,
+        "duration": result.duration,
+        "ext": "mp4",
+        "bytes": Self.fileBytes(result.url),
+      ]
+    }
+
+    AsyncFunction("cancelExport") { () in
+      StudioExporter.cancel()
+    }
+
     AsyncFunction("materialize") { (assetId: String) async throws -> [String: Any] in
       let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
       guard let photo = fetched.firstObject, photo.mediaType == .video else {
@@ -184,7 +203,7 @@ public class WippVideoTrimModule: Module {
   }
 }
 
-private final class TrimFailure: Exception {
+final class TrimFailure: Exception {
   private let detail: String
   init(_ detail: String) {
     self.detail = detail

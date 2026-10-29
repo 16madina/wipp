@@ -21,12 +21,14 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Camera, ChevronRight, Pause, Play, Type, X } from "lucide-react-native";
+import { Camera, ChevronRight, Pause, Play, Scissors, Type, X } from "lucide-react-native";
 import { Press } from "../components/ui";
 import { overlayFromLayers, type StoryLayer } from "../lib/story-overlay";
 import { StoryLayerEditor } from "../components/StoryLayerEditor";
 import { coverScaleForContain, storyCropRect } from "../lib/story-frame";
-import { materializeLibraryVideo, trimVideoSegment } from "wipp-video-trim";
+import { isStudioAvailable, materializeLibraryVideo, trimVideoSegment } from "wipp-video-trim";
+import { forgetStudioFile, VideoStudio } from "./video-studio/VideoStudio";
+import type { StudioProject } from "../lib/video-studio/project";
 import { useWippStore } from "../lib/store";
 import { palettes } from "../theme";
 
@@ -42,7 +44,18 @@ type Phase =
   | { name: "gallery" }
   | { name: "text" }
   | { name: "trim"; uri: string; mime: string; duration: number }
-  | { name: "edit"; uri: string; kind: "image" | "video"; mime: string; width?: number; height?: number };
+  | {
+      name: "edit";
+      uri: string;
+      kind: "image" | "video";
+      mime: string;
+      width?: number;
+      height?: number;
+      /** Video Studio: the original video and the part chosen, and the edit if one was made. */
+      source?: { uri: string; duration?: number; start?: number; end?: number };
+      studio?: StudioProject;
+      studioOpen?: boolean;
+    };
 
 const AUDIENCE_LABEL = {
   get contacts() { return tr("Mes contacts"); },
@@ -68,6 +81,28 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
   const overlay = overlayFromLayers(layers);
   const frame = useRef({ scale: 1, x: 0, y: 0, canvasW: 0, canvasH: 0, imageW: 0, imageH: 0 });
   const uploadedPath = useRef<string | null>(null);
+
+  const studioReady = isStudioAvailable();
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  useEffect(
+    () => () => {
+      // Composer closed: remove the temporary copies made for this Story (never the photo library originals).
+      const last = phaseRef.current;
+      if (last.name !== "edit") return;
+      for (const uri of [last.source?.uri, last.uri]) {
+        if (uri && /wipp-(src|trim|studio)-/.test(uri)) {
+          try {
+            const f = new File(uri);
+            if (f.exists) f.delete();
+          } catch {
+            /* temporary folder is cleaned by the system */
+          }
+        }
+      }
+    },
+    [],
+  );
 
   async function publish() {
     if (busy || (phase.name !== "edit" && phase.name !== "text")) return;
@@ -194,10 +229,40 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
           <StoryLayerEditor layers={layers} onChange={setLayers} topInset={insets.top} />
         </View>
       ) : null}
-      {phase.name === "edit" && phase.kind === "video" ? (
+      {phase.name === "edit" && phase.kind === "video" && !phase.studioOpen ? (
         <View style={{ flex: 1 }}>
           <VideoStage uri={phase.uri} />
           <StoryLayerEditor layers={layers} onChange={setLayers} topInset={insets.top} />
+          {studioReady ? (
+            <Press
+              accessibilityLabel={tr("Modifier la vidéo")}
+              onPress={() => setPhase({ ...phase, studioOpen: true })}
+              style={{ position: "absolute", top: insets.top + 124, right: 12, width: 46, alignItems: "center", gap: 4, zIndex: 3 }}
+            >
+              <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
+                <Scissors size={21} color="#fff" />
+              </View>
+              <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 3 }}>{tr("Modifier")}</Text>
+            </Press>
+          ) : null}
+        </View>
+      ) : null}
+      {phase.name === "edit" && phase.kind === "video" && phase.studioOpen ? (
+        <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, zIndex: 10 }}>
+          <VideoStudio
+            initial={phase.studio}
+            seed={phase.source ?? { uri: phase.uri }}
+            onCancel={() => setPhase({ ...phase, studioOpen: false })}
+            onDone={(result) => {
+              if (!result) {
+                setPhase({ ...phase, studioOpen: false });
+                return;
+              }
+              if (phase.studio) forgetStudioFile(phase.uri);
+              uploadedPath.current = null;
+              setPhase({ ...phase, uri: result.uri, mime: result.mime, studio: result.project, studioOpen: false });
+            }}
+          />
         </View>
       ) : null}
       {phase.name === "trim" ? (
@@ -206,14 +271,14 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
           mime={phase.mime}
           duration={phase.duration}
           onCancel={() => setPhase({ name: "gallery" })}
-          onConfirm={(uri, mime) => {
+          onConfirm={(uri, mime, range) => {
             uploadedPath.current = null;
             setLayers([]);
-            setPhase({ name: "edit", uri, kind: "video", mime });
+            setPhase({ name: "edit", uri, kind: "video", mime, source: { uri: phase.uri, duration: phase.duration, ...range } });
           }}
         />
       ) : null}
-      {phase.name === "text" || phase.name === "edit" ? (
+      {phase.name === "text" || (phase.name === "edit" && !phase.studioOpen) ? (
         <>
           <Press accessibilityLabel={tr("Fermer")} onPress={pop} style={{ position: "absolute", top: insets.top + 8, left: 12, width: 44, height: 44, alignItems: "center", justifyContent: "center", zIndex: 4 }}>
             <X size={26} color="#fff" />
@@ -401,7 +466,7 @@ function VideoTrim({
   mime: string;
   duration: number;
   onCancel: () => void;
-  onConfirm: (uri: string, mime: string) => void;
+  onConfirm: (uri: string, mime: string, range?: { start: number; end: number }) => void;
 }) {
   const insets = useSafeAreaInsets();
   const [start, setStart] = useState(0);
@@ -569,19 +634,12 @@ function VideoTrim({
           outputDuration: Math.round(trimmed.duration * 10) / 10,
         });
       }
-      if (trimmed.uri !== uri && uri.includes("wipp-src-")) {
-        try {
-          const source = new File(uri);
-          if (source.exists) source.delete();
-        } catch {
-          /* le fichier temporaire sera purgé par iOS */
-        }
-      }
-      onConfirm(trimmed.uri, videoMime(trimmed.ext || trimmed.uri));
+      // The original copy is kept while the composer is open (the Video Studio can use all of it).
+      onConfirm(trimmed.uri, videoMime(trimmed.ext || trimmed.uri), { start, end });
     } catch (err) {
       if (keepsWholeClip) {
         if (__DEV__) console.warn("[wipp] story encode skipped", { sourceBytes, message: errorText(err, String(err)) });
-        onConfirm(uri, mime);
+        onConfirm(uri, mime, { start, end });
         return;
       }
       if (__DEV__) {

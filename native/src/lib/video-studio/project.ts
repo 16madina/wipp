@@ -1,0 +1,213 @@
+/**
+ * Video Studio project: what the person edits. The source files are never changed;
+ * the final video is made from this description on the phone (see exportStudioProject).
+ * All edit functions are pure: they return a new project, so undo / redo is a list of past projects.
+ */
+
+export const MAX_SOURCES = 2;
+export const MAX_OUTPUT_SEC = 60;
+export const MIN_SEGMENT_SEC = 0.3;
+export const SPEEDS = [0.5, 1, 1.5, 2] as const;
+
+export type StudioSource = { id: string; uri: string; duration: number; index: number };
+
+export type StudioSegment = {
+  id: string;
+  sourceId: string;
+  /** Seconds in the source file. */
+  start: number;
+  end: number;
+  /** 0–1. 0 = muted. */
+  volume: number;
+  speed: number;
+};
+
+export type StudioTextStyle = "plain" | "box" | "outline";
+export type StudioFont = "regular" | "bold";
+
+export type StudioText = {
+  id: string;
+  text: string;
+  /** Centre of the text, 0–1 across the 9:16 canvas. */
+  x: number;
+  y: number;
+  /** Font size as a share of the canvas width. */
+  size: number;
+  color: string;
+  style: StudioTextStyle;
+  font: StudioFont;
+  /** Seconds on the final (edited) timeline. */
+  from: number;
+  to: number;
+};
+
+export type StudioProject = { sources: StudioSource[]; segments: StudioSegment[]; texts: StudioText[] };
+
+let counter = 0;
+export function newId(prefix: string) {
+  counter += 1;
+  return `${prefix}${Date.now().toString(36)}${counter.toString(36)}`;
+}
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+export function segmentLength(seg: StudioSegment) {
+  return (seg.end - seg.start) / seg.speed;
+}
+
+export function totalDuration(p: StudioProject) {
+  return p.segments.reduce((sum, s) => sum + segmentLength(s), 0);
+}
+
+/** Where each segment starts on the final timeline. */
+export function segmentOffsets(p: StudioProject) {
+  let at = 0;
+  return p.segments.map((s) => {
+    const from = at;
+    at += segmentLength(s);
+    return { seg: s, from, to: at };
+  });
+}
+
+/** Final-timeline time → segment and the matching time in its source file. */
+export function locate(p: StudioProject, t: number) {
+  const list = segmentOffsets(p);
+  if (!list.length) return null;
+  const time = clamp(t, 0, list[list.length - 1].to);
+  const hit = list.find((x) => time < x.to - 1e-4) ?? list[list.length - 1];
+  const index = list.indexOf(hit);
+  return { index, seg: hit.seg, from: hit.from, to: hit.to, sourceTime: hit.seg.start + (time - hit.from) * hit.seg.speed };
+}
+
+export function createProject(source: { uri: string; duration: number }, range?: { start: number; end: number }): StudioProject {
+  const src: StudioSource = { id: newId("src"), uri: source.uri, duration: source.duration, index: 0 };
+  const start = range ? clamp(range.start, 0, source.duration) : 0;
+  const end = range ? clamp(range.end, start + MIN_SEGMENT_SEC, source.duration) : source.duration;
+  return { sources: [src], segments: [{ id: newId("seg"), sourceId: src.id, start, end, volume: 1, speed: 1 }], texts: [] };
+}
+
+export function addSource(p: StudioProject, source: { uri: string; duration: number }): StudioProject {
+  if (p.sources.length >= MAX_SOURCES) return p;
+  const src: StudioSource = { id: newId("src"), uri: source.uri, duration: source.duration, index: p.sources.length };
+  return {
+    ...p,
+    sources: [...p.sources, src],
+    segments: [...p.segments, { id: newId("seg"), sourceId: src.id, start: 0, end: source.duration, volume: 1, speed: 1 }],
+  };
+}
+
+/** Cuts the segment under final-timeline time t in two. */
+export function splitAt(p: StudioProject, t: number): { project: StudioProject; rightId: string | null } {
+  const hit = locate(p, t);
+  if (!hit) return { project: p, rightId: null };
+  const cut = hit.sourceTime;
+  if (cut - hit.seg.start < MIN_SEGMENT_SEC || hit.seg.end - cut < MIN_SEGMENT_SEC) return { project: p, rightId: null };
+  const left: StudioSegment = { ...hit.seg, end: cut };
+  const right: StudioSegment = { ...hit.seg, id: newId("seg"), start: cut };
+  const segments = [...p.segments];
+  segments.splice(hit.index, 1, left, right);
+  return { project: { ...p, segments }, rightId: right.id };
+}
+
+/** Removes a segment; the parts around it are joined. Texts that end up past the end are pulled back. */
+export function removeSegment(p: StudioProject, id: string): StudioProject {
+  if (p.segments.length <= 1) return p;
+  const segments = p.segments.filter((s) => s.id !== id);
+  const next = { ...p, segments };
+  // A source that has no segment left is dropped (frees a slot for another video).
+  const used = new Set(segments.map((s) => s.sourceId));
+  next.sources = p.sources.filter((s) => used.has(s.id)).map((s, index) => ({ ...s, index }));
+  return fitTexts(next);
+}
+
+export function updateSegment(p: StudioProject, id: string, patch: Partial<Pick<StudioSegment, "start" | "end" | "volume" | "speed">>): StudioProject {
+  return fitTexts({
+    ...p,
+    segments: p.segments.map((s) => {
+      if (s.id !== id) return s;
+      const src = p.sources.find((x) => x.id === s.sourceId);
+      const max = src?.duration ?? s.end;
+      const start = clamp(patch.start ?? s.start, 0, max - MIN_SEGMENT_SEC);
+      const end = clamp(patch.end ?? s.end, start + MIN_SEGMENT_SEC, max);
+      return { ...s, start, end, volume: clamp(patch.volume ?? s.volume, 0, 1), speed: patch.speed ?? s.speed };
+    }),
+  });
+}
+
+export function moveSegment(p: StudioProject, id: string, delta: -1 | 1): StudioProject {
+  const i = p.segments.findIndex((s) => s.id === id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= p.segments.length) return p;
+  const segments = [...p.segments];
+  [segments[i], segments[j]] = [segments[j], segments[i]];
+  return { ...p, segments };
+}
+
+export function addText(p: StudioProject, at: number, text: Omit<StudioText, "id" | "from" | "to" | "x" | "y">): { project: StudioProject; id: string } {
+  const total = totalDuration(p);
+  const from = clamp(at, 0, Math.max(0, total - 0.5));
+  const id = newId("txt");
+  return { project: { ...p, texts: [...p.texts, { ...text, id, x: 0.5, y: 0.4, from, to: Math.min(total, from + 3) }] }, id };
+}
+
+export function updateText(p: StudioProject, id: string, patch: Partial<Omit<StudioText, "id">>): StudioProject {
+  const total = totalDuration(p);
+  return {
+    ...p,
+    texts: p.texts.map((t) => {
+      if (t.id !== id) return t;
+      const n = { ...t, ...patch };
+      const from = clamp(n.from, 0, Math.max(0, total - 0.2));
+      return { ...n, x: clamp(n.x, 0.05, 0.95), y: clamp(n.y, 0.05, 0.95), size: clamp(n.size, 0.04, 0.16), from, to: clamp(n.to, from + 0.2, total) };
+    }),
+  };
+}
+
+export function removeText(p: StudioProject, id: string): StudioProject {
+  return { ...p, texts: p.texts.filter((t) => t.id !== id) };
+}
+
+function fitTexts(p: StudioProject): StudioProject {
+  const total = totalDuration(p);
+  return {
+    ...p,
+    texts: p.texts
+      .filter((t) => t.from < total - 0.1)
+      .map((t) => ({ ...t, to: Math.min(t.to, total) })),
+  };
+}
+
+/** True when the project is just the untouched first video (nothing to export). */
+export function isUntouched(p: StudioProject) {
+  if (p.sources.length !== 1 || p.segments.length !== 1 || p.texts.length) return false;
+  const s = p.segments[0];
+  return s.start < 0.05 && Math.abs(s.end - p.sources[0].duration) < 0.05 && s.volume === 1 && s.speed === 1;
+}
+
+/** History for undo / redo. */
+export type History = { past: StudioProject[]; present: StudioProject; future: StudioProject[] };
+export const historyOf = (present: StudioProject): History => ({ past: [], present, future: [] });
+export function commit(h: History, next: StudioProject): History {
+  if (next === h.present) return h;
+  return { past: [...h.past.slice(-49), h.present], present: next, future: [] };
+}
+export function undo(h: History): History {
+  if (!h.past.length) return h;
+  return { past: h.past.slice(0, -1), present: h.past[h.past.length - 1], future: [h.present, ...h.future] };
+}
+export function redo(h: History): History {
+  if (!h.future.length) return h;
+  return { past: [...h.past, h.present], present: h.future[0], future: h.future.slice(1) };
+}
+
+/** What the native exporters receive (same shape on iPhone and Android). */
+export function exportSpec(p: StudioProject) {
+  const byId = new Map(p.sources.map((s) => [s.id, s]));
+  return {
+    width: 720,
+    height: 1280,
+    segments: p.segments.map((s) => ({ uri: byId.get(s.sourceId)!.uri, start: s.start, end: s.end, volume: s.volume, speed: s.speed })),
+    texts: p.texts.map((t) => ({ text: t.text, x: t.x, y: t.y, size: t.size, color: t.color, style: t.style, bold: t.font === "bold", from: t.from, to: t.to })),
+  };
+}
+export type ExportSpec = ReturnType<typeof exportSpec>;

@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.wipp'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.wippvideotrim"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Video Studio export on the phone (join segments, per-segment volume, timed texts).
+  def media3 = "1.4.1"
+  implementation "androidx.media3:media3-transformer:$media3"
+  implementation "androidx.media3:media3-effect:$media3"
+  implementation "androidx.media3:media3-common:$media3"
+}
