@@ -266,9 +266,9 @@ export function VideoStudio({
   const textItem = project?.texts.find((t) => t.id === selectedText) ?? null;
 
   // Video area: 9:16, as large as the space allows.
-  const chrome = insets.top + 56 + 44 + 168 + 76 + insets.bottom;
-  const stageH = Math.max(220, Math.min(screenH - chrome, ((screenW - 48) * 16) / 9));
-  const stageW = (stageH * 9) / 16;
+  // Full screen, like WhatsApp: the 9:16 picture fills the screen and the controls float over it.
+  const stageW = Math.min(screenW, (screenH * 9) / 16);
+  const stageH = (stageW * 16) / 9;
 
   function split() {
     if (!project) return;
@@ -424,34 +424,16 @@ export function VideoStudio({
   const half = screenW / 2;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Top bar */}
-      <View style={{ paddingTop: insets.top + 6, height: insets.top + 56, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12 }}>
-        <Press accessibilityLabel={tr("Annuler")} onPress={() => { stop(); onCancel(); }} style={{ height: 40, paddingHorizontal: 10, justifyContent: "center" }}>
-          <Text style={{ color: colors.fg, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{tr("Annuler")}</Text>
-        </Press>
-        <View style={{ flexDirection: "row", gap: 4 }}>
-          <Press accessibilityLabel={tr("Annuler la dernière action")} disabled={!history?.past.length} onPress={() => history && (stop(), setHistory(P.undo(history)), setTimeout(() => showAt(Math.min(headRef.current, P.totalDuration(P.undo(history).present) - 0.05), false), 0))} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", opacity: history?.past.length ? 1 : 0.35 }}>
-            <Undo2 size={22} color={colors.fg} />
-          </Press>
-          <Press accessibilityLabel={tr("Rétablir")} disabled={!history?.future.length} onPress={() => history && (stop(), setHistory(P.redo(history)), setTimeout(() => showAt(Math.min(headRef.current, P.totalDuration(P.redo(history).present) - 0.05), false), 0))} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", opacity: history?.future.length ? 1 : 0.35 }}>
-            <Redo2 size={22} color={colors.fg} />
-          </Press>
-        </View>
-        <Press accessibilityLabel={tr("Terminé")} onPress={() => void done()} style={{ height: 36, paddingHorizontal: 18, borderRadius: 18, backgroundColor: colors.accent, justifyContent: "center" }}>
-          <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Terminé")}</Text>
-        </Press>
-      </View>
-
-      {/* Preview 9:16 */}
-      <View style={{ alignItems: "center" }}>
-        <View style={{ width: stageW, height: stageH, borderRadius: 18, overflow: "hidden", backgroundColor: "#000" }}>
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      {/* Preview 9:16, full screen */}
+      <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: stageW, height: stageH, overflow: "hidden", backgroundColor: "#000" }}>
           <VideoView player={playerA} style={{ position: "absolute", width: "100%", height: "100%", opacity: active === 0 ? 1 : 0 }} contentFit="contain" nativeControls={false} />
           {uriB ? <VideoView player={playerB} style={{ position: "absolute", width: "100%", height: "100%", opacity: active === 1 ? 1 : 0 }} contentFit="contain" nativeControls={false} /> : null}
           <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
             {!playing ? (
-              <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
-                <Play size={28} color="#fff" fill="#fff" />
+              <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" }}>
+                <Play size={30} color="#fff" fill="#fff" />
               </View>
             ) : null}
           </Press>
@@ -474,8 +456,27 @@ export function VideoStudio({
         </View>
       </View>
 
+      {/* Top: actions, then the timeline, over the video */}
+      <View style={{ position: "absolute", left: 0, right: 0, top: 0, paddingTop: insets.top, backgroundColor: "rgba(0,0,0,0.42)" }}>
+      <View style={{ height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 8 }}>
+        <Press accessibilityLabel={tr("Annuler")} onPress={() => { stop(); onCancel(); }} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+          <X size={26} color="#fff" />
+        </Press>
+        <View style={{ flexDirection: "row", gap: 4 }}>
+          <Press accessibilityLabel={tr("Annuler la dernière action")} disabled={!history?.past.length} onPress={() => history && (stop(), setHistory(P.undo(history)), setTimeout(() => showAt(Math.min(headRef.current, P.totalDuration(P.undo(history).present) - 0.05), false), 0))} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", opacity: history?.past.length ? 1 : 0.35 }}>
+            <Undo2 size={22} color={colors.fg} />
+          </Press>
+          <Press accessibilityLabel={tr("Rétablir")} disabled={!history?.future.length} onPress={() => history && (stop(), setHistory(P.redo(history)), setTimeout(() => showAt(Math.min(headRef.current, P.totalDuration(P.redo(history).present) - 0.05), false), 0))} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", opacity: history?.future.length ? 1 : 0.35 }}>
+            <Redo2 size={22} color={colors.fg} />
+          </Press>
+        </View>
+        <Press accessibilityLabel={tr("Terminé")} onPress={() => void done()} style={{ height: 36, paddingHorizontal: 18, borderRadius: 18, backgroundColor: colors.accent, justifyContent: "center" }}>
+          <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Terminé")}</Text>
+        </Press>
+      </View>
+
       {/* Time */}
-      <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <View style={{ height: 30, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
         <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           {playing ? <Pause size={22} color={colors.fg} fill={colors.fg} /> : <Play size={22} color={colors.fg} fill={colors.fg} />}
         </Press>
@@ -486,7 +487,7 @@ export function VideoStudio({
       </View>
 
       {/* Timeline */}
-      <View style={{ height: 168 }}>
+      <View style={{ height: 132 }}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -504,11 +505,11 @@ export function VideoStudio({
           onMomentumScrollEnd={() => {
             userScrolling.current = false;
           }}
-          contentContainerStyle={{ paddingHorizontal: half, paddingTop: 8 }}
+          contentContainerStyle={{ paddingHorizontal: half, paddingTop: 4 }}
         >
           <View>
             {/* Video track */}
-            <View style={{ flexDirection: "row", height: 64, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", height: 58, alignItems: "center" }}>
               {offsets.map(({ seg }) => {
                 const w = Math.max(8, P.segmentLength(seg) * PX_PER_SEC);
                 const src = project.sources.find((s) => s.id === seg.sourceId);
@@ -566,7 +567,7 @@ export function VideoStudio({
             </View>
 
             {/* Sound track: one bar per segment, by volume */}
-            <View style={{ flexDirection: "row", height: 28, marginTop: 6 }}>
+            <View style={{ flexDirection: "row", height: 24, marginTop: 4 }}>
               {offsets.map(({ seg }) => {
                 const w = Math.max(8, P.segmentLength(seg) * PX_PER_SEC);
                 const muted = seg.volume <= 0.001;
@@ -595,7 +596,7 @@ export function VideoStudio({
             </View>
 
             {/* Text track */}
-            <View style={{ height: 30, marginTop: 6, width: Math.max(8, total * PX_PER_SEC) }}>
+            <View style={{ height: 30, marginTop: 4, width: Math.max(8, total * PX_PER_SEC) }}>
               {project.texts.map((t, i) => (
                 <Press
                   key={t.id}
@@ -619,26 +620,31 @@ export function VideoStudio({
         {/* Play head */}
         <View pointerEvents="none" style={{ position: "absolute", left: half - 1, top: 0, bottom: 0, width: 2, borderRadius: 1, backgroundColor: "#fff" }} />
       </View>
+      </View>
 
-      {error ? <Text style={{ color: colors.danger, textAlign: "center", paddingHorizontal: 16, fontSize: 13, marginTop: -4 }}>{error}</Text> : null}
+      {error ? (
+        <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: insets.top + 222, alignItems: "center" }}>
+          <Text style={{ color: "#fff", backgroundColor: "rgba(200,40,60,0.85)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, overflow: "hidden", fontSize: 13, textAlign: "center" }}>{error}</Text>
+        </View>
+      ) : null}
 
       {/* Toolbar */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingBottom: insets.bottom + 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.hair, backgroundColor: colors.bg }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, gap: 2, minWidth: "100%", justifyContent: "space-around" }}>
-          <Tool icon={<Scissors size={22} color={colors.fg} />} label={tr("Scinder")} onPress={split} />
-          <Tool icon={<Trash2 size={22} color={colors.fg} />} label={tr("Supprimer")} onPress={remove} />
-          <Tool icon={<Volume2 size={22} color={colors.fg} />} label={tr("Son")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("sound"); }} />
-          {caps.speed ? <Tool icon={<Gauge size={22} color={colors.fg} />} label={tr("Vitesse")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("speed"); }} /> : null}
-          <Tool icon={<Type size={22} color={colors.fg} />} label={tr("Texte")} onPress={newText} />
-          {project.segments.length > 1 ? <Tool icon={<ArrowRight size={22} color={colors.fg} />} label={tr("Ordre")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("order"); }} /> : null}
-          {project.sources.length < P.MAX_SOURCES ? <Tool icon={<Plus size={22} color={colors.fg} />} label={tr("Vidéo")} onPress={() => void addVideo()} /> : null}
+      <View pointerEvents="box-none" style={{ position: "absolute", left: 8, top: insets.top + 224, bottom: insets.bottom + 16 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
+          <Tool icon={<Scissors size={21} color="#fff" />} label={tr("Scinder")} onPress={split} />
+          <Tool icon={<Trash2 size={21} color="#fff" />} label={tr("Supprimer")} onPress={remove} />
+          <Tool icon={<Volume2 size={21} color="#fff" />} label={tr("Son")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("sound"); }} />
+          {caps.speed ? <Tool icon={<Gauge size={21} color="#fff" />} label={tr("Vitesse")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("speed"); }} /> : null}
+          <Tool icon={<Type size={21} color="#fff" />} label={tr("Texte")} onPress={newText} />
+          {project.segments.length > 1 ? <Tool icon={<ArrowRight size={21} color="#fff" />} label={tr("Ordre")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("order"); }} /> : null}
+          {project.sources.length < P.MAX_SOURCES ? <Tool icon={<Plus size={21} color="#fff" />} label={tr("Vidéo")} onPress={() => void addVideo()} /> : null}
         </ScrollView>
       </View>
 
       {/* Panels */}
       {panel && (panel === "text" ? textItem : currentSeg) ? (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
-          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 12 }}>
+          <View style={{ backgroundColor: "rgba(17,24,39,0.92)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", fontSize: 17 }}>
                 {panel === "sound" ? tr("Son") : panel === "speed" ? tr("Vitesse") : panel === "order" ? tr("Ordre des séquences") : tr("Texte")}
@@ -719,9 +725,9 @@ function ThumbTile({ uri }: { uri: string }) {
 
 function Tool({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
   return (
-    <Press accessibilityLabel={label} onPress={onPress} style={{ minWidth: 58, height: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 4 }}>
-      {icon}
-      <Text style={{ color: colors.fg, fontSize: 11, fontFamily: "Inter_500Medium" }}>{label}</Text>
+    <Press accessibilityLabel={label} onPress={onPress} style={{ width: 58, alignItems: "center", gap: 3 }}>
+      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>{icon}</View>
+      <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 3 }}>{label}</Text>
     </Press>
   );
 }
@@ -843,7 +849,7 @@ function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; to
 
       {/* One screen to write and style the text, like Instagram: live preview at the top, options just above the keyboard. */}
       <Modal visible={writing} transparent animationType="fade" onRequestClose={finish}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)" }}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }}>
           <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Press accessibilityLabel={tr("Plus petit")} onPress={() => onChange({ size: item.size - 0.01 })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
@@ -856,6 +862,13 @@ function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; to
             <Press accessibilityLabel={tr("Terminé")} onPress={finish} style={{ height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: colors.accent, justifyContent: "center" }}>
               <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Terminé")}</Text>
             </Press>
+          </View>
+          <View style={{ marginTop: 12 }}>
+              <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
+              {STORY_COLORS.map((c) => (
+                <Press key={c} accessibilityLabel={c} onPress={() => onChange({ color: c })} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: item.color === c ? 3 : 1, borderColor: item.color === c ? colors.accent : "rgba(255,255,255,0.4)" }} />
+              ))}
+            </ScrollView>
           </View>
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
             <TextInput
@@ -889,11 +902,7 @@ function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; to
               <Chip label={tr("Contour")} on={item.style === "outline"} onPress={() => onChange({ style: "outline" })} />
               <Chip label={tr("Gras")} on={item.font === "bold"} onPress={() => onChange({ font: item.font === "bold" ? "regular" : "bold" })} />
             </ScrollView>
-            <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
-              {STORY_COLORS.map((c) => (
-                <Press key={c} accessibilityLabel={c} onPress={() => onChange({ color: c })} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: item.color === c ? 3 : 1, borderColor: item.color === c ? colors.accent : "rgba(255,255,255,0.4)" }} />
-              ))}
-            </ScrollView>
+
           </View>
         </KeyboardAvoidingView>
       </Modal>
