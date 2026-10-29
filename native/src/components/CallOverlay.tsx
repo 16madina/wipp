@@ -302,6 +302,74 @@ export function CallOverlay() {
     room.on(RoomEvent.Disconnected, () => {
       if (!cancelled) patch({ phase: "ended", url: undefined, token: undefined });
     });
+    // Calls with 3+ people: raised hands, applause and the organizer's tools travel as data messages.
+    void import("../lib/calls/room-controls").then((rc) => {
+      if (cancelled) return;
+      rc.resetCallControls();
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+      const isHost = session.dir === "out";
+      const nameOf = (identity: string) => {
+        for (const u of Object.values(useWippStore.getState().users)) if (u?.id && identityKey(u.id) === identity) return u.displayName || `@${u.username}`;
+        return [...room.remoteParticipants.values()].find((p) => p.identity === identity)?.name || tr("Quelqu’un");
+      };
+      const send = (msg: import("../lib/calls/room-controls").CallMsg) => {
+        if (room.state !== "connected") return;
+        void room.localParticipant.publishData(enc.encode(JSON.stringify(msg)), { reliable: true, topic: rc.CALL_TOPIC }).catch(() => undefined);
+        // My own hand / applause also show on my screen.
+        const me = room.localParticipant.identity;
+        if (msg.t === "hand") rc.setHand(me, msg.up);
+        if (msg.t === "clap") rc.addClap(me);
+      };
+      rc.useCallControls.setState({ send });
+      const announce = () => {
+        if (!isHost) return;
+        rc.useCallControls.setState({ host: room.localParticipant.identity });
+        send({ t: "host" });
+      };
+      room.on(RoomEvent.Connected, announce);
+      room.on(RoomEvent.ParticipantConnected, announce);
+      room.on(RoomEvent.ParticipantDisconnected, (p) => rc.setHand(p.identity, false));
+      room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+        if (topic !== rc.CALL_TOPIC || !participant) return;
+        let msg: import("../lib/calls/room-controls").CallMsg;
+        try {
+          msg = JSON.parse(dec.decode(payload));
+        } catch {
+          return;
+        }
+        const from = participant.identity;
+        const me = room.localParticipant.identity;
+        const st = rc.useCallControls.getState();
+        if (msg.t === "host") {
+          // The first organizer announced wins (the one who started the call).
+          if (!st.host) rc.useCallControls.setState({ host: from });
+          return;
+        }
+        if (msg.t === "hand") {
+          rc.setHand(from, msg.up);
+          if (msg.up && st.host === me) rc.callNotice(tr("{0} lève la main", nameOf(from)));
+          return;
+        }
+        if (msg.t === "clap") {
+          rc.addClap(from);
+          return;
+        }
+        // Organizer tools: only from the organizer, only for me.
+        if (st.host !== from || msg.to !== me) return;
+        if (msg.t === "mute") {
+          patch({ muted: true });
+          rc.callNotice(tr("{0} a coupé ton micro", nameOf(from)));
+        } else if (msg.t === "cam-ask") {
+          rc.useCallControls.setState({ camAsk: true });
+        } else if (msg.t === "floor") {
+          rc.setHand(me, false);
+          send({ t: "hand", up: false });
+          rc.callNotice(tr("{0} te donne la parole. Active ton micro pour parler.", nameOf(from)));
+        }
+      });
+      if (room.state === "connected") announce();
+    });
     // One-to-one call: when the other person leaves the room, the call is over for us too.
     room.on(RoomEvent.ParticipantDisconnected, () => {
       if (!cancelled && !session.group && room.remoteParticipants.size === 0) {
@@ -339,6 +407,7 @@ export function CallOverlay() {
       setRemoteMuted(false);
       setSwapped(false);
       void room.disconnect();
+      void import("../lib/calls/room-controls").then((rc) => rc.resetCallControls());
       void import("@livekit/react-native").then((m) => m.AudioSession.stopAudioSession()).catch(() => undefined);
     };
   }, [session?.url, session?.token]);
@@ -530,7 +599,7 @@ export function CallOverlay() {
   const groupTiles = session.group || tiles.length > 2
     ? tiles.map((tile) => {
         const who = tile.local ? { displayName: tr("Toi"), avatar: me.avatar } : byIdentity.get(tile.identity) ?? { displayName: tr("Membre") };
-        return { key: tile.key, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };
+        return { key: tile.key, identity: tile.identity, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };
       })
     : undefined;
   const peer = {

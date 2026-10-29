@@ -1,0 +1,9 @@
+2332|{0} raised their hand
+2333|{0} muted your microphone
+2334|{0} gives you the floor. Turn on your microphone to speak.
+2335|Lower hand
+2336|The organizer asks you to turn on your camera
+2337|Not now
+2338|Give the floor
+2339|Mute their microphone
+2340|Ask to turn on their camera

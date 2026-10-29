@@ -2330,5 +2330,14 @@
  "Impossible d’ajouter cette personne pour le moment.",
  "Jusqu’à 4 personnes dans l’appel. La personne reçoit un appel WIPP.",
  "Aucun autre contact à ajouter.",
- "Appel en cours…"
+ "Appel en cours…",
+ "{0} lève la main",
+ "{0} a coupé ton micro",
+ "{0} te donne la parole. Active ton micro pour parler.",
+ "Baisser la main",
+ "L’organisateur te demande d’activer ta caméra",
+ "Pas maintenant",
+ "Donner la parole",
+ "Couper son micro",
+ "Demander d’activer sa caméra"
 ]

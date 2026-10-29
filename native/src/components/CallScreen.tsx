@@ -29,6 +29,8 @@ import { formatDuration } from "../lib/format";
 import { useT, useWippStore } from "../lib/store";
 import { acceptCurrentCall, declineCurrentCall, upgradeToVideo, useCallSession, type CallPhase, type CallSession } from "../lib/calls/session";
 import { tr } from "../lib/tr";
+import { callNotice, sendCallMsg, useCallControls } from "../lib/calls/room-controls";
+const callNoticeSent = () => callNotice(tr("Demande envoyée"));
 
 const BG_TOP = "#070B16";
 const BG_BOTTOM = "#02040A";
@@ -232,17 +234,26 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
-export type GroupTile = { key: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean };
+export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean };
 
 /** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
-function GroupMosaic({ tiles, RTCView, viewEpoch }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number }) {
+function GroupMosaic({ tiles, RTCView, viewEpoch, onTile }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void }) {
   const shown = tiles.slice(0, 8);
+  const hands = useCallControls((s) => s.hands);
+  const claps = useCallControls((s) => s.claps);
+  const [, tick] = useState(0);
+  // Applause fades after 3 s: refresh while some is showing.
+  useEffect(() => {
+    if (!claps.length) return;
+    const id = setTimeout(() => tick((n) => n + 1), 3100);
+    return () => clearTimeout(id);
+  }, [claps]);
   const cols = shown.length <= 2 ? 1 : 2;
   const rows = Math.ceil(shown.length / cols);
   return (
     <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap" }}>
       {shown.map((tile) => (
-        <View key={tile.key} style={{ width: `${100 / cols}%`, height: `${100 / rows}%`, padding: 4 }}>
+        <Pressable key={tile.key} onPress={onTile ? () => onTile(tile) : undefined} style={{ width: `${100 / cols}%`, height: `${100 / rows}%`, padding: 4 }}>
           <View
             style={{
               flex: 1,
@@ -270,8 +281,17 @@ function GroupMosaic({ tiles, RTCView, viewEpoch }: { tiles: GroupTile[]; RTCVie
                 </View>
               ) : null}
             </View>
+            {tile.identity && hands.includes(tile.identity) ? (
+              <View style={{ position: "absolute", top: 8, left: 8, paddingHorizontal: 8, height: 28, borderRadius: 14, backgroundColor: GOLD, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text style={{ fontSize: 14 }}>✋</Text>
+                <Text style={{ color: "#000", fontSize: 12, fontFamily: "Inter_700Bold" }}>{hands.indexOf(tile.identity) + 1}</Text>
+              </View>
+            ) : null}
+            {tile.identity && claps.some((c) => c.id === tile.identity && Date.now() - c.at < 3000) ? (
+              <Text style={{ position: "absolute", top: 6, right: 10, fontSize: 30 }}>👏</Text>
+            ) : null}
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -316,6 +336,21 @@ export function CallScreen({
   const { width, height } = useWindowDimensions();
   const [more, setMore] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Calls with 3+ people: organizer tools, raised hand, applause.
+  const host = useCallControls((s) => s.host);
+  const hands = useCallControls((s) => s.hands);
+  const notice = useCallControls((s) => s.notice);
+  const camAsk = useCallControls((s) => s.camAsk);
+  const myIdentity = groupTiles?.find((t) => t.local)?.identity ?? null;
+  const iAmHost = Boolean(host && myIdentity && host === myIdentity);
+  const myHand = Boolean(myIdentity && hands.includes(myIdentity));
+  const [hostTile, setHostTile] = useState<GroupTile | null>(null);
+  const [, noticeTick] = useState(0);
+  useEffect(() => {
+    if (!notice) return;
+    const id = setTimeout(() => noticeTick((n) => n + 1), 4100);
+    return () => clearTimeout(id);
+  }, [notice]);
   const [controls, setControls] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -413,7 +448,7 @@ export function CallScreen({
               {status} · {groupTiles.length} {tr("participant")}{groupTiles.length > 1 ? "s" : ""}
             </Text>
           </View>
-          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} />
+          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onTile={iAmHost ? (t) => { if (!t.local && t.identity) setHostTile(t); } : undefined} />
         </View>
       ) : null}
 
@@ -535,6 +570,18 @@ export function CallScreen({
                 <Text style={{ color: "#fff", fontSize: 15 }}>{c.flip}</Text>
               </Press>
             ) : null}
+            {mosaic ? (
+              <Press onPress={() => { setMore(false); sendCallMsg({ t: "hand", up: !myHand }); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Text style={{ fontSize: 18, width: 20, textAlign: "center" }}>✋</Text>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{myHand ? tr("Baisser la main") : tr("Lever la main")}</Text>
+              </Press>
+            ) : null}
+            {mosaic ? (
+              <Press onPress={() => { setMore(false); sendCallMsg({ t: "clap" }); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Text style={{ fontSize: 18, width: 20, textAlign: "center" }}>👏</Text>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Applaudir")}</Text>
+              </Press>
+            ) : null}
             {connected && !session.group && session.callId ? (
               <Press onPress={() => { setMore(false); setAdding(true); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
                 <UserPlus size={20} color={GOLD} />
@@ -546,6 +593,65 @@ export function CallScreen({
               <Text style={{ color: "#fff", fontSize: 15 }}>{c.minimize}</Text>
             </Press>
             <Press onPress={() => setMore(false)} style={{ paddingVertical: 14, alignItems: "center" }}>
+              <Text style={{ color: GREY, fontSize: 15 }}>{c.cancel}</Text>
+            </Press>
+          </View>
+        </Pressable>
+      </Modal>
+      {notice && Date.now() - notice.at < 4000 ? (
+        <View pointerEvents="none" style={{ position: "absolute", top: insets.top + 12, left: 16, right: 16, alignItems: "center" }}>
+          <View style={{ backgroundColor: "rgba(0,0,0,0.75)", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }}>
+            <Text style={{ color: "#fff", fontSize: 14, textAlign: "center" }}>{notice.text}</Text>
+          </View>
+        </View>
+      ) : null}
+      {/* The organizer asks me to turn my camera on: my choice. */}
+      <Modal visible={camAsk} transparent animationType="fade" onRequestClose={() => useCallControls.setState({ camAsk: false })}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <View style={{ width: "100%", backgroundColor: "#0E1320", borderRadius: 20, padding: 20, gap: 14 }}>
+            <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{tr("L’organisateur te demande d’activer ta caméra")}</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Press onPress={() => useCallControls.setState({ camAsk: false })} style={{ flex: 1, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Pas maintenant")}</Text>
+              </Press>
+              <Press
+                onPress={() => {
+                  useCallControls.setState({ camAsk: false });
+                  if (video) patch({ camOff: false });
+                  else void upgradeToVideo();
+                }}
+                style={{ flex: 1, height: 46, borderRadius: 23, backgroundColor: GOLD, alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: "#000", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Activer")}</Text>
+              </Press>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Organizer: actions on one person. */}
+      <Modal visible={Boolean(hostTile)} transparent animationType="fade" onRequestClose={() => setHostTile(null)}>
+        <Pressable onPress={() => setHostTile(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: "#0E1320", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: insets.bottom + 18, gap: 4 }}>
+            <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16, marginBottom: 8 }}>{hostTile?.name}</Text>
+            {hostTile?.identity && hands.includes(hostTile.identity) ? (
+              <Press onPress={() => { if (hostTile?.identity) sendCallMsg({ t: "floor", to: hostTile.identity }); setHostTile(null); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Text style={{ fontSize: 18, width: 20, textAlign: "center" }}>🎤</Text>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Donner la parole")}</Text>
+              </Press>
+            ) : null}
+            {hostTile?.micOn ? (
+              <Press onPress={() => { if (hostTile?.identity) sendCallMsg({ t: "mute", to: hostTile.identity }); setHostTile(null); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <MicOff size={20} color={GOLD} />
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Couper son micro")}</Text>
+              </Press>
+            ) : null}
+            {!hostTile?.url ? (
+              <Press onPress={() => { if (hostTile?.identity) sendCallMsg({ t: "cam-ask", to: hostTile.identity }); setHostTile(null); callNoticeSent(); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Video size={20} color={GOLD} />
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Demander d’activer sa caméra")}</Text>
+              </Press>
+            ) : null}
+            <Press onPress={() => setHostTile(null)} style={{ paddingVertical: 14, alignItems: "center" }}>
               <Text style={{ color: GREY, fontSize: 15 }}>{c.cancel}</Text>
             </Press>
           </View>
