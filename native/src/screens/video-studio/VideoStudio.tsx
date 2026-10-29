@@ -456,7 +456,7 @@ export function VideoStudio({
         </View>
       </View>
 
-      {/* Top: actions, then the timeline, over the video */}
+      {/* Top: cancel, undo / redo, done */}
       <View style={{ position: "absolute", left: 0, right: 0, top: 0, paddingTop: insets.top, backgroundColor: "rgba(0,0,0,0.42)" }}>
       <View style={{ height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 8 }}>
         <Press accessibilityLabel={tr("Annuler")} onPress={() => { stop(); onCancel(); }} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
@@ -475,6 +475,10 @@ export function VideoStudio({
         </Press>
       </View>
 
+      </View>
+
+      {/* Bottom: time and timeline (video, sound, texts), over the video */}
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 6, paddingBottom: insets.bottom + 6, backgroundColor: "rgba(0,0,0,0.42)" }}>
       {/* Time */}
       <View style={{ height: 30, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
         <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
@@ -623,13 +627,13 @@ export function VideoStudio({
       </View>
 
       {error ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: insets.top + 222, alignItems: "center" }}>
+        <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: insets.top + 58, alignItems: "center" }}>
           <Text style={{ color: "#fff", backgroundColor: "rgba(200,40,60,0.85)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, overflow: "hidden", fontSize: 13, textAlign: "center" }}>{error}</Text>
         </View>
       ) : null}
 
       {/* Toolbar */}
-      <View pointerEvents="box-none" style={{ position: "absolute", left: 8, top: insets.top + 224, bottom: insets.bottom + 16 }}>
+      <View pointerEvents="box-none" style={{ position: "absolute", right: 8, top: insets.top + 60, bottom: insets.bottom + 186 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
           <Tool icon={<Scissors size={21} color="#fff" />} label={tr("Scinder")} onPress={split} />
           <Tool icon={<Trash2 size={21} color="#fff" />} label={tr("Supprimer")} onPress={remove} />
