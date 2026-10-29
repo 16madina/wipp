@@ -771,6 +771,21 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
+    // Sign-in code by Termii (Africa: SMS on local routes, WhatsApp, voice). No session yet.
+    if (a === "auth" && b === "otp") {
+      const otp = await import("@/lib/auth/otp");
+      if (method === "GET" && c === "config") return json(otp.otpConfig());
+      if (method === "POST" && c === "send") {
+        const body = await readBody<{ phone?: string; channel?: string }>(request);
+        const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null;
+        return json(await otp.sendOtp({ phone: body.phone, channel: body.channel, ip }));
+      }
+      if (method === "POST" && c === "verify") {
+        const body = await readBody<{ phone?: string; code?: string }>(request);
+        return json(await otp.verifyOtp({ phone: body.phone, code: body.code }));
+      }
+    }
+
     // Password accounts are a local demo path. In production every account comes
     // from Firebase phone auth (auth/profile), so these two would skip the SMS.
     if (method === "POST" && (a === "register" || a === "login") && process.env.NODE_ENV === "production") {

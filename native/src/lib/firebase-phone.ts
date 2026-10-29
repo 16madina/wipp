@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   PhoneAuthProvider,
   signInWithCredential,
+  signInWithCustomToken,
   signOut,
   type ApplicationVerifier,
   type Auth,
@@ -248,4 +249,11 @@ export function clearSms(): void {
 
 export function explainSmsError(err: unknown): string {
   return smsSendError(err);
+}
+
+/** Sign-in with the token the WIPP server gives after a Termii code (same Firebase account as the phone number). */
+export async function signInWithServerToken(token: string): Promise<void> {
+  const cred = await signInWithCustomToken(firebaseAuth(), token);
+  await cred.user.getIdToken(true);
+  verificationId = null;
 }

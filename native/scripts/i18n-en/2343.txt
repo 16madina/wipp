@@ -1,0 +1,6 @@
+2343|The code could not be sent. Try again.
+2344|Wrong or expired code.
+2345|Didn’t get the code? Get it by:
+2346|WhatsApp
+2347|Voice call
+2348|SMS

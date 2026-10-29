@@ -2341,5 +2341,11 @@
  "Couper son micro",
  "Demander d’activer sa caméra",
  "{0} te donne la parole. Ton micro est activé.",
- "Tu donnes la parole à {0}"
+ "Tu donnes la parole à {0}",
+ "Le code n’a pas pu être envoyé. Réessaie.",
+ "Code incorrect ou expiré.",
+ "Tu n’as pas reçu le code ? Reçois-le par :",
+ "WhatsApp",
+ "Appel vocal",
+ "SMS"
 ]

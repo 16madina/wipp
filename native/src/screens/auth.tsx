@@ -15,6 +15,8 @@ import {
   setVerifiedSignup,
   startFreshSignup,
   startPhoneCode,
+  codeChannelsFor,
+  type CodeChannel,
   toE164,
   verifyPhoneCode,
 } from "../lib/auth-flow";
@@ -939,11 +941,17 @@ export function SmsReferenceScreen() {
     push({ name: "profile-reference" });
   }
 
-  async function resend() {
+  // Africa: other ways to get the code (WhatsApp, voice call) when the SMS does not arrive.
+  const [channels, setChannels] = useState<CodeChannel[]>([]);
+  useEffect(() => {
+    if (phone) void codeChannelsFor(phone).then(setChannels);
+  }, [phone]);
+
+  async function resend(channel?: CodeChannel) {
     if (seconds > 0 || busy || !phone) return;
     setBusy(true);
     setError("");
-    const result = await startPhoneCode(phone, signin ? "signin" : "signup");
+    const result = await startPhoneCode(phone, signin ? "signin" : "signup", channel);
     setBusy(false);
     if (result) {
       setError(result);
@@ -1036,12 +1044,27 @@ export function SmsReferenceScreen() {
         </Abs>
       ) : null}
       <Abs t={78} l={8} h={5} w={84}>
-        <Pressable disabled={seconds > 0 || busy} onPress={() => void resend()} style={{ flex: 1, justifyContent: "center" }}>
-          <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{tr("Tu n’as pas reçu le code ?")}</Text>
-          <Text style={{ marginTop: 3, textAlign: "center", color: seconds > 0 ? "rgba(255,216,77,0.6)" : colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-            {seconds > 0 ? tr("Renvoyer le code dans 00:{0}", String(seconds).padStart(2, "0")) : tr("Renvoyer le code")}
-          </Text>
-        </Pressable>
+        {channels.length > 1 && seconds === 0 ? (
+          <View style={{ flex: 1, justifyContent: "center" }}>
+            <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{tr("Tu n’as pas reçu le code ? Reçois-le par :")}</Text>
+            <View style={{ marginTop: 4, flexDirection: "row", justifyContent: "center", gap: 18 }}>
+              {channels.map((ch) => (
+                <Pressable key={ch} disabled={busy} onPress={() => void resend(ch)} hitSlop={8}>
+                  <Text style={{ color: colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    {ch === "whatsapp" ? tr("WhatsApp") : ch === "voice" ? tr("Appel vocal") : tr("SMS")}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <Pressable disabled={seconds > 0 || busy} onPress={() => void resend()} style={{ flex: 1, justifyContent: "center" }}>
+            <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{tr("Tu n’as pas reçu le code ?")}</Text>
+            <Text style={{ marginTop: 3, textAlign: "center", color: seconds > 0 ? "rgba(255,216,77,0.6)" : colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+              {seconds > 0 ? tr("Renvoyer le code dans 00:{0}", String(seconds).padStart(2, "0")) : tr("Renvoyer le code")}
+            </Text>
+          </Pressable>
+        )}
       </Abs>
       <Abs t={84} l={6} h={6.6} w={88}>
         <ContinueHit ready={code.length === 6} busy={busy} label={tr("Continuer")} onPress={() => void validate()} solid />

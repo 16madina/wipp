@@ -1,5 +1,6 @@
 import { tr } from "./tr";
-import { confirmSmsCode, currentFirebaseUser, explainSmsError, hasPendingSms, sendSmsCode, signOutFirebase, toE164 } from "./firebase-phone";
+import { confirmSmsCode, currentFirebaseUser, explainSmsError, hasPendingSms, sendSmsCode, signInWithServerToken, signOutFirebase, toE164 } from "./firebase-phone";
+import { WIPP_WEB_ORIGIN } from "./firebase-config";
 import { clearLinkedSession } from "./firebase-linked-session";
 import { demoMe } from "./seed";
 import { useWippStore } from "./store";
@@ -11,7 +12,45 @@ export { toE164 };
 type Pending = {
   phone: string;
   mode: AuthMode;
+  /** "termii": code sent by the WIPP server (Africa), checked by the server. */
+  via?: "firebase" | "termii";
 };
+
+export type CodeChannel = "sms" | "whatsapp" | "voice";
+type OtpConfig = { enabled: boolean; prefixes: string[]; whatsapp: boolean; voice: boolean };
+let otpConfigCache: { at: number; value: OtpConfig } | null = null;
+
+/** Which countries get their code from the WIPP server (Termii) instead of Firebase SMS. */
+export async function otpConfig(): Promise<OtpConfig> {
+  if (otpConfigCache && Date.now() - otpConfigCache.at < 5 * 60_000) return otpConfigCache.value;
+  try {
+    const res = await fetch(`${WIPP_WEB_ORIGIN}/api/wipp/auth/otp/config`);
+    const value = (await res.json()) as OtpConfig;
+    otpConfigCache = { at: Date.now(), value };
+    return value;
+  } catch {
+    return { enabled: false, prefixes: [], whatsapp: false, voice: false };
+  }
+}
+
+/** Ways to receive the code for this number (empty = the usual Firebase SMS only). */
+export async function codeChannelsFor(rawPhone: string): Promise<CodeChannel[]> {
+  const phone = toE164(rawPhone);
+  const cfg = await otpConfig();
+  if (!phone || !cfg.enabled || !cfg.prefixes.some((p) => phone.startsWith(p))) return [];
+  return ["sms", ...(cfg.whatsapp ? (["whatsapp"] as const) : []), ...(cfg.voice ? (["voice"] as const) : [])];
+}
+
+async function otpCall<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${WIPP_WEB_ORIGIN}/api/wipp/auth/otp/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const json = (await res.json().catch(() => ({}))) as T & { message?: string };
+  if (!res.ok) throw new Error(json.message || tr("Le code n’a pas pu être envoyé. Réessaie."));
+  return json;
+}
+
+export function pendingVia(): "firebase" | "termii" | null {
+  return pending?.via ?? null;
+}
 
 let pending: Pending | null = null;
 let verifiedSignup: { phone: string } | null = null;
@@ -23,12 +62,22 @@ export function getVerifiedSignup() {
   return verifiedSignup;
 }
 
-export async function startPhoneCode(rawPhone: string, mode: AuthMode): Promise<string | null> {
+export async function startPhoneCode(rawPhone: string, mode: AuthMode, channel?: CodeChannel): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return tr("Numéro invalide. Vérifie l'indicatif et le numéro.");
+  // Africa: the code comes from the WIPP server (local SMS routes, WhatsApp or a voice call).
+  if ((await codeChannelsFor(phone)).length) {
+    try {
+      await otpCall("send", { phone, channel: channel ?? "sms" });
+      pending = { phone, mode, via: "termii" };
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : tr("Le code n’a pas pu être envoyé. Réessaie.");
+    }
+  }
   try {
     await sendSmsCode(phone);
-    pending = { phone, mode };
+    pending = { phone, mode, via: "firebase" };
     return null;
   } catch (err) {
     console.warn("[wipp] sms send failed", err);
@@ -50,6 +99,16 @@ export function pendingMode(): AuthMode | null {
 
 export async function verifyPhoneCode(code: string): Promise<{ phone: string } | { error: string }> {
   if (!pending) return { error: tr("Code expiré. Renvoie un nouveau code.") };
+  if (pending.via === "termii") {
+    try {
+      const { token } = await otpCall<{ token: string }>("verify", { phone: pending.phone, code });
+      await signInWithServerToken(token);
+      if (!currentFirebaseUser()) return { error: tr("Code incorrect ou expiré.") };
+      return { phone: pending.phone };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : tr("Code incorrect ou expiré.") };
+    }
+  }
   if (!hasPendingSms()) {
     return {
       error:
