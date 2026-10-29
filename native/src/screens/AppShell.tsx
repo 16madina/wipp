@@ -419,7 +419,13 @@ export function AppShell() {
     if (firebaseUser || s.onboarded) {
       if (!name || name === "splash" || AUTH.has(name)) s.goTab("chats");
     } else if (!s.stack.length || name === "splash") {
-      s.replace({ name: "onboarding" });
+      // Came back while waiting for a sign-in code: reopen the code screen.
+      void import("../lib/auth-flow").then(async ({ restorePendingCode }) => {
+        const back = await restorePendingCode();
+        const now = useWippStore.getState();
+        if (now.stack.at(-1)?.name && now.stack.at(-1)?.name !== "splash") return;
+        now.replace(back ? { name: "sms-reference" } : { name: "onboarding" });
+      });
     }
   }, [introDone, authReady, firebaseUser]);
 

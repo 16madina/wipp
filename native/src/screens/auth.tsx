@@ -862,7 +862,7 @@ export function SmsReferenceScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [seconds, setSeconds] = useState(45);
+  const [seconds, setSeconds] = useState(15);
   const [noAccount, setNoAccount] = useState<{ phone: string } | null>(null);
   const otpBlockRef = useRef<View>(null);
   const codeAccessoryId = "wipp-sms-code-keyboard";
@@ -961,7 +961,7 @@ export function SmsReferenceScreen() {
     }
     setCode("");
     setSentBy(lastCodeChannel());
-    setSeconds(45);
+    setSeconds(15);
   }
 
   return (

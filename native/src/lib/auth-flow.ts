@@ -80,6 +80,7 @@ export async function startPhoneCode(rawPhone: string, mode: AuthMode, channel?:
       // The server may switch WhatsApp to SMS when WhatsApp fails.
       lastChannel = sent.channel ?? channel ?? channels[0];
       pending = { phone, mode, via: "termii" };
+      rememberPending();
       return null;
     } catch (err) {
       return err instanceof Error ? err.message : tr("Le code n’a pas pu être envoyé. Réessaie.");
@@ -136,7 +137,38 @@ export async function verifyPhoneCode(code: string): Promise<{ phone: string } |
   }
 }
 
+const PENDING_KEY = "wipp_pending_code";
+
+/** Keeps the code in progress, so coming back after a phone call reopens the code screen. */
+function rememberPending() {
+  if (!pending) return;
+  void import("expo-secure-store")
+    .then((S) => S.setItemAsync(PENDING_KEY, JSON.stringify({ ...pending, channel: lastChannel, at: Date.now() })))
+    .catch(() => undefined);
+}
+
+/** After the app was closed while waiting for a code: restores it when it is less than 10 minutes old. */
+export async function restorePendingCode(): Promise<boolean> {
+  if (pending) return true;
+  try {
+    const S = await import("expo-secure-store");
+    const raw = await S.getItemAsync(PENDING_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw) as Pending & { channel?: CodeChannel | null; at: number };
+    if (saved.via !== "termii" || Date.now() - saved.at > 10 * 60_000) {
+      await S.deleteItemAsync(PENDING_KEY);
+      return false;
+    }
+    pending = { phone: saved.phone, mode: saved.mode, via: "termii" };
+    lastChannel = saved.channel ?? null;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function clearPending() {
+  void import("expo-secure-store").then((S) => S.deleteItemAsync(PENDING_KEY)).catch(() => undefined);
   pending = null;
   verifiedSignup = null;
 }
