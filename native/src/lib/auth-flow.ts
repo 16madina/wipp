@@ -38,7 +38,7 @@ export async function codeChannelsFor(rawPhone: string): Promise<CodeChannel[]> 
   const phone = toE164(rawPhone);
   const cfg = await otpConfig();
   if (!phone || !cfg.enabled || !cfg.prefixes.some((p) => phone.startsWith(p))) return [];
-  return ["sms", ...(cfg.whatsapp ? (["whatsapp"] as const) : []), ...(cfg.voice ? (["voice"] as const) : [])];
+  return [...(cfg.whatsapp ? (["whatsapp"] as const) : []), "sms", ...(cfg.voice ? (["voice"] as const) : [])];
 }
 
 async function otpCall<T>(path: string, body: unknown): Promise<T> {
@@ -46,6 +46,12 @@ async function otpCall<T>(path: string, body: unknown): Promise<T> {
   const json = (await res.json().catch(() => ({}))) as T & { message?: string };
   if (!res.ok) throw new Error(json.message || tr("Le code n’a pas pu être envoyé. Réessaie."));
   return json;
+}
+
+let lastChannel: CodeChannel | null = null;
+/** How the last code was sent (to tell the person where to look). */
+export function lastCodeChannel(): CodeChannel | null {
+  return pending?.via === "termii" ? lastChannel : null;
 }
 
 export function pendingVia(): "firebase" | "termii" | null {
@@ -65,10 +71,12 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode, channel?: CodeChannel): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return tr("Numéro invalide. Vérifie l'indicatif et le numéro.");
-  // Africa: the code comes from the WIPP server (local SMS routes, WhatsApp or a voice call).
-  if ((await codeChannelsFor(phone)).length) {
+  // Africa: the code comes from the WIPP server (WhatsApp first, else SMS or a voice call).
+  const channels = await codeChannelsFor(phone);
+  if (channels.length) {
     try {
-      await otpCall("send", { phone, channel: channel ?? "sms" });
+      await otpCall("send", { phone, channel: channel ?? channels[0] });
+      lastChannel = channel ?? channels[0];
       pending = { phone, mode, via: "termii" };
       return null;
     } catch (err) {

@@ -16,6 +16,7 @@ import {
   startFreshSignup,
   startPhoneCode,
   codeChannelsFor,
+  lastCodeChannel,
   type CodeChannel,
   toE164,
   verifyPhoneCode,
@@ -943,6 +944,7 @@ export function SmsReferenceScreen() {
 
   // Africa: other ways to get the code (WhatsApp, voice call) when the SMS does not arrive.
   const [channels, setChannels] = useState<CodeChannel[]>([]);
+  const [sentBy, setSentBy] = useState<CodeChannel | null>(lastCodeChannel());
   useEffect(() => {
     if (phone) void codeChannelsFor(phone).then(setChannels);
   }, [phone]);
@@ -958,6 +960,7 @@ export function SmsReferenceScreen() {
       return;
     }
     setCode("");
+    setSentBy(lastCodeChannel());
     setSeconds(45);
   }
 
@@ -1046,7 +1049,9 @@ export function SmsReferenceScreen() {
       <Abs t={78} l={8} h={5} w={84}>
         {channels.length > 1 && seconds === 0 ? (
           <View style={{ flex: 1, justifyContent: "center" }}>
-            <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{tr("Tu n’as pas reçu le code ? Reçois-le par :")}</Text>
+            <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>
+              {sentBy === "whatsapp" ? tr("Code envoyé sur WhatsApp. Pas reçu ? Reçois-le par :") : tr("Tu n’as pas reçu le code ? Reçois-le par :")}
+            </Text>
             <View style={{ marginTop: 4, flexDirection: "row", justifyContent: "center", gap: 18 }}>
               {channels.map((ch) => (
                 <Pressable key={ch} disabled={busy} onPress={() => void resend(ch)} hitSlop={8}>
@@ -1059,7 +1064,7 @@ export function SmsReferenceScreen() {
           </View>
         ) : (
           <Pressable disabled={seconds > 0 || busy} onPress={() => void resend()} style={{ flex: 1, justifyContent: "center" }}>
-            <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{tr("Tu n’as pas reçu le code ?")}</Text>
+            <Text style={{ textAlign: "center", color: "rgba(247,249,252,0.6)", fontSize: 12 }}>{sentBy === "whatsapp" ? tr("Regarde tes messages WhatsApp : ton code y est.") : tr("Tu n’as pas reçu le code ?")}</Text>
             <Text style={{ marginTop: 3, textAlign: "center", color: seconds > 0 ? "rgba(255,216,77,0.6)" : colors.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
               {seconds > 0 ? tr("Renvoyer le code dans 00:{0}", String(seconds).padStart(2, "0")) : tr("Renvoyer le code")}
             </Text>

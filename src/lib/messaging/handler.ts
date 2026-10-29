@@ -771,7 +771,7 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json({ invite });
     }
 
-    // Sign-in code by Termii (Africa: SMS on local routes, WhatsApp, voice). No session yet.
+    // Sign-in code by Twilio Verify (Africa: WhatsApp first, SMS, voice). No session yet.
     if (a === "auth" && b === "otp") {
       const otp = await import("@/lib/auth/otp");
       if (method === "GET" && c === "config") return json(otp.otpConfig());

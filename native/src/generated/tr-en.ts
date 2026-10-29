@@ -1506,6 +1506,8 @@ export const TR_EN: Record<string, string> = {
   "Code incorrect ou expiré.": "Wrong or expired code.",
   "Tu n’as pas reçu le code ? Reçois-le par :": "Didn’t get the code? Get it by:",
   "Appel vocal": "Voice call",
+  "Code envoyé sur WhatsApp. Pas reçu ? Reçois-le par :": "Code sent on WhatsApp. Didn’t get it? Get it by:",
+  "Regarde tes messages WhatsApp : ton code y est.": "Check your WhatsApp messages: your code is there.",
   "Ouvertes maintenant": "Open now",
   "Ouvertes 24 h/24": "Open 24/7",
   "Ouvertes autour de vous": "Open around you",

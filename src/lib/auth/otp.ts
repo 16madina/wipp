@@ -1,42 +1,36 @@
 /**
- * Sign-in code sent by Termii (SMS on African routes, or WhatsApp), for countries where Firebase SMS
- * do not arrive. Once the code is right, the server gives a Firebase custom token for the account
- * linked to this phone number: the same WIPP account as with Firebase SMS.
- * Secrets: TERMII_API_KEY, FIREBASE_SERVICE_ACCOUNT (server only).
+ * Sign-in code by Twilio Verify (WhatsApp first, SMS or voice call as fallback), for countries where
+ * Firebase SMS do not arrive (Africa). Twilio makes and checks the code. Once it is right, the server
+ * gives a Firebase custom token for the account linked to this phone number: the same WIPP account.
+ * Secrets (server only): TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID, FIREBASE_SERVICE_ACCOUNT.
  */
-import { createHash, randomInt } from "node:crypto";
 import { SignJWT, importPKCS8 } from "jose";
 import { getSql } from "@/lib/db";
 import { WippHttpError } from "@/lib/messaging/server";
 
-const TERMII_BASE = (process.env.TERMII_BASE_URL || "https://v4.api.termii.com").replace(/\/$/, "");
-const SENDER = process.env.TERMII_SENDER_ID || "WIPP";
-/** WhatsApp device name in Termii, once a WhatsApp Business account is connected. */
-const WHATSAPP_FROM = process.env.TERMII_WHATSAPP_FROM || "";
-/** Dial codes served by Termii (Africa by default). */
-const PREFIXES = (process.env.TERMII_PREFIXES ||
+const TWILIO = {
+  sid: process.env.TWILIO_ACCOUNT_SID || "",
+  token: process.env.TWILIO_AUTH_TOKEN || "",
+  service: process.env.TWILIO_VERIFY_SID || "",
+};
+/** Dial codes whose code comes from Twilio Verify (Africa by default). */
+const PREFIXES = (process.env.OTP_PREFIXES ||
   "+225,+221,+223,+224,+226,+227,+228,+229,+237,+241,+242,+243,+235,+236,+240,+222,+220,+232,+231,+233,+234,+212,+213,+216,+250,+257,+254,+255,+256,+251,+27,+260,+263,+258,+261,+269,+230,+248,+238,+245,+239,+253,+252,+244,+264,+267,+266,+268,+265,+211,+249,+218,+20")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const CODE_TTL_MS = 10 * 60_000;
-const MAX_ATTEMPTS = 5;
 const LIMITS = { perPhone15min: 3, perPhoneDay: 8, perIpHour: 20 };
 
 export type OtpChannel = "sms" | "whatsapp" | "voice";
 
 export function otpConfig() {
-  const enabled = Boolean(process.env.TERMII_API_KEY && process.env.FIREBASE_SERVICE_ACCOUNT);
-  return { enabled, prefixes: enabled ? PREFIXES : [], whatsapp: enabled && Boolean(WHATSAPP_FROM), voice: enabled };
+  const enabled = Boolean(TWILIO.sid && TWILIO.token && TWILIO.service && process.env.FIREBASE_SERVICE_ACCOUNT);
+  return { enabled, prefixes: enabled ? PREFIXES : [], whatsapp: enabled, voice: enabled };
 }
 
-function servedByTermii(phone: string) {
+function served(phone: string) {
   return PREFIXES.some((p) => phone.startsWith(p));
-}
-
-function hash(phone: string, code: string) {
-  return createHash("sha256").update(`${process.env.TERMII_API_KEY ?? ""}|${phone}|${code}`).digest("hex");
 }
 
 function normalize(raw: string) {
@@ -50,7 +44,7 @@ async function ensureTable() {
   await sql`create table if not exists wipp_otp_codes (
     id bigserial primary key,
     phone text not null,
-    code_hash text not null,
+    code_hash text,
     channel text not null,
     ip text,
     attempts int not null default 0,
@@ -63,12 +57,26 @@ async function ensureTable() {
   return sql;
 }
 
+function twilioAuth() {
+  return `Basic ${Buffer.from(`${TWILIO.sid}:${TWILIO.token}`).toString("base64")}`;
+}
+
+async function twilio(path: string, form: Record<string, string>) {
+  const res = await fetch(`https://verify.twilio.com/v2/Services/${TWILIO.service}/${path}`, {
+    method: "POST",
+    headers: { Authorization: twilioAuth(), "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(form),
+  });
+  const json = (await res.json().catch(() => ({}))) as { status?: string; message?: string; code?: number };
+  return { ok: res.ok, status: res.status, json };
+}
+
 export async function sendOtp(input: { phone?: string; channel?: string; ip?: string | null }) {
-  const key = process.env.TERMII_API_KEY;
-  if (!key) throw new WippHttpError(503, "otp_unavailable", "Cette méthode n’est pas encore disponible.");
+  if (!otpConfig().enabled) throw new WippHttpError(503, "otp_unavailable", "Cette méthode n’est pas encore disponible.");
   const phone = normalize(input.phone ?? "");
-  if (!servedByTermii(phone)) throw new WippHttpError(400, "otp_country", "Utilise le code par SMS habituel pour ce pays.");
-  const channel: OtpChannel = input.channel === "whatsapp" && WHATSAPP_FROM ? "whatsapp" : input.channel === "voice" ? "voice" : "sms";
+  if (!served(phone)) throw new WippHttpError(400, "otp_country", "Utilise le code par SMS habituel pour ce pays.");
+  // WhatsApp first (reaches African numbers best), SMS or a voice call when asked.
+  const channel: OtpChannel = input.channel === "sms" ? "sms" : input.channel === "voice" ? "voice" : "whatsapp";
   const sql = await ensureTable();
   const counts = await sql<{ p15: number; pday: number; ip: number }>`
     select
@@ -80,28 +88,13 @@ export async function sendOtp(input: { phone?: string; channel?: string; ip?: st
   if (c.p15 >= LIMITS.perPhone15min || c.pday >= LIMITS.perPhoneDay || (input.ip && c.ip >= LIMITS.perIpHour)) {
     throw new WippHttpError(429, "otp_limit", "Trop de demandes de code. Réessaie dans quelques minutes.");
   }
-  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  const text =
-    channel === "voice"
-      ? `Ton code WIPP est ${code.split("").join(" ")}. Je répète : ${code.split("").join(" ")}.`
-      : `Ton code WIPP : ${code}. Ne le partage avec personne. Valable 10 minutes.`;
-  const body = {
-    api_key: key,
-    to: phone.replace(/^\+/, ""),
-    from: channel === "whatsapp" ? WHATSAPP_FROM : SENDER,
-    sms: text,
-    type: channel === "voice" ? "Voice" : "plain",
-    // dnd = transactional route (reaches numbers that block promotions).
-    channel: channel === "whatsapp" ? "whatsapp" : channel === "voice" ? "voice" : "dnd",
-  };
-  const res = await fetch(`${TERMII_BASE}/api/sms/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string };
-  if (!res.ok || (json.code && json.code !== "ok")) {
-    console.warn("[otp] termii", res.status, json.message);
-    throw new WippHttpError(502, "otp_send_failed", "Le code n’a pas pu être envoyé. Réessaie ou choisis une autre méthode.");
+  const r = await twilio("Verifications", { To: phone, Channel: channel === "voice" ? "call" : channel, Locale: "fr" });
+  if (!r.ok) {
+    console.warn("[otp] twilio send", r.status, r.json.code, r.json.message);
+    throw new WippHttpError(502, "otp_send_failed", channel === "whatsapp" ? "Le code n’a pas pu être envoyé sur WhatsApp. Essaie par SMS." : "Le code n’a pas pu être envoyé. Réessaie ou choisis une autre méthode.");
   }
-  await sql`insert into wipp_otp_codes (phone, code_hash, channel, ip, expires_at)
-    values (${phone}, ${hash(phone, code)}, ${channel}, ${input.ip ?? null}, ${new Date(Date.now() + CODE_TTL_MS).toISOString()})`;
+  await sql`insert into wipp_otp_codes (phone, channel, ip, expires_at)
+    values (${phone}, ${channel}, ${input.ip ?? null}, ${new Date(Date.now() + 10 * 60_000).toISOString()})`;
   return { ok: true, channel };
 }
 
@@ -165,22 +158,16 @@ async function customToken(sa: ServiceAccount, uid: string) {
 }
 
 export async function verifyOtp(input: { phone?: string; code?: string }) {
+  if (!otpConfig().enabled) throw new WippHttpError(503, "otp_unavailable", "Cette méthode n’est pas encore disponible.");
   const phone = normalize(input.phone ?? "");
   const code = (input.code ?? "").replace(/\D/g, "");
-  if (code.length !== 6) throw new WippHttpError(400, "bad_code", "Le code a 6 chiffres.");
+  if (code.length < 4 || code.length > 10) throw new WippHttpError(400, "bad_code", "Code incorrect.");
+  const r = await twilio("VerificationCheck", { To: phone, Code: code });
+  if (r.status === 404) throw new WippHttpError(400, "code_expired", "Code expiré. Demande un nouveau code.");
+  if (r.status === 429) throw new WippHttpError(429, "too_many_attempts", "Trop d’essais. Demande un nouveau code.");
+  if (!r.ok || r.json.status !== "approved") throw new WippHttpError(400, "bad_code", "Code incorrect.");
   const sql = await ensureTable();
-  const rows = await sql<{ id: number; code_hash: string; attempts: number }>`
-    select id, code_hash, attempts from wipp_otp_codes
-    where phone = ${phone} and used_at is null and expires_at > now()
-    order by created_at desc limit 1`;
-  const row = rows[0];
-  if (!row) throw new WippHttpError(400, "code_expired", "Code expiré. Demande un nouveau code.");
-  if (row.attempts >= MAX_ATTEMPTS) throw new WippHttpError(429, "too_many_attempts", "Trop d’essais. Demande un nouveau code.");
-  if (row.code_hash !== hash(phone, code)) {
-    await sql`update wipp_otp_codes set attempts = attempts + 1 where id = ${row.id}`;
-    throw new WippHttpError(400, "bad_code", "Code incorrect.");
-  }
-  await sql`update wipp_otp_codes set used_at = now() where id = ${row.id}`;
+  await sql`update wipp_otp_codes set used_at = now() where id = (select id from wipp_otp_codes where phone = ${phone} and used_at is null order by created_at desc limit 1)`;
   const sa = serviceAccount();
   const uid = await firebaseUidForPhone(sa, phone);
   return { token: await customToken(sa, uid) };

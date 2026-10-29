@@ -2347,5 +2347,7 @@
  "Tu n’as pas reçu le code ? Reçois-le par :",
  "WhatsApp",
  "Appel vocal",
- "SMS"
+ "SMS",
+ "Code envoyé sur WhatsApp. Pas reçu ? Reçois-le par :",
+ "Regarde tes messages WhatsApp : ton code y est."
 ]
