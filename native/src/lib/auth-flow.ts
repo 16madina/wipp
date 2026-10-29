@@ -36,6 +36,8 @@ export async function otpConfig(): Promise<OtpConfig> {
 /** Ways to receive the code for this number (empty = the usual Firebase SMS only). */
 export async function codeChannelsFor(rawPhone: string): Promise<CodeChannel[]> {
   const phone = toE164(rawPhone);
+  // Fictional test numbers (+1 XXX 555-01XX) keep their fixed code in Firebase.
+  if (phone && /^\+1\d{3}55501\d{2}$/.test(phone)) return [];
   const cfg = await otpConfig();
   if (!phone || !cfg.enabled || !cfg.prefixes.some((p) => phone.startsWith(p))) return [];
   // SMS first; WhatsApp and a voice call as other choices.

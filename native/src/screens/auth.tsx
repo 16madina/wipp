@@ -497,18 +497,13 @@ export function OnboardingScreen() {
       <View pointerEvents="none" style={{ position: "absolute", top: insets.top + 6, left: 0, right: 0, alignItems: "center" }}>
         <Image source={logoGold} style={{ width: 92, height: 34 }} contentFit="contain" />
       </View>
-      <Press accessibilityLabel={t("skip")} onPress={() => replace({ name: "welcome" })} style={{ position: "absolute", top: insets.top, right: 4, minHeight: 44, paddingHorizontal: 12, justifyContent: "center" }}>
-        {slide.kind === "tap" || slide.kind === "together" ? null : (
-          <Text style={{ color: "rgba(255,255,255,0.78)", fontSize: 14, fontFamily: "Inter_500Medium" }}>{t("skip")}</Text>
-        )}
-      </Press>
       {drawn ? (
         <View style={{ position: "absolute", left: vleft, width: vw, top: vtop + vh * drawn.top, height: vh * (drawn.bottom - drawn.top), flexDirection: "row" }}>
           <Press accessibilityLabel={t("back")} disabled={page === 0} onPress={back} style={{ flex: 1 }} />
           <Press accessibilityLabel={last ? t("start") : t("next")} onPress={next} style={{ flex: 1.2 }} />
         </View>
       ) : (
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom, 12) + 10 }}>
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom, 12) + (last ? 10 : 40) }}>
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 2, marginBottom: 8 }}>
             {ONB.map((_, i) => (
               <Press key={i} onPress={() => setPage(i)} style={{ width: 22, height: 30, alignItems: "center", justifyContent: "center" }}>
@@ -526,6 +521,16 @@ export function OnboardingScreen() {
             </Press>
           </View>
         </View>
+      )}
+      {/* « Passer » at the bottom, centred under Retour / Commencer: easier to reach than the top corner. */}
+      {last ? null : (
+        <Press
+          accessibilityLabel={t("skip")}
+          onPress={() => replace({ name: "welcome" })}
+          style={{ position: "absolute", left: 0, right: 0, alignItems: "center", ...(drawn ? { top: Math.min(vtop + vh * drawn.bottom + 4, box.h - insets.bottom - 40) } : { bottom: Math.max(insets.bottom, 12) - 6 }) }}
+        >
+          <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, paddingVertical: 10 }}>{t("skip")}</Text>
+        </Press>
       )}
     </View>
   );
