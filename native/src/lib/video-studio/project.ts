@@ -23,7 +23,44 @@ export type StudioSegment = {
 };
 
 export type StudioTextStyle = "plain" | "box" | "outline";
-export type StudioFont = "regular" | "bold";
+export type StudioFont = "classic" | "serif" | "rounded" | "mono" | "hand";
+export type StudioAlign = "left" | "center" | "right";
+export type StudioAnim = "none" | "appear" | "fade" | "pop" | "slide";
+export const STUDIO_FONTS: StudioFont[] = ["classic", "serif", "rounded", "mono", "hand"];
+export const STUDIO_ANIMS: StudioAnim[] = ["none", "appear", "fade", "pop", "slide"];
+/** Intro animation length (seconds), same in the preview and the export. */
+export const ANIM_SEC = 0.4;
+
+/** Font file used on each system, for both the preview and the export (so they match). */
+export const FONT_FILES: Record<StudioFont, { ios: string | null; iosBold: string | null; android: string }> = {
+  classic: { ios: null, iosBold: null, android: "sans-serif" },
+  serif: { ios: "Georgia", iosBold: "Georgia-Bold", android: "serif" },
+  rounded: { ios: "ArialRoundedMTBold", iosBold: "ArialRoundedMTBold", android: "sans-serif-medium" },
+  mono: { ios: "Menlo-Regular", iosBold: "Menlo-Bold", android: "monospace" },
+  hand: { ios: "Noteworthy-Light", iosBold: "Noteworthy-Bold", android: "casual" },
+};
+export function fontFileFor(font: StudioFont, bold: boolean, os: string): string | null {
+  const f = FONT_FILES[font] ?? FONT_FILES.classic;
+  return os === "ios" ? (bold ? f.iosBold : f.ios) : f.android;
+}
+
+/** Intro animation state at `t` seconds after the text appears (preview and export use the same curve). */
+export function animAt(anim: StudioAnim, t: number) {
+  const p = Math.max(0, Math.min(1, t / ANIM_SEC));
+  const ease = 1 - Math.pow(1 - p, 3);
+  switch (anim) {
+    case "fade":
+      return { opacity: ease, scale: 1, dy: 0 };
+    case "appear":
+      return { opacity: ease, scale: 1.3 - 0.3 * ease, dy: 0 };
+    case "pop":
+      return { opacity: Math.min(1, p * 3), scale: p < 0.6 ? 0.5 + (0.62 * p) / 0.6 : 1.12 - (0.12 * (p - 0.6)) / 0.4, dy: 0 };
+    case "slide":
+      return { opacity: ease, scale: 1, dy: 0.08 * (1 - ease) };
+    default:
+      return { opacity: 1, scale: 1, dy: 0 };
+  }
+}
 
 export type StudioText = {
   id: string;
@@ -36,6 +73,12 @@ export type StudioText = {
   color: string;
   style: StudioTextStyle;
   font: StudioFont;
+  bold: boolean;
+  shadow: boolean;
+  align: StudioAlign;
+  /** Degrees, clockwise. */
+  rot: number;
+  anim: StudioAnim;
   /** Seconds on the final (edited) timeline. */
   from: number;
   to: number;
@@ -158,7 +201,7 @@ export function updateText(p: StudioProject, id: string, patch: Partial<Omit<Stu
       if (t.id !== id) return t;
       const n = { ...t, ...patch };
       const from = clamp(n.from, 0, Math.max(0, total - 0.2));
-      return { ...n, x: clamp(n.x, 0.05, 0.95), y: clamp(n.y, 0.05, 0.95), size: clamp(n.size, 0.04, 0.16), from, to: clamp(n.to, from + 0.2, total) };
+      return { ...n, x: clamp(n.x, 0.05, 0.95), y: clamp(n.y, 0.05, 0.95), size: clamp(n.size, 0.03, 0.3), from, to: clamp(n.to, from + 0.2, total) };
     }),
   };
 }
@@ -201,13 +244,29 @@ export function redo(h: History): History {
 }
 
 /** What the native exporters receive (same shape on iPhone and Android). */
-export function exportSpec(p: StudioProject) {
+export function exportSpec(p: StudioProject, os = "ios") {
   const byId = new Map(p.sources.map((s) => [s.id, s]));
   return {
     width: 720,
     height: 1280,
     segments: p.segments.map((s) => ({ uri: byId.get(s.sourceId)!.uri, start: s.start, end: s.end, volume: s.volume, speed: s.speed })),
-    texts: p.texts.map((t) => ({ text: t.text, x: t.x, y: t.y, size: t.size, color: t.color, style: t.style, bold: t.font === "bold", from: t.from, to: t.to })),
+    texts: p.texts.map((t) => ({
+      text: t.text,
+      x: t.x,
+      y: t.y,
+      size: t.size,
+      color: t.color,
+      style: t.style,
+      bold: t.bold,
+      shadow: t.shadow,
+      align: t.align,
+      rot: t.rot,
+      anim: t.anim,
+      animSec: ANIM_SEC,
+      fontName: fontFileFor(t.font, t.bold, os),
+      from: t.from,
+      to: t.to,
+    })),
   };
 }
 export type ExportSpec = ReturnType<typeof exportSpec>;

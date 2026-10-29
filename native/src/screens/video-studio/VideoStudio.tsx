@@ -44,6 +44,8 @@ import {
 } from "lucide-react-native";
 import { cancelStudioExport, exportStudioProject, studioCapabilities } from "wipp-video-trim";
 import { Press } from "../../components/ui";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StudioTextView, TextBlock, TextTools, TextWriter, fittedSize } from "./text-editing";
 import { palettes } from "../../theme";
 import { tr } from "../../lib/tr";
 import { STORY_COLORS } from "../../lib/story-overlay";
@@ -56,7 +58,7 @@ const SOURCE_TINT = ["#ffd84d", "#5cc8ff"];
 
 export type StudioResult = { uri: string; mime: string; duration: number; project: P.StudioProject };
 
-type Panel = null | "sound" | "speed" | "text" | "order";
+type Panel = null | "sound" | "speed" | "order";
 
 export function VideoStudio({
   initial,
@@ -94,6 +96,8 @@ export function VideoStudio({
   const [exporting, setExporting] = useState<null | number>(null);
   const [error, setError] = useState("");
   const [handleDrag, setHandleDrag] = useState(false);
+  /** Mode A: the text being written (new or edited). Changes stay in `draft` until ✓. */
+  const [writing, setWriting] = useState<{ id: string; isNew: boolean } | null>(null);
 
   const sources = project?.sources ?? [];
   const uriA = sources[0]?.uri ?? seed?.uri ?? null;
@@ -332,13 +336,50 @@ export function VideoStudio({
   }
 
   function newText() {
-    if (!project) return;
+    if (!history) return;
     stop();
-    const r = P.addText(project, headRef.current, { text: tr("Ton texte"), size: 0.075, color: "#ffffff", style: "box", font: "bold" });
-    apply(r.project, "light");
+    setPanel(null);
     setSelected(null);
+    // New text: in the draft only, until ✓.
+    const r = P.addText(history.present, headRef.current, { text: "", size: 0.075, color: "#ffffff", style: "box", font: "classic", bold: true, shadow: false, align: "center", rot: 0, anim: "none" });
+    setDraft(r.project);
     setSelectedText(r.id);
-    setPanel("text");
+    setWriting({ id: r.id, isNew: true });
+  }
+
+  function editText(id: string) {
+    if (!history) return;
+    stop();
+    setPanel(null);
+    setSelected(null);
+    setDraft(history.present);
+    setSelectedText(id);
+    setWriting({ id, isNew: false });
+  }
+
+  function validateText(value: string) {
+    if (!history || !writing || !draft) return;
+    const text = value.trim();
+    const item = draft.texts.find((t) => t.id === writing.id);
+    setWriting(null);
+    if (!text || !item) {
+      // Empty: nothing is kept (an edited text that is emptied is removed).
+      setDraft(null);
+      if (!writing.isNew && item) apply(P.removeText(history.present, item.id), "light");
+      setSelectedText(null);
+      return;
+    }
+    const next = P.updateText(draft, item.id, { text, size: fittedSize(text, item.size) });
+    setDraft(null);
+    setHistory(P.commit(history, next));
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+
+  function cancelText() {
+    // Back to the text as it was before (or no text if it was new).
+    setDraft(null);
+    if (writing?.isNew) setSelectedText(null);
+    setWriting(null);
   }
 
   async function done() {
@@ -420,44 +461,61 @@ export function VideoStudio({
     );
   }
 
-  const visibleTexts = project.texts.filter((t) => head >= t.from && head < t.to);
+  // The selected text stays visible while it is being worked on, even outside its time.
+  const visibleTexts = project.texts.filter((t) => (head >= t.from && head < t.to) || t.id === selectedText);
+  const writingItem = writing ? project.texts.find((t) => t.id === writing.id) ?? null : null;
+  // Timeline rows for texts that overlap in time.
+  const textRows = new Map<string, number>();
+  const rowEnds: number[] = [];
+  for (const t of [...project.texts].sort((a, b) => a.from - b.from)) {
+    let row = rowEnds.findIndex((end) => end <= t.from + 0.01);
+    if (row < 0) row = rowEnds.length;
+    rowEnds[row] = t.to;
+    textRows.set(t.id, row);
+  }
+  const textTrackH = Math.max(1, rowEnds.length) * 30;
   const half = screenW / 2;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000" }}>
       {/* Preview 9:16, full screen */}
       <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
         <View style={{ width: stageW, height: stageH, overflow: "hidden", backgroundColor: "#000" }}>
           <VideoView player={playerA} style={{ position: "absolute", width: "100%", height: "100%", opacity: active === 0 ? 1 : 0 }} contentFit="contain" nativeControls={false} />
           {uriB ? <VideoView player={playerB} style={{ position: "absolute", width: "100%", height: "100%", opacity: active === 1 ? 1 : 0 }} contentFit="contain" nativeControls={false} /> : null}
-          <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
-            {!playing ? (
+          <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={() => (selectedText ? setSelectedText(null) : togglePlay())} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+            {!playing && !selectedText && !writing ? (
               <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" }}>
                 <Play size={30} color="#fff" fill="#fff" />
               </View>
             ) : null}
           </Press>
-          {visibleTexts.map((t) => (
-            <DraggableText
-              key={t.id}
-              item={t}
-              stageW={stageW}
-              stageH={stageH}
-              selected={t.id === selectedText}
-              onSelect={() => {
-                stop();
-                setSelected(null);
-                setSelectedText(t.id);
-                setPanel("text");
-              }}
-              onMove={(x, y) => apply(P.updateText(project, t.id, { x, y }))}
-            />
-          ))}
+          {visibleTexts.map((t) =>
+            writing?.id === t.id ? null : (
+              <StudioTextView
+                key={t.id}
+                item={t}
+                stageW={stageW}
+                stageH={stageH}
+                head={head}
+                playing={playing}
+                selected={t.id === selectedText}
+                onSelect={() => {
+                  stop();
+                  setSelected(null);
+                  setPanel(null);
+                  setSelectedText(t.id);
+                }}
+                onEdit={() => editText(t.id)}
+                onTransform={(patch) => apply(P.updateText(project, t.id, patch))}
+              />
+            ),
+          )}
         </View>
       </View>
 
-      {/* Top: cancel, undo / redo, done */}
-      <View style={{ position: "absolute", left: 0, right: 0, top: 0, paddingTop: insets.top, backgroundColor: "rgba(0,0,0,0.42)" }}>
+      {/* Top: cancel, undo / redo, done (hidden while writing a text, so « Terminé » cannot export by mistake) */}
+      <View style={{ position: "absolute", left: 0, right: 0, top: 0, paddingTop: insets.top, backgroundColor: "rgba(0,0,0,0.42)", display: writing ? "none" : "flex" }}>
       <View style={{ height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 8 }}>
         <Press accessibilityLabel={tr("Annuler")} onPress={() => { stop(); onCancel(); }} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
           <X size={26} color="#fff" />
@@ -478,7 +536,20 @@ export function VideoStudio({
       </View>
 
       {/* Bottom: time and timeline (video, sound, texts), over the video */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 6, paddingBottom: insets.bottom + 6, backgroundColor: "rgba(0,0,0,0.42)" }}>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 6, paddingBottom: insets.bottom + 6, backgroundColor: textItem && !writing ? "rgba(10,14,22,0.88)" : "rgba(0,0,0,0.42)", display: writing ? "none" : "flex" }}>
+      {textItem && !writing ? (
+        <TextTools
+          item={textItem}
+          total={total}
+          onChange={(patch) => apply(P.updateText(project, textItem.id, patch))}
+          onEdit={() => editText(textItem.id)}
+          onDelete={() => {
+            apply(P.removeText(project, textItem.id), "light");
+            setSelectedText(null);
+          }}
+          onClose={() => setSelectedText(null)}
+        />
+      ) : null}
       {/* Time */}
       <View style={{ height: 30, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
         <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
@@ -491,7 +562,7 @@ export function VideoStudio({
       </View>
 
       {/* Timeline */}
-      <View style={{ height: 132 }}>
+      <View style={{ height: 102 + textTrackH }}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -528,7 +599,6 @@ export function VideoStudio({
                       stop();
                       setSelectedText(null);
                       setSelected(isSel ? null : seg.id);
-                      if (panel === "text") setPanel(null);
                       void Haptics.selectionAsync();
                     }}
                     style={{ width: w, height: 56, marginRight: 2, borderRadius: 8, overflow: "hidden", backgroundColor: colors.surface2, borderWidth: isSel ? 3 : 0, borderColor: colors.accent }}
@@ -599,24 +669,41 @@ export function VideoStudio({
               })}
             </View>
 
-            {/* Text track */}
-            <View style={{ height: 30, marginTop: 4, width: Math.max(8, total * PX_PER_SEC) }}>
-              {project.texts.map((t, i) => (
-                <Press
+            {/* Text track: drag the ends to set when the text shows, or the whole block to move it */}
+            <View style={{ height: textTrackH, marginTop: 4, width: Math.max(8, total * PX_PER_SEC) }}>
+              {project.texts.map((t) => (
+                <TextBlock
                   key={t.id}
-                  accessibilityLabel={tr("Texte")}
-                  onPress={() => {
+                  item={t}
+                  row={textRows.get(t.id) ?? 0}
+                  pxPerSec={PX_PER_SEC}
+                  total={total}
+                  selected={t.id === selectedText}
+                  onSelect={() => {
                     stop();
                     setSelected(null);
+                    setPanel(null);
                     setSelectedText(t.id);
-                    setPanel("text");
-                    showAt(t.from + 0.01, false);
+                    if (head < t.from || head >= t.to) showAt(t.from + 0.01, false);
                   }}
-                  style={{ position: "absolute", left: t.from * PX_PER_SEC, width: Math.max(16, (t.to - t.from) * PX_PER_SEC), top: (i % 2) * 2, height: 26, borderRadius: 6, backgroundColor: t.id === selectedText ? "#8e6bff" : "rgba(142,107,255,0.55)", flexDirection: "row", alignItems: "center", paddingHorizontal: 6, gap: 4, overflow: "hidden" }}
-                >
-                  <Type size={12} color="#fff" />
-                  <Text numberOfLines={1} style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{t.text}</Text>
-                </Press>
+                  onDragState={(on) => {
+                    setHandleDrag(on);
+                    if (on) dragBase.current = history?.present ?? null;
+                  }}
+                  onTiming={(from, to, live) => {
+                    const base = dragBase.current ?? history!.present;
+                    const next = P.updateText(base, t.id, { from, to });
+                    if (live) {
+                      setDraft(next);
+                      projectRef.current = next;
+                      showAt(from + 0.01, false);
+                    } else {
+                      setDraft(null);
+                      dragBase.current = null;
+                      if (history && (from !== t.from || to !== t.to || next !== history.present)) setHistory(P.commit(history, next));
+                    }
+                  }}
+                />
               ))}
             </View>
           </View>
@@ -633,7 +720,7 @@ export function VideoStudio({
       ) : null}
 
       {/* Toolbar */}
-      <View pointerEvents="box-none" style={{ position: "absolute", right: 8, top: insets.top + 60, bottom: insets.bottom + 186 }}>
+      <View pointerEvents="box-none" style={{ position: "absolute", right: 8, top: insets.top + 60, bottom: insets.bottom + 186, display: textItem || writing ? "none" : "flex" }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
           <Tool icon={<Scissors size={21} color="#fff" />} label={tr("Scinder")} onPress={split} />
           <Tool icon={<Trash2 size={21} color="#fff" />} label={tr("Supprimer")} onPress={remove} />
@@ -646,12 +733,12 @@ export function VideoStudio({
       </View>
 
       {/* Panels */}
-      {panel && (panel === "text" ? textItem : currentSeg) ? (
+      {panel && currentSeg && !writing ? (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
           <View style={{ backgroundColor: "rgba(17,24,39,0.92)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", fontSize: 17 }}>
-                {panel === "sound" ? tr("Son") : panel === "speed" ? tr("Vitesse") : panel === "order" ? tr("Ordre des séquences") : tr("Texte")}
+                {panel === "sound" ? tr("Son") : panel === "speed" ? tr("Vitesse") : tr("Ordre des séquences")}
               </Text>
               <Press accessibilityLabel={tr("Valider")} onPress={() => setPanel(null)} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
                 <Check size={24} color={colors.fg} />
@@ -689,20 +776,20 @@ export function VideoStudio({
                 <Text style={{ color: colors.muted, fontSize: 12, flex: 1 }}>{tr("Déplace la séquence sélectionnée.")}</Text>
               </View>
             ) : null}
-            {panel === "text" && textItem ? (
-              <TextPanel
-                item={textItem}
-                total={total}
-                onChange={(patch) => apply(P.updateText(project, textItem.id, patch))}
-                onDelete={() => {
-                  apply(P.removeText(project, textItem.id), "light");
-                  setSelectedText(null);
-                  setPanel(null);
-                }}
-              />
-            ) : null}
           </View>
         </KeyboardAvoidingView>
+      ) : null}
+
+      {/* Mode A: writing directly on the video */}
+      {writingItem ? (
+        <TextWriter
+          key={writingItem.id}
+          item={writingItem}
+          stageW={stageW}
+          onChange={(patch) => draft && setDraft(P.updateText(draft, writingItem.id, patch))}
+          onValidate={validateText}
+          onCancel={cancelText}
+        />
       ) : null}
 
       {/* Export progress */}
@@ -719,7 +806,7 @@ export function VideoStudio({
           </Press>
         </View>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -809,177 +896,6 @@ function Slider({ value, onChange }: { value: number; onChange: (v: number, live
         <View style={{ width: `${value * 100}%`, height: 4, borderRadius: 2, backgroundColor: colors.accent }} />
       </View>
       <View style={{ position: "absolute", left: `${value * 100}%`, marginLeft: -11, width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff" }} />
-    </View>
-  );
-}
-
-function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; total: number; onChange: (patch: Partial<P.StudioText>) => void; onDelete: () => void }) {
-  const insets = useSafeAreaInsets();
-  const [value, setValue] = useState(item.text);
-  const [writing, setWriting] = useState(item.text === tr("Ton texte"));
-  useEffect(() => setValue(item.text), [item.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  function finish() {
-    setWriting(false);
-    const v = value.trim();
-    if (v && v !== item.text) onChange({ text: v });
-    else setValue(item.text);
-  }
-  const step = 0.5;
-  const fontSize = Math.round(item.size * 400);
-  return (
-    <View style={{ gap: 10 }}>
-      <Press accessibilityLabel={tr("Modifier le texte")} onPress={() => setWriting(true)} style={{ minHeight: 48, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.surface2, flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Type size={18} color={colors.accent} />
-        <Text numberOfLines={2} style={{ flex: 1, color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{item.text}</Text>
-        <Text style={{ color: colors.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{tr("Modifier")}</Text>
-      </Press>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={{ color: colors.muted, fontSize: 13, width: 62 }}>{tr("Début")}</Text>
-        <Chip label="−" on={false} onPress={() => onChange({ from: item.from - step })} />
-        <Text style={{ color: colors.fg, width: 46, textAlign: "center", fontVariant: ["tabular-nums"] }}>{clock(item.from)}</Text>
-        <Chip label="+" on={false} onPress={() => onChange({ from: Math.min(item.to - 0.2, item.from + step) })} />
-      </View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={{ color: colors.muted, fontSize: 13, width: 62 }}>{tr("Fin")}</Text>
-        <Chip label="−" on={false} onPress={() => onChange({ to: item.to - step })} />
-        <Text style={{ color: colors.fg, width: 46, textAlign: "center", fontVariant: ["tabular-nums"] }}>{clock(item.to)}</Text>
-        <Chip label="+" on={false} onPress={() => onChange({ to: Math.min(total, item.to + step) })} />
-        <View style={{ flex: 1 }} />
-        <Press accessibilityLabel={tr("Supprimer le texte")} onPress={onDelete} style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.chipStrong }}>
-          <Trash2 size={18} color={colors.danger} />
-        </Press>
-      </View>
-      <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Déplace le texte avec le doigt sur la vidéo.")}</Text>
-
-      {/* One screen to write and style the text, like Instagram: live preview at the top, options just above the keyboard. */}
-      <Modal visible={writing} transparent animationType="fade" onRequestClose={finish}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }}>
-          <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Press accessibilityLabel={tr("Plus petit")} onPress={() => onChange({ size: item.size - 0.01 })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 }}>A−</Text>
-              </Press>
-              <Press accessibilityLabel={tr("Plus grand")} onPress={() => onChange({ size: item.size + 0.01 })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 17 }}>A+</Text>
-              </Press>
-            </View>
-            <Press accessibilityLabel={tr("Terminé")} onPress={finish} style={{ height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: colors.accent, justifyContent: "center" }}>
-              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Terminé")}</Text>
-            </Press>
-          </View>
-          <View style={{ marginTop: 12 }}>
-              <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
-              {STORY_COLORS.map((c) => (
-                <Press key={c} accessibilityLabel={c} onPress={() => onChange({ color: c })} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: item.color === c ? 3 : 1, borderColor: item.color === c ? colors.accent : "rgba(255,255,255,0.4)" }} />
-              ))}
-            </ScrollView>
-          </View>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
-            <TextInput
-              value={value}
-              onChangeText={setValue}
-              autoFocus
-              multiline
-              placeholder={tr("Ton texte")}
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              selectionColor={colors.accent}
-              style={{
-                maxWidth: "100%",
-                textAlign: "center",
-                color: item.color,
-                fontSize,
-                lineHeight: fontSize * 1.2,
-                fontFamily: item.font === "bold" ? "Inter_800ExtraBold" : "Inter_600SemiBold",
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 12,
-                backgroundColor: item.style === "box" ? "rgba(0,0,0,0.6)" : "transparent",
-                textShadowColor: item.style === "outline" ? "#000" : "transparent",
-                textShadowRadius: item.style === "outline" ? 4 : 0,
-              }}
-            />
-          </View>
-          <View style={{ paddingBottom: 10, gap: 10 }}>
-            <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
-              <Chip label={tr("Simple")} on={item.style === "plain"} onPress={() => onChange({ style: "plain" })} />
-              <Chip label={tr("Fond")} on={item.style === "box"} onPress={() => onChange({ style: "box" })} />
-              <Chip label={tr("Contour")} on={item.style === "outline"} onPress={() => onChange({ style: "outline" })} />
-              <Chip label={tr("Gras")} on={item.font === "bold"} onPress={() => onChange({ font: item.font === "bold" ? "regular" : "bold" })} />
-            </ScrollView>
-
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </View>
-  );
-}
-
-/** Text shown on the preview exactly where it will be in the video; drag it with a finger. */
-function DraggableText({
-  item,
-  stageW,
-  stageH,
-  selected,
-  onSelect,
-  onMove,
-}: {
-  item: P.StudioText;
-  stageW: number;
-  stageH: number;
-  selected: boolean;
-  onSelect: () => void;
-  onMove: (x: number, y: number) => void;
-}) {
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const moved = useRef(false);
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) + Math.abs(g.dy) > 3,
-        onPanResponderGrant: () => {
-          moved.current = false;
-        },
-        onPanResponderMove: (_, g) => {
-          if (Math.abs(g.dx) + Math.abs(g.dy) > 3) moved.current = true;
-          setOffset({ x: g.dx, y: g.dy });
-        },
-        onPanResponderRelease: (_, g) => {
-          setOffset({ x: 0, y: 0 });
-          if (!moved.current) onSelect();
-          else onMove(item.x + g.dx / stageW, item.y + g.dy / stageH);
-        },
-        onPanResponderTerminate: () => setOffset({ x: 0, y: 0 }),
-      }),
-    [item.x, item.y, stageW, stageH, onSelect, onMove],
-  );
-  const fontSize = item.size * stageW;
-  const maxW = stageW * 0.86;
-  return (
-    <View
-      {...responder.panHandlers}
-      style={{ position: "absolute", left: item.x * stageW - maxW / 2 + offset.x, top: item.y * stageH + offset.y, width: maxW, alignItems: "center", transform: [{ translateY: -fontSize * 0.75 }] }}
-    >
-      <Text
-        style={{
-          color: item.color,
-          fontSize,
-          lineHeight: fontSize * 1.2,
-          textAlign: "center",
-          fontFamily: item.font === "bold" ? "Inter_800ExtraBold" : "Inter_600SemiBold",
-          paddingHorizontal: item.style === "box" ? fontSize * 0.35 : 0,
-          paddingVertical: item.style === "box" ? fontSize * 0.2 : 0,
-          backgroundColor: item.style === "box" ? "rgba(0,0,0,0.6)" : "transparent",
-          borderRadius: fontSize * 0.3,
-          overflow: "hidden",
-          textShadowColor: item.style === "outline" ? "#000" : "transparent",
-          textShadowRadius: item.style === "outline" ? 4 : 0,
-          borderWidth: selected ? 1 : 0,
-          borderColor: "rgba(255,255,255,0.8)",
-        }}
-      >
-        {item.text}
-      </Text>
     </View>
   );
 }

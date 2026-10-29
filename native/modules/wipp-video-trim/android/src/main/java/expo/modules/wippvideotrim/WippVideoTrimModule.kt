@@ -179,15 +179,39 @@ private data class TextItem(
   val color: Int,
   val style: String,
   val bold: Boolean,
+  val shadow: Boolean,
+  val align: String,
+  val rot: Float,
+  val anim: String,
+  val animSec: Double,
+  val fontName: String?,
   val from: Double,
   val to: Double,
 ) {
+  /** Same curves as animAt() in project.ts. */
+  fun animAt(t: Double): Triple<Float, Float, Float> {
+    val p = (t / animSec).coerceIn(0.0, 1.0)
+    val ease = 1 - Math.pow(1 - p, 3.0)
+    return when (anim) {
+      "fade" -> Triple(ease.toFloat(), 1f, 0f)
+      "appear" -> Triple(ease.toFloat(), (1.3 - 0.3 * ease).toFloat(), 0f)
+      "pop" -> Triple(minOf(1.0, p * 3).toFloat(), (if (p < 0.6) 0.5 + 0.62 * p / 0.6 else 1.12 - 0.12 * (p - 0.6) / 0.4).toFloat(), 0f)
+      "slide" -> Triple(ease.toFloat(), 1f, (0.08 * (1 - ease)).toFloat())
+      else -> Triple(1f, 1f, 0f)
+    }
+  }
+
   companion object {
     fun from(m: Map<String, Any?>): TextItem? {
       val text = (m["text"] as? String)?.takeIf { it.isNotBlank() } ?: return null
       fun n(k: String, f: Double) = (m[k] as? Number)?.toDouble() ?: f
       val color = runCatching { Color.parseColor(m["color"] as? String ?: "#ffffff") }.getOrDefault(Color.WHITE)
-      return TextItem(text, n("x", 0.5).toFloat(), n("y", 0.5).toFloat(), n("size", 0.07).toFloat(), color, m["style"] as? String ?: "plain", m["bold"] as? Boolean ?: false, n("from", 0.0), n("to", 0.0))
+      return TextItem(
+        text, n("x", 0.5).toFloat(), n("y", 0.5).toFloat(), n("size", 0.07).toFloat(), color,
+        m["style"] as? String ?: "plain", m["bold"] as? Boolean ?: false, m["shadow"] as? Boolean ?: false,
+        m["align"] as? String ?: "center", n("rot", 0.0).toFloat(), m["anim"] as? String ?: "none", n("animSec", 0.4),
+        m["fontName"] as? String, n("from", 0.0), n("to", 0.0),
+      )
     }
   }
 }
@@ -211,15 +235,19 @@ private class TextOverlay(
     val abs = absolute ?: (kotlin.math.abs(pts - offset) < kotlin.math.abs(pts)).also { absolute = it }
     val t = if (abs) pts else pts + offset
     val visible = texts.filter { t >= it.from && t < it.to }
-    val key = visible.joinToString("|") { it.hashCode().toString() }
+    // While an intro animation runs, every frame is different.
+    val key = visible.joinToString("|") { item ->
+      val since = t - item.from
+      if (item.anim != "none" && since < item.animSec) "${item.hashCode()}@${(since * 1000).toInt()}" else item.hashCode().toString()
+    }
     if (key != lastKey) {
       lastKey = key
-      bitmap = draw(visible)
+      bitmap = draw(visible, t)
     }
     return bitmap
   }
 
-  private fun draw(list: List<TextItem>): Bitmap {
+  private fun draw(list: List<TextItem>, now: Double): Bitmap {
     val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
     for (item in list) {
@@ -227,15 +255,24 @@ private class TextOverlay(
       val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = fontPx
         color = item.color
-        typeface = Typeface.create(Typeface.DEFAULT, if (item.bold) Typeface.BOLD else Typeface.NORMAL)
-        isFakeBoldText = item.bold
+        typeface = Typeface.create(item.fontName ?: "sans-serif", if (item.bold) Typeface.BOLD else Typeface.NORMAL)
+        if (item.shadow) setShadowLayer(fontPx * 0.08f, 0f, fontPx * 0.04f, Color.argb(190, 0, 0, 0))
       }
+      val align = when (item.align) { "left" -> Layout.Alignment.ALIGN_NORMAL; "right" -> Layout.Alignment.ALIGN_OPPOSITE; else -> Layout.Alignment.ALIGN_CENTER }
+      val (alpha, scale, dy) = item.animAt(now - item.from)
       val maxW = (width * 0.86f).toInt()
-      val layout = StaticLayout.Builder.obtain(item.text, 0, item.text.length, paint, maxW).setAlignment(Layout.Alignment.ALIGN_CENTER).build()
+      val layout = StaticLayout.Builder.obtain(item.text, 0, item.text.length, paint, maxW).setAlignment(align).build()
       var textW = 0f
       for (i in 0 until layout.lineCount) textW = maxOf(textW, layout.getLineWidth(i))
       val cx = item.x * width
       val cy = item.y * height
+      // Rotation, intro animation: around the centre of the text, like in the editor.
+      canvas.save()
+      canvas.translate(0f, dy * height)
+      canvas.rotate(item.rot, cx, cy)
+      canvas.scale(scale, scale, cx, cy)
+      val layerAlpha = (alpha * 255).toInt().coerceIn(0, 255)
+      if (layerAlpha < 255) canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), layerAlpha)
       val left = cx - maxW / 2f
       val top = cy - layout.height / 2f
       if (item.style == "box") {
@@ -251,9 +288,11 @@ private class TextOverlay(
           strokeWidth = fontPx * 0.08f
           color = Color.BLACK
         }
-        StaticLayout.Builder.obtain(item.text, 0, item.text.length, stroke, maxW).setAlignment(Layout.Alignment.ALIGN_CENTER).build().draw(canvas)
+        StaticLayout.Builder.obtain(item.text, 0, item.text.length, stroke, maxW).setAlignment(align).build().draw(canvas)
       }
       layout.draw(canvas)
+      canvas.restore()
+      if (layerAlpha < 255) canvas.restore()
       canvas.restore()
     }
     return bmp

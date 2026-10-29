@@ -38,9 +38,16 @@ test("two sources, reorder, undo / redo", () => {
 
 test("text timing and speed", () => {
   let p = P.createProject({ uri: "a", duration: 20 });
-  const t = P.addText(p, 4, { text: "Bisous", size: 0.08, color: "#fff", style: "box", font: "bold" });
+  const t = P.addText(p, 4, { text: "Bisous", size: 0.08, color: "#fff", style: "box", font: "classic", bold: true, shadow: false, align: "center", rot: 0, anim: "pop" });
   p = t.project;
   assert.deepEqual([p.texts[0].from, p.texts[0].to], [4, 7]);
   p = P.updateSegment(p, p.segments[0].id, { speed: 2 });
   assert.equal(P.totalDuration(p), 10);
+});
+
+test("animation curves end at rest", () => {
+  for (const a of P.STUDIO_ANIMS) {
+    const end = P.animAt(a, P.ANIM_SEC);
+    assert.ok(Math.abs(end.opacity - 1) < 1e-6 && Math.abs(end.scale - 1) < 1e-6 && Math.abs(end.dy) < 1e-6, a);
+  }
 });
