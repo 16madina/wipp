@@ -65,7 +65,7 @@ export function textLayerStyles(layer: Pick<StoryTextLayer, "font" | "color" | "
 /** One layer, drawn at its natural size (the caller positions, scales and rotates it). */
 export function StoryLayerContent({ layer, canvasW, animate = true }: { layer: StoryLayer; canvasW: number; animate?: boolean }) {
   if (layer.t === "sticker") {
-    return <WippSticker id={layer.id} size={stickerSizeFor(canvasW)} still={!animate} />;
+    return <WippSticker id={layer.id} size={stickerSizeFor(canvasW)} still={!animate} repeat={animate} />;
   }
   const s = textLayerStyles(layer, textSizeFor(canvasW));
   return (

@@ -28,7 +28,7 @@ function clipHtml(file: string, loop?: boolean) {
 }
 
 /** Navigateur (aperçu web) : même lecteur fond vert, dans une iframe (pas de WebView ni de fichiers locaux). */
-function ChromaClipWeb({ source, loop, still, black, extra, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; onReady: () => void }) {
+function ChromaClipWeb({ source, loop, still, black, extra, repeat, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; repeat?: boolean; onReady: () => void }) {
   const ready = useRef(onReady);
   ready.current = onReady;
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -41,7 +41,7 @@ function ChromaClipWeb({ source, loop, still, black, extra, onReady }: { source:
     return () => window.removeEventListener("message", onMsg);
   }, []);
   // opacity 0 : le navigateur joue quand même la vidéo (sur iPhone il faut 0.02), sans laisser de rectangle visible.
-  const html = (clipHtml(uri, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
+  const html = (clipHtml(uri, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra, repeat)).replace("video{opacity:0.02}", "video{opacity:0}").replace(
     "window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('ready');",
     "window.parent.postMessage('wipp-clip-ready','*');",
   );
@@ -58,12 +58,12 @@ function ChromaClipWeb({ source, loop, still, black, extra, onReady }: { source:
 /** Personal clips: words drawn by WIPP over the video, and seconds skipped at the start. */
 type ClipExtra = { start?: number; text?: string; pop?: boolean };
 
-function ChromaClip({ source, loop, still, black, extra, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; onReady: () => void }) {
-  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} black={black} extra={extra} onReady={onReady} />;
-  return <ChromaClipNative source={source} loop={loop} still={still} black={black} extra={extra} onReady={onReady} />;
+function ChromaClip({ source, loop, still, black, extra, repeat, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; repeat?: boolean; onReady: () => void }) {
+  if (Platform.OS === "web") return <ChromaClipWeb source={source} loop={loop} still={still} black={black} extra={extra} repeat={repeat} onReady={onReady} />;
+  return <ChromaClipNative source={source} loop={loop} still={still} black={black} extra={extra} repeat={repeat} onReady={onReady} />;
 }
 
-function ChromaClipNative({ source, loop, still, black, extra, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; onReady: () => void }) {
+function ChromaClipNative({ source, loop, still, black, extra, repeat, onReady }: { source: number | string; loop?: boolean; still?: boolean; black?: boolean; extra?: ClipExtra; repeat?: boolean; onReady: () => void }) {
   const [page, setPage] = useState<string | null>(null);
   const [dir, setDir] = useState<string | null>(null);
   const ready = useRef(onReady);
@@ -89,8 +89,8 @@ function ChromaClipNative({ source, loop, still, black, extra, onReady }: { sour
         else await downloadAsync(uri, folder + file);
       }
       const tag = extra ? `-x${Math.abs([...JSON.stringify(extra)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7))}` : "";
-      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${still ? "-still" : ""}${black ? "-black" : ""}${tag}.html`;
-      await writeAsStringAsync(htmlUri, clipHtml(file, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra));
+      const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${repeat ? "-repeat" : ""}${still ? "-still" : ""}${black ? "-black" : ""}${tag}.html`;
+      await writeAsStringAsync(htmlUri, clipHtml(file, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra, repeat));
       if (!live) return;
       setDir(folder);
       setPage(htmlUri);
@@ -100,7 +100,7 @@ function ChromaClipNative({ source, loop, still, black, extra, onReady }: { sour
     return () => {
       live = false;
     };
-  }, [source, loop, still, black, extra?.start, extra?.text, extra?.pop]);
+  }, [source, loop, repeat, still, black, extra?.start, extra?.text, extra?.pop]);
   if (!page || !dir) return null;
   return (
     <WebView
@@ -128,7 +128,7 @@ function ChromaClipNative({ source, loop, still, black, extra, onReady }: { sour
   );
 }
 
-function CLIP_SCRIPT(loop?: boolean, still?: boolean, black?: boolean, extra?: ClipExtra) {
+function CLIP_SCRIPT(loop?: boolean, still?: boolean, black?: boolean, extra?: ClipExtra, repeat?: boolean) {
   const start = Math.max(0, extra?.start ?? 0);
   const words = extra?.text ? JSON.stringify(extra.text) : "null";
   return `
@@ -159,7 +159,7 @@ v.playbackRate=${loop ? "0.92" : "1"};
 v.addEventListener('loadeddata',()=>{ if(START>0&&v.currentTime<START) v.currentTime=START; const p=v.play(); if(p&&p.catch) p.catch(function(e){ tell('play '+(e&&e.name||e)); }); });
 v.addEventListener('error',()=>{ tell('video '+(v.error&&v.error.code)); });
 setTimeout(()=>{ if(!sent) tell('late ready='+v.readyState+' paused='+v.paused+' net='+v.networkState+' size='+window.innerWidth+'x'+window.innerHeight+' t='+v.currentTime); },4000);
-${loop ? (start ? "v.addEventListener('ended',()=>{ v.currentTime=START; v.play(); });" : "") : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
+${loop ? (start ? "v.addEventListener('ended',()=>{ v.currentTime=START; v.play(); });" : "") : repeat ? "let rest=false; v.addEventListener('timeupdate',()=>{ if(!rest&&v.currentTime>=(v.duration||3.17)-0.12){ rest=true; v.pause(); setTimeout(()=>{ v.currentTime=START; v.play(); rest=false; },1800); } });" : "v.addEventListener('timeupdate',()=>{ if(v.currentTime>=(v.duration||3.17)-0.12) v.pause(); });"}
 ${still ? "v.addEventListener('playing',()=>setTimeout(()=>v.pause(),120));" : ""}
 requestAnimationFrame(frame);
 </script></body></html>`;
@@ -229,7 +229,7 @@ function PersonalSticker({ id, size, fill, still, loop }: { id: string; size: nu
   );
 }
 
-export function WippSticker(props: { id: string; size?: number; loop?: boolean; fill?: boolean; still?: boolean }) {
+export function WippSticker(props: { id: string; size?: number; loop?: boolean; fill?: boolean; still?: boolean; /** Plays again every few seconds (Stories). */ repeat?: boolean }) {
   if (props.id.startsWith("wm:")) return <PersonalSticker id={props.id} size={props.size ?? 48} fill={props.fill} still={props.still} loop={props.loop} />;
   return <BuiltInSticker {...props} />;
 }
@@ -239,11 +239,13 @@ function BuiltInSticker({
   size = 48,
   fill = false,
   still = false,
+  repeat = false,
 }: {
   id: string;
   size?: number;
   loop?: boolean;
   fill?: boolean;
+  repeat?: boolean;
   /** Picker grid: first image only — no animation, no video player (dozens at once froze the iPhone). */
   still?: boolean;
 }) {
@@ -265,6 +267,13 @@ function BuiltInSticker({
     setBroken(false);
     setClipReady(false);
   }, [id]);
+  // Animated pictures play once: in a Story they start again every few seconds.
+  const [round, setRound] = useState(0);
+  useEffect(() => {
+    if (!repeat || still) return;
+    const t = setInterval(() => setRound((r) => r + 1), 4500);
+    return () => clearInterval(t);
+  }, [repeat, still]);
 
   if (still) {
     if (!poster) return <View style={box} />;
@@ -307,7 +316,7 @@ function BuiltInSticker({
     return (
       <View style={box}>
         {poster && !clipReady ? <Image source={poster} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="contain" /> : null}
-        <ChromaClip source={clipSource} loop={row?.loopSoft} onReady={() => setClipReady(true)} />
+        <ChromaClip source={clipSource} loop={row?.loopSoft} repeat={repeat && !row?.loopSoft} onReady={() => setClipReady(true)} />
       </View>
     );
   }
@@ -327,6 +336,7 @@ function BuiltInSticker({
     const zoomed = { position: "absolute" as const, width: w * k, height: h * k, left: size / 2 - ((x0 + x1) / 2) * w * k, top: size / 2 - ((y0 + y1) / 2) * h * k };
     const picture = (
       <Image
+        key={repeat ? `${id}-${round}` : id}
         ref={img}
         recyclingKey={id}
         source={animate ? animatedSource(shown) : shown}

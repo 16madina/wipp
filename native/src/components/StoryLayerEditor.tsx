@@ -6,7 +6,6 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Trash2, X } from "lucide-react-native";
 import { haptic } from "../lib/haptics";
-import { composerMascotGold } from "../lib/assets";
 import { stickersInPack, wippieStickers } from "../lib/stickers";
 import {
   MAX_LAYERS,
@@ -28,8 +27,12 @@ type Canvas = { w: number; h: number };
 /** Drop zone at the bottom centre while dragging. */
 const inTrash = (x: number, y: number) => {
   "worklet";
-  return y > 0.84 && Math.abs(x - 0.5) < 0.16;
+  // Above the caption and « Ajouter à ma story » buttons, so it is always visible.
+  return Math.abs(y - TRASH_Y) < 0.07 && Math.abs(x - 0.5) < 0.16;
 };
+
+/** Where the trash sits on the Story (share of the height). */
+const TRASH_Y = 0.68;
 
 function EditableLayer({
   layer,
@@ -39,6 +42,7 @@ function EditableLayer({
   onEdit,
   onDrag,
   onOverTrash,
+  onHold,
 }: {
   layer: StoryLayer;
   canvas: Canvas;
@@ -47,6 +51,8 @@ function EditableLayer({
   onEdit: () => void;
   onDrag: (dragging: boolean) => void;
   onOverTrash: (over: boolean) => void;
+  /** Long press without moving: shows a trash to tap. */
+  onHold: () => void;
 }) {
   const x = useSharedValue(layer.x);
   const y = useSharedValue(layer.y);
@@ -131,7 +137,12 @@ function EditableLayer({
     .onEnd((_e, ok) => {
       if (ok) runOnJS(onEdit)();
     });
-  const gesture = Gesture.Exclusive(Gesture.Simultaneous(pan, pinch, rotate), tap);
+  const hold = Gesture.LongPress()
+    .minDuration(450)
+    .onStart(() => {
+      runOnJS(onHold)();
+    });
+  const gesture = Gesture.Race(Gesture.Simultaneous(pan, pinch, rotate), Gesture.Exclusive(hold, tap));
 
   const anchor = useAnimatedStyle(() => ({ left: x.value * cw.value, top: y.value * ch.value }));
   const body = useAnimatedStyle(() => ({
@@ -285,6 +296,13 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
   const [picking, setPicking] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [overTrash, setOverTrash] = useState(false);
+  /** Layer chosen with a long press: a trash appears to delete it. */
+  const [held, setHeld] = useState<number | null>(null);
+  useEffect(() => {
+    if (held == null) return;
+    const t = setTimeout(() => setHeld(null), 5000);
+    return () => clearTimeout(t);
+  }, [held]);
   const stickers = layers.filter((l) => l.t === "sticker").length;
 
   const setAt = (i: number, next: StoryLayer) => onChange(layers.map((l, k) => (k === i ? next : l)));
@@ -308,7 +326,14 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
               onEdit={() => {
                 if (layer.t === "text") setEditing({ index: i });
               }}
-              onDrag={setDragging}
+              onDrag={(d) => {
+                if (d) setHeld(null);
+                setDragging(d);
+              }}
+              onHold={() => {
+                haptic("select");
+                setHeld(i);
+              }}
               onOverTrash={(v) => {
                 if (v) haptic("select");
                 setOverTrash(v);
@@ -317,7 +342,7 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
           ))
         : null}
 
-      <View pointerEvents="box-none" style={{ position: "absolute", top: topInset + 8, right: 12, gap: 12, alignItems: "center" }}>
+      <View pointerEvents="box-none" style={{ position: "absolute", top: topInset + 24, right: 12, gap: 12, alignItems: "center" }}>
         <Press
           accessibilityLabel={tr("Ajouter un texte")}
           disabled={layers.length >= MAX_LAYERS}
@@ -332,12 +357,29 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
           onPress={() => setPicking(true)}
           style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)", opacity: stickers >= MAX_STICKERS ? 0.5 : 1 }}
         >
-          <Image source={composerMascotGold} style={{ width: 38, height: 29 }} contentFit="contain" />
+          <WippSticker id="moji-37" size={40} />
         </Press>
       </View>
 
+      {held != null && !dragging && layers[held] ? (
+        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: canvas.h * TRASH_Y - 32, alignItems: "center", zIndex: 20 }}>
+          <Press
+            accessibilityLabel={tr("Supprimer")}
+            onPress={() => {
+              haptic("warn");
+              removeAt(held);
+              setHeld(null);
+            }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 52, paddingHorizontal: 20, borderRadius: 26, backgroundColor: colors.danger, borderWidth: 2, borderColor: "#fff" }}
+          >
+            <Trash2 size={22} color="#fff" />
+            <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Supprimer")}</Text>
+          </Press>
+        </View>
+      ) : null}
+
       {dragging ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: canvas.h * 0.06, alignItems: "center" }}>
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: canvas.h * TRASH_Y - 32, alignItems: "center", zIndex: 20 }}>
           <View
             style={{
               width: overTrash ? 64 : 52,

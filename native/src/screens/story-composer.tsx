@@ -237,7 +237,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
             <Press
               accessibilityLabel={tr("Modifier la vidéo")}
               onPress={() => setPhase({ ...phase, studioOpen: true })}
-              style={{ position: "absolute", top: insets.top + 124, right: 12, width: 46, alignItems: "center", gap: 4, zIndex: 3 }}
+              style={{ position: "absolute", top: insets.top + 140, right: 12, width: 46, alignItems: "center", gap: 4, zIndex: 3 }}
             >
               <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
                 <Scissors size={21} color="#fff" />
