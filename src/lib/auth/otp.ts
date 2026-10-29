@@ -1,6 +1,6 @@
 /**
- * Sign-in code by Twilio Verify (WhatsApp first, SMS or voice call as fallback), for countries where
- * Firebase SMS do not arrive (Africa). Twilio makes and checks the code. Once it is right, the server
+ * Sign-in code by Twilio Verify for every country (SMS first, voice call as the other choice;
+ * WhatsApp once OTP_WHATSAPP=1). Firebase SMS stays only as a fallback when the Twilio keys are missing. Twilio makes and checks the code. Once it is right, the server
  * gives a Firebase custom token for the account linked to this phone number: the same WIPP account.
  * Secrets (server only): TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID, FIREBASE_SERVICE_ACCOUNT.
  */
@@ -13,12 +13,13 @@ const TWILIO = {
   token: process.env.TWILIO_AUTH_TOKEN || "",
   service: process.env.TWILIO_VERIFY_SID || "",
 };
-/** Dial codes whose code comes from Twilio Verify (Africa by default). */
-const PREFIXES = (process.env.OTP_PREFIXES ||
-  "+225,+221,+223,+224,+226,+227,+228,+229,+237,+241,+242,+243,+235,+236,+240,+222,+220,+232,+231,+233,+234,+212,+213,+216,+250,+257,+254,+255,+256,+251,+27,+260,+263,+258,+261,+269,+230,+248,+238,+245,+239,+253,+252,+244,+264,+267,+266,+268,+265,+211,+249,+218,+20")
+/** Dial codes whose code comes from Twilio Verify: every country by default ("+"). */
+const PREFIXES = (process.env.OTP_PREFIXES || "+")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+/** WhatsApp is not ready yet: offered only once OTP_WHATSAPP=1. */
+const WHATSAPP = process.env.OTP_WHATSAPP === "1";
 
 const LIMITS = { perPhone15min: 3, perPhoneDay: 8, perIpHour: 20 };
 
@@ -26,7 +27,7 @@ export type OtpChannel = "sms" | "whatsapp" | "voice";
 
 export function otpConfig() {
   const enabled = Boolean(TWILIO.sid && TWILIO.token && TWILIO.service && process.env.FIREBASE_SERVICE_ACCOUNT);
-  return { enabled, prefixes: enabled ? PREFIXES : [], whatsapp: enabled, voice: enabled };
+  return { enabled, prefixes: enabled ? PREFIXES : [], whatsapp: enabled && WHATSAPP, voice: enabled };
 }
 
 function served(phone: string) {
@@ -76,7 +77,7 @@ export async function sendOtp(input: { phone?: string; channel?: string; ip?: st
   const phone = normalize(input.phone ?? "");
   if (!served(phone)) throw new WippHttpError(400, "otp_country", "Utilise le code par SMS habituel pour ce pays.");
   // SMS first; WhatsApp or a voice call only when asked.
-  let channel: OtpChannel = input.channel === "whatsapp" ? "whatsapp" : input.channel === "voice" ? "voice" : "sms";
+  let channel: OtpChannel = input.channel === "whatsapp" && WHATSAPP ? "whatsapp" : input.channel === "voice" ? "voice" : "sms";
   const sql = await ensureTable();
   const counts = await sql<{ p15: number; pday: number; ip: number }>`
     select

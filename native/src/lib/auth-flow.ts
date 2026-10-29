@@ -72,7 +72,7 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode, channel?: CodeChannel): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return tr("Numéro invalide. Vérifie l'indicatif et le numéro.");
-  // Africa: the code comes from the WIPP server (SMS first, else WhatsApp or a voice call).
+  // Twilio Verify through the WIPP server (SMS first, else a voice call); Firebase SMS only when it is off.
   const channels = await codeChannelsFor(phone);
   if (channels.length) {
     try {
