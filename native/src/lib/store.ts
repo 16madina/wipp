@@ -486,7 +486,22 @@ export const useWippStore = create<Store>((set, get) => ({
     void import("./inbox-cache").then((m) => m.clearInboxSnapshot());
     void import("./firebase-linked-session").then(({ clearLinkedSession }) => clearLinkedSession());
     void import("./proximity/lifecycle").then(({ syncProximityLifecycle }) => syncProximityLifecycle("splash", "background"));
-    get().resetDemo();
+    // Back to the sign-in screen with nothing left: no demo conversations, contacts or calls.
+    set({
+      ...fresh(),
+      language: get().language,
+      onboarded: false,
+      stack: [{ name: "onboarding" }],
+      users: {},
+      chats: [],
+      messages: {},
+      stories: [],
+      calls: [],
+      requests: [],
+      intros: [],
+      codes: [],
+      verifiedIds: [],
+    });
   },
   pinChat: (chatId, pinned) => {
     set((s) => ({ chats: s.chats.map((c) => (c.id === chatId ? { ...c, pinned } : c)) }));
