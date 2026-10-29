@@ -1500,6 +1500,8 @@ export const TR_EN: Record<string, string> = {
   "Donner la parole": "Give the floor",
   "Couper son micro": "Mute their microphone",
   "Demander d’activer sa caméra": "Ask to turn on their camera",
+  "{0} te donne la parole. Ton micro est activé.": "{0} gives you the floor. Your microphone is on.",
+  "Tu donnes la parole à {0}": "You give the floor to {0}",
   "Ouvertes maintenant": "Open now",
   "Ouvertes 24 h/24": "Open 24/7",
   "Ouvertes autour de vous": "Open around you",

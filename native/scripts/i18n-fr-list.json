@@ -2339,5 +2339,7 @@
  "Pas maintenant",
  "Donner la parole",
  "Couper son micro",
- "Demander d’activer sa caméra"
+ "Demander d’activer sa caméra",
+ "{0} te donne la parole. Ton micro est activé.",
+ "Tu donnes la parole à {0}"
 ]

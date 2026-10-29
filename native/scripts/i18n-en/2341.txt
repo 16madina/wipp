@@ -1,0 +1,2 @@
+2341|{0} gives you the floor. Your microphone is on.
+2342|You give the floor to {0}

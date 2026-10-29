@@ -365,7 +365,9 @@ export function CallOverlay() {
         } else if (msg.t === "floor") {
           rc.setHand(me, false);
           send({ t: "hand", up: false });
-          rc.callNotice(tr("{0} te donne la parole. Active ton micro pour parler.", nameOf(from)));
+          // I raised my hand to speak: my microphone turns on.
+          patch({ muted: false });
+          rc.callNotice(tr("{0} te donne la parole. Ton micro est activé.", nameOf(from)));
         }
       });
       if (room.state === "connected") announce();

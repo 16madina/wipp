@@ -234,6 +234,25 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
+/** Raised hand: big, in the middle of the tile, waving. */
+function WavingHand({ size }: { size: number }) {
+  const turn = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(turn, { toValue: 1, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(turn, { toValue: -1, duration: 520, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(turn, { toValue: 0, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.delay(250),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [turn]);
+  const rotate = turn.interpolate({ inputRange: [-1, 1], outputRange: ["-22deg", "22deg"] });
+  return <Animated.Text style={{ fontSize: size, lineHeight: size * 1.2, transform: [{ translateY: size * 0.3 }, { rotate }, { translateY: -size * 0.3 }] }}>✋</Animated.Text>;
+}
+
 export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean };
 
 /** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
@@ -282,10 +301,14 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile }: { tiles: GroupTile[]
               ) : null}
             </View>
             {tile.identity && hands.includes(tile.identity) ? (
-              <View style={{ position: "absolute", top: 8, left: 8, paddingHorizontal: 8, height: 28, borderRadius: 14, backgroundColor: GOLD, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Text style={{ fontSize: 14 }}>✋</Text>
-                <Text style={{ color: "#000", fontSize: 12, fontFamily: "Inter_700Bold" }}>{hands.indexOf(tile.identity) + 1}</Text>
-              </View>
+              <>
+                <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
+                  <WavingHand size={rows > 2 ? 64 : 96} />
+                </View>
+                <View style={{ position: "absolute", top: 8, left: 8, minWidth: 28, paddingHorizontal: 8, height: 28, borderRadius: 14, backgroundColor: GOLD, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: "#000", fontSize: 13, fontFamily: "Inter_700Bold" }}>{hands.indexOf(tile.identity) + 1}</Text>
+                </View>
+              </>
             ) : null}
             {tile.identity && claps.some((c) => c.id === tile.identity && Date.now() - c.at < 3000) ? (
               <Text style={{ position: "absolute", top: 6, right: 10, fontSize: 30 }}>👏</Text>
@@ -448,7 +471,13 @@ export function CallScreen({
               {status} · {groupTiles.length} {tr("participant")}{groupTiles.length > 1 ? "s" : ""}
             </Text>
           </View>
-          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onTile={iAmHost ? (t) => { if (!t.local && t.identity) setHostTile(t); } : undefined} />
+          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onTile={iAmHost ? (t) => {
+            if (t.local || !t.identity) return;
+            if (hands.includes(t.identity)) {
+              sendCallMsg({ t: "floor", to: t.identity });
+              callNotice(tr("Tu donnes la parole à {0}", t.name));
+            } else setHostTile(t);
+          } : undefined} />
         </View>
       ) : null}
 
