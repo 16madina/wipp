@@ -804,21 +804,57 @@ function Slider({ value, onChange }: { value: number; onChange: (v: number, live
 }
 
 function TextPanel({ item, total, onChange, onDelete }: { item: P.StudioText; total: number; onChange: (patch: Partial<P.StudioText>) => void; onDelete: () => void }) {
+  const insets = useSafeAreaInsets();
   const [value, setValue] = useState(item.text);
+  const [writing, setWriting] = useState(item.text === tr("Ton texte"));
   useEffect(() => setValue(item.text), [item.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  function finish() {
+    setWriting(false);
+    const v = value.trim();
+    if (v && v !== item.text) onChange({ text: v });
+    else setValue(item.text);
+  }
   const step = 0.5;
   return (
     <View style={{ gap: 10 }}>
-      <TextInput
-        value={value}
-        onChangeText={setValue}
-        onEndEditing={() => value.trim() && value !== item.text && onChange({ text: value.trim() })}
-        onBlur={() => value.trim() && value !== item.text && onChange({ text: value.trim() })}
-        multiline
-        placeholder={tr("Ton texte")}
-        placeholderTextColor={colors.muted}
-        style={{ minHeight: 44, maxHeight: 90, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: colors.fg, backgroundColor: colors.surface2, fontFamily: "Inter_500Medium", fontSize: 15 }}
-      />
+      <Press accessibilityLabel={tr("Écrire le texte")} onPress={() => setWriting(true)} style={{ minHeight: 44, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.surface2, justifyContent: "center" }}>
+        <Text numberOfLines={2} style={{ color: colors.fg, fontFamily: "Inter_500Medium", fontSize: 15 }}>{item.text}</Text>
+      </Press>
+      {/* Writing happens at the top of the screen, above the keyboard, so the text stays visible. */}
+      <Modal visible={writing} transparent animationType="fade" onRequestClose={finish}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", paddingTop: insets.top + 8, paddingHorizontal: 20 }}>
+          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+            <Press accessibilityLabel={tr("OK")} onPress={finish} style={{ height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: colors.accent, justifyContent: "center" }}>
+              <Text style={{ color: colors.accentFg, fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("OK")}</Text>
+            </Press>
+          </View>
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <TextInput
+              value={value}
+              onChangeText={setValue}
+              autoFocus
+              multiline
+              placeholder={tr("Ton texte")}
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              selectionColor={colors.accent}
+              style={{
+                maxWidth: "100%",
+                maxHeight: 260,
+                textAlign: "center",
+                color: item.color,
+                fontSize: 30,
+                fontFamily: item.font === "bold" ? "Inter_800ExtraBold" : "Inter_600SemiBold",
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 12,
+                backgroundColor: item.style === "box" ? "rgba(0,0,0,0.6)" : "transparent",
+                textShadowColor: item.style === "outline" ? "#000" : "transparent",
+                textShadowRadius: item.style === "outline" ? 4 : 0,
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         <Chip label={tr("Simple")} on={item.style === "plain"} onPress={() => onChange({ style: "plain" })} />
         <Chip label={tr("Fond")} on={item.style === "box"} onPress={() => onChange({ style: "box" })} />
