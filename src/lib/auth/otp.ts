@@ -75,8 +75,8 @@ export async function sendOtp(input: { phone?: string; channel?: string; ip?: st
   if (!otpConfig().enabled) throw new WippHttpError(503, "otp_unavailable", "Cette méthode n’est pas encore disponible.");
   const phone = normalize(input.phone ?? "");
   if (!served(phone)) throw new WippHttpError(400, "otp_country", "Utilise le code par SMS habituel pour ce pays.");
-  // WhatsApp first (reaches African numbers best), SMS or a voice call when asked.
-  const channel: OtpChannel = input.channel === "sms" ? "sms" : input.channel === "voice" ? "voice" : "whatsapp";
+  // SMS first; WhatsApp or a voice call only when asked.
+  let channel: OtpChannel = input.channel === "whatsapp" ? "whatsapp" : input.channel === "voice" ? "voice" : "sms";
   const sql = await ensureTable();
   const counts = await sql<{ p15: number; pday: number; ip: number }>`
     select
@@ -88,7 +88,13 @@ export async function sendOtp(input: { phone?: string; channel?: string; ip?: st
   if (c.p15 >= LIMITS.perPhone15min || c.pday >= LIMITS.perPhoneDay || (input.ip && c.ip >= LIMITS.perIpHour)) {
     throw new WippHttpError(429, "otp_limit", "Trop de demandes de code. Réessaie dans quelques minutes.");
   }
-  const r = await twilio("Verifications", { To: phone, Channel: channel === "voice" ? "call" : channel, Locale: "fr" });
+  let r = await twilio("Verifications", { To: phone, Channel: channel === "voice" ? "call" : channel, Locale: "fr" });
+  if (!r.ok && channel === "whatsapp") {
+    // WhatsApp not available (yet): fall back to SMS automatically.
+    console.warn("[otp] whatsapp failed, falling back to sms", r.status, r.json.code, r.json.message);
+    channel = "sms";
+    r = await twilio("Verifications", { To: phone, Channel: "sms", Locale: "fr" });
+  }
   if (!r.ok) {
     console.warn("[otp] twilio send", r.status, r.json.code, r.json.message);
     throw new WippHttpError(502, "otp_send_failed", channel === "whatsapp" ? "Le code n’a pas pu être envoyé sur WhatsApp. Essaie par SMS." : "Le code n’a pas pu être envoyé. Réessaie ou choisis une autre méthode.");

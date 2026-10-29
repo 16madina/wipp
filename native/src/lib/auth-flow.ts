@@ -38,7 +38,8 @@ export async function codeChannelsFor(rawPhone: string): Promise<CodeChannel[]> 
   const phone = toE164(rawPhone);
   const cfg = await otpConfig();
   if (!phone || !cfg.enabled || !cfg.prefixes.some((p) => phone.startsWith(p))) return [];
-  return [...(cfg.whatsapp ? (["whatsapp"] as const) : []), "sms", ...(cfg.voice ? (["voice"] as const) : [])];
+  // SMS first; WhatsApp and a voice call as other choices.
+  return ["sms", ...(cfg.whatsapp ? (["whatsapp"] as const) : []), ...(cfg.voice ? (["voice"] as const) : [])];
 }
 
 async function otpCall<T>(path: string, body: unknown): Promise<T> {
@@ -71,12 +72,13 @@ export function getVerifiedSignup() {
 export async function startPhoneCode(rawPhone: string, mode: AuthMode, channel?: CodeChannel): Promise<string | null> {
   const phone = toE164(rawPhone);
   if (!phone) return tr("Numéro invalide. Vérifie l'indicatif et le numéro.");
-  // Africa: the code comes from the WIPP server (WhatsApp first, else SMS or a voice call).
+  // Africa: the code comes from the WIPP server (SMS first, else WhatsApp or a voice call).
   const channels = await codeChannelsFor(phone);
   if (channels.length) {
     try {
-      await otpCall("send", { phone, channel: channel ?? channels[0] });
-      lastChannel = channel ?? channels[0];
+      const sent = await otpCall<{ channel?: CodeChannel }>("send", { phone, channel: channel ?? channels[0] });
+      // The server may switch WhatsApp to SMS when WhatsApp fails.
+      lastChannel = sent.channel ?? channel ?? channels[0];
       pending = { phone, mode, via: "termii" };
       return null;
     } catch (err) {
