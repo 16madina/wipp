@@ -30,6 +30,7 @@ import {
   ArrowRight,
   Check,
   Gauge,
+  Palette,
   Pause,
   Play,
   Plus,
@@ -45,6 +46,7 @@ import {
 import { cancelStudioExport, exportStudioProject, studioCapabilities } from "wipp-video-trim";
 import { Press } from "../../components/ui";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { FILTER_NAMES, FilterCompare, FilterPanel, useFilterPictures } from "./filters";
 import { StudioTextView, TextBlock, TextTools, TextWriter, fittedSize } from "./text-editing";
 import { palettes } from "../../theme";
 import { tr } from "../../lib/tr";
@@ -98,6 +100,11 @@ export function VideoStudio({
   const [handleDrag, setHandleDrag] = useState(false);
   /** Mode A: the text being written (new or edited). Changes stay in `draft` until ✓. */
   const [writing, setWriting] = useState<{ id: string; isNew: boolean } | null>(null);
+  /** Filters panel: the frame (source file + time) used for the before / after pictures. */
+  const [filterFrame, setFilterFrame] = useState<{ uri: string; time: number } | null>(null);
+  const filtering = filterFrame != null;
+  const currentFilter: P.StudioFilter = (draft ?? history?.present)?.filter ?? { kind: "none", amount: 0 };
+  const filterPics = useFilterPictures(filterFrame, currentFilter);
 
   const sources = project?.sources ?? [];
   const uriA = sources[0]?.uri ?? seed?.uri ?? null;
@@ -335,6 +342,17 @@ export function VideoStudio({
     }
   }
 
+  function openFilters() {
+    if (!project) return;
+    stop();
+    setPanel(null);
+    setSelected(null);
+    setSelectedText(null);
+    const hit = P.locate(project, headRef.current);
+    const src = hit && project.sources.find((s) => s.id === hit.seg.sourceId);
+    if (hit && src) setFilterFrame({ uri: src.uri, time: hit.sourceTime });
+  }
+
   function newText() {
     if (!history) return;
     stop();
@@ -484,13 +502,20 @@ export function VideoStudio({
           <VideoView player={playerA} style={{ position: "absolute", width: "100%", height: "100%", opacity: active === 0 ? 1 : 0 }} contentFit="contain" nativeControls={false} />
           {uriB ? <VideoView player={playerB} style={{ position: "absolute", width: "100%", height: "100%", opacity: active === 1 ? 1 : 0 }} contentFit="contain" nativeControls={false} /> : null}
           <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={() => (selectedText ? setSelectedText(null) : togglePlay())} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
-            {!playing && !selectedText && !writing ? (
+            {!playing && !selectedText && !writing && !filtering ? (
               <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" }}>
                 <Play size={30} color="#fff" fill="#fff" />
               </View>
             ) : null}
           </Press>
-          {visibleTexts.map((t) =>
+          {filtering ? <FilterCompare before={filterPics.before} after={filterPics.after} width={stageW} height={stageH} /> : null}
+          {!filtering && currentFilter.kind !== "none" && currentFilter.amount > 0 ? (
+            <View pointerEvents="none" style={{ position: "absolute", left: 10, top: Math.max(8, insets.top + 58 - (screenH - stageH) / 2), flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10 }}>
+              <Palette size={12} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{tr(FILTER_NAMES[currentFilter.kind])} · {tr("visible dans la vidéo finale")}</Text>
+            </View>
+          ) : null}
+          {!filtering && visibleTexts.map((t) =>
             writing?.id === t.id ? null : (
               <StudioTextView
                 key={t.id}
@@ -537,7 +562,23 @@ export function VideoStudio({
 
       {/* Bottom: time and timeline (video, sound, texts), over the video */}
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 6, paddingBottom: insets.bottom + 6, backgroundColor: textItem && !writing ? "rgba(10,14,22,0.88)" : "rgba(0,0,0,0.42)", display: writing ? "none" : "flex" }}>
-      {textItem && !writing ? (
+      {filtering ? (
+        <FilterPanel
+          filter={currentFilter}
+          thumbs={filterPics.thumbs}
+          onChange={(f, live) => {
+            if (!history) return;
+            const next = P.setFilter(history.present, f);
+            if (live) setDraft(next);
+            else {
+              setDraft(null);
+              apply(next, "light");
+            }
+          }}
+          onClose={() => setFilterFrame(null)}
+        />
+      ) : null}
+      {textItem && !writing && !filtering ? (
         <TextTools
           item={textItem}
           total={total}
@@ -551,7 +592,7 @@ export function VideoStudio({
         />
       ) : null}
       {/* Time */}
-      <View style={{ height: 30, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <View style={{ display: filtering ? "none" : "flex", height: 30, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
         <Press accessibilityLabel={playing ? tr("Pause") : tr("Lecture")} onPress={togglePlay} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           {playing ? <Pause size={22} color={colors.fg} fill={colors.fg} /> : <Play size={22} color={colors.fg} fill={colors.fg} />}
         </Press>
@@ -562,7 +603,7 @@ export function VideoStudio({
       </View>
 
       {/* Timeline */}
-      <View style={{ height: 102 + textTrackH }}>
+      <View style={{ height: 102 + textTrackH, display: filtering ? "none" : "flex" }}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -720,13 +761,14 @@ export function VideoStudio({
       ) : null}
 
       {/* Toolbar */}
-      <View pointerEvents="box-none" style={{ position: "absolute", right: 8, top: insets.top + 60, bottom: insets.bottom + 186, display: textItem || writing ? "none" : "flex" }}>
+      <View pointerEvents="box-none" style={{ position: "absolute", right: 8, top: insets.top + 60, bottom: insets.bottom + 186, display: textItem || writing || filtering ? "none" : "flex" }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
           <Tool icon={<Scissors size={21} color="#fff" />} label={tr("Scinder")} onPress={split} />
           <Tool icon={<Trash2 size={21} color="#fff" />} label={tr("Supprimer")} onPress={remove} />
           <Tool icon={<Volume2 size={21} color="#fff" />} label={tr("Son")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("sound"); }} />
           {caps.speed ? <Tool icon={<Gauge size={21} color="#fff" />} label={tr("Vitesse")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("speed"); }} /> : null}
           <Tool icon={<Type size={21} color="#fff" />} label={tr("Texte")} onPress={newText} />
+          <Tool icon={<Palette size={21} color="#fff" />} label={tr("Filtres")} onPress={openFilters} />
           {project.segments.length > 1 ? <Tool icon={<ArrowRight size={21} color="#fff" />} label={tr("Ordre")} onPress={() => { stop(); setSelectedText(null); if (!selected && currentSeg) setSelected(currentSeg.id); setPanel("order"); }} /> : null}
           {project.sources.length < P.MAX_SOURCES ? <Tool icon={<Plus size={21} color="#fff" />} label={tr("Vidéo")} onPress={() => void addVideo()} /> : null}
         </ScrollView>

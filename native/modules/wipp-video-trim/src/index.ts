@@ -54,6 +54,7 @@ export async function trimVideoSegment(uri: string, start: number, end: number) 
 type StudioNative = {
   exportProject: (spec: unknown) => Promise<{ uri: string; duration: number; ext?: string; bytes?: number }>;
   cancelExport: () => Promise<void>;
+  filterPreview?: (uri: string, seconds: number, params: unknown) => Promise<string>;
   studioCapabilities?: () => { speed: boolean };
   addListener?: (event: string, cb: (e: { progress: number }) => void) => { remove: () => void };
 };
@@ -94,4 +95,11 @@ export async function exportStudioProject(spec: unknown, onProgress?: (p: number
 
 export function cancelStudioExport() {
   return studioNative()?.cancelExport();
+}
+
+/** One frame of a video with a colour filter (before / after preview). */
+export async function studioFilterPreview(uri: string, seconds: number, params: unknown) {
+  const mod = studioNative();
+  if (!mod?.filterPreview) throw new Error("filter_preview_unavailable");
+  return mod.filterPreview(uri, seconds, params);
 }

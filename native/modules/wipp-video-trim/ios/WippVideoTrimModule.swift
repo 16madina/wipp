@@ -1,6 +1,8 @@
 import ExpoModulesCore
 import AVFoundation
 import Photos
+import CoreImage
+import UIKit
 
 public class WippVideoTrimModule: Module {
   public func definition() -> ModuleDefinition {
@@ -19,6 +21,23 @@ public class WippVideoTrimModule: Module {
         "ext": "mp4",
         "bytes": Self.fileBytes(result.url),
       ]
+    }
+
+    /// One frame of the video with the colour filter applied (for the before / after preview).
+    AsyncFunction("filterPreview") { (uri: String, seconds: Double, params: [String: Any]) async throws -> String in
+      let asset = AVURLAsset(url: Self.fileURL(uri))
+      let generator = AVAssetImageGenerator(asset: asset)
+      generator.appliesPreferredTrackTransform = true
+      generator.maximumSize = CGSize(width: 720, height: 1280)
+      generator.requestedTimeToleranceBefore = CMTime(seconds: 0.1, preferredTimescale: 600)
+      generator.requestedTimeToleranceAfter = CMTime(seconds: 0.1, preferredTimescale: 600)
+      let cg = try generator.copyCGImage(at: CMTime(seconds: max(0, seconds), preferredTimescale: 600), actualTime: nil)
+      let filtered = StudioExporter.Filter(params).apply(CIImage(cgImage: cg))
+      guard let out = CIContext().createCGImage(filtered, from: filtered.extent),
+            let data = UIImage(cgImage: out).jpegData(compressionQuality: 0.85) else { throw TrimFailure("filter_preview") }
+      let file = FileManager.default.temporaryDirectory.appendingPathComponent("wipp-filter-\(UUID().uuidString).jpg")
+      try data.write(to: file)
+      return file.absoluteString
     }
 
     AsyncFunction("cancelExport") { () in

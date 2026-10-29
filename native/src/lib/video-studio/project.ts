@@ -84,7 +84,31 @@ export type StudioText = {
   to: number;
 };
 
-export type StudioProject = { sources: StudioSource[]; segments: StudioSegment[]; texts: StudioText[] };
+export type StudioFilterKind = "none" | "bright" | "contrast" | "warm" | "cool" | "vivid" | "bw";
+export const STUDIO_FILTERS: StudioFilterKind[] = ["none", "bright", "contrast", "warm", "cool", "vivid", "bw"];
+/** One filter for the whole video, with its strength (0–1). Texts are never filtered. */
+export type StudioFilter = { kind: StudioFilterKind; amount: number };
+
+export type StudioProject = { sources: StudioSource[]; segments: StudioSegment[]; texts: StudioText[]; filter?: StudioFilter };
+
+/** Colour settings sent to the native engines (same numbers on iPhone and Android). */
+export function filterParams(f: StudioFilter | undefined) {
+  const a = f && f.kind !== "none" ? clamp(f.amount, 0, 1) : 0;
+  const p = { brightness: 0, contrast: 1, saturation: 1, red: 1, blue: 1 };
+  switch (f?.kind) {
+    case "bright": p.brightness = 0.15 * a; break;
+    case "contrast": p.contrast = 1 + 0.35 * a; break;
+    case "warm": p.red = 1 + 0.12 * a; p.blue = 1 - 0.12 * a; break;
+    case "cool": p.red = 1 - 0.1 * a; p.blue = 1 + 0.12 * a; break;
+    case "vivid": p.saturation = 1 + 0.6 * a; break;
+    case "bw": p.saturation = 1 - a; break;
+  }
+  return p;
+}
+
+export function setFilter(p: StudioProject, filter: StudioFilter): StudioProject {
+  return { ...p, filter: { kind: filter.kind, amount: clamp(filter.amount, 0, 1) } };
+}
 
 let counter = 0;
 export function newId(prefix: string) {
@@ -223,6 +247,7 @@ function fitTexts(p: StudioProject): StudioProject {
 /** True when the project is just the untouched first video (nothing to export). */
 export function isUntouched(p: StudioProject) {
   if (p.sources.length !== 1 || p.segments.length !== 1 || p.texts.length) return false;
+  if (p.filter && p.filter.kind !== "none" && p.filter.amount > 0) return false;
   const s = p.segments[0];
   return s.start < 0.05 && Math.abs(s.end - p.sources[0].duration) < 0.05 && s.volume === 1 && s.speed === 1;
 }
@@ -249,6 +274,7 @@ export function exportSpec(p: StudioProject, os = "ios") {
   return {
     width: 720,
     height: 1280,
+    filter: filterParams(p.filter),
     segments: p.segments.map((s) => ({ uri: byId.get(s.sourceId)!.uri, start: s.start, end: s.end, volume: s.volume, speed: s.speed })),
     texts: p.texts.map((t) => ({
       text: t.text,

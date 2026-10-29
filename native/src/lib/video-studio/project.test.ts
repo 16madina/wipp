@@ -51,3 +51,12 @@ test("animation curves end at rest", () => {
     assert.ok(Math.abs(end.opacity - 1) < 1e-6 && Math.abs(end.scale - 1) < 1e-6 && Math.abs(end.dy) < 1e-6, a);
   }
 });
+
+test("filters change the project and the export", () => {
+  let p = P.createProject({ uri: "a", duration: 10 });
+  assert.equal(P.isUntouched(p), true);
+  p = P.setFilter(p, { kind: "bw", amount: 1 });
+  assert.equal(P.isUntouched(p), false);
+  assert.equal(P.exportSpec(p).filter.saturation, 0);
+  assert.deepEqual(P.filterParams({ kind: "none", amount: 1 }), { brightness: 0, contrast: 1, saturation: 1, red: 1, blue: 1 });
+});

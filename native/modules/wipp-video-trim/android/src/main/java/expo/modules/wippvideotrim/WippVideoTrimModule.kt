@@ -1,6 +1,9 @@
 package expo.modules.wippvideotrim
 
 import android.graphics.Bitmap
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.media.MediaMetadataRetriever
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -17,6 +20,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
+import androidx.media3.common.audio.SonicAudioProcessor
+import androidx.media3.effect.Brightness
+import androidx.media3.effect.Contrast
+import androidx.media3.effect.HslAdjustment
+import androidx.media3.effect.RgbAdjustment
+import androidx.media3.effect.SpeedChangeEffect
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.OverlayEffect
@@ -42,7 +51,7 @@ import java.util.UUID
 /**
  * Video Studio export (Android, Media3 Transformer). The sources are read, never changed:
  * segments are joined in order, each with its own volume, every video is fitted into a 9:16 frame,
- * and the timed texts are drawn into the picture. Speed changes are iPhone-only for now.
+ * per-segment speed, one colour filter, and the timed texts drawn into the picture (texts are not filtered).
  */
 @UnstableApi
 class WippVideoTrimModule : Module() {
@@ -53,7 +62,28 @@ class WippVideoTrimModule : Module() {
     Name("WippVideoTrim")
     Events("onStudioProgress")
 
-    Function("studioCapabilities") { mapOf("speed" to false) }
+    Function("studioCapabilities") { mapOf("speed" to true) }
+
+    /** One frame with the colour filter (for the before / after preview). */
+    AsyncFunction("filterPreview") { uri: String, seconds: Double, params: Map<String, Any?> ->
+      val context = appContext.reactContext ?: throw CodedException("studio_context")
+      val retriever = MediaMetadataRetriever()
+      try {
+        retriever.setDataSource(context, Uri.parse(uri))
+        val frame = retriever.getFrameAtTime((seconds * 1_000_000).toLong(), MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: throw CodedException("filter_preview")
+        val scale = minOf(1f, 720f / frame.width)
+        val w = (frame.width * scale).toInt()
+        val h = (frame.height * scale).toInt()
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val f = FilterParams.from(params)
+        Canvas(out).drawBitmap(Bitmap.createScaledBitmap(frame, w, h, true), 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter = ColorMatrixColorFilter(f.matrix()) })
+        val file = File(context.cacheDir, "wipp-filter-${UUID.randomUUID()}.jpg")
+        file.outputStream().use { out.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+        Uri.fromFile(file).toString()
+      } finally {
+        retriever.release()
+      }
+    }
 
     AsyncFunction("exportProject") { spec: Map<String, Any?>, promise: Promise ->
       val context = appContext.reactContext ?: return@AsyncFunction promise.reject(CodedException("studio_context"))
@@ -65,6 +95,8 @@ class WippVideoTrimModule : Module() {
       val texts = (spec["texts"] as? List<Map<String, Any?>>).orEmpty().mapNotNull { TextItem.from(it) }
       if (segments.isEmpty()) return@AsyncFunction promise.reject(CodedException("studio_no_segments"))
       if (context.cacheDir.usableSpace < 200L * 1024 * 1024) return@AsyncFunction promise.reject(CodedException("studio_no_space"))
+      @Suppress("UNCHECKED_CAST")
+      val filter = FilterParams.from(spec["filter"] as? Map<String, Any?>)
 
       val items = mutableListOf<EditedMediaItem>()
       var offset = 0.0
@@ -74,6 +106,7 @@ class WippVideoTrimModule : Module() {
         val end = num(seg["end"], 0.0)
         if (end <= start) return@AsyncFunction promise.reject(CodedException("studio_bad_range"))
         val volume = num(seg["volume"], 1.0).coerceIn(0.0, 1.0).toFloat()
+        val speed = num(seg["speed"], 1.0).coerceIn(0.25, 4.0).toFloat()
         val media = MediaItem.Builder()
           .setUri(Uri.parse(uri))
           .setClippingConfiguration(
@@ -83,15 +116,20 @@ class WippVideoTrimModule : Module() {
               .build(),
           )
           .build()
-        val audio = if (volume < 0.999f) listOf<AudioProcessor>(VolumeProcessor(volume)) else emptyList()
+        val audio = mutableListOf<AudioProcessor>()
+        if (volume < 0.999f) audio.add(VolumeProcessor(volume))
+        if (kotlin.math.abs(speed - 1f) > 0.01f) audio.add(SonicAudioProcessor().apply { setSpeed(speed); setPitch(1f) })
         val video = mutableListOf<androidx.media3.common.Effect>(
           Presentation.createForWidthAndHeight(width, height, Presentation.LAYOUT_SCALE_TO_FIT),
         )
+        video.addAll(filter.effects())
+        if (kotlin.math.abs(speed - 1f) > 0.01f) video.add(SpeedChangeEffect(speed))
+        // After the speed change: frame times are final-video times (texts stay in sync).
         if (texts.isNotEmpty()) {
           video.add(OverlayEffect(ImmutableList.of(TextOverlay(texts, offset, width, height))))
         }
         items.add(EditedMediaItem.Builder(media).setEffects(Effects(audio, video)).build())
-        offset += end - start
+        offset += (end - start) / speed
       }
 
       val composition = Composition.Builder(listOf(EditedMediaItemSequence(items)))
@@ -225,15 +263,15 @@ private class TextOverlay(
   private val width: Int,
   private val height: Int,
 ) : BitmapOverlay() {
-  private var absolute: Boolean? = null
+  private var firstPts: Double? = null
   private var lastKey = ""
   private var bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
   override fun getBitmap(presentationTimeUs: Long): Bitmap {
     val pts = presentationTimeUs / 1_000_000.0
-    // Frames may carry times counted from this segment or from the start of the video: decide on the first frame.
-    val abs = absolute ?: (kotlin.math.abs(pts - offset) < kotlin.math.abs(pts)).also { absolute = it }
-    val t = if (abs) pts else pts + offset
+    // Whatever the frame times are counted from, this segment starts at `offset` in the final video.
+    val first = firstPts ?: pts.also { firstPts = it }
+    val t = offset + (pts - first)
     val visible = texts.filter { t >= it.from && t < it.to }
     // While an intro animation runs, every frame is different.
     val key = visible.joinToString("|") { item ->
@@ -296,5 +334,35 @@ private class TextOverlay(
       canvas.restore()
     }
     return bmp
+  }
+}
+
+/** Colour filter: same numbers as filterParams() in project.ts and the iPhone engine. */
+@UnstableApi
+private data class FilterParams(val brightness: Float, val contrast: Float, val saturation: Float, val red: Float, val blue: Float) {
+  fun effects(): List<androidx.media3.common.Effect> {
+    val list = mutableListOf<androidx.media3.common.Effect>()
+    if (brightness != 0f) list.add(Brightness(brightness.coerceIn(-1f, 1f)))
+    if (contrast != 1f) list.add(Contrast((contrast - 1f).coerceIn(-1f, 1f)))
+    if (saturation != 1f) list.add(HslAdjustment.Builder().adjustSaturation(((saturation - 1f) * 100f).coerceIn(-100f, 100f)).build())
+    if (red != 1f || blue != 1f) list.add(RgbAdjustment.Builder().setRedScale(red).setBlueScale(blue).build())
+    return list
+  }
+
+  /** Same look for the still preview. */
+  fun matrix(): ColorMatrix {
+    val m = ColorMatrix().apply { setSaturation(saturation) }
+    val c = contrast
+    val t = (1 - c) * 128f + brightness * 255f
+    m.postConcat(ColorMatrix(floatArrayOf(c, 0f, 0f, 0f, t, 0f, c, 0f, 0f, t, 0f, 0f, c, 0f, t, 0f, 0f, 0f, 1f, 0f)))
+    m.postConcat(ColorMatrix(floatArrayOf(red, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f, blue, 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
+    return m
+  }
+
+  companion object {
+    fun from(m: Map<String, Any?>?): FilterParams {
+      fun n(k: String, f: Double) = ((m?.get(k) as? Number)?.toDouble() ?: f).toFloat()
+      return FilterParams(n("brightness", 0.0), n("contrast", 1.0), n("saturation", 1.0), n("red", 1.0), n("blue", 1.0))
+    }
   }
 }
