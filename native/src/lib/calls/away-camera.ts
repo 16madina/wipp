@@ -1,6 +1,7 @@
 import { Platform, Settings } from "react-native";
 import * as Notifications from "expo-notifications";
 import { tr } from "../tr";
+import { callActivityRunning, updateCallActivity } from "./live-activity";
 
 /**
  * Video call, WIPP left (mini player): a notification asks whether the others may see me.
@@ -76,6 +77,12 @@ export function awayCameraSupported() {
 
 /** Shows (or replaces) the notice: camera paused → « Me montrer / Garder en pause »; shown → « Pause caméra ». */
 export async function showAwayCameraNotice(shown: boolean) {
+  // Dynamic Island phones: the Live Activity has the button, no notification.
+  if (callActivityRunning()) {
+    awayLog(`live activity ${shown ? "shown" : "paused"}`);
+    updateCallActivity(shown);
+    return;
+  }
   if (!awayCameraSupported()) {
     awayLog("notice skipped: not supported");
     return;
