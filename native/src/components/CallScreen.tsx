@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ComponentType } from "react";
 import { ActivityIndicator, Alert, Animated, Easing, Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -206,13 +206,15 @@ function RoundAction({
   children: React.ReactNode;
   translucent?: boolean;
 }) {
+  // Calls with 3+ people: compact row, no labels, so the bottom tiles stay visible.
+  const small = useContext(CompactControls);
   return (
-    <Press onPress={onPress} accessibilityLabel={a11y} style={{ alignItems: "center", width: 76 }}>
+    <Press onPress={onPress} accessibilityLabel={a11y} style={{ alignItems: "center", width: small ? 52 : 76 }}>
       <View
         style={{
-          width: 58,
-          height: 58,
-          borderRadius: 29,
+          width: small ? 46 : 58,
+          height: small ? 46 : 58,
+          borderRadius: small ? 23 : 29,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: active ? "rgba(255,216,77,0.22)" : translucent ? "rgba(20,24,34,0.55)" : "rgba(255,255,255,0.08)",
@@ -222,10 +224,12 @@ function RoundAction({
       >
         {children}
       </View>
-      <Text numberOfLines={1} style={{ marginTop: 6, color: "rgba(255,255,255,0.86)", fontSize: 12 }}>{label}</Text>
+      {small ? null : <Text numberOfLines={1} style={{ marginTop: 6, color: "rgba(255,255,255,0.86)", fontSize: 12 }}>{label}</Text>}
     </Press>
   );
 }
+
+const CompactControls = createContext(false);
 
 function BigButton({ color, label, a11y, onPress, children }: { color: string; label?: string; a11y: string; onPress: () => void; children: React.ReactNode }) {
   return (
@@ -287,7 +291,7 @@ function WavingHand({ size }: { size: number }) {
 export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean; level?: number };
 
 /** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
-function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void; /** Organizer: one tap mutes this person. */ onMute?: (tile: GroupTile) => void }) {
+function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute, onAskMic }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void; /** Organizer: one tap mutes this person. */ onMute?: (tile: GroupTile) => void; /** Organizer: ask this person to turn their mic back on. */ onAskMic?: (tile: GroupTile) => void }) {
   // Up to 8 people fill the screen; more (group calls up to 50) scroll, 2 or 3 per row.
   const many = tiles.length > 8;
   const shown = tiles;
@@ -339,6 +343,12 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
                 <Press accessibilityLabel={tr("Couper son micro")} onPress={() => onMute(tile)} style={{ marginLeft: "auto", height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <Mic size={14} color="#fff" />
                   <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{tr("Couper")}</Text>
+                </Press>
+              ) : null}
+              {onAskMic && !tile.local && !tile.micOn ? (
+                <Press accessibilityLabel={tr("Demander d’activer son micro")} onPress={() => onAskMic(tile)} style={{ marginLeft: "auto", height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: "rgba(255,216,77,0.9)", flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <Mic size={14} color="#000" />
+                  <Text style={{ color: "#000", fontSize: 11, fontFamily: "Inter_700Bold" }}>{tr("Demander")}</Text>
                 </Press>
               ) : null}
               {!tile.micOn ? (
@@ -413,6 +423,7 @@ export function CallScreen({
   const hands = useCallControls((s) => s.hands);
   const notice = useCallControls((s) => s.notice);
   const camAsk = useCallControls((s) => s.camAsk);
+  const micAsk = useCallControls((s) => s.micAsk);
   const myIdentity = groupTiles?.find((t) => t.local)?.identity ?? null;
   const iAmHost = Boolean(host && myIdentity && host === myIdentity);
   const mods = useCallControls((s) => s.mods);
@@ -527,7 +538,7 @@ export function CallScreen({
       ) : null}
 
       {mosaic && groupTiles ? (
-        <View style={{ position: "absolute", top: insets.top + 56, left: 8, right: 8, bottom: insets.bottom + 190 }}>
+        <View style={{ position: "absolute", top: insets.top + 56, left: 8, right: 8, bottom: insets.bottom + 66 }}>
           <View style={{ alignItems: "center", marginBottom: 6 }}>
             <Text numberOfLines={1} style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{peer.displayName}</Text>
             <Text style={{ color: GREY, fontSize: 13, fontVariant: ["tabular-nums"] }}>
@@ -538,6 +549,10 @@ export function CallScreen({
             if (!t.identity || (!iAmHost && t.identity === host)) return;
             sendCallMsg({ t: "mute", to: t.identity });
             callNotice(tr("Tu as coupé le micro de {0}", t.name));
+          } : undefined} onAskMic={iModerate ? (t) => {
+            if (!t.identity) return;
+            sendCallMsg({ t: "mic-ask", to: t.identity });
+            callNotice(tr("Demande envoyée à {0}", t.name));
           } : undefined} onTile={iModerate ? (t) => {
             if (t.local || !t.identity || (!iAmHost && t.identity === host)) return;
             if (hands.includes(t.identity)) {
@@ -621,9 +636,10 @@ export function CallScreen({
           </View>
         </View>
       ) : !videoLive || controls ? (
-        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: insets.bottom + 28, alignItems: "center" }}>
+        <CompactControls.Provider value={mosaic}>
+        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: mosaic ? insets.bottom + 8 : insets.bottom + 28, alignItems: "center", ...(mosaic ? { flexDirection: "row", justifyContent: "center", gap: 2 } : {}) }}>
           {!terminal ? (
-            <View style={{ flexDirection: "row", justifyContent: "center", marginBottom: 26 }}>
+            <View style={{ flexDirection: "row", justifyContent: "center", marginBottom: mosaic ? 0 : 26 }}>
               <RoundAction label={c.mic} a11y={session.muted ? c.a11y.unmute : c.a11y.mute} active={session.muted} translucent={videoLive} onPress={() => patch({ muted: !session.muted })}>
                 {session.muted ? <MicOff size={22} color={GOLD} /> : <Mic size={22} color="#fff" />}
               </RoundAction>
@@ -651,10 +667,17 @@ export function CallScreen({
               </RoundAction>
             </View>
           ) : null}
-          <BigButton color={RED} a11y={c.a11y.hangup} onPress={onHangup}>
-            <PhoneOff size={30} color="#fff" />
-          </BigButton>
+          {mosaic ? (
+            <Press onPress={onHangup} accessibilityLabel={c.a11y.hangup} style={{ width: 54, height: 46, borderRadius: 23, backgroundColor: RED, alignItems: "center", justifyContent: "center", marginLeft: 4 }}>
+              <PhoneOff size={22} color="#fff" />
+            </Press>
+          ) : (
+            <BigButton color={RED} a11y={c.a11y.hangup} onPress={onHangup}>
+              <PhoneOff size={30} color="#fff" />
+            </BigButton>
+          )}
         </View>
+        </CompactControls.Provider>
       ) : null}
 
       {/* Reactions: the other person's over the video (one-to-one video), mine top right, collective in the middle. */}
@@ -754,6 +777,21 @@ export function CallScreen({
         </View>
       ) : null}
       {/* The organizer asks me to turn my camera on: my choice. */}
+      <Modal visible={micAsk && session.muted} transparent animationType="fade" onRequestClose={() => useCallControls.setState({ micAsk: false })}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", padding: 28 }}>
+          <View style={{ width: "100%", backgroundColor: "#0E1320", borderRadius: 20, padding: 20, gap: 14 }}>
+            <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>{tr("L’organisateur te propose de reprendre la parole")}</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Press onPress={() => useCallControls.setState({ micAsk: false })} style={{ flex: 1, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Pas maintenant")}</Text>
+              </Press>
+              <Press onPress={() => { useCallControls.setState({ micAsk: false }); patch({ muted: false }); }} style={{ flex: 1, height: 46, borderRadius: 23, backgroundColor: GOLD, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#000", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>{tr("Activer mon micro")}</Text>
+              </Press>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={camAsk} transparent animationType="fade" onRequestClose={() => useCallControls.setState({ camAsk: false })}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <View style={{ width: "100%", backgroundColor: "#0E1320", borderRadius: 20, padding: 20, gap: 14 }}>
@@ -791,6 +829,12 @@ export function CallScreen({
               <Press onPress={() => { if (hostTile?.identity) sendCallMsg({ t: "mute", to: hostTile.identity }); setHostTile(null); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
                 <MicOff size={20} color={GOLD} />
                 <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Couper son micro")}</Text>
+              </Press>
+            ) : null}
+            {hostTile && !hostTile.micOn ? (
+              <Press onPress={() => { if (hostTile?.identity) sendCallMsg({ t: "mic-ask", to: hostTile.identity }); setHostTile(null); callNoticeSent(); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Mic size={20} color={GOLD} />
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Demander d’activer son micro")}</Text>
               </Press>
             ) : null}
             {!hostTile?.url ? (
