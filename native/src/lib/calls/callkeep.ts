@@ -21,6 +21,34 @@ const answeredBySystem = new Set<string>();
 const pendingAnswers = new Set<string>();
 /** CallKit UUIDs ended (declined, or closed by iOS) before they were linked to a WIPP call. */
 const pendingEnds = new Set<string>();
+/** Every CallKit UUID seen for a WIPP call (kept after the system screen closes), to clear its « Appel manqué » notice. */
+const uuidsByCall = new Map<string, Set<string>>();
+function rememberUuid(callId: string, uuid: string) {
+  const set = uuidsByCall.get(callId) ?? new Set<string>();
+  set.add(uuid.toLowerCase());
+  uuidsByCall.set(callId, set);
+}
+
+/**
+ * The call was really answered (in the app or on the iPhone screen): remove the « Appel manqué » notice that iOS
+ * schedules for every ringing call (shown when the system screen closes without a CallKit answer).
+ */
+export function clearMissedNotice(callId: string) {
+  const uuids = [...(uuidsByCall.get(callId) ?? [])];
+  if (!uuids.length) return;
+  const clear = () =>
+    void import("expo-notifications")
+      .then(async (N) => {
+        for (const u of uuids) {
+          await N.cancelScheduledNotificationAsync(`missed-${u}`).catch(() => undefined);
+          await N.dismissNotificationAsync(`missed-${u}`).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+  clear();
+  // The notice may be shown a moment after the answer: clear again shortly after.
+  setTimeout(clear, 2500);
+}
 let endHandler: ((callId: string) => void) | null = null;
 
 export function callKeepAvailable() {
@@ -150,6 +178,7 @@ export function showSystemIncoming(callId: string, video: boolean, callerName?: 
     return (c === "x" ? n : (n & 0x3) | 0x8).toString(16);
   });
   uuidToCall.set(uuid, callId);
+  rememberUuid(callId, uuid);
   // The name of the caller is the handle, so each person gets a separate line in Recents.
   keep.displayIncomingCall(uuid, callerName || "WIPP", callerName || "WIPP", "generic", video);
 }
@@ -173,6 +202,7 @@ export function wasAnsweredBySystem(callId: string) {
 export function linkSystemCall(uuid: string, callId: string) {
   uuidToCall.set(uuid.toLowerCase(), callId);
   uuidToCall.set(uuid.toUpperCase(), callId);
+  rememberUuid(callId, uuid);
   if (pendingAnswers.delete(uuid.toLowerCase())) answeredBySystem.add(callId);
   // Ended on the iPhone screen while WIPP was starting (and not answered): tell the server now.
   if (pendingEnds.delete(uuid.toLowerCase()) && !answeredBySystem.has(callId)) endHandler?.(callId);

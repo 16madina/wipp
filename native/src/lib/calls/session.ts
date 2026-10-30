@@ -307,6 +307,7 @@ export async function acceptCurrentCall() {
       else await answerCall(live.callId!, true);
     });
     await withStartupRetry(() => attachToken(live.callId!, live.kind === "video"));
+    void import("./callkeep").then(({ clearMissedNotice }) => clearMissedNotice(live.callId!));
   } catch (err) {
     void import("../crash-log").then(({ logAppError }) => logAppError(err, false, "call answer"));
     const status = (err as { status?: number }).status;
