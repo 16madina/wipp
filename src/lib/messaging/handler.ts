@@ -223,11 +223,17 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const body = await readBody<{ callId?: string; video?: boolean }>(request);
       if (!body.callId?.trim()) throw new WippHttpError(400, "call_required", "callId requis");
       const { authorizeLiveKitJoin } = await import("@/lib/messaging/calls");
+      const { deviceAllowed } = await import("./device-lock");
+      if (!(await deviceAllowed(me.id, request.headers.get("x-wipp-installation")))) {
+        throw new WippHttpError(409, "device_replaced", "Ton compte est maintenant utilisé sur un autre téléphone.");
+      }
       const allowed = await authorizeLiveKitJoin(me.id, body.callId.trim());
       const identity = `p_${me.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40)}`;
       const token = await mintCallToken({
         roomName: allowed.roomName,
         identity,
+        displayName: me.displayName || `@${me.username}`,
+        metadata: JSON.stringify({ username: me.username, avatar: me.avatarUrl ?? null }),
         video: Boolean(body.video) || allowed.kind === "video",
       });
       return json(token);
@@ -292,6 +298,9 @@ export async function handleWippApi(request: Request): Promise<Response> {
         installationId?: string;
         lang?: string;
       }>(request);
+      // A phone replaced by another one no longer registers for this account's calls and notifications.
+      const { deviceAllowed } = await import("./device-lock");
+      if (!(await deviceAllowed(me.id, body.installationId))) return json({ ok: false, reason: "device_replaced" });
       const result = await registerPushToken({
         profileId: me.id,
         token: body.token ?? "",
@@ -308,6 +317,13 @@ export async function handleWippApi(request: Request): Promise<Response> {
       const body = await readBody<{ messageId?: string; vault?: boolean }>(request);
       const { notifyStoredMessage } = await import("./message-actions");
       return json(await notifyStoredMessage(me.id, b, body.messageId ?? "", Boolean(body.vault)));
+    }
+
+    if (method === "POST" && a === "device" && b === "claim" && !c) {
+      const me = await resolveSession(bearer(request));
+      const body = await readBody<{ installationId?: string; platform?: string; force?: boolean }>(request);
+      const { claimDevice } = await import("./device-lock");
+      return json(await claimDevice({ profileId: me.id, installationId: body.installationId, platform: body.platform, force: Boolean(body.force) }));
     }
 
     if (method === "POST" && a === "push" && b === "connection") {

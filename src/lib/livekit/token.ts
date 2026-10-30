@@ -20,6 +20,8 @@ export async function mintCallToken(input: {
   roomName: string;
   identity: string;
   displayName?: string;
+  /** Shown to everyone in the call (same name and photo on every phone). */
+  metadata?: string;
   video?: boolean;
 }): Promise<LiveKitTokenResult> {
   const env = liveKitEnv();
@@ -32,6 +34,7 @@ export async function mintCallToken(input: {
   const at = new AccessToken(env.apiKey, env.apiSecret, {
     identity,
     name: input.displayName?.trim() || identity,
+    metadata: input.metadata,
     ttl: "2h",
   });
   at.addGrant({

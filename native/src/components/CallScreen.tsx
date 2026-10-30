@@ -256,7 +256,7 @@ function WavingHand({ size }: { size: number }) {
 export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean };
 
 /** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
-function GroupMosaic({ tiles, RTCView, viewEpoch, onTile }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void }) {
+function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void; /** Organizer: one tap mutes this person. */ onMute?: (tile: GroupTile) => void }) {
   const shown = tiles.slice(0, 8);
   const hands = useCallControls((s) => s.hands);
   const claps = useCallControls((s) => s.claps);
@@ -294,6 +294,12 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile }: { tiles: GroupTile[]
               <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
                 {tile.name}
               </Text>
+              {onMute && !tile.local && tile.micOn ? (
+                <Press accessibilityLabel={tr("Couper son micro")} onPress={() => onMute(tile)} style={{ marginLeft: "auto", height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <Mic size={14} color="#fff" />
+                  <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>{tr("Couper")}</Text>
+                </Press>
+              ) : null}
               {!tile.micOn ? (
                 <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
                   <MicOff size={12} color="#fff" />
@@ -471,7 +477,11 @@ export function CallScreen({
               {status} · {groupTiles.length} {tr("participant")}{groupTiles.length > 1 ? "s" : ""}
             </Text>
           </View>
-          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onTile={iAmHost ? (t) => {
+          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onMute={iAmHost ? (t) => {
+            if (!t.identity) return;
+            sendCallMsg({ t: "mute", to: t.identity });
+            callNotice(tr("Tu as coupé le micro de {0}", t.name));
+          } : undefined} onTile={iAmHost ? (t) => {
             if (t.local || !t.identity) return;
             if (hands.includes(t.identity)) {
               sendCallMsg({ t: "floor", to: t.identity });

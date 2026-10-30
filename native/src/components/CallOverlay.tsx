@@ -35,7 +35,18 @@ function streamURL(track: { mediaStream?: unknown } | null) {
   return stream?.toURL?.() ?? null;
 }
 
-type RoomTile = { key: string; local: boolean; identity: string; url: string | null; micOn: boolean; speaking: boolean };
+type RoomTile = { key: string; local: boolean; identity: string; url: string | null; micOn: boolean; speaking: boolean; name?: string; avatar?: string };
+
+/** Name and photo sent by the server with each person's call pass (same on every phone). */
+function roomPerson(p: { name?: string; identity: string; metadata?: string }) {
+  let avatar: string | undefined;
+  try {
+    avatar = p.metadata ? (JSON.parse(p.metadata) as { avatar?: string | null }).avatar ?? undefined : undefined;
+  } catch {
+    avatar = undefined;
+  }
+  return { name: p.name && p.name !== p.identity ? p.name : undefined, avatar };
+}
 
 /** LiveKit identity is "p_" + the profile id without symbols (see the token route). */
 function identityKey(profileId: string) {
@@ -279,6 +290,7 @@ export function CallOverlay() {
             url: cam?.track && !cam.isMuted ? streamURL(cam.track) : null,
             micOn: Boolean(mic && !mic.isMuted),
             speaking: p.isSpeaking,
+            ...roomPerson(p),
           };
         }),
       );
@@ -294,6 +306,8 @@ export function CallOverlay() {
       RoomEvent.LocalTrackPublished,
       RoomEvent.LocalTrackUnpublished,
       RoomEvent.ActiveSpeakersChanged,
+      RoomEvent.ParticipantNameChanged,
+      RoomEvent.ParticipantMetadataChanged,
     ]) {
       room.on(ev, refreshTiles);
     }
@@ -600,7 +614,9 @@ export function CallOverlay() {
   // Mosaic for group calls, and for a one-to-one call once a third person has joined.
   const groupTiles = session.group || tiles.length > 2
     ? tiles.map((tile) => {
-        const who = tile.local ? { displayName: tr("Toi"), avatar: me.avatar } : byIdentity.get(tile.identity) ?? { displayName: tr("Membre") };
+        // Contacts keep the name I know them by; anyone else shows their WIPP name and photo.
+        const known = byIdentity.get(tile.identity);
+        const who = tile.local ? { displayName: tr("Toi"), avatar: me.avatar } : known ? { displayName: known.displayName, avatar: known.avatar ?? tile.avatar } : { displayName: tile.name ?? tr("Membre"), avatar: tile.avatar };
         return { key: tile.key, identity: tile.identity, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };
       })
     : undefined;

@@ -10,8 +10,11 @@ export type CallToken =
  * LIVEKIT_API_SECRET stays on the server. CALL E2EE stays pending.
  */
 export async function fetchCallToken(callId: string, video: boolean) {
+  const { getInstallationId } = await import("../push/install-id");
   return wippApi<CallToken>("calls/token", {
     method: "POST",
+    // The server refuses a phone that another phone has replaced on this account.
+    headers: { "x-wipp-installation": await getInstallationId() },
     body: JSON.stringify({ callId, video }),
   });
 }

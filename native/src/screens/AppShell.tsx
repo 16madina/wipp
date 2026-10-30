@@ -440,8 +440,11 @@ export function AppShell() {
         void useWippStore.getState().applyLiveEvent(event);
       });
     });
+    // One phone per account: check now and each time WIPP comes back.
+    void import("../lib/device-lock").then(({ checkThisDevice }) => checkThisDevice());
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active") {
+        void import("../lib/device-lock").then(({ checkThisDevice }) => checkThisDevice());
         void useWippStore.getState().syncServerInbox();
       } else if (st === "background") {
         // Locked conversations ask for the code again after the app was left.
