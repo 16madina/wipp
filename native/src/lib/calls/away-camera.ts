@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, Settings } from "react-native";
 import * as Notifications from "expo-notifications";
 import { tr } from "../tr";
 
@@ -16,6 +16,26 @@ export const AWAY_CAMERA_TYPE = "call-camera";
 export type AwayCameraAction = "show" | "pause" | "keep";
 
 let ready: Promise<void> | null = null;
+
+/** Trail readable from the Mac (same list as the native call log, Library/Preferences wippCallLog). */
+export function awayLog(line: string) {
+  if (Platform.OS !== "ios") return;
+  try {
+    const log = (Settings.get("wippCallLog") as string[] | undefined) ?? [];
+    Settings.set({ wippCallLog: [...log, `${new Date().toISOString()} [js] ${line}`].slice(-40) });
+  } catch {
+    /* no settings */
+  }
+}
+
+/** Prepares the notice buttons in advance (called when a video call connects). */
+export function prepareAwayCamera() {
+  if (!awayCameraSupported()) {
+    awayLog(`away camera not supported (iOS ${String(Platform.Version)})`);
+    return;
+  }
+  void setup().then(() => awayLog("away camera ready"));
+}
 
 function setup() {
   if (!ready) {
@@ -37,7 +57,8 @@ function setup() {
           lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
         });
       }
-    })().catch(() => {
+    })().catch((err) => {
+      awayLog(`setup failed ${String(err?.message ?? err)}`);
       ready = null;
     });
   }
@@ -55,8 +76,14 @@ export function awayCameraSupported() {
 
 /** Shows (or replaces) the notice: camera paused → « Me montrer / Garder en pause »; shown → « Pause caméra ». */
 export async function showAwayCameraNotice(shown: boolean) {
-  if (!awayCameraSupported()) return;
+  if (!awayCameraSupported()) {
+    awayLog("notice skipped: not supported");
+    return;
+  }
+  awayLog(`notice ${shown ? "shown" : "paused"} requested`);
   try {
+    const perm = await Notifications.getPermissionsAsync().catch(() => null);
+    awayLog(`notif permission ${perm?.status ?? "?"}`);
     await setup();
     await Notifications.dismissNotificationAsync(NOTICE_ID).catch(() => undefined);
     await Notifications.scheduleNotificationAsync({
@@ -72,8 +99,9 @@ export async function showAwayCameraNotice(shown: boolean) {
       },
       trigger: Platform.OS === "android" ? { channelId: CHANNEL } : null,
     });
-  } catch {
-    /* notifications refused: the mini player still works, camera stays paused */
+    awayLog("notice posted");
+  } catch (err) {
+    awayLog(`notice failed ${String((err as Error)?.message ?? err)}`);
   }
 }
 
@@ -91,6 +119,7 @@ export function onAwayCameraAction(cb: (action: AwayCameraAction) => void) {
   const sub = Notifications.addNotificationResponseReceivedListener((r) => {
     if (r.notification.request.content.data?.type !== AWAY_CAMERA_TYPE) return;
     const a = r.actionIdentifier;
+    awayLog(`notice button ${a}`);
     if (a === "show" || a === "pause" || a === "keep") cb(a);
   });
   return () => sub.remove();
