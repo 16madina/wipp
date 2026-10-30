@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { File } from "expo-file-system";
+import { cacheDirectory, copyAsync } from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
@@ -14,6 +15,7 @@ import {
   Keyboard,
   Modal,
   PanResponder,
+  Platform,
   Text,
   TextInput,
   TouchableWithoutFeedback,
@@ -38,6 +40,17 @@ import { errorText } from "../lib/error-fr";
 import { tr } from "../lib/tr";
 
 const MAX_VIDEO_SEC = 60;
+
+/** Android: copies a gallery video into the app cache (the iPhone does this in the native module). */
+async function androidLibraryVideo(asset: MediaLibrary.Asset) {
+  const info = await MediaLibrary.getAssetInfoAsync(asset);
+  const source = info.localUri || asset.uri;
+  const found = source.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  const ext = /^[a-z0-9]{2,4}$/.test(found) ? found : "mp4";
+  const uri = `${cacheDirectory}wipp-story-${Date.now()}.${ext}`;
+  await copyAsync({ from: source, to: uri });
+  return { uri, duration: info.duration || asset.duration, ext };
+}
 const MIN_VIDEO_SEC = 1;
 
 type Phase =
@@ -792,7 +805,7 @@ function StoryGallery({
       setPreparing(true);
       setNotice("");
       try {
-        const local = await materializeLibraryVideo(asset.id);
+        const local = Platform.OS === "android" ? await androidLibraryVideo(asset) : await materializeLibraryVideo(asset.id);
         onAsset({
           uri: local.uri,
           kind: "video",

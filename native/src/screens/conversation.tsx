@@ -309,6 +309,18 @@ function ConversationInner({ chatId }: { chatId: string }) {
   // Colour of my bubbles chosen for this conversation (contact info → Thème de la discussion).
   const mb = myBubbleColors(useChatThemes((s) => s.themes[chatId]));
   const insets = useSafeAreaInsets();
+  // Android: while the keyboard is open the field sits right on it (no navigation-bar gap). iPhone unchanged.
+  const [androidKeyboard, setAndroidKeyboard] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const show = Keyboard.addListener("keyboardDidShow", () => setAndroidKeyboard(true));
+    const hide = Keyboard.addListener("keyboardDidHide", () => setAndroidKeyboard(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  const bottomInset = androidKeyboard ? 0 : insets.bottom;
   const { compact, icon, headerIcon, tablet } = useDeviceLayout();
   const composerIcon = tablet ? 48 : icon;
   // The little WIPP guy inside the message field (opens the stickers).
@@ -1053,6 +1065,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <FlatList
           ref={listRef}
+          // Android: scrolling the messages puts the keyboard away. iPhone unchanged.
+          keyboardDismissMode={Platform.OS === "android" ? "on-drag" : undefined}
           scrollEnabled={!scratching}
           data={messages}
           keyExtractor={(m) => m.localKey ?? m.id}
@@ -1069,11 +1083,11 @@ function ConversationInner({ chatId }: { chatId: string }) {
           </View>
         ) : chat?.type === "group" && chat.groupSettings?.membersCanSend === false && !(chat.adminIds ?? []).includes("me") ? (
           // Announcement group: only admins write (the server refuses the others anyway).
-          <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12), alignItems: "center", borderTopWidth: 1, borderTopColor: colors.hair }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(bottomInset, 12), alignItems: "center", borderTopWidth: 1, borderTopColor: colors.hair }}>
             <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>{tr("Seuls les admins peuvent envoyer des messages dans ce groupe.")}</Text>
           </View>
         ) : (
-          <View style={{ paddingBottom: stickerBar ? 0 : Math.max(insets.bottom, 8) }}>
+          <View style={{ paddingBottom: stickerBar ? 0 : Math.max(bottomInset, 8) }}>
             {reply || editing ? (
               <View style={{ marginHorizontal: 12, marginBottom: 4, borderRadius: 12, backgroundColor: colors.surface2, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
@@ -1215,7 +1229,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
               )}
             </View>
             {stickerBar ? (
-              <View style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
+              <View style={{ paddingBottom: Math.max(bottomInset, 8) }}>
                 <StickerTray
                   onPick={(s) => {
                     sendMessage(chatId, { type: "sticker", text: s.labelFr, stickerId: s.id });
