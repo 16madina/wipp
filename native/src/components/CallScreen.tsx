@@ -238,6 +238,37 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
+/** Shown to the other person while my camera is paused (I left the app for a moment). */
+function BeRightBack({ name, avatar, top }: { name: string; avatar?: string; top: number }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(t, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(t, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [t]);
+  const scale = t.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.06] });
+  const glow = t.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.9] });
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
+      <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
+      <Animated.View style={{ position: "absolute", width: 260, height: 260, borderRadius: 130, backgroundColor: "rgba(255,216,77,0.12)", opacity: glow, transform: [{ scale }] }} />
+      <Animated.View style={{ alignItems: "center", transform: [{ scale }], marginTop: -top / 2 }}>
+        <WippWordmark size={54} variant="dark" />
+      </Animated.View>
+      <View style={{ marginTop: 34, alignItems: "center", gap: 10 }}>
+        <Avatar user={{ displayName: name, avatar }} size={56} />
+        <Text style={{ color: "#fff", fontSize: 22, fontFamily: "Inter_700Bold" }}>{tr("Je reviens…")}</Text>
+        <Text style={{ color: GREY, fontSize: 14, textAlign: "center", paddingHorizontal: 40 }}>{tr("{0} a quitté l’app un instant. Vous vous entendez toujours.", name)}</Text>
+      </View>
+    </View>
+  );
+}
+
 /** iPhone: the other person's video keeps playing in a floating window when WIPP goes to the background. */
 const CALL_PIP = { iosPIP: { enabled: true, startAutomatically: true, stopAutomatically: true, preferredSize: { width: 9, height: 16 } } } as object;
 
@@ -465,6 +496,8 @@ export function CallScreen({
         <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
       )}
 
+      {/* The other person left the app: animated WIPP logo + « Je reviens… » instead of a frozen picture. */}
+      {!mosaic && connected && video && remoteUrl && remoteMuted ? <BeRightBack name={peer.displayName} avatar={peer.avatar} top={insets.top} /> : null}
       {/* Top bar */}
       {(!videoLive || controls) ? (
         <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 6, left: 14, right: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -618,14 +651,6 @@ export function CallScreen({
         </View>
       ) : null}
 
-      {/* The other person left the app (or turned the camera off): say so instead of a frozen picture. */}
-      {!mosaic && connected && video && remoteUrl && remoteMuted ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: insets.top + 64, alignItems: "center" }}>
-          <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, overflow: "hidden" }}>
-            {tr("Caméra de {0} en pause", peer.displayName)}
-          </Text>
-        </View>
-      ) : null}
       {/* Reactions: the other person's over the video (one-to-one video), mine top right, collective in the middle. */}
       {!mosaic && videoLive ? (
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: height * 0.22, height: height * 0.35 }}>
