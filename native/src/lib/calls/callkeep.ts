@@ -43,7 +43,9 @@ export function clearMissedNotice(_callId?: string) {
         const recent = Date.now() - 120_000;
         for (const n of shown) {
           const id = n.request.identifier;
-          if (id.startsWith("missed-") && n.date >= recent) await N.dismissNotificationAsync(id).catch(() => undefined);
+          // iOS gives the time in seconds, Android in milliseconds.
+          const at = n.date < 1e12 ? n.date * 1000 : n.date;
+          if (id.startsWith("missed-") && at >= recent) await N.dismissNotificationAsync(id).catch(() => undefined);
         }
         const scheduled = await N.getAllScheduledNotificationsAsync().catch(() => []);
         for (const r of scheduled) if (r.identifier.startsWith("missed-")) await N.cancelScheduledNotificationAsync(r.identifier).catch(() => undefined);
