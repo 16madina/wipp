@@ -2,7 +2,9 @@
 
 La propriétaire m'a demandé de mettre ces instructions sur `main`. **Tout le code est sur la branche `video-studio`** (testé sur le Samsung A50). Ce fichier est seulement la marche à suivre.
 
-## 1. Intégrer `video-studio` dans `main` (avant tout AAB 14)
+## 1. Récupérer le code iPhone de `video-studio`
+
+`main` contient déjà toutes les corrections Android, jusqu'à `01382e3`. Il ne manque que **`86a5d12`** (notification caméra iPhone), resté sur `video-studio` parce qu'il n'est pas testé sur iPhone :
 
 ```
 git fetch
@@ -10,9 +12,9 @@ git checkout main && git pull
 git merge origin/video-studio
 ```
 
-**Sans ce merge, la version 14 ne démarre pas sur Android.** Le `main` actuel (2417b22 + 3b6e36d) redémarre en boucle sur Android : 62 rechargements en 2 minutes, écran bleu. La cause est la relance automatique de `AppShell.tsx` (7b3ec91). Le correctif `81601ff` la limite à iOS. Détails dans `windows-build/RAPPORT-WINDOWS-VERSION-14.md`.
+Pour rappel, **la boucle de redémarrage Android est corrigée dans `main` (`81601ff`)**. Sans ce commit, la version 14 ne démarrait pas sur Android : 62 rechargements en 2 minutes, écran bleu, à cause de la relance automatique de `AppShell.tsx` (7b3ec91). Détails dans `windows-build/RAPPORT-WINDOWS-VERSION-14.md`.
 
-Contenu de `video-studio` par rapport à `main` :
+Travail Windows du 30 octobre :
 
 | Commit | Quoi | Plateforme |
 |---|---|---|
