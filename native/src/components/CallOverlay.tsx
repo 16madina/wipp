@@ -24,7 +24,7 @@ import { hideOngoing, showOngoing } from "../lib/calls/android-ongoing";
 import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 import { tr } from "../lib/tr";
-import { onAndroidPipCameraButton, setAndroidCallPip, setAndroidPipCamera, useAndroidPip } from "../lib/calls/android-pip";
+import { onAndroidPipCameraButton, setAndroidCallPip, setAndroidPipCamera, useAndroidPip, useAndroidPipSize } from "../lib/calls/android-pip";
 import { awayLog, clearAwayCameraNotice, onAwayCameraAction, prepareAwayCamera, showAwayCameraNotice } from "../lib/calls/away-camera";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
@@ -642,6 +642,7 @@ export function CallOverlay() {
 
   // Android: connected video call → leaving the app opens the system mini player (like iOS PiP).
   const androidPipEvent = useAndroidPip();
+  const pipSize = useAndroidPipSize();
   const pipWanted = Platform.OS === "android" && session?.phase === "connected" && session.kind === "video";
   // The window itself becomes tiny in the mini player: switch the layout at once, even if Android's
   // « mini player » signal arrives late (otherwise the whole call screen shows, shrunk, for a moment).
@@ -734,7 +735,7 @@ export function CallOverlay() {
   if (androidPip && !terminal) {
     const showRemote = Boolean(remoteUrl && !remoteMuted);
     return (
-      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 1000, elevation: 1000, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+      <View style={[pipSize ? { position: "absolute", top: 0, left: 0, width: pipSize.width, height: pipSize.height } : { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }, { zIndex: 1000, elevation: 1000, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", overflow: "hidden" }]}>
         {showRemote && remoteUrl ? (
           <RTCView streamURL={remoteUrl} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" zOrder={0} />
         ) : (

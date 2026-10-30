@@ -16,6 +16,7 @@ import android.util.Log
 import android.util.Rational
 import androidx.core.content.ContextCompat
 import com.facebook.react.ReactPackage
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -110,6 +111,19 @@ object CallPip {
     inPip = isInPip
     onChange?.invoke(isInPip)
   }
+
+  /** Mini player size in dp (Samsung keeps the full-size layout until touched: JS draws at this size). */
+  @Volatile var pipWidthDp = 0
+  @Volatile var pipHeightDp = 0
+  var onSize: ((Int, Int) -> Unit)? = null
+
+  fun sized(widthDp: Int, heightDp: Int) {
+    Log.i("WippPip", "size ${widthDp}x${heightDp} dp")
+    if (widthDp <= 0 || heightDp <= 0) return
+    pipWidthDp = widthDp
+    pipHeightDp = heightDp
+    onSize?.invoke(widthDp, heightDp)
+  }
 }
 
 class CallPipModule(private val ctx: ReactApplicationContext) : ReactContextBaseJavaModule(ctx) {
@@ -124,6 +138,16 @@ class CallPipModule(private val ctx: ReactApplicationContext) : ReactContextBase
   init {
     CallPip.onChange = { inPip -> emit("wippCallPip", inPip) }
     CallPip.onCameraButton = { emit("wippCallPipCamera", true) }
+    CallPip.onSize = { w, h ->
+      try {
+        if (ctx.hasActiveReactInstance()) {
+          val map = Arguments.createMap()
+          map.putInt("width", w)
+          map.putInt("height", h)
+          ctx.emitDeviceEvent("wippCallPipSize", map)
+        }
+      } catch (_: Exception) {}
+    }
     try {
       ContextCompat.registerReceiver(ctx.applicationContext, receiver, IntentFilter(CallPip.ACTION_CAMERA), ContextCompat.RECEIVER_NOT_EXPORTED)
     } catch (_: Exception) {}

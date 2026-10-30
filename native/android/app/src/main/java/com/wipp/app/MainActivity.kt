@@ -43,7 +43,16 @@ class MainActivity : ReactActivity() {
 
   override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
     super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+    // Samsung (home button): the window shrinks but the screen keeps its full-size layout until it is
+    // touched (the mini player showed a grey corner of the call). Give JS the real size to draw at.
+    if (isInPictureInPictureMode) CallPip.sized(newConfig.screenWidthDp, newConfig.screenHeightDp)
     CallPip.changed(isInPictureInPictureMode)
+  }
+
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    // Mini player resized (pinch, tap): keep the drawing size in step.
+    if (isInPictureInPictureMode) CallPip.sized(newConfig.screenWidthDp, newConfig.screenHeightDp)
   }
 
   /**

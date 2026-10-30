@@ -34,6 +34,22 @@ export function onAndroidPipCameraButton(cb: () => void) {
   return () => sub.remove();
 }
 
+/**
+ * Real size of the mini player (dp). Samsung keeps the full-size layout until the mini player is touched,
+ * so only the top-left corner shows: the mini player content is drawn at this size, in that corner.
+ */
+export function useAndroidPipSize() {
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!mod) return;
+    const sub = DeviceEventEmitter.addListener("wippCallPipSize", (v: { width?: number; height?: number }) => {
+      if (v?.width && v?.height) setSize({ width: v.width, height: v.height });
+    });
+    return () => sub.remove();
+  }, []);
+  return size;
+}
+
 /** True while WIPP is shown as the Android mini player. Always false on iPhone. */
 export function useAndroidPip() {
   const [inPip, setInPip] = useState(false);
