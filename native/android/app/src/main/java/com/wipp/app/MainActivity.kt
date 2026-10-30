@@ -1,6 +1,7 @@
 package com.wipp.app
 import expo.modules.splashscreen.SplashScreenManager
 
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 
@@ -28,6 +29,22 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "main"
+
+  /** Video call connected + user leaves the app (home, recent apps): mini player (Picture-in-Picture). */
+  override fun onUserLeaveHint() {
+    super.onUserLeaveHint()
+    CallPip.enterIfWanted(this)
+  }
+
+  override fun onResume() {
+    super.onResume()
+    CallPip.sync(this)
+  }
+
+  override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+    super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+    CallPip.changed(isInPictureInPictureMode)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

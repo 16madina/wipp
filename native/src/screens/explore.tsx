@@ -2,7 +2,7 @@ import { PharmacyResults } from "./pharmacies";
 import { EdgeSwipeBack } from "../components/EdgeSwipeBack";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, BackHandler, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { Brush, CakeSlice, Coffee, Flower2, Scissors, Shirt, Utensils, Wrench, Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Clock, Cross, Heart, MapPin, MessageCircle, MoreHorizontal, Navigation, Pencil, Phone, Pin, Plus, Search, Share2, ShieldAlert, Star, Store, Tag, Eye } from "lucide-react-native";
 import { EventCard } from "../components/event-parts";
 import { Avatar } from "../components/Avatar";
@@ -105,6 +105,17 @@ export function ExploreScreen() {
       }
     })();
   }, [hub]);
+  // Android back button: a search or a section (Petites annonces, Événements, Entreprises, Services)
+  // goes back to Explorer's home first, instead of leaving the screen.
+  useEffect(() => {
+    if (Platform.OS !== "android" || (hub === "home" && !q)) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (q) setQ("");
+      else setHub("home");
+      return true;
+    });
+    return () => sub.remove();
+  }, [hub, q]);
   const tabbed = hub === "home" || hub === "shops" || hub === "lifestyle" || hub === "utilities";
   const destTitle = tabbed
     ? t("exploreTitle")

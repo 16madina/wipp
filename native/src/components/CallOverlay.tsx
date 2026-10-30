@@ -24,6 +24,7 @@ import { hideOngoing, showOngoing } from "../lib/calls/android-ongoing";
 import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 import { tr } from "../lib/tr";
+import { setAndroidCallPip, useAndroidPip } from "../lib/calls/android-pip";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -625,9 +626,34 @@ export function CallOverlay() {
     }).catch(() => undefined);
   }, [session?.speaker, session?.phase]);
 
+  // Android: connected video call → leaving the app opens the system mini player (like iOS PiP).
+  const androidPip = useAndroidPip();
+  const pipWanted = Platform.OS === "android" && session?.phase === "connected" && session.kind === "video";
+  useEffect(() => {
+    setAndroidCallPip(pipWanted);
+  }, [pipWanted]);
+  useEffect(() => () => setAndroidCallPip(false), []);
+
   if (!session) return null;
   const title = user?.displayName || session.displayName;
   const terminal = ["ended", "declined", "missed", "busy", "failed"].includes(session.phase);
+
+  // Inside the Android mini player: only the other person's video (no buttons).
+  if (androidPip && !terminal) {
+    const showRemote = Boolean(remoteUrl && !remoteMuted);
+    return (
+      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 1000, elevation: 1000, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
+        {showRemote && remoteUrl ? (
+          <RTCView streamURL={remoteUrl} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" zOrder={1} />
+        ) : (
+          <View style={{ padding: 8, alignItems: "center" }}>
+            <Text numberOfLines={1} style={{ color: colors.paper, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{title}</Text>
+            <Text style={{ color: "rgba(247,249,252,0.7)", fontSize: 11 }}>{formatDuration(sec)}</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   if (session.pip && !terminal) {
     const showRemote = Boolean(remoteUrl && !remoteMuted);
