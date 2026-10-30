@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { ActivityIndicator, Alert, Animated, Easing, Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Smile,
@@ -237,23 +238,10 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
-/** Raised hand: big, in the middle of the tile, waving. */
+/** Raised hand: the WIPP hand (Grok animation, transparent), waving in the middle of the tile while the hand is up. */
+const RAISED_HAND = require("../../assets/call-reactions/main-levee.webp");
 function WavingHand({ size }: { size: number }) {
-  const turn = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(turn, { toValue: 1, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(turn, { toValue: -1, duration: 520, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(turn, { toValue: 0, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.delay(250),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [turn]);
-  const rotate = turn.interpolate({ inputRange: [-1, 1], outputRange: ["-22deg", "22deg"] });
-  return <Animated.Text style={{ fontSize: size, lineHeight: size * 1.2, transform: [{ translateY: size * 0.3 }, { rotate }, { translateY: -size * 0.3 }] }}>✋</Animated.Text>;
+  return <Image source={RAISED_HAND} style={{ width: size * 1.25, height: size * 1.25 }} contentFit="contain" autoplay />;
 }
 
 export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean; level?: number };

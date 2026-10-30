@@ -4,7 +4,7 @@
 # Output: assets/call-reactions/<id>.webp (plays once). Then set `file: require("../../../assets/call-reactions/<id>.webp")`
 # for this id in src/lib/calls/reactions.ts.
 set -e
-id=$1; src=$2; size=${3:-320}; fps=${4:-20}; key=${5:-green}
+id=$1; src=$2; size=${3:-320}; fps=${4:-20}; key=${5:-green}; loop=${6:-1}  # loop: 1 = once, 0 = forever
 [[ -z "$id" || ! -f "$src" ]] && { echo "usage: convert-reaction.sh <id> <video.mp4> [size] [fps] [green|black]"; exit 1; }
 tmp=$(mktemp -d)
 if [[ $key == black ]]; then
@@ -17,7 +17,7 @@ ffmpeg -loglevel error -y -i "$src" -vf "fps=$fps,$filter,scale=$size:$size:forc
 frames=($tmp/f_*.png)
 delay=$((1000 / fps))
 out="assets/call-reactions/$id.webp"
-img2webp -loop 1 -lossy -q 72 -m 6 -d $delay "${frames[@]}" -o "$out" >/dev/null
+img2webp -loop $loop -lossy -q 72 -m 6 -d $delay "${frames[@]}" -o "$out" >/dev/null
 rm -rf "$tmp"
 dur=$(( ${#frames[@]} * delay ))
 echo "$out  $(du -h "$out" | cut -f1)  ${#frames[@]} images  ~${dur} ms  (durationMs à mettre dans reactions.ts)"
