@@ -21,6 +21,8 @@ export type ReactionDef = {
   emoji: string;
   /** Animated WebP with transparency (require(...)), or null while waiting for the Grok file. */
   file: number | null;
+  /** Or one of our animated Wippmojis (sticker id), played once. */
+  sticker?: string;
   durationMs: number;
   /** Size relative to the participant's photo / tile. */
   scale: number;
@@ -28,18 +30,18 @@ export type ReactionDef = {
   /** Optional sound (off by default in settings). */
   sound: number | null;
   /** Collective effect when several people send it together. */
-  collective?: { label: string; file: number | null; threshold: number; windowMs: number; durationMs: number };
+  collective?: { label: string; file: number | null; sticker?: string; threshold: number; windowMs: number; durationMs: number };
 };
 
 export const REACTIONS: ReactionDef[] = [
   // Grok (applaus.mp4, 3 s, black background removed) — 29 oct. 2026.
   { id: "bravo", label: "Bravo", emoji: "👏", file: require("../../../assets/call-reactions/bravo.webp"), durationMs: 2970, scale: 1.1, place: "over", sound: null, collective: { label: "Ovation", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
-  { id: "amour", label: "Amour", emoji: "❤️", file: null, durationMs: 2600, scale: 1.2, place: "around", sound: null, collective: { label: "Grand cœur", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
-  { id: "mdr", label: "MDR", emoji: "😂", file: null, durationMs: 2400, scale: 1.0, place: "over", sound: null, collective: { label: "Fou rire", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
-  { id: "fete", label: "Fête", emoji: "🎉", file: null, durationMs: 2600, scale: 1.3, place: "around", sound: null, collective: { label: "Célébration", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
-  { id: "chaud", label: "C’est chaud", emoji: "🔥", file: null, durationMs: 2400, scale: 1.2, place: "around", sound: null },
-  { id: "wow", label: "Wow", emoji: "😮", file: null, durationMs: 2000, scale: 1.0, place: "over", sound: null },
-  { id: "valide", label: "Validé", emoji: "💯", file: null, durationMs: 2000, scale: 1.0, place: "over", sound: null },
+  { id: "amour", label: "Amour", emoji: "❤️", file: null, sticker: "moji-03", durationMs: 2600, scale: 1.2, place: "around", sound: null, collective: { label: "Grand cœur", file: null, sticker: "moji-03", threshold: 3, windowMs: 5000, durationMs: 3000 } },
+  { id: "mdr", label: "MDR", emoji: "😂", file: null, sticker: "moji-29", durationMs: 2400, scale: 1.0, place: "over", sound: null, collective: { label: "Fou rire", file: null, sticker: "moji-29", threshold: 3, windowMs: 5000, durationMs: 3000 } },
+  { id: "fete", label: "Fête", emoji: "🎉", file: null, sticker: "moji-38", durationMs: 2600, scale: 1.3, place: "around", sound: null, collective: { label: "Célébration", file: null, sticker: "moji-38", threshold: 3, windowMs: 5000, durationMs: 3000 } },
+  { id: "chaud", label: "C’est chaud", emoji: "🔥", file: null, sticker: "moji-13", durationMs: 2400, scale: 1.2, place: "around", sound: null },
+  { id: "wow", label: "Wow", emoji: "😮", file: null, sticker: "moji-08", durationMs: 2000, scale: 1.0, place: "over", sound: null },
+  { id: "valide", label: "Validé", emoji: "💯", file: null, sticker: "moji-24", durationMs: 2000, scale: 1.0, place: "over", sound: null },
   { id: "diamant", label: "Diamant", emoji: "💎", file: null, durationMs: 2600, scale: 1.1, place: "around", sound: null },
 ];
 

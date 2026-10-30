@@ -8,6 +8,7 @@ import { Animated, Easing, Modal, Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Press } from "./ui";
+import { WippSticker } from "./WippSticker";
 import { tr } from "../lib/tr";
 import { REACTION_BY_ID, REACTIONS, useReactions, type ReactionDef, type ReactionId, saveReactionSettings } from "../lib/calls/reactions";
 
@@ -21,6 +22,13 @@ export function ReactionBurst({ def, size }: { def: ReactionDef; size: number })
     Animated.timing(t, { toValue: 1, duration: def.durationMs, easing: Easing.linear, useNativeDriver: true }).start();
   }, [t, def.durationMs]);
   const box = size * def.scale * (reduce ? 0.7 : 1);
+  if (def.sticker) {
+    return (
+      <Animated.View pointerEvents="none" style={{ width: box, height: box, opacity: t.interpolate({ inputRange: [0, 0.06, 0.85, 1], outputRange: [0, 1, 1, 0] }), transform: [{ scale: reduce ? 1 : t.interpolate({ inputRange: [0, 0.1, 0.18, 1], outputRange: [0.4, 1.12, 1, 1] }) }] }}>
+        <WippSticker id={def.sticker} size={box} still={reduce} />
+      </Animated.View>
+    );
+  }
   if (def.file != null) {
     return (
       <Animated.View pointerEvents="none" style={{ width: box, height: box, opacity: t.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] }) }}>
@@ -66,7 +74,7 @@ export function CollectiveReaction({ size }: { size: number }) {
   const def = REACTION_BY_ID[collective.r];
   const c = def.collective;
   if (!c) return null;
-  const big: ReactionDef = { ...def, file: c.file, durationMs: c.durationMs, scale: 1 };
+  const big: ReactionDef = { ...def, file: c.file, sticker: c.file != null ? undefined : c.sticker ?? def.sticker, durationMs: c.durationMs, scale: 1 };
   return (
     <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", zIndex: 50 }}>
       <ReactionBurst key={collective.at} def={big} size={size} />
@@ -95,7 +103,7 @@ export function ReactionPicker({ visible, onClose, onPick, bottomInset }: { visi
                 }}
                 style={{ width: "24%", alignItems: "center", paddingVertical: 8, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.06)" }}
               >
-                {r.file != null ? <Image source={r.file} style={{ width: 40, height: 40 }} contentFit="contain" autoplay={false} /> : <Text style={{ fontSize: 30, lineHeight: 40 }}>{r.emoji}</Text>}
+                {r.sticker ? <WippSticker id={r.sticker} size={40} still /> : r.file != null ? <Image source={r.file} style={{ width: 40, height: 40 }} contentFit="contain" autoplay={false} /> : <Text style={{ fontSize: 30, lineHeight: 40 }}>{r.emoji}</Text>}
                 <Text numberOfLines={1} style={{ color: "#fff", fontSize: 11, marginTop: 2, fontFamily: "Inter_500Medium" }}>{tr(r.label)}</Text>
               </Press>
             ))}
