@@ -636,8 +636,11 @@ export function CallOverlay() {
   }, [session?.speaker, session?.phase]);
 
   // Android: connected video call → leaving the app opens the system mini player (like iOS PiP).
-  const androidPip = useAndroidPip();
+  const androidPipEvent = useAndroidPip();
   const pipWanted = Platform.OS === "android" && session?.phase === "connected" && session.kind === "video";
+  // The window itself becomes tiny in the mini player: switch the layout at once, even if Android's
+  // « mini player » signal arrives late (otherwise the whole call screen shows, shrunk, for a moment).
+  const androidPip = androidPipEvent || (pipWanted && win.width < 250);
   // Camera in the mini player: paused when leaving the app (the others see « Je reviens… »);
   // the mini player's button « Me montrer » / « Pause caméra » switches it.
   const [pipCamShown, setPipCamShown] = useState(false);
@@ -715,7 +718,7 @@ export function CallOverlay() {
     return (
       <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 1000, elevation: 1000, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
         {showRemote && remoteUrl ? (
-          <RTCView streamURL={remoteUrl} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" zOrder={1} />
+          <RTCView streamURL={remoteUrl} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" zOrder={0} />
         ) : (
           <View style={{ padding: 8, alignItems: "center" }}>
             <Text numberOfLines={1} style={{ color: colors.paper, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{title}</Text>
@@ -725,7 +728,7 @@ export function CallOverlay() {
         {/* « Me montrer » pressed: a small view of my own camera, so I know the others see me. */}
         {pipCamShown && localUrl ? (
           <View style={{ position: "absolute", right: 6, bottom: 6, width: "34%", aspectRatio: 9 / 16, borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.8)" }}>
-            <RTCView streamURL={localUrl} style={{ flex: 1 }} objectFit="cover" mirror={session.facing !== "environment"} zOrder={2} />
+            <RTCView streamURL={localUrl} style={{ flex: 1 }} objectFit="cover" mirror={session.facing !== "environment"} zOrder={1} />
           </View>
         ) : null}
       </View>
