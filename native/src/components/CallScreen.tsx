@@ -259,12 +259,15 @@ function BeRightBack({ name, avatar, top }: { name: string; avatar?: string; top
   return (
     <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
       <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
-      <Animated.View style={{ position: "absolute", width: 300, height: 300, borderRadius: 150, backgroundColor: "rgba(255,216,77,0.12)", opacity: glow, transform: [{ scale }] }} />
       <View style={{ alignItems: "center", marginTop: -top / 2 }}>
-        <Image source={PAUSE_LOGO} style={{ width: 210, height: 210 }} contentFit="contain" autoplay />
+        <Image source={PAUSE_LOGO} style={{ width: 170, height: 170 }} contentFit="contain" autoplay />
       </View>
-      <View style={{ marginTop: 18, alignItems: "center", gap: 10 }}>
-        <Avatar user={{ displayName: name, avatar }} size={56} />
+      {/* Their photo, big, inside the softly pulsing circle. */}
+      <View style={{ width: 210, height: 210, alignItems: "center", justifyContent: "center", marginTop: 4 }}>
+        <Animated.View style={{ position: "absolute", width: 210, height: 210, borderRadius: 105, backgroundColor: "rgba(255,216,77,0.14)", borderWidth: 2, borderColor: "rgba(255,216,77,0.55)", opacity: glow, transform: [{ scale }] }} />
+        <Avatar user={{ displayName: name, avatar }} size={172} />
+      </View>
+      <View style={{ marginTop: 14, alignItems: "center", gap: 6 }}>
         <Text style={{ color: "#fff", fontSize: 22, fontFamily: "Inter_700Bold" }}>{tr("Je reviens…")}</Text>
         <Text style={{ color: GREY, fontSize: 14, textAlign: "center", paddingHorizontal: 40 }}>{tr("{0} revient dans un instant.", name)}</Text>
       </View>
