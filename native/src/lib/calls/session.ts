@@ -1,3 +1,4 @@
+import { Platform, Settings } from "react-native";
 import { tr } from "../tr";
 import { useWippStore } from "../store";
 import { create } from "zustand";
@@ -278,15 +279,49 @@ export async function joinCallByLink(token: string, title: string) {
   }
 }
 
+/** Tells the iPhone side « this call was answered », so it does not post « Appel manqué » when its call screen closes. */
+export function markAnsweredNow() {
+  if (Platform.OS !== "ios") return;
+  try {
+    Settings.set({ wippLastAnswerAt: Date.now() / 1000 });
+  } catch {
+    /* settings unavailable */
+  }
+}
+
+/** Retries while the session is not ready yet (401) or the network is still waking up — up to ~8 s. */
+async function withStartupRetry<T>(fn: () => Promise<T>): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < 8; i += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      last = err;
+      const status = (err as { status?: number }).status;
+      // A real answer from the server (call over, refused…): stop at once.
+      if (status && status !== 401 && status !== 503 && status < 500) throw err;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw last;
+}
+
 export async function acceptCurrentCall() {
   const live = useCallSession.getState().session;
   if (!live?.callId) return;
   useCallSession.getState().patch({ phase: "connecting" });
+  markAnsweredNow();
   try {
-    if (live.group) await setGroupState(live.callId, "joining");
-    else await answerCall(live.callId, true);
-    await attachToken(live.callId, live.kind === "video");
+    // Answered while WIPP was starting (opened by the iPhone call screen): the sign-in comes back a moment
+    // later. Try again for a few seconds instead of giving up (that showed « appel manqué » and the caller kept ringing).
+    await withStartupRetry(async () => {
+      if (live.group) await setGroupState(live.callId!, "joining");
+      else await answerCall(live.callId!, true);
+    });
+    await withStartupRetry(() => attachToken(live.callId!, live.kind === "video"));
+    void import("./callkeep").then(({ clearMissedNotice }) => clearMissedNotice(live.callId!));
   } catch (err) {
+    void import("../crash-log").then(({ logAppError }) => logAppError(err, false, "call answer"));
     const status = (err as { status?: number }).status;
     useCallSession.getState().patch({
       phase: status === 410 ? "missed" : "failed",

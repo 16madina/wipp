@@ -109,6 +109,12 @@ export function CallOverlay() {
       (callId) => {
         const live = useCallSession.getState().session;
         if (live?.callId === callId) void endCurrentCall();
+        // The call was not loaded in the app yet (WIPP was starting): decline it on the server directly,
+        // so the caller stops ringing at once.
+        else
+          void import("../lib/calls/livekit-client")
+            .then(({ answerCall }) => answerCall(callId, false))
+            .catch(() => undefined);
       },
       (handle, video) => {
         // Touched in the iPhone's Recents: call that contact back. When WIPP was fully closed, the contacts
@@ -209,7 +215,11 @@ export function CallOverlay() {
     if ((session?.phase === "connecting" || session?.phase === "connected") && session.dir === "in" && session.callId) {
       dismissSystemRinging(session.callId);
     }
-    if (session?.phase === "connected" && session.callId) markSystemCallConnected(session.callId);
+    if (session?.phase === "connected" && session.callId) {
+      markSystemCallConnected(session.callId);
+      // Answered (in the app or on the iPhone screen): no « Appel manqué » notice for this call.
+      if (session.dir === "in") void import("../lib/calls/callkeep").then(({ clearMissedNotice }) => clearMissedNotice(session.callId));
+    }
     if (session?.callId) lastCallId.current = session.callId;
     // Any end (hang-up here, the other side, refused, busy, failed, or the session cleared) closes the iOS/Android call too.
     if (!session || terminalPhases(session.phase)) {
@@ -572,6 +582,12 @@ export function CallOverlay() {
     let prev = AppState.currentState;
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active" && prev === "background") revive();
+      if (st === "background") {
+        // iOS stops the camera in the background: pause it on purpose, so the other phone shows
+        // "camera paused" instead of a frozen picture. It turns back on when WIPP comes back (revive).
+        const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+        if (track && !track.isMuted) void track.mute().catch(() => undefined);
+      }
       prev = st;
     });
     reviveRef.current = revive;

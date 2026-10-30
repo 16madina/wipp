@@ -99,6 +99,7 @@ import { colors } from "../theme";
 import { WippmojiStudioScreen } from "./wippmoji-studio";
 import { useAppearance } from "../lib/appearance";
 import { AppState, Platform, View } from "react-native";
+import { EdgeSwipeBack, NO_SWIPE_BACK } from "../components/EdgeSwipeBack";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
 import { ScreenProtectionHost } from "../components/ScreenProtectionHost";
 import { hydratePrivateVault } from "../lib/private-vault";
@@ -329,6 +330,10 @@ export function AppShell() {
   const signedInScreen = firebaseUser && !holdSignup && (raw.name === "splash" || AUTH.has(raw.name));
   const top = signedInScreen ? ({ name: "chats" } as const) : raw.name === "splash" ? ({ name: "onboarding" } as const) : raw;
   const showTabs = isTabScreen(top.name);
+  // iPhone: swipe from the left edge goes back (not on the main tabs, sign-in, calls, camera…).
+  const underScreen = stack.length > 1 ? stack[stack.length - 2] : undefined;
+  const swipeBack =
+    top === raw && !showTabs && Boolean(underScreen) && !AUTH.has(top.name) && !AUTH.has(underScreen!.name) && !NO_SWIPE_BACK.has(top.name);
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
@@ -410,6 +415,21 @@ export function AppShell() {
       stop();
       stopPush();
     };
+  }, []);
+
+  // Started by a call while the phone was locked, before the sign-in could be read: when WIPP is opened,
+  // start again so the saved sign-in is found (instead of staying on the sign-in screen).
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active" || useWippStore.getState().onboarded) return;
+      void import("../lib/firebase-phone").then(async ({ currentFirebaseUser, hasStoredFirebaseUser }) => {
+        if (currentFirebaseUser() || !(await hasStoredFirebaseUser())) return;
+        const { reloadAppAsync } = await import("expo");
+        await reloadAppAsync("signed-in user saved but not loaded at launch").catch(() => undefined);
+      });
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -547,7 +567,14 @@ export function AppShell() {
               else st.goTab("chats");
             }}
           >
-            <ScreenSwitch screen={top} />
+            <EdgeSwipeBack
+              key={stack.length}
+              enabled={swipeBack}
+              onBack={() => useWippStore.getState().pop()}
+              under={underScreen ? <ScreenSwitch screen={underScreen} /> : null}
+            >
+              <ScreenSwitch screen={top} />
+            </EdgeSwipeBack>
           </ScreenErrorBoundary>
           {showTabs ? <TabBar active={top.name} /> : null}
           <ScreenErrorBoundary resetKey="live" silent onBack={() => useLiveSession.getState().clear()}>

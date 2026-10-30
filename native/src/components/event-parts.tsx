@@ -169,7 +169,7 @@ export function EventCard({
   live?: string | null;
 }) {
   return (
-    <Press onPress={onPress} style={{ height: 200, marginBottom: 14, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 1, borderColor: accentA(0.25) }}>
+    <Press onPress={onPress} style={{ height: 200, marginBottom: 14, borderRadius: 18, overflow: "hidden", backgroundColor: colors.navy, borderWidth: 1.5, borderColor: accentA(0.5), shadowColor: colors.accent, shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 }}>
       {image ? <Image source={image} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" /> : null}
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "75%", backgroundColor: "rgba(0,0,0,0.45)" }} />
       {starts ? (

@@ -14,6 +14,7 @@ import {
   type Persistence,
 } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
+import { BACKGROUND_READABLE, upgradeKeychainItem } from "./keychain-access";
 import { Platform } from "react-native";
 import { FIREBASE_WEB_CONFIG } from "./firebase-config";
 
@@ -36,22 +37,31 @@ const firebaseStateStore = {
   async getItem(key: string): Promise<string | null> {
     const raw = await SecureStore.getItemAsync(chunkCountKey(key));
     const n = raw ? Number(raw) : 0;
-    if (!Number.isFinite(n) || n <= 0) return SecureStore.getItemAsync(secureKey(key));
+    if (!Number.isFinite(n) || n <= 0) {
+      const single = await SecureStore.getItemAsync(secureKey(key));
+      void upgradeKeychainItem(secureKey(key), single);
+      return single;
+    }
     let out = "";
-    for (let i = 0; i < n; i++) out += (await SecureStore.getItemAsync(chunkKey(key, i))) ?? "";
+    for (let i = 0; i < n; i++) {
+      const part = await SecureStore.getItemAsync(chunkKey(key, i));
+      void upgradeKeychainItem(chunkKey(key, i), part);
+      out += part ?? "";
+    }
+    void upgradeKeychainItem(chunkCountKey(key), raw);
     return out || null;
   },
   async setItem(key: string, value: string): Promise<void> {
     await this.removeItem(key);
     if (value.length <= CHUNK) {
-      await SecureStore.setItemAsync(secureKey(key), value);
+      await SecureStore.setItemAsync(secureKey(key), value, BACKGROUND_READABLE);
       return;
     }
     const n = Math.ceil(value.length / CHUNK);
     for (let i = 0; i < n; i++) {
-      await SecureStore.setItemAsync(chunkKey(key, i), value.slice(i * CHUNK, (i + 1) * CHUNK));
+      await SecureStore.setItemAsync(chunkKey(key, i), value.slice(i * CHUNK, (i + 1) * CHUNK), BACKGROUND_READABLE);
     }
-    await SecureStore.setItemAsync(chunkCountKey(key), String(n));
+    await SecureStore.setItemAsync(chunkCountKey(key), String(n), BACKGROUND_READABLE);
   },
   async removeItem(key: string): Promise<void> {
     const raw = await SecureStore.getItemAsync(chunkCountKey(key));
@@ -121,6 +131,15 @@ function firebaseAuth(): Auth {
   const auth = getAuth(app);
   auth.languageCode = "fr";
   return auth;
+}
+
+/** A signed-in user is saved on this phone (even if this launch could not read it). */
+export async function hasStoredFirebaseUser() {
+  try {
+    return Boolean(await firebaseStateStore.getItem(`firebase:authUser:${FIREBASE_WEB_CONFIG.apiKey}:[DEFAULT]`));
+  } catch {
+    return false;
+  }
 }
 
 export function currentFirebaseUser() {

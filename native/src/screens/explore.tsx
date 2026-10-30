@@ -1,4 +1,5 @@
 import { PharmacyResults } from "./pharmacies";
+import { EdgeSwipeBack } from "../components/EdgeSwipeBack";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
@@ -111,6 +112,7 @@ export function ExploreScreen() {
       ? t("hubListings")
       : t("exploreTitle");
   return (
+    <EdgeSwipeBack enabled={hub !== "home" && !searching} onBack={() => setHub("home")} under={<View style={{ flex: 1, backgroundColor: colors.bg }} />}>
     <ScreenRoot padBottom>
       <GlassHeader>
         <View style={{ height: layout.navBarHeight, flexDirection: "row", alignItems: "center", paddingHorizontal: 8 }}>
@@ -169,6 +171,7 @@ export function ExploreScreen() {
         {!searching && hub === "lifestyle" ? <LifestylePane /> : null}
       </ScrollView>
     </ScreenRoot>
+    </EdgeSwipeBack>
   );
 }
 
@@ -253,19 +256,40 @@ function ExploreHome({ go }: { go: (h: Hub) => void }) {
       <Text style={{ fontSize: 13, lineHeight: 18, color: colors.muted }}>{t("exploreSplit")}</Text>
       <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
         {hubs.map((h) => (
-          <Press key={h.title} onPress={h.go} style={{ width: "48.5%", minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: colors.hair }}>
+          <Press
+            key={h.title}
+            onPress={h.go}
+            // More visible: thin accent border, stronger picture, icon in a badge, soft shadow.
+            style={{
+              width: "48.5%",
+              minHeight: 108,
+              borderRadius: 18,
+              overflow: "hidden",
+              backgroundColor: colors.navy,
+              padding: 14,
+              borderWidth: 1.5,
+              borderColor: withAlpha(colors.accent, 0.45),
+              shadowColor: colors.accent,
+              shadowOpacity: 0.18,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 4,
+            }}
+          >
             {HUB_BACKGROUNDS[h.kind] ? (
-              <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
+              <Image source={HUB_BACKGROUNDS[h.kind]} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
             ) : (
               <View pointerEvents="none" style={{ position: "absolute", right: -10, top: -6, bottom: -6, justifyContent: "center", opacity: 0.55 }}>
                 <Cross size={96} color="#1fbf6a" fill="#1fbf6a" strokeWidth={1} />
               </View>
             )}
-            <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil }} />
+            <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil, opacity: 0.75 }} />
             <View style={{ zIndex: 1 }}>
-              <h.icon size={20} color={colors.accent} />
-              <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{h.title}</Text>
-              <Text style={{ marginTop: 2, fontSize: 11, color: colors.muted }}>{h.sub}</Text>
+              <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(colors.accent, 0.18), borderWidth: 1, borderColor: withAlpha(colors.accent, 0.5) }}>
+                <h.icon size={18} color={colors.accent} />
+              </View>
+              <Text style={{ marginTop: 12, fontSize: 15, fontFamily: "Inter_700Bold", color: colors.fg, textShadowColor: "rgba(0,0,0,0.35)", textShadowRadius: 4 }}>{h.title}</Text>
+              <Text style={{ marginTop: 2, fontSize: 11, color: colors.fg, opacity: 0.8 }}>{h.sub}</Text>
             </View>
           </Press>
         ))}
@@ -445,17 +469,17 @@ function UtilitiesPane() {
           <Press
             onPress={() => setPharmaMode((m) => (m ? null : "open"))}
             accessibilityLabel={tr("Pharmacies")}
-            style={{ minHeight: 100, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, padding: 14, borderWidth: 1, borderColor: pharmaMode ? colors.accent : colors.hair }}
+            style={{ ...hubTile(colors.accent), backgroundColor: colors.navy, borderColor: pharmaMode ? colors.accent : withAlpha(colors.accent, 0.45) }}
           >
-            <Image source={HUB_BACKGROUNDS.utilities} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.32 }} />
-            <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil }} />
+            <Image source={HUB_BACKGROUNDS.utilities} contentFit="cover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+            <View style={{ position: "absolute", inset: 0, backgroundColor: colors.imageVeil, opacity: 0.75 }} />
             <View style={{ zIndex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Cross size={20} color={colors.accent} />
-                <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: pharmaMode ? "180deg" : "0deg" }] }} />
+                <HubBadge color={colors.accent}><Cross size={18} color={colors.accent} /></HubBadge>
+                <ChevronDown size={16} color={colors.fg} style={{ transform: [{ rotate: pharmaMode ? "180deg" : "0deg" }] }} />
               </View>
-              <Text style={{ marginTop: 16, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.fg }}>{tr("Pharmacies")}</Text>
-              <Text style={{ marginTop: 2, fontSize: 11, color: pharmaMode ? colors.accent : colors.muted }}>
+              <Text style={{ marginTop: 12, fontSize: 15, fontFamily: "Inter_700Bold", color: colors.fg, textShadowColor: "rgba(0,0,0,0.35)", textShadowRadius: 4 }}>{tr("Pharmacies")}</Text>
+              <Text style={{ marginTop: 2, fontSize: 11, color: pharmaMode ? colors.accent : colors.fg, opacity: pharmaMode ? 1 : 0.8 }}>
                 {pharmaMode === "open" ? tr("Ouvertes maintenant") : pharmaMode === "h24" ? tr("Ouvertes 24 h/24") : tr("Ouvertes autour de vous")}
               </Text>
             </View>
@@ -688,13 +712,15 @@ function ShopsPane() {
           return (
             <Press key={item.id} onPress={() => setCat(cat === item.id ? "all" : item.id)} style={{ width: 72, alignItems: "center" }}>
               {src ? (
-                <Image source={src} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: cat === item.id ? 2 : 0, borderColor: colors.accent }} contentFit="cover" />
+                <View style={{ borderRadius: 34, shadowColor: colors.accent, shadowOpacity: cat === item.id ? 0.45 : 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 }}>
+                  <Image source={src} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: cat === item.id ? 2.5 : 1.5, borderColor: cat === item.id ? colors.accent : withAlpha(colors.accent, 0.55) }} contentFit="cover" />
+                </View>
               ) : (
-                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", borderWidth: cat === item.id ? 2 : 1, borderColor: cat === item.id ? colors.accent : colors.hair }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center", borderWidth: cat === item.id ? 2.5 : 1.5, borderColor: cat === item.id ? colors.accent : withAlpha(colors.accent, 0.55) }}>
                   <item.Icon size={26} color={colors.accent} />
                 </View>
               )}
-              <Text numberOfLines={1} style={{ marginTop: 6, color: colors.fg, fontSize: 12 }}>{item.label}</Text>
+              <Text numberOfLines={1} style={{ marginTop: 6, color: cat === item.id ? colors.accent : colors.fg, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{item.label}</Text>
             </Press>
           );
         })}
@@ -710,7 +736,9 @@ function ShopsPane() {
           const src = s.image?.startsWith("http") ? { uri: s.image } : wippSrc(s.image);
           return (
             <Press key={s.id} onPress={() => push(s.id.startsWith("business:") ? { name: "business-card-view", publicId: s.handle } : { name: "shop", shopId: s.id })} style={{ width: 168 }}>
-              {src ? <Image source={src} style={{ width: 168, height: 112, borderRadius: 16 }} contentFit="cover" /> : <View style={{ width: 168, height: 112, borderRadius: 16, backgroundColor: colors.navy }} />}
+              <View style={{ borderRadius: 16, shadowColor: colors.accent, shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 }}>
+                {src ? <Image source={src} style={{ width: 168, height: 112, borderRadius: 16, borderWidth: 1.5, borderColor: withAlpha(colors.accent, 0.45) }} contentFit="cover" /> : <View style={{ width: 168, height: 112, borderRadius: 16, backgroundColor: colors.navy, borderWidth: 1.5, borderColor: withAlpha(colors.accent, 0.45) }} />}
+              </View>
               {s.pinned ? (
                 <View style={{ position: "absolute", top: 8, left: 8, flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.65)", paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Pin size={11} color={colors.accent} />
@@ -728,7 +756,7 @@ function ShopsPane() {
         {shortcuts.map((item) => {
           const src = coverFor(item.id);
           return (
-            <Press key={`pop-${item.id}`} onPress={() => setCat(item.id)} style={{ width: 150, height: 96, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, justifyContent: "flex-end" }}>
+            <Press key={`pop-${item.id}`} onPress={() => setCat(item.id)} style={{ width: 150, height: 96, borderRadius: 16, overflow: "hidden", backgroundColor: colors.navy, justifyContent: "flex-end", borderWidth: 1.5, borderColor: withAlpha(colors.accent, 0.45) }}>
               {src ? (
                 <Image source={src} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" />
               ) : (
@@ -737,7 +765,7 @@ function ShopsPane() {
                 </View>
               )}
               <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 0, backgroundColor: src ? "rgba(0,0,0,0.35)" : "transparent" }} />
-              <Text style={{ padding: 12, color: colors.fg, fontFamily: "Inter_600SemiBold" }}>{item.label}</Text>
+              <Text style={{ padding: 12, color: "#fff", fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: 4 }}>{item.label}</Text>
             </Press>
           );
         })}
@@ -1627,5 +1655,39 @@ function Missing({ onBack }: { onBack: () => void }) {
       </GlassHeader>
       <Empty title={tr("Introuvable")} />
     </ScreenRoot>
+  );
+}
+
+/** "#rrggbb" + opacity → rgba (other colour formats are returned as they are). */
+function withAlpha(color: string, alpha: number) {
+  const m = /^#([0-9a-f]{6})$/i.exec(color);
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+/** Explorer tiles: thin accent border, soft accent shadow (same look everywhere in Explorer). */
+function hubTile(accent: string) {
+  return {
+    minHeight: 108,
+    borderRadius: 18,
+    overflow: "hidden" as const,
+    backgroundColor: undefined as string | undefined,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: withAlpha(accent, 0.45),
+    shadowColor: accent,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  };
+}
+
+function HubBadge({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(color, 0.18), borderWidth: 1, borderColor: withAlpha(color, 0.5) }}>
+      {children}
+    </View>
   );
 }

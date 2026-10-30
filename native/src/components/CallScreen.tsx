@@ -238,6 +238,46 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
+/** Animated WIPP logo (Grok video, 1.4× faster, sound removed, black background removed, endless loop). */
+const PAUSE_LOGO = require("../../assets/call-reactions/logo-pause.webp");
+
+/** Shown to the other person while my camera is paused (I left the app for a moment). */
+function BeRightBack({ name, avatar, top }: { name: string; avatar?: string; top: number }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(t, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(t, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [t]);
+  const scale = t.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.06] });
+  const glow = t.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.9] });
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
+      <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
+      <View style={{ alignItems: "center", marginTop: -top / 2 }}>
+        <Image source={PAUSE_LOGO} style={{ width: 170, height: 170 }} contentFit="contain" autoplay />
+      </View>
+      {/* Their photo, big, inside the softly pulsing circle. */}
+      <View style={{ width: 210, height: 210, alignItems: "center", justifyContent: "center", marginTop: 4 }}>
+        <Animated.View style={{ position: "absolute", width: 210, height: 210, borderRadius: 105, backgroundColor: "rgba(255,216,77,0.14)", borderWidth: 2, borderColor: "rgba(255,216,77,0.55)", opacity: glow, transform: [{ scale }] }} />
+        <Avatar user={{ displayName: name, avatar }} size={172} />
+      </View>
+      <View style={{ marginTop: 14, alignItems: "center", gap: 6 }}>
+        <Text style={{ color: "#fff", fontSize: 22, fontFamily: "Inter_700Bold" }}>{tr("Je reviens…")}</Text>
+        <Text style={{ color: GREY, fontSize: 14, textAlign: "center", paddingHorizontal: 40 }}>{tr("{0} revient dans un instant.", name)}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** iPhone: the other person's video keeps playing in a floating window when WIPP goes to the background. */
+const CALL_PIP = { iosPIP: { enabled: true, startAutomatically: true, stopAutomatically: true, preferredSize: { width: 9, height: 16 } } } as object;
+
 /** Raised hand: the WIPP hand (Grok animation, transparent), waving in the middle of the tile while the hand is up. */
 const RAISED_HAND = require("../../assets/call-reactions/main-levee.webp");
 function WavingHand({ size }: { size: number }) {
@@ -455,13 +495,15 @@ export function CallScreen({
     <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: BG_BOTTOM }}>
       {main ? (
         <Pressable onPress={showControls} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
-          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={main === localVid} zOrder={0} />
+          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={main === localVid} zOrder={0} {...(main === remoteVid ? CALL_PIP : {})} />
           {preview ? <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.35)" }} /> : null}
         </Pressable>
       ) : (
         <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
       )}
 
+      {/* The other person left the app: animated WIPP logo + « Je reviens… » instead of a frozen picture. */}
+      {!mosaic && connected && video && remoteUrl && remoteMuted ? <BeRightBack name={peer.displayName} avatar={peer.avatar} top={insets.top} /> : null}
       {/* Top bar */}
       {(!videoLive || controls) ? (
         <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 6, left: 14, right: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -552,7 +594,7 @@ export function CallScreen({
       {/* Local camera, floating bottom-right on live video */}
       {mini && !mosaic ? (
         <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.5)", backgroundColor: "#000", shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 10 }}>
-          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={mini === localVid} zOrder={1} />
+          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={mini === localVid} zOrder={1} {...(mini === remoteVid ? CALL_PIP : {})} />
         </Press>
       ) : null}
 

@@ -137,6 +137,21 @@ function patchAppDelegate(src) {
   /** Ringing stopped without an answer: show the notice right away (the scheduled one was only a fallback). */
   static func showMissedNow(_ key: String) {
     guard missedPending.removeValue(forKey: key) != nil else { return }
+    let endedAt = Date().timeIntervalSince1970
+    // Answered with the in-app button (WIPP closes the iPhone call screen itself): the app writes
+    // « wippLastAnswerAt » when it answers. Wait a little, then check before showing anything.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+      let answeredAt = UserDefaults.standard.double(forKey: "wippLastAnswerAt")
+      if answeredAt > 0 && abs(answeredAt - endedAt) < 30 {
+        AppDelegate.callLog("answered in app \\(key.prefix(8)) → notice cancelled")
+        AppDelegate.cancelMissedCall(key)
+        return
+      }
+      AppDelegate.postMissedNow(key)
+    }
+  }
+
+  private static func postMissedNow(_ key: String) {
     let center = UNUserNotificationCenter.current()
     center.getPendingNotificationRequests { requests in
       guard let scheduled = requests.first(where: { $0.identifier == "missed-\\(key)" }) else { return }

@@ -1,6 +1,7 @@
 import { WIPP_WEB_ORIGIN } from "../firebase-config";
 import { firebaseIdToken, waitForFirebaseUser } from "../firebase-phone";
 import * as SecureStore from "expo-secure-store";
+import { BACKGROUND_READABLE, upgradeKeychainItem } from "../keychain-access";
 
 const TOKEN_KEY = "wipp-server-token";
 let mem: string | null | undefined;
@@ -9,6 +10,7 @@ export async function getStoredWippToken(): Promise<string | null> {
   if (mem !== undefined) return mem;
   try {
     mem = await SecureStore.getItemAsync(TOKEN_KEY);
+    void upgradeKeychainItem(TOKEN_KEY, mem);
     return mem;
   } catch {
     mem = null;
@@ -20,7 +22,7 @@ export async function persistWippToken(token: string | null) {
   mem = token;
   try {
     if (!token) await SecureStore.deleteItemAsync(TOKEN_KEY);
-    else await SecureStore.setItemAsync(TOKEN_KEY, token);
+    else await SecureStore.setItemAsync(TOKEN_KEY, token, BACKGROUND_READABLE);
   } catch {
     /* web / unavailable */
   }

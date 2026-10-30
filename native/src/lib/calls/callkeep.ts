@@ -19,6 +19,44 @@ const uuidToCall = new Map<string, string>();
 const answeredBySystem = new Set<string>();
 /** CallKit UUIDs answered before the VoIP payload linked them to a WIPP call. */
 const pendingAnswers = new Set<string>();
+/** CallKit UUIDs ended (declined, or closed by iOS) before they were linked to a WIPP call. */
+const pendingEnds = new Set<string>();
+/** Every CallKit UUID seen for a WIPP call (kept after the system screen closes), to clear its « Appel manqué » notice. */
+const uuidsByCall = new Map<string, Set<string>>();
+function rememberUuid(callId: string, uuid: string) {
+  const set = uuidsByCall.get(callId) ?? new Set<string>();
+  set.add(uuid.toLowerCase());
+  uuidsByCall.set(callId, set);
+}
+
+/**
+ * The call was really answered (in the app or on the iPhone screen): remove the « Appel manqué » notice that iOS
+ * schedules for every ringing call (shown when the system screen closes without a CallKit answer).
+ */
+export function clearMissedNotice(_callId?: string) {
+  // Every « Appel manqué » notice of the last 2 minutes, shown or still scheduled: the call was answered.
+  // (Looking it up by the iPhone call id missed it when the app had not linked that id yet.)
+  const clear = () =>
+    void import("expo-notifications")
+      .then(async (N) => {
+        const shown = await N.getPresentedNotificationsAsync().catch(() => []);
+        const recent = Date.now() - 120_000;
+        for (const n of shown) {
+          const id = n.request.identifier;
+          // iOS gives the time in seconds, Android in milliseconds.
+          const at = n.date < 1e12 ? n.date * 1000 : n.date;
+          if (id.startsWith("missed-") && at >= recent) await N.dismissNotificationAsync(id).catch(() => undefined);
+        }
+        const scheduled = await N.getAllScheduledNotificationsAsync().catch(() => []);
+        for (const r of scheduled) if (r.identifier.startsWith("missed-")) await N.cancelScheduledNotificationAsync(r.identifier).catch(() => undefined);
+      })
+      .catch(() => undefined);
+  clear();
+  // iOS may post it a moment after the answer (when its call screen closes): clear again.
+  setTimeout(clear, 1500);
+  setTimeout(clear, 4000);
+}
+let endHandler: ((callId: string) => void) | null = null;
 
 export function callKeepAvailable() {
   return keep != null && Platform.OS !== "web";
@@ -33,6 +71,7 @@ export async function setupCallKeep(
   // CallKit does not run on the iOS simulator: it reports every call as ended,
   // which the app turned into an automatic "decline". Use the in-app screen there.
   if (Platform.OS === "web" || keep || !Device.isDevice) return;
+  endHandler = onEnd;
   try {
     const mod = require("react-native-callkeep") as { default: Keep };
     keep = mod.default;
@@ -92,6 +131,12 @@ export async function setupCallKeep(
             start(e.data as StartData);
             continue;
           }
+          if (e.name === "RNCallKeepPerformEndCallAction" && e.data?.callUUID) {
+            const ended = uuidToCall.get(e.data.callUUID);
+            if (ended) onEnd(ended);
+            else pendingEnds.add(e.data.callUUID.toLowerCase());
+            continue;
+          }
           if (e.name !== "RNCallKeepPerformAnswerCallAction" || !e.data?.callUUID) continue;
           const id = uuidToCall.get(e.data.callUUID);
           if (id) {
@@ -121,6 +166,9 @@ export async function setupCallKeep(
     keep.addEventListener("endCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) onEnd(id);
+      // WIPP was still starting (opened by the call): end it on the server as soon as we know which call it is,
+      // or the caller keeps ringing for a minute.
+      else if (callUUID) pendingEnds.add(callUUID.toLowerCase());
     });
   } catch {
     keep = null;
@@ -137,6 +185,7 @@ export function showSystemIncoming(callId: string, video: boolean, callerName?: 
     return (c === "x" ? n : (n & 0x3) | 0x8).toString(16);
   });
   uuidToCall.set(uuid, callId);
+  rememberUuid(callId, uuid);
   // The name of the caller is the handle, so each person gets a separate line in Recents.
   keep.displayIncomingCall(uuid, callerName || "WIPP", callerName || "WIPP", "generic", video);
 }
@@ -160,7 +209,10 @@ export function wasAnsweredBySystem(callId: string) {
 export function linkSystemCall(uuid: string, callId: string) {
   uuidToCall.set(uuid.toLowerCase(), callId);
   uuidToCall.set(uuid.toUpperCase(), callId);
+  rememberUuid(callId, uuid);
   if (pendingAnswers.delete(uuid.toLowerCase())) answeredBySystem.add(callId);
+  // Ended on the iPhone screen while WIPP was starting (and not answered): tell the server now.
+  if (pendingEnds.delete(uuid.toLowerCase()) && !answeredBySystem.has(callId)) endHandler?.(callId);
 }
 
 /** Tells CallKit the call is really connected (system call timer, audio route). */
