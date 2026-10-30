@@ -1,7 +1,8 @@
 /**
  * Calls with 3+ people: raised hands, applause and the organizer's tools (mute someone, ask for the camera,
  * give the floor). Messages travel between the phones of the call over LiveKit data (topic "wipp-call").
- * The organizer is the person who started the call.
+ * The organizer is the person who started the call. The organizer can name moderators, who get the same tools
+ * (except naming moderators).
  */
 import { create } from "zustand";
 
@@ -13,11 +14,17 @@ export type CallMsg =
   | { t: "clap" }
   | { t: "mute"; to: string }
   | { t: "cam-ask"; to: string }
-  | { t: "floor"; to: string };
+  | { t: "floor"; to: string }
+  /** Organizer only: names (on) or removes a moderator. */
+  | { t: "mod"; to: string; on: boolean }
+  /** Organizer only: the full list, for people who join later. */
+  | { t: "mods"; ids: string[] };
 
 type State = {
   /** Identity of the organizer (announced by their phone). */
   host: string | null;
+  /** Moderators named by the organizer. */
+  mods: string[];
   /** Identities with a raised hand, in order. */
   hands: string[];
   /** Recent applause, to show 👏 on the tiles. */
@@ -30,10 +37,10 @@ type State = {
   send: ((msg: CallMsg) => void) | null;
 };
 
-export const useCallControls = create<State>(() => ({ host: null, hands: [], claps: [], notice: null, camAsk: false, send: null }));
+export const useCallControls = create<State>(() => ({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, send: null }));
 
 export function resetCallControls() {
-  useCallControls.setState({ host: null, hands: [], claps: [], notice: null, camAsk: false, send: null });
+  useCallControls.setState({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, send: null });
 }
 
 export function callNotice(text: string) {
@@ -51,4 +58,11 @@ export function addClap(identity: string) {
 
 export function sendCallMsg(msg: CallMsg) {
   useCallControls.getState().send?.(msg);
+}
+
+/** The organizer or a moderator. */
+export function canModerate(identity: string | null | undefined) {
+  if (!identity) return false;
+  const st = useCallControls.getState();
+  return st.host === identity || st.mods.includes(identity);
 }

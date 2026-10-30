@@ -334,12 +334,16 @@ export function CallOverlay() {
         const me = room.localParticipant.identity;
         if (msg.t === "hand") rc.setHand(me, msg.up);
         if (msg.t === "clap") rc.addClap(me);
+        if (msg.t === "mod") rc.useCallControls.setState((st) => ({ mods: msg.on ? [...st.mods.filter((x) => x !== msg.to), msg.to] : st.mods.filter((x) => x !== msg.to) }));
       };
       rc.useCallControls.setState({ send });
       const announce = () => {
         if (!isHost) return;
         rc.useCallControls.setState({ host: room.localParticipant.identity });
         send({ t: "host" });
+        // People who join later also learn who the moderators are.
+        const mods = rc.useCallControls.getState().mods;
+        if (mods.length) send({ t: "mods", ids: mods });
       };
       room.on(RoomEvent.Connected, announce);
       room.on(RoomEvent.ParticipantConnected, announce);
@@ -360,17 +364,30 @@ export function CallOverlay() {
           if (!st.host) rc.useCallControls.setState({ host: from });
           return;
         }
+        if (msg.t === "mod" || msg.t === "mods") {
+          // Only the organizer names moderators.
+          if (st.host !== from) return;
+          if (msg.t === "mods") {
+            rc.useCallControls.setState({ mods: msg.ids.filter((x) => typeof x === "string").slice(0, 50) });
+            return;
+          }
+          rc.useCallControls.setState({ mods: msg.on ? [...st.mods.filter((x) => x !== msg.to), msg.to] : st.mods.filter((x) => x !== msg.to) });
+          if (msg.to === me) rc.callNotice(msg.on ? tr("{0} t’a nommé modérateur", nameOf(from)) : tr("Tu n’es plus modérateur"));
+          return;
+        }
         if (msg.t === "hand") {
           rc.setHand(from, msg.up);
-          if (msg.up && st.host === me) rc.callNotice(tr("{0} lève la main", nameOf(from)));
+          if (msg.up && (st.host === me || st.mods.includes(me))) rc.callNotice(tr("{0} lève la main", nameOf(from)));
           return;
         }
         if (msg.t === "clap") {
           rc.addClap(from);
           return;
         }
-        // Organizer tools: only from the organizer, only for me.
-        if (st.host !== from || msg.to !== me) return;
+        // Organizer tools: only from the organizer or a moderator, only for me.
+        if ((st.host !== from && !st.mods.includes(from)) || msg.to !== me) return;
+        // A moderator never acts on the organizer.
+        if (st.host !== from && me === st.host) return;
         if (msg.t === "mute") {
           patch({ muted: true });
           rc.callNotice(tr("{0} a coupé ton micro", nameOf(from)));

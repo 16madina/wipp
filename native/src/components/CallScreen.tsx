@@ -262,6 +262,8 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
   const shown = tiles;
   const hands = useCallControls((s) => s.hands);
   const claps = useCallControls((s) => s.claps);
+  const host = useCallControls((s) => s.host);
+  const mods = useCallControls((s) => s.mods);
   const [, tick] = useState(0);
   // Applause fades after 3 s: refresh while some is showing.
   useEffect(() => {
@@ -297,6 +299,9 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
               <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
                 {tile.name}
               </Text>
+              {tile.identity && (tile.identity === host || mods.includes(tile.identity)) ? (
+                <Text style={{ fontSize: 11, color: GOLD, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>{tile.identity === host ? tr("Organisateur") : `🛡 ${tr("Modo")}`}</Text>
+              ) : null}
               {onMute && !tile.local && tile.micOn ? (
                 <Press accessibilityLabel={tr("Couper son micro")} onPress={() => onMute(tile)} style={{ marginLeft: "auto", height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <Mic size={14} color="#fff" />
@@ -376,6 +381,9 @@ export function CallScreen({
   const camAsk = useCallControls((s) => s.camAsk);
   const myIdentity = groupTiles?.find((t) => t.local)?.identity ?? null;
   const iAmHost = Boolean(host && myIdentity && host === myIdentity);
+  const mods = useCallControls((s) => s.mods);
+  // Organizer or moderator: same tools (only the organizer names moderators).
+  const iModerate = iAmHost || Boolean(myIdentity && mods.includes(myIdentity));
   const myHand = Boolean(myIdentity && hands.includes(myIdentity));
   const [hostTile, setHostTile] = useState<GroupTile | null>(null);
   const [, noticeTick] = useState(0);
@@ -481,12 +489,12 @@ export function CallScreen({
               {status} · {groupTiles.length} {tr("participant")}{groupTiles.length > 1 ? "s" : ""}
             </Text>
           </View>
-          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onMute={iAmHost ? (t) => {
-            if (!t.identity) return;
+          <GroupMosaic tiles={groupTiles} RTCView={RTCView} viewEpoch={viewEpoch} onMute={iModerate ? (t) => {
+            if (!t.identity || (!iAmHost && t.identity === host)) return;
             sendCallMsg({ t: "mute", to: t.identity });
             callNotice(tr("Tu as coupé le micro de {0}", t.name));
-          } : undefined} onTile={iAmHost ? (t) => {
-            if (t.local || !t.identity) return;
+          } : undefined} onTile={iModerate ? (t) => {
+            if (t.local || !t.identity || (!iAmHost && t.identity === host)) return;
             if (hands.includes(t.identity)) {
               sendCallMsg({ t: "floor", to: t.identity });
               callNotice(tr("Tu donnes la parole à {0}", t.name));
@@ -692,6 +700,22 @@ export function CallScreen({
               <Press onPress={() => { if (hostTile?.identity) sendCallMsg({ t: "cam-ask", to: hostTile.identity }); setHostTile(null); callNoticeSent(); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
                 <Video size={20} color={GOLD} />
                 <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Demander d’activer sa caméra")}</Text>
+              </Press>
+            ) : null}
+            {iAmHost && hostTile?.identity && hostTile.identity !== host ? (
+              <Press
+                onPress={() => {
+                  const id = hostTile?.identity;
+                  if (!id) return;
+                  const on = !mods.includes(id);
+                  sendCallMsg({ t: "mod", to: id, on });
+                  callNotice(on ? tr("{0} est maintenant modérateur", hostTile?.name ?? "") : tr("{0} n’est plus modérateur", hostTile?.name ?? ""));
+                  setHostTile(null);
+                }}
+                style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 18, width: 20, textAlign: "center" }}>🛡</Text>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{hostTile?.identity && mods.includes(hostTile.identity) ? tr("Retirer modérateur") : tr("Nommer modérateur")}</Text>
               </Press>
             ) : null}
             <Press onPress={() => setHostTile(null)} style={{ paddingVertical: 14, alignItems: "center" }}>
