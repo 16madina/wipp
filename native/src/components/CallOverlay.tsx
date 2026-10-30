@@ -24,7 +24,7 @@ import { hideOngoing, showOngoing } from "../lib/calls/android-ongoing";
 import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 import { tr } from "../lib/tr";
-import { setAndroidCallPip, useAndroidPip } from "../lib/calls/android-pip";
+import { onAndroidPipCameraButton, setAndroidCallPip, setAndroidPipCamera, useAndroidPip } from "../lib/calls/android-pip";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -631,10 +631,49 @@ export function CallOverlay() {
   // Android: connected video call → leaving the app opens the system mini player (like iOS PiP).
   const androidPip = useAndroidPip();
   const pipWanted = Platform.OS === "android" && session?.phase === "connected" && session.kind === "video";
+  // Camera in the mini player: paused when leaving the app (the others see « Je reviens… »);
+  // the mini player's button « Me montrer » / « Pause caméra » switches it.
+  const [pipCamShown, setPipCamShown] = useState(false);
+  const pipCamAvailable = pipWanted && !session?.camOff;
   useEffect(() => {
     setAndroidCallPip(pipWanted);
   }, [pipWanted]);
   useEffect(() => () => setAndroidCallPip(false), []);
+  useEffect(() => {
+    setAndroidPipCamera(pipCamAvailable, androidPip && pipCamShown);
+  }, [pipCamAvailable, androidPip, pipCamShown]);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    if (androidPip) {
+      setPipCamShown(false);
+      return;
+    }
+    // Mini player closed while WIPP stays in the background (call still on): camera paused again.
+    if (AppState.currentState !== "active") {
+      const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+      if (track && !track.isMuted) void track.mute().catch(() => undefined);
+    }
+    setPipCamShown(false);
+  }, [androidPip]);
+  useEffect(
+    () =>
+      onAndroidPipCameraButton(() => {
+        const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+        const live = useCallSession.getState().session;
+        if (!track || !live || live.camOff) return;
+        if (track.isMuted) {
+          setPipCamShown(true);
+          void track
+            .unmute()
+            .then(() => setLocalUrl(streamURL(track)))
+            .catch(() => setPipCamShown(false));
+        } else {
+          setPipCamShown(false);
+          void track.mute().catch(() => undefined);
+        }
+      }),
+    [],
+  );
 
   if (!session) return null;
   const title = user?.displayName || session.displayName;
@@ -653,6 +692,12 @@ export function CallOverlay() {
             <Text style={{ color: "rgba(247,249,252,0.7)", fontSize: 11 }}>{formatDuration(sec)}</Text>
           </View>
         )}
+        {/* « Me montrer » pressed: a small view of my own camera, so I know the others see me. */}
+        {pipCamShown && localUrl ? (
+          <View style={{ position: "absolute", right: 6, bottom: 6, width: "34%", aspectRatio: 9 / 16, borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.8)" }}>
+            <RTCView streamURL={localUrl} style={{ flex: 1 }} objectFit="cover" mirror={session.facing !== "environment"} zOrder={2} />
+          </View>
+        ) : null}
       </View>
     );
   }

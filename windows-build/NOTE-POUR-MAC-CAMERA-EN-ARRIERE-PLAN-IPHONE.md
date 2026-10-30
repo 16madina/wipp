@@ -52,3 +52,9 @@ Le PiP iOS de la bibliothèque (`iosPIP` sur un `RTCView`, `PIPController.m`) n'
 - Apple, `AVCaptureSession.isMultitaskingCameraAccessSupported` : https://developer.apple.com/documentation/avfoundation/avcapturesession/ismultitaskingcameraaccesssupported
 - Apple, entitlement `multitasking-camera-access` : https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.avfoundation.multitasking-camera-access
 - `node_modules/@livekit/react-native/README.md`, section iOS, « use the camera in the background — Requires voip background mode and iOS 18+ ».
+
+## Mise à jour : choix « pause / me montrer » (décision de la propriétaire)
+
+- **Au départ, la caméra est en pause** quand on sort de l'app : l'autre voit « Je reviens… », comme aujourd'hui. La propriétaire veut pouvoir **choisir de se montrer**.
+- **Android (fait, commit Windows)** : le mini lecteur a un bouton caméra (`RemoteAction` dans `CallPip.kt`) qui alterne « Me montrer » et « Pause caméra ». Côté JS : `onAndroidPipCameraButton` → `track.unmute()` / `track.mute()`. Quand « Me montrer » est actif, une vignette de sa propre caméra s'affiche dans le mini lecteur. Testé sur le Samsung avec l'iPhone : la caméra se rallume en restant dans le mini lecteur, et l'iPhone revoit l'image.
+- **iPhone** : la bibliothèque utilise le PiP « appel vidéo » d'Apple (`AVPictureInPictureVideoCallViewController` + `ContentSource(activeVideoCallSourceView:)`, `PIPController.m`). **Apple n'offre aucune API pour y ajouter un bouton** ; seuls les boutons système (agrandir, fermer) y figurent. On pourrait détourner le bouton lecture/pause du PiP « lecture vidéo », mais ce serait l'icône ▶︎/⏸ et pas une caméra : à éviter. Proposition : dans l'écran d'appel, un réglage « Quand je quitte WIPP : caméra en pause / me montrer », par défaut **en pause**, mémorisé. Avec « me montrer » et iOS 18+, ne pas faire `track.mute()` en arrière-plan (étapes 1 et 2 ci-dessus).
