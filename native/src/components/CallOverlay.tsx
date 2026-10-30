@@ -25,7 +25,7 @@ import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 import { tr } from "../lib/tr";
 import { onAndroidPipCameraButton, setAndroidCallPip, setAndroidPipCamera, useAndroidPip } from "../lib/calls/android-pip";
-import { clearAwayCameraNotice, onAwayCameraAction, showAwayCameraNotice } from "../lib/calls/away-camera";
+import { awayLog, clearAwayCameraNotice, onAwayCameraAction, prepareAwayCamera, showAwayCameraNotice } from "../lib/calls/away-camera";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -219,6 +219,7 @@ export function CallOverlay() {
     }
     if (session?.phase === "connected" && session.callId) {
       markSystemCallConnected(session.callId);
+      if (session.kind === "video") prepareAwayCamera();
       // Answered (in the app or on the iPhone screen): no « Appel manqué » notice for this call.
       if (session.dir === "in") void import("../lib/calls/callkeep").then(({ clearMissedNotice }) => clearMissedNotice(session.callId));
     }
@@ -594,6 +595,7 @@ export function CallOverlay() {
         if (track && !track.isMuted) void track.mute().catch(() => undefined);
         // Video call: a notification lets me show my camera anyway (« Me montrer »), without coming back.
         const live = useCallSession.getState().session;
+        awayLog(`background: track=${Boolean(track)} phase=${live?.phase} kind=${live?.kind} camOff=${live?.camOff}`);
         if (track && live?.phase === "connected" && live.kind === "video" && !live.camOff) void showAwayCameraNotice(false);
       }
       prev = st;
