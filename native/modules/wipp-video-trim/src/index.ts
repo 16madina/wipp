@@ -44,9 +44,12 @@ export async function materializeLibraryVideo(assetId: string) {
 /** Writes a new file containing only [start, end] seconds. */
 export async function trimVideoSegment(uri: string, start: number, end: number) {
   const mod = native();
-  if (!mod) throw new Error("video_trim_unavailable");
   if (!(end > start) || end - start > 60.25) throw new Error("video_trim_range");
-  return mod.trim(uri, start, end);
+  if (mod) return mod.trim(uri, start, end);
+  // Android: the Studio engine (Media3) writes the chosen passage, in the 9:16 Story frame.
+  const studio = Platform.OS === "android" ? studioNative() : null;
+  if (!studio) throw new Error("video_trim_unavailable");
+  return studio.exportProject({ width: 720, height: 1280, segments: [{ uri, start, end, volume: 1, speed: 1 }], texts: [] });
 }
 
 /* ───────── Video Studio ───────── */
