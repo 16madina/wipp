@@ -238,7 +238,7 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
-/** Animated WIPP logo (Grok video, sound removed, black background removed, endless loop). */
+/** Animated WIPP logo (Grok video, 1.4× faster, sound removed, black background removed, endless loop). */
 const PAUSE_LOGO = require("../../assets/call-reactions/logo-pause.webp");
 
 /** Shown to the other person while my camera is paused (I left the app for a moment). */
@@ -266,7 +266,7 @@ function BeRightBack({ name, avatar, top }: { name: string; avatar?: string; top
       <View style={{ marginTop: 18, alignItems: "center", gap: 10 }}>
         <Avatar user={{ displayName: name, avatar }} size={56} />
         <Text style={{ color: "#fff", fontSize: 22, fontFamily: "Inter_700Bold" }}>{tr("Je reviens…")}</Text>
-        <Text style={{ color: GREY, fontSize: 14, textAlign: "center", paddingHorizontal: 40 }}>{tr("{0} a quitté l’app un instant. Vous vous entendez toujours.", name)}</Text>
+        <Text style={{ color: GREY, fontSize: 14, textAlign: "center", paddingHorizontal: 40 }}>{tr("{0} revient dans un instant.", name)}</Text>
       </View>
     </View>
   );
