@@ -1240,7 +1240,7 @@ export function EventLiveRoomScreen({ eventId, mini = false }: { eventId: string
       <QaAnnounce n={qaAnnounce} />
 
       {/* Bottom: comments over the video, then the bar */}
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
+      <KeyboardAvoidingView behavior="padding" style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
         {multi && !(immersive && chromeOn) ? null : <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: immersive ? 230 : 360 }} />}
         {showComments && sharing && !shareLandscape ? (
           <View pointerEvents="box-none" style={{ paddingLeft: 10, paddingRight: 70, paddingBottom: chromeOn ? 4 : Math.max(insets.bottom, 10) + 6, gap: 4, alignItems: "flex-start" }}>
