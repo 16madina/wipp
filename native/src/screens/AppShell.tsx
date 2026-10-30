@@ -412,6 +412,21 @@ export function AppShell() {
     };
   }, []);
 
+  // Started by a call while the phone was locked, before the sign-in could be read: when WIPP is opened,
+  // start again so the saved sign-in is found (instead of staying on the sign-in screen).
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active" || useWippStore.getState().onboarded) return;
+      void import("../lib/firebase-phone").then(async ({ currentFirebaseUser, hasStoredFirebaseUser }) => {
+        if (currentFirebaseUser() || !(await hasStoredFirebaseUser())) return;
+        const { reloadAppAsync } = await import("expo");
+        await reloadAppAsync("signed-in user saved but not loaded at launch").catch(() => undefined);
+      });
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     if (!introDone || !authReady) return;
     const s = useWippStore.getState();
