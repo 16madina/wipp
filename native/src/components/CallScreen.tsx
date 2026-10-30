@@ -238,6 +238,9 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
+/** Animated WIPP logo (Grok video, sound removed, black background removed, endless loop). */
+const PAUSE_LOGO = require("../../assets/call-reactions/logo-pause.webp");
+
 /** Shown to the other person while my camera is paused (I left the app for a moment). */
 function BeRightBack({ name, avatar, top }: { name: string; avatar?: string; top: number }) {
   const t = useRef(new Animated.Value(0)).current;
@@ -256,11 +259,11 @@ function BeRightBack({ name, avatar, top }: { name: string; avatar?: string; top
   return (
     <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" }}>
       <LinearGradient colors={[BG_TOP, BG_BOTTOM]} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} />
-      <Animated.View style={{ position: "absolute", width: 260, height: 260, borderRadius: 130, backgroundColor: "rgba(255,216,77,0.12)", opacity: glow, transform: [{ scale }] }} />
-      <Animated.View style={{ alignItems: "center", transform: [{ scale }], marginTop: -top / 2 }}>
-        <WippWordmark size={54} variant="dark" />
-      </Animated.View>
-      <View style={{ marginTop: 34, alignItems: "center", gap: 10 }}>
+      <Animated.View style={{ position: "absolute", width: 300, height: 300, borderRadius: 150, backgroundColor: "rgba(255,216,77,0.12)", opacity: glow, transform: [{ scale }] }} />
+      <View style={{ alignItems: "center", marginTop: -top / 2 }}>
+        <Image source={PAUSE_LOGO} style={{ width: 210, height: 210 }} contentFit="contain" autoplay />
+      </View>
+      <View style={{ marginTop: 18, alignItems: "center", gap: 10 }}>
         <Avatar user={{ displayName: name, avatar }} size={56} />
         <Text style={{ color: "#fff", fontSize: 22, fontFamily: "Inter_700Bold" }}>{tr("Je reviens…")}</Text>
         <Text style={{ color: GREY, fontSize: 14, textAlign: "center", paddingHorizontal: 40 }}>{tr("{0} a quitté l’app un instant. Vous vous entendez toujours.", name)}</Text>
