@@ -989,7 +989,8 @@ function ConversationInner({ chatId }: { chatId: string }) {
                   </Press>
                 )}
                 <Press onPress={() => push({ name: "chat-info", chatId })} style={{ minWidth: 0, flexShrink: 1, flex: 1 }}>
-                <View style={{ minWidth: 0, flexShrink: 1, flex: 1 }}>
+                {/* No flex: 1 here: in this column it squashed the height to nothing on Android and hid « en ligne / vu… ». */}
+                <View style={{ minWidth: 0, flexShrink: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4, minWidth: 0 }}>
                     <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: compact ? 15 : 16, fontFamily: "Inter_600SemiBold", color: colors.fg }}>
                       {title}
