@@ -43,6 +43,10 @@ function ensureHandler() {
   handleNotification: async (notification) => {
     try {
       const data = (notification.request.content.data ?? {}) as Record<string, unknown>;
+      // Video call left for the mini player: the camera question is always shown, without sound.
+      if (data.type === "call-camera") {
+        return { shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true };
+      }
       const eventId = String(data.eventId || notification.request.identifier || "");
       if (remember(`show:${eventId}`)) {
         return {
