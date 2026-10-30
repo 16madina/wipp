@@ -98,7 +98,7 @@ import { useEffect, useState } from "react";
 import { colors } from "../theme";
 import { WippmojiStudioScreen } from "./wippmoji-studio";
 import { useAppearance } from "../lib/appearance";
-import { AppState, Platform, View } from "react-native";
+import { AppState, BackHandler, Platform, View } from "react-native";
 import { EdgeSwipeBack, NO_SWIPE_BACK } from "../components/EdgeSwipeBack";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
 import { ScreenProtectionHost } from "../components/ScreenProtectionHost";
@@ -334,6 +334,16 @@ export function AppShell() {
   const underScreen = stack.length > 1 ? stack[stack.length - 2] : undefined;
   const swipeBack =
     top === raw && !showTabs && Boolean(underScreen) && !AUTH.has(top.name) && !AUTH.has(underScreen!.name) && !NO_SWIPE_BACK.has(top.name);
+  // Android back button: same pages as the iPhone swipe go back one page. Elsewhere (main tabs, calls,
+  // camera, Stories, live…) Android keeps its default (WIPP goes to the background).
+  useEffect(() => {
+    if (Platform.OS !== "android" || !swipeBack) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      useWippStore.getState().pop();
+      return true;
+    });
+    return () => sub.remove();
+  }, [swipeBack]);
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
