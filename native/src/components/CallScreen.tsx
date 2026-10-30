@@ -238,6 +238,9 @@ function BigButton({ color, label, a11y, onPress, children }: { color: string; l
   );
 }
 
+/** iPhone: the other person's video keeps playing in a floating window when WIPP goes to the background. */
+const CALL_PIP = { iosPIP: { enabled: true, startAutomatically: true, stopAutomatically: true, preferredSize: { width: 9, height: 16 } } } as object;
+
 /** Raised hand: the WIPP hand (Grok animation, transparent), waving in the middle of the tile while the hand is up. */
 const RAISED_HAND = require("../../assets/call-reactions/main-levee.webp");
 function WavingHand({ size }: { size: number }) {
@@ -455,7 +458,7 @@ export function CallScreen({
     <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 100, elevation: 100, backgroundColor: BG_BOTTOM }}>
       {main ? (
         <Pressable onPress={showControls} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}>
-          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={main === localVid} zOrder={0} />
+          <RTCView key={`main-${viewEpoch}-${main}`} streamURL={main} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={main === localVid} zOrder={0} {...(main === remoteVid ? CALL_PIP : {})} />
           {preview ? <View pointerEvents="none" style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.35)" }} /> : null}
         </Pressable>
       ) : (
@@ -552,7 +555,7 @@ export function CallScreen({
       {/* Local camera, floating bottom-right on live video */}
       {mini && !mosaic ? (
         <Press onPress={() => setSwapped((v) => !v)} style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.5)", backgroundColor: "#000", shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 10 }}>
-          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={mini === localVid} zOrder={1} />
+          <RTCView key={`mini-${viewEpoch}-${mini}`} streamURL={mini} style={{ width: 104, height: 148 }} objectFit="cover" mirror={mini === localVid} zOrder={1} {...(mini === remoteVid ? CALL_PIP : {})} />
         </Press>
       ) : null}
 
@@ -615,6 +618,14 @@ export function CallScreen({
         </View>
       ) : null}
 
+      {/* The other person left the app (or turned the camera off): say so instead of a frozen picture. */}
+      {!mosaic && connected && video && remoteUrl && remoteMuted ? (
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: insets.top + 64, alignItems: "center" }}>
+          <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, overflow: "hidden" }}>
+            {tr("Caméra de {0} en pause", peer.displayName)}
+          </Text>
+        </View>
+      ) : null}
       {/* Reactions: the other person's over the video (one-to-one video), mine top right, collective in the middle. */}
       {!mosaic && videoLive ? (
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: height * 0.22, height: height * 0.35 }}>

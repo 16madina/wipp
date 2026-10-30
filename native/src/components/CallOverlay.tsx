@@ -572,6 +572,12 @@ export function CallOverlay() {
     let prev = AppState.currentState;
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active" && prev === "background") revive();
+      if (st === "background") {
+        // iOS stops the camera in the background: pause it on purpose, so the other phone shows
+        // "camera paused" instead of a frozen picture. It turns back on when WIPP comes back (revive).
+        const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+        if (track && !track.isMuted) void track.mute().catch(() => undefined);
+      }
       prev = st;
     });
     reviveRef.current = revive;
