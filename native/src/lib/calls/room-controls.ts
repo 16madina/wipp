@@ -14,6 +14,8 @@ export type CallMsg =
   | { t: "clap" }
   | { t: "mute"; to: string }
   | { t: "cam-ask"; to: string }
+  /** Organizer / moderator asks someone to turn their microphone back on (they choose). */
+  | { t: "mic-ask"; to: string }
   | { t: "floor"; to: string }
   /** Organizer only: names (on) or removes a moderator. */
   | { t: "mod"; to: string; on: boolean }
@@ -37,14 +39,16 @@ type State = {
   notice: { text: string; at: number } | null;
   /** The organizer asks me to turn my camera on. */
   camAsk: boolean;
+  /** The organizer asks me to turn my microphone on. */
+  micAsk: boolean;
   /** Sends a message to everyone in the call (set by the call overlay while connected). */
   send: ((msg: CallMsg) => void) | null;
 };
 
-export const useCallControls = create<State>(() => ({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, send: null }));
+export const useCallControls = create<State>(() => ({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, micAsk: false, send: null }));
 
 export function resetCallControls() {
-  useCallControls.setState({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, send: null });
+  useCallControls.setState({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, micAsk: false, send: null });
 }
 
 export function callNotice(text: string) {

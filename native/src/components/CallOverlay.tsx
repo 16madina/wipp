@@ -424,6 +424,8 @@ export function CallOverlay() {
           rc.callNotice(tr("{0} a coupé ton micro", nameOf(from)));
         } else if (msg.t === "cam-ask") {
           rc.useCallControls.setState({ camAsk: true });
+        } else if (msg.t === "mic-ask") {
+          rc.useCallControls.setState({ micAsk: true });
         } else if (msg.t === "floor") {
           rc.setHand(me, false);
           send({ t: "hand", up: false });
