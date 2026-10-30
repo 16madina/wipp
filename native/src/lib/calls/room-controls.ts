@@ -18,7 +18,11 @@ export type CallMsg =
   /** Organizer only: names (on) or removes a moderator. */
   | { t: "mod"; to: string; on: boolean }
   /** Organizer only: the full list, for people who join later. */
-  | { t: "mods"; ids: string[] };
+  | { t: "mods"; ids: string[] }
+  /** Animated reaction: only its id travels (r), with a unique tag (n) and the send time (at). */
+  | { t: "react"; r: string; n: string; at: number }
+  /** WIPP Moment: a shared 3-second celebration. */
+  | { t: "moment"; n: string; at: number };
 
 type State = {
   /** Identity of the organizer (announced by their phone). */

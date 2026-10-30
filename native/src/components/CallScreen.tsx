@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Animated, Easing, Modal, Pressable, ScrollVie
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  Smile,
   ChevronDown,
   Clock,
   MessageCircle,
@@ -30,6 +31,8 @@ import { useT, useWippStore } from "../lib/store";
 import { acceptCurrentCall, declineCurrentCall, upgradeToVideo, useCallSession, type CallPhase, type CallSession } from "../lib/calls/session";
 import { tr } from "../lib/tr";
 import { callNotice, sendCallMsg, useCallControls } from "../lib/calls/room-controls";
+import { CollectiveReaction, HandQueue, ParticipantReactions, ReactionPicker, SpeakingRing, WippMoment } from "./CallReactions";
+import { canSendMoment, canSendReaction, newNonce, type ReactionId } from "../lib/calls/reactions";
 const callNoticeSent = () => callNotice(tr("Demande envoyée"));
 
 const BG_TOP = "#070B16";
@@ -253,7 +256,7 @@ function WavingHand({ size }: { size: number }) {
   return <Animated.Text style={{ fontSize: size, lineHeight: size * 1.2, transform: [{ translateY: size * 0.3 }, { rotate }, { translateY: -size * 0.3 }] }}>✋</Animated.Text>;
 }
 
-export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean };
+export type GroupTile = { key: string; identity?: string; local: boolean; name: string; avatar?: string; url: string | null; micOn: boolean; speaking: boolean; level?: number };
 
 /** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
 function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void; /** Organizer: one tap mutes this person. */ onMute?: (tile: GroupTile) => void }) {
@@ -293,7 +296,9 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
             {tile.url ? (
               <RTCView key={`tile-${viewEpoch}-${tile.url}`} streamURL={tile.url} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={tile.local} zOrder={1} />
             ) : (
-              <Avatar user={{ displayName: tile.name, avatar: tile.avatar }} size={many || rows > 2 ? 56 : 84} />
+              <SpeakingRing speaking={tile.speaking} level={tile.level} size={many || rows > 2 ? 56 : 84}>
+                <Avatar user={{ displayName: tile.name, avatar: tile.avatar }} size={many || rows > 2 ? 56 : 84} />
+              </SpeakingRing>
             )}
             <View style={{ position: "absolute", left: 8, right: 8, bottom: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
@@ -324,9 +329,7 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
                 </View>
               </>
             ) : null}
-            {tile.identity && claps.some((c) => c.id === tile.identity && Date.now() - c.at < 3000) ? (
-              <Text style={{ position: "absolute", top: 6, right: 10, fontSize: 30 }}>👏</Text>
-            ) : null}
+            <ParticipantReactions identity={tile.identity} size={many || rows > 2 ? 70 : 96} />
           </View>
         </Pressable>
       ))}
@@ -347,6 +350,7 @@ export function CallScreen({
   setSwapped,
   viewEpoch,
   groupTiles,
+  people,
   onMinimize,
   onHangup,
   RTCView,
@@ -363,6 +367,8 @@ export function CallScreen({
   viewEpoch: number;
   /** Group call: everyone in the room (me first). */
   groupTiles?: GroupTile[];
+  /** Everyone in the room (one-to-one too): who is speaking, for reactions and the speaking ring. */
+  people?: { identity: string; local: boolean; speaking: boolean; level?: number }[];
   onMinimize: () => void;
   onHangup: () => void;
   RTCView: RTC;
@@ -385,6 +391,15 @@ export function CallScreen({
   // Organizer or moderator: same tools (only the organizer names moderators).
   const iModerate = iAmHost || Boolean(myIdentity && mods.includes(myIdentity));
   const myHand = Boolean(myIdentity && hands.includes(myIdentity));
+  const remotePerson = people?.find((p) => !p.local);
+  const localPerson = people?.find((p) => p.local);
+  const [reacting, setReacting] = useState(false);
+  const react = (r: ReactionId) => {
+    if (!canSendReaction()) return;
+    sendCallMsg({ t: "react", r, n: newNonce(), at: Date.now() });
+    // Older WIPP versions only know the applause.
+    if (r === "bravo") sendCallMsg({ t: "clap" });
+  };
   const [hostTile, setHostTile] = useState<GroupTile | null>(null);
   const [, noticeTick] = useState(0);
   useEffect(() => {
@@ -518,9 +533,12 @@ export function CallScreen({
             ) : (
               <>
                 <Halo size={avatarSize + 26} active={incoming || session.phase === "outgoing"} />
-                <View style={{ padding: 3, borderRadius: avatarSize, borderWidth: 1, borderColor: "rgba(255,216,77,0.7)" }}>
-                  <Avatar user={{ displayName: peer.displayName, avatar: peer.avatar }} size={avatarSize} />
-                </View>
+                <SpeakingRing speaking={Boolean(connected && remotePerson?.speaking)} level={remotePerson?.level} size={avatarSize + 8}>
+                  <View style={{ padding: 3, borderRadius: avatarSize, borderWidth: 1, borderColor: "rgba(255,216,77,0.7)" }}>
+                    <Avatar user={{ displayName: peer.displayName, avatar: peer.avatar }} size={avatarSize} />
+                  </View>
+                </SpeakingRing>
+                <ParticipantReactions identity={remotePerson?.identity} size={avatarSize * 0.6} />
               </>
             )}
           </View>
@@ -593,6 +611,11 @@ export function CallScreen({
               <RoundAction label={c.speaker} a11y={session.speaker ? c.a11y.speakerOff : c.a11y.speakerOn} active={session.speaker} translucent={videoLive} onPress={() => patch({ speaker: !session.speaker })}>
                 {session.speaker ? <Volume2 size={22} color={GOLD} /> : <VolumeX size={22} color="#fff" />}
               </RoundAction>
+              {connected ? (
+                <RoundAction label={tr("Réactions")} a11y={tr("Envoyer une réaction")} translucent={videoLive} onPress={() => setReacting(true)}>
+                  <Smile size={22} color="#fff" />
+                </RoundAction>
+              ) : null}
               <RoundAction label={c.more} a11y={c.moreTitle} translucent={videoLive} onPress={() => setMore(true)}>
                 <MoreHorizontal size={22} color="#fff" />
               </RoundAction>
@@ -603,6 +626,34 @@ export function CallScreen({
           </BigButton>
         </View>
       ) : null}
+
+      {/* Reactions: the other person's over the video (one-to-one video), mine top right, collective in the middle. */}
+      {!mosaic && videoLive ? (
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: height * 0.22, height: height * 0.35 }}>
+          <ParticipantReactions identity={remotePerson?.identity} size={Math.min(170, width * 0.42)} />
+        </View>
+      ) : null}
+      {!mosaic && connected ? (
+        <View pointerEvents="none" style={{ position: "absolute", right: 12, top: insets.top + 60, width: 110, height: 140 }}>
+          <ParticipantReactions identity={localPerson?.identity} size={80} />
+        </View>
+      ) : null}
+      <CollectiveReaction size={Math.min(260, width * 0.62)} />
+      <WippMoment width={width} height={height} />
+      {mosaic && hands.length ? (
+        <View style={{ position: "absolute", left: 10, top: insets.top + 60, zIndex: 40 }}>
+          <HandQueue
+            hands={hands}
+            nameOf={(id) => groupTiles?.find((t) => t.identity === id)?.name ?? tr("Quelqu’un")}
+            canGive={iModerate}
+            onGive={(id) => {
+              sendCallMsg({ t: "floor", to: id });
+              callNotice(tr("Tu donnes la parole à {0}", groupTiles?.find((t) => t.identity === id)?.name ?? ""));
+            }}
+          />
+        </View>
+      ) : null}
+      <ReactionPicker visible={reacting} onClose={() => setReacting(false)} onPick={react} bottomInset={insets.bottom} />
 
       {/* "Plus": only options the call really supports */}
       <Modal visible={more} transparent animationType="fade" onRequestClose={() => setMore(false)}>
@@ -628,9 +679,25 @@ export function CallScreen({
               </Press>
             ) : null}
             {mosaic ? (
-              <Press onPress={() => { setMore(false); sendCallMsg({ t: "clap" }); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+              <Press onPress={() => { setMore(false); react("bravo"); }} style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
                 <Text style={{ fontSize: 18, width: 20, textAlign: "center" }}>👏</Text>
                 <Text style={{ color: "#fff", fontSize: 15 }}>{tr("Applaudir")}</Text>
+              </Press>
+            ) : null}
+            {connected ? (
+              <Press
+                onPress={() => {
+                  setMore(false);
+                  if (!canSendMoment()) {
+                    callNotice(tr("Un WIPP Moment toutes les 30 secondes au maximum."));
+                    return;
+                  }
+                  sendCallMsg({ t: "moment", n: newNonce(), at: Date.now() });
+                }}
+                style={{ paddingVertical: 14, flexDirection: "row", gap: 12, alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 18, width: 20, textAlign: "center" }}>🎊</Text>
+                <Text style={{ color: "#fff", fontSize: 15 }}>{tr("WIPP Moment")}</Text>
               </Press>
             ) : null}
             {connected && !session.group && session.callId ? (

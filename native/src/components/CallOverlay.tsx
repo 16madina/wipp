@@ -35,7 +35,7 @@ function streamURL(track: { mediaStream?: unknown } | null) {
   return stream?.toURL?.() ?? null;
 }
 
-type RoomTile = { key: string; local: boolean; identity: string; url: string | null; micOn: boolean; speaking: boolean; name?: string; avatar?: string };
+type RoomTile = { key: string; local: boolean; identity: string; url: string | null; micOn: boolean; speaking: boolean; level?: number; name?: string; avatar?: string };
 
 /** Name and photo sent by the server with each person's call pass (same on every phone). */
 function roomPerson(p: { name?: string; identity: string; metadata?: string }) {
@@ -290,6 +290,7 @@ export function CallOverlay() {
             url: cam?.track && !cam.isMuted ? streamURL(cam.track) : null,
             micOn: Boolean(mic && !mic.isMuted),
             speaking: p.isSpeaking,
+            level: p.audioLevel,
             ...roomPerson(p),
           };
         }),
@@ -320,6 +321,12 @@ export function CallOverlay() {
     void import("../lib/calls/room-controls").then((rc) => {
       if (cancelled) return;
       rc.resetCallControls();
+      void import("../lib/calls/reactions").then((rx) => {
+        rx.resetReactions();
+        void rx.loadReactionSettings();
+      });
+      /** Phones that send the new reactions (their old-style applause is a copy, ignored). */
+      const reactors = new Set<string>();
       const enc = new TextEncoder();
       const dec = new TextDecoder();
       const isHost = session.dir === "out";
@@ -334,6 +341,8 @@ export function CallOverlay() {
         const me = room.localParticipant.identity;
         if (msg.t === "hand") rc.setHand(me, msg.up);
         if (msg.t === "clap") rc.addClap(me);
+        if (msg.t === "react") void import("../lib/calls/reactions").then((rx) => rx.isReactionId(msg.r) && rx.receiveReaction(me, msg.r, msg.n));
+        if (msg.t === "moment") void import("../lib/calls/reactions").then((rx) => rx.receiveMoment(me, msg.n));
         if (msg.t === "mod") rc.useCallControls.setState((st) => ({ mods: msg.on ? [...st.mods.filter((x) => x !== msg.to), msg.to] : st.mods.filter((x) => x !== msg.to) }));
       };
       rc.useCallControls.setState({ send });
@@ -380,8 +389,19 @@ export function CallOverlay() {
           if (msg.up && (st.host === me || st.mods.includes(me))) rc.callNotice(tr("{0} lève la main", nameOf(from)));
           return;
         }
+        if (msg.t === "react") {
+          reactors.add(from);
+          void import("../lib/calls/reactions").then((rx) => rx.isReactionId(msg.r) && rx.receiveReaction(from, msg.r, String(msg.n ?? ""), Number(msg.at) || undefined));
+          return;
+        }
+        if (msg.t === "moment") {
+          void import("../lib/calls/reactions").then((rx) => rx.receiveMoment(from, String(msg.n ?? "")));
+          return;
+        }
         if (msg.t === "clap") {
           rc.addClap(from);
+          // Applause from an older WIPP version: shown as the new « Bravo ».
+          if (!reactors.has(from)) void import("../lib/calls/reactions").then((rx) => rx.receiveReaction(from, "bravo", `clap${Date.now()}`));
           return;
         }
         // Organizer tools: only from the organizer or a moderator, only for me.
@@ -634,7 +654,7 @@ export function CallOverlay() {
         // Contacts keep the name I know them by; anyone else shows their WIPP name and photo.
         const known = byIdentity.get(tile.identity);
         const who = tile.local ? { displayName: tr("Toi"), avatar: me.avatar } : known ? { displayName: known.displayName, avatar: known.avatar ?? tile.avatar } : { displayName: tile.name ?? tr("Membre"), avatar: tile.avatar };
-        return { key: tile.key, identity: tile.identity, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking };
+        return { key: tile.key, identity: tile.identity, local: tile.local, name: who.displayName, avatar: who.avatar, url: tile.url, micOn: tile.local ? !session.muted : tile.micOn, speaking: tile.speaking, level: tile.level };
       })
     : undefined;
   const peer = {
@@ -655,6 +675,7 @@ export function CallOverlay() {
       setSwapped={setSwapped}
       viewEpoch={viewEpoch}
       groupTiles={groupTiles}
+      people={tiles.map((x) => ({ identity: x.identity, local: x.local, speaking: x.speaking, level: x.level }))}
       onMinimize={minimize}
       RTCView={RTCView as never}
       onHangup={() => {
