@@ -89,8 +89,12 @@ async function charactersUsed(profileId: string, kind: "moji" | "pop") {
   return rows[0]?.n ?? 0;
 }
 
-/** Until in-app purchases exist, only the team and the listed testers may generate (real generations cost money). */
+/**
+ * In-app purchases exist: the Studio is open to everyone (packs are paid). WIPPMOJI_OPEN=0 closes it again
+ * (then only the team and the listed testers may generate).
+ */
 async function assertAllowed(profileId: string) {
+  if (process.env.WIPPMOJI_OPEN !== "0") return;
   const testers = (process.env.WIPPMOJI_TESTERS || "").split(",").map((s) => s.trim()).filter(Boolean);
   if (testers.includes(profileId)) return;
   const sql = await getSql();
