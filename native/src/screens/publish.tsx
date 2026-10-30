@@ -232,7 +232,7 @@ export function CreateListingScreen({ listingId }: { listingId?: string }) {
 
   return (
     <ScreenRoot>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ height: 210, marginHorizontal: -14, marginBottom: 4 }}>
             <Image source={listingHero} style={{ position: "absolute", right: 0, top: 30, width: "68%", height: 180 }} contentFit="cover" />
@@ -666,7 +666,7 @@ export function CreateLifestyleScreen({ eventId }: { eventId?: string }) {
 
   return (
     <ScreenRoot>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
           {/* Hero: illustration on the right, title on the left (artwork has no text). */}
           <View style={{ height: 200, marginHorizontal: -14, marginBottom: 4 }}>

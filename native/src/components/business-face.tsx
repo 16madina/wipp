@@ -259,7 +259,7 @@ export function BusinessCardExperience({
         <GlassHeader>
           <Header title={tr("Partager ma carte")} onBack={back} />
         </GlassHeader>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 16) + 12 }} keyboardShouldPersistTaps="handled">
           <SearchField placeholder={tr("Rechercher un contact")} value={q} onChangeText={setQ} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingVertical: 16 }}>

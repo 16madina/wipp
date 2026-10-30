@@ -54,7 +54,7 @@ export function LiveEndScreen({ eventId, onBack }: { eventId: string; onBack: ()
 
   return (
     <View style={{ flex: 1, backgroundColor: "#111725" }}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 36, paddingHorizontal: 18, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ alignSelf: "center", width: 64, height: 64, borderRadius: 32, backgroundColor: "#262d42", alignItems: "center", justifyContent: "center" }}>
             <CheckCheck size={28} color={GOLD} />

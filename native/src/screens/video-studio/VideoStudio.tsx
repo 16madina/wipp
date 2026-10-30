@@ -776,7 +776,7 @@ export function VideoStudio({
 
       {/* Panels */}
       {panel && currentSeg && !writing ? (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
+        <KeyboardAvoidingView behavior="padding" style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
           <View style={{ backgroundColor: "rgba(17,24,39,0.92)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ color: colors.fg, fontFamily: "Inter_700Bold", fontSize: 17 }}>

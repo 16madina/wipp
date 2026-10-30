@@ -225,7 +225,7 @@ export function QuestionsSheet({
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
       <Press accessibilityLabel={tr("Fermer les questions")} onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView behavior="padding">
         <Animated.View
           style={{
             maxHeight: 520,

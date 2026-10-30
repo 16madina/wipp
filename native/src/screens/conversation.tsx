@@ -1050,7 +1050,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
           </Text>
         </View>
       ) : null}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <FlatList
           ref={listRef}
           scrollEnabled={!scratching}

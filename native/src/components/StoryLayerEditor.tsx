@@ -202,7 +202,7 @@ function TextEditor({
   const nextBg = () => setBg((b) => (b === "none" ? "solid" : b === "solid" ? "soft" : "none"));
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Press onPress={onCancel} accessibilityLabel={tr("Annuler")} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
             <X size={26} color="#fff" />
