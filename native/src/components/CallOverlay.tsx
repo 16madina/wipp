@@ -215,7 +215,11 @@ export function CallOverlay() {
     if ((session?.phase === "connecting" || session?.phase === "connected") && session.dir === "in" && session.callId) {
       dismissSystemRinging(session.callId);
     }
-    if (session?.phase === "connected" && session.callId) markSystemCallConnected(session.callId);
+    if (session?.phase === "connected" && session.callId) {
+      markSystemCallConnected(session.callId);
+      // Answered (in the app or on the iPhone screen): no « Appel manqué » notice for this call.
+      if (session.dir === "in") void import("../lib/calls/callkeep").then(({ clearMissedNotice }) => clearMissedNotice(session.callId));
+    }
     if (session?.callId) lastCallId.current = session.callId;
     // Any end (hang-up here, the other side, refused, busy, failed, or the session cleared) closes the iOS/Android call too.
     if (!session || terminalPhases(session.phase)) {

@@ -33,21 +33,26 @@ function rememberUuid(callId: string, uuid: string) {
  * The call was really answered (in the app or on the iPhone screen): remove the « Appel manqué » notice that iOS
  * schedules for every ringing call (shown when the system screen closes without a CallKit answer).
  */
-export function clearMissedNotice(callId: string) {
-  const uuids = [...(uuidsByCall.get(callId) ?? [])];
-  if (!uuids.length) return;
+export function clearMissedNotice(_callId?: string) {
+  // Every « Appel manqué » notice of the last 2 minutes, shown or still scheduled: the call was answered.
+  // (Looking it up by the iPhone call id missed it when the app had not linked that id yet.)
   const clear = () =>
     void import("expo-notifications")
       .then(async (N) => {
-        for (const u of uuids) {
-          await N.cancelScheduledNotificationAsync(`missed-${u}`).catch(() => undefined);
-          await N.dismissNotificationAsync(`missed-${u}`).catch(() => undefined);
+        const shown = await N.getPresentedNotificationsAsync().catch(() => []);
+        const recent = Date.now() - 120_000;
+        for (const n of shown) {
+          const id = n.request.identifier;
+          if (id.startsWith("missed-") && n.date >= recent) await N.dismissNotificationAsync(id).catch(() => undefined);
         }
+        const scheduled = await N.getAllScheduledNotificationsAsync().catch(() => []);
+        for (const r of scheduled) if (r.identifier.startsWith("missed-")) await N.cancelScheduledNotificationAsync(r.identifier).catch(() => undefined);
       })
       .catch(() => undefined);
   clear();
-  // The notice may be shown a moment after the answer: clear again shortly after.
-  setTimeout(clear, 2500);
+  // iOS may post it a moment after the answer (when its call screen closes): clear again.
+  setTimeout(clear, 1500);
+  setTimeout(clear, 4000);
 }
 let endHandler: ((callId: string) => void) | null = null;
 
