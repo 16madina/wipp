@@ -145,6 +145,9 @@ function LiveHost({ top }: { top: Screen }) {
   );
 }
 
+/** The sign-in reload happened once in this launch. */
+let reloadedForSignIn = false;
+
 function ScreenSwitch({ screen }: { screen: Screen }) {
   switch (screen.name) {
     case "splash":
@@ -433,10 +436,15 @@ export function AppShell() {
   // sign-in is still loading, so WIPP restarted in a loop (about every 2 s) and never opened.
   useEffect(() => {
     if (Platform.OS !== "ios") return;
+    let prev = AppState.currentState;
     const sub = AppState.addEventListener("change", (st) => {
-      if (st !== "active" || useWippStore.getState().onboarded) return;
+      const fromBackground = prev === "background";
+      prev = st;
+      // Only when coming back from the background, and at most once per launch (never a loop).
+      if (st !== "active" || !fromBackground || reloadedForSignIn || useWippStore.getState().onboarded) return;
       void import("../lib/firebase-phone").then(async ({ currentFirebaseUser, hasStoredFirebaseUser }) => {
         if (currentFirebaseUser() || !(await hasStoredFirebaseUser())) return;
+        reloadedForSignIn = true;
         const { reloadAppAsync } = await import("expo");
         await reloadAppAsync("signed-in user saved but not loaded at launch").catch(() => undefined);
       });
