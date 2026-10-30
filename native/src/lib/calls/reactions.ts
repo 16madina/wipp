@@ -32,7 +32,8 @@ export type ReactionDef = {
 };
 
 export const REACTIONS: ReactionDef[] = [
-  { id: "bravo", label: "Bravo", emoji: "👏", file: null, durationMs: 2600, scale: 1.1, place: "over", sound: null, collective: { label: "Ovation", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
+  // Grok (applaus.mp4, 3 s, black background removed) — 29 oct. 2026.
+  { id: "bravo", label: "Bravo", emoji: "👏", file: require("../../../assets/call-reactions/bravo.webp"), durationMs: 2970, scale: 1.1, place: "over", sound: null, collective: { label: "Ovation", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
   { id: "amour", label: "Amour", emoji: "❤️", file: null, durationMs: 2600, scale: 1.2, place: "around", sound: null, collective: { label: "Grand cœur", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
   { id: "mdr", label: "MDR", emoji: "😂", file: null, durationMs: 2400, scale: 1.0, place: "over", sound: null, collective: { label: "Fou rire", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
   { id: "fete", label: "Fête", emoji: "🎉", file: null, durationMs: 2600, scale: 1.3, place: "around", sound: null, collective: { label: "Célébration", file: null, threshold: 3, windowMs: 5000, durationMs: 3000 } },
