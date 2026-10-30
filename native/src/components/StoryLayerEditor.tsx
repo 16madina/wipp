@@ -24,15 +24,15 @@ import { tr } from "../lib/tr";
 
 type Canvas = { w: number; h: number };
 
-/** Drop zone at the bottom centre while dragging. */
-const inTrash = (x: number, y: number) => {
+/** The finger is over the trash (screen points). */
+const inTrash = (fx: number, fy: number, tx: number, ty: number) => {
   "worklet";
-  // Above the caption and « Ajouter à ma story » buttons, so it is always visible.
-  return Math.abs(y - TRASH_Y) < 0.07 && Math.abs(x - 0.5) < 0.16;
+  return Math.hypot(fx - tx, fy - ty) < 56;
 };
 
-/** Where the trash sits on the Story (share of the height). */
-const TRASH_Y = 0.68;
+/** The trash sits in the right-hand column, under « Modifier » (centre, in points from the top-right). */
+const TRASH_SIZE = 56;
+const trashCenter = (canvasW: number, topInset: number) => ({ x: canvasW - 12 - 23, y: topInset + 24 + 46 * 3 + 12 * 2 + 30 + 18 + TRASH_SIZE / 2 });
 
 function EditableLayer({
   layer,
@@ -43,6 +43,7 @@ function EditableLayer({
   onDrag,
   onOverTrash,
   onHold,
+  trash,
 }: {
   layer: StoryLayer;
   canvas: Canvas;
@@ -53,6 +54,7 @@ function EditableLayer({
   onOverTrash: (over: boolean) => void;
   /** Long press without moving: shows a trash to tap. */
   onHold: () => void;
+  trash: { x: number; y: number };
 }) {
   const x = useSharedValue(layer.x);
   const y = useSharedValue(layer.y);
@@ -60,6 +62,12 @@ function EditableLayer({
   const rot = useSharedValue(layer.rot);
   const start = useSharedValue({ x: layer.x, y: layer.y, scale: layer.scale, rot: layer.rot });
   const over = useSharedValue(false);
+  const tx = useSharedValue(trash.x);
+  const ty = useSharedValue(trash.y);
+  useEffect(() => {
+    tx.value = trash.x;
+    ty.value = trash.y;
+  }, [trash.x, trash.y, tx, ty]);
   const cw = useSharedValue(canvas.w);
   const ch = useSharedValue(canvas.h);
   useEffect(() => {
@@ -107,11 +115,17 @@ function EditableLayer({
 
   const pan = Gesture.Pan()
     .averageTouches(true)
+    .onBegin(() => {
+      runOnJS(onDrag)(true);
+    })
+    .onFinalize((_e, ok) => {
+      if (!ok) runOnJS(onDrag)(false);
+    })
     .onStart(begin)
     .onUpdate((e) => {
       x.value = start.value.x + e.translationX / Math.max(cw.value, 1);
       y.value = start.value.y + e.translationY / Math.max(ch.value, 1);
-      const now = inTrash(x.value, y.value);
+      const now = inTrash(e.absoluteX, e.absoluteY, tx.value, ty.value);
       if (now !== over.value) {
         over.value = now;
         runOnJS(onOverTrash)(now);
@@ -330,6 +344,7 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
                 if (d) setHeld(null);
                 setDragging(d);
               }}
+              trash={trashCenter(canvas.w, topInset)}
               onHold={() => {
                 haptic("select");
                 setHeld(i);
@@ -361,39 +376,33 @@ export function StoryLayerEditor({ layers, onChange, topInset }: { layers: Story
         </Press>
       </View>
 
-      {held != null && !dragging && layers[held] ? (
-        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: canvas.h * TRASH_Y - 32, alignItems: "center", zIndex: 20 }}>
+      {(dragging || held != null) && canvas.w > 0 ? (
+        <View
+          pointerEvents={held != null && !dragging ? "box-none" : "none"}
+          style={{ position: "absolute", left: trashCenter(canvas.w, topInset).x - TRASH_SIZE / 2, top: trashCenter(canvas.w, topInset).y - TRASH_SIZE / 2, zIndex: 20, alignItems: "center" }}
+        >
           <Press
             accessibilityLabel={tr("Supprimer")}
             onPress={() => {
+              if (held == null) return;
               haptic("warn");
               removeAt(held);
               setHeld(null);
             }}
-            style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 52, paddingHorizontal: 20, borderRadius: 26, backgroundColor: colors.danger, borderWidth: 2, borderColor: "#fff" }}
-          >
-            <Trash2 size={22} color="#fff" />
-            <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 }}>{tr("Supprimer")}</Text>
-          </Press>
-        </View>
-      ) : null}
-
-      {dragging ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: canvas.h * TRASH_Y - 32, alignItems: "center", zIndex: 20 }}>
-          <View
             style={{
-              width: overTrash ? 64 : 52,
-              height: overTrash ? 64 : 52,
-              borderRadius: 32,
+              width: TRASH_SIZE,
+              height: TRASH_SIZE,
+              borderRadius: TRASH_SIZE / 2,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: overTrash ? colors.danger : "rgba(0,0,0,0.55)",
+              backgroundColor: overTrash || held != null ? colors.danger : "rgba(0,0,0,0.55)",
               borderWidth: 2,
               borderColor: "#fff",
+              transform: [{ scale: overTrash ? 1.2 : 1 }],
             }}
           >
-            <Trash2 size={overTrash ? 28 : 22} color="#fff" />
-          </View>
+            <Trash2 size={24} color="#fff" />
+          </Press>
         </View>
       ) : null}
 
