@@ -1,3 +1,4 @@
+import { Platform, Settings } from "react-native";
 import { tr } from "../tr";
 import { useWippStore } from "../store";
 import { create } from "zustand";
@@ -278,6 +279,16 @@ export async function joinCallByLink(token: string, title: string) {
   }
 }
 
+/** Tells the iPhone side « this call was answered », so it does not post « Appel manqué » when its call screen closes. */
+export function markAnsweredNow() {
+  if (Platform.OS !== "ios") return;
+  try {
+    Settings.set({ wippLastAnswerAt: Date.now() / 1000 });
+  } catch {
+    /* settings unavailable */
+  }
+}
+
 /** Retries while the session is not ready yet (401) or the network is still waking up — up to ~8 s. */
 async function withStartupRetry<T>(fn: () => Promise<T>): Promise<T> {
   let last: unknown;
@@ -299,6 +310,7 @@ export async function acceptCurrentCall() {
   const live = useCallSession.getState().session;
   if (!live?.callId) return;
   useCallSession.getState().patch({ phase: "connecting" });
+  markAnsweredNow();
   try {
     // Answered while WIPP was starting (opened by the iPhone call screen): the sign-in comes back a moment
     // later. Try again for a few seconds instead of giving up (that showed « appel manqué » and the caller kept ringing).
