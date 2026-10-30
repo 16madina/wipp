@@ -1488,7 +1488,7 @@ export const TR_EN: Record<string, string> = {
   "Action impossible pour le moment. Réessaie.": "Not possible right now. Try again.",
   "Ajouter une personne": "Add someone",
   "Impossible d’ajouter cette personne pour le moment.": "Could not add this person right now.",
-  "Jusqu’à 4 personnes dans l’appel. La personne reçoit un appel WIPP.": "Up to 4 people in the call. The person receives a WIPP call.",
+  "Jusqu’à 10 personnes dans l’appel. La personne reçoit un appel WIPP.": "Up to 10 people in the call. The person receives a WIPP call.",
   "Aucun autre contact à ajouter.": "No other contact to add.",
   "Appel en cours…": "Calling…",
   "{0} lève la main": "{0} raised their hand",

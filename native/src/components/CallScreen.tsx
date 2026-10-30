@@ -257,7 +257,9 @@ export type GroupTile = { key: string; identity?: string; local: boolean; name: 
 
 /** Group call grid: 1–2 people stacked, then 2 columns (up to 8). Gold ring = speaking. */
 function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: GroupTile[]; RTCView: RTC; viewEpoch: number; onTile?: (tile: GroupTile) => void; /** Organizer: one tap mutes this person. */ onMute?: (tile: GroupTile) => void }) {
-  const shown = tiles.slice(0, 8);
+  // Up to 8 people fill the screen; more (group calls up to 50) scroll, 2 or 3 per row.
+  const many = tiles.length > 8;
+  const shown = tiles;
   const hands = useCallControls((s) => s.hands);
   const claps = useCallControls((s) => s.claps);
   const [, tick] = useState(0);
@@ -267,12 +269,13 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
     const id = setTimeout(() => tick((n) => n + 1), 3100);
     return () => clearTimeout(id);
   }, [claps]);
-  const cols = shown.length <= 2 ? 1 : 2;
+  const cols = shown.length <= 2 ? 1 : shown.length > 18 ? 3 : 2;
   const rows = Math.ceil(shown.length / cols);
-  return (
-    <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap" }}>
+  const tileSize = many ? { width: `${100 / cols}%` as const, aspectRatio: 0.82 } : { width: `${100 / cols}%` as const, height: `${100 / rows}%` as const };
+  const grid = (
+    <View style={{ flex: many ? undefined : 1, flexDirection: "row", flexWrap: "wrap" }}>
       {shown.map((tile) => (
-        <Pressable key={tile.key} onPress={onTile ? () => onTile(tile) : undefined} style={{ width: `${100 / cols}%`, height: `${100 / rows}%`, padding: 4 }}>
+        <Pressable key={tile.key} onPress={onTile ? () => onTile(tile) : undefined} style={{ ...tileSize, padding: 4 }}>
           <View
             style={{
               flex: 1,
@@ -288,7 +291,7 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
             {tile.url ? (
               <RTCView key={`tile-${viewEpoch}-${tile.url}`} streamURL={tile.url} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} objectFit="cover" mirror={tile.local} zOrder={1} />
             ) : (
-              <Avatar user={{ displayName: tile.name, avatar: tile.avatar }} size={rows > 2 ? 56 : 84} />
+              <Avatar user={{ displayName: tile.name, avatar: tile.avatar }} size={many || rows > 2 ? 56 : 84} />
             )}
             <View style={{ position: "absolute", left: 8, right: 8, bottom: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text numberOfLines={1} style={{ flexShrink: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 }}>
@@ -324,6 +327,7 @@ function GroupMosaic({ tiles, RTCView, viewEpoch, onTile, onMute }: { tiles: Gro
       ))}
     </View>
   );
+  return many ? <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>{grid}</ScrollView> : grid;
 }
 
 export function CallScreen({
@@ -701,7 +705,7 @@ export function CallScreen({
   );
 }
 
-/** Contacts to add to a one-to-one call in progress (up to 4 people in the call). */
+/** Contacts to add to a one-to-one call in progress (up to 10 people in the call). */
 function AddToCallSheet({ callId, exclude, onClose, bottomInset }: { callId: string; exclude: string[]; onClose: () => void; bottomInset: number }) {
   const users = useWippStore((s) => s.users);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -728,7 +732,7 @@ function AddToCallSheet({ callId, exclude, onClose, bottomInset }: { callId: str
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
         <Pressable onPress={() => undefined} style={{ maxHeight: "70%", backgroundColor: "#0E1320", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: bottomInset + 18 }}>
           <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{tr("Ajouter une personne")}</Text>
-          <Text style={{ color: GREY, fontSize: 13, marginTop: 4, marginBottom: 10 }}>{tr("Jusqu’à 4 personnes dans l’appel. La personne reçoit un appel WIPP.")}</Text>
+          <Text style={{ color: GREY, fontSize: 13, marginTop: 4, marginBottom: 10 }}>{tr("Jusqu’à 10 personnes dans l’appel. La personne reçoit un appel WIPP.")}</Text>
           <ScrollView>
             {contacts.length === 0 ? <Text style={{ color: GREY, fontSize: 14, paddingVertical: 16 }}>{tr("Aucun autre contact à ajouter.")}</Text> : null}
             {contacts.map((u) => {

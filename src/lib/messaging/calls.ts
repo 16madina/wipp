@@ -786,7 +786,9 @@ export async function activeGroupCall(meId: string, chatId: string) {
 }
 
 /** Most people in one call started as a one-to-one call and grown with « Ajouter ». */
-const MAX_IN_CALL = 4;
+/** One-to-one call with people added: up to 10 people. Group calls: up to 50 people at once. */
+const MAX_IN_CALL = 10;
+const MAX_GROUP_CALL = 50;
 
 /**
  * Adds someone to a one-to-one call in progress: a normal ringing invite to the same LiveKit room,
@@ -891,6 +893,13 @@ export async function authorizeLiveKitJoin(meId: string, callId: string) {
     limit 1
   `;
   if (!member[0] || banned[0]) throw new WippHttpError(403, "forbidden", "Tu n’es plus membre de ce groupe.");
+  // Up to 50 people in a group call at the same time (people already in keep their place).
+  const inCall = await sql<{ n: number }>`
+    select count(*)::int as n from wipp_group_call_members
+    where call_id = ${callId} and profile_id <> ${meId} and state in ('joined', 'reconnecting')`;
+  if ((inCall[0]?.n ?? 0) >= MAX_GROUP_CALL - 1 && g.state !== "joined" && g.state !== "reconnecting") {
+    throw new WippHttpError(409, "call_full", `Un appel de groupe peut réunir ${MAX_GROUP_CALL} personnes au maximum.`);
+  }
   return { roomName: g.room_name, kind: g.kind === "video" ? "video" as const : "audio" as const };
 }
 
