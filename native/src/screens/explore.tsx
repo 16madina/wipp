@@ -1,4 +1,5 @@
 import { PharmacyResults } from "./pharmacies";
+import { EdgeSwipeBack } from "../components/EdgeSwipeBack";
 import { useEffect, useMemo, useState } from "react";
 import { Image } from "expo-image";
 import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, Share, Text, TextInput, View } from "react-native";
@@ -111,6 +112,7 @@ export function ExploreScreen() {
       ? t("hubListings")
       : t("exploreTitle");
   return (
+    <EdgeSwipeBack enabled={hub !== "home" && !searching} onBack={() => setHub("home")} under={<View style={{ flex: 1, backgroundColor: colors.bg }} />}>
     <ScreenRoot padBottom>
       <GlassHeader>
         <View style={{ height: layout.navBarHeight, flexDirection: "row", alignItems: "center", paddingHorizontal: 8 }}>
@@ -169,6 +171,7 @@ export function ExploreScreen() {
         {!searching && hub === "lifestyle" ? <LifestylePane /> : null}
       </ScrollView>
     </ScreenRoot>
+    </EdgeSwipeBack>
   );
 }
 
