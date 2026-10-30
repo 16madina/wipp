@@ -99,6 +99,7 @@ import { colors } from "../theme";
 import { WippmojiStudioScreen } from "./wippmoji-studio";
 import { useAppearance } from "../lib/appearance";
 import { AppState, Platform, View } from "react-native";
+import { EdgeSwipeBack, NO_SWIPE_BACK } from "../components/EdgeSwipeBack";
 import { RecaptchaHost } from "../components/FirebaseRecaptchaVerifierModal";
 import { ScreenProtectionHost } from "../components/ScreenProtectionHost";
 import { hydratePrivateVault } from "../lib/private-vault";
@@ -329,6 +330,10 @@ export function AppShell() {
   const signedInScreen = firebaseUser && !holdSignup && (raw.name === "splash" || AUTH.has(raw.name));
   const top = signedInScreen ? ({ name: "chats" } as const) : raw.name === "splash" ? ({ name: "onboarding" } as const) : raw;
   const showTabs = isTabScreen(top.name);
+  // iPhone: swipe from the left edge goes back (not on the main tabs, sign-in, calls, camera…).
+  const underScreen = stack.length > 1 ? stack[stack.length - 2] : undefined;
+  const swipeBack =
+    top === raw && !showTabs && Boolean(underScreen) && !AUTH.has(top.name) && !AUTH.has(underScreen!.name) && !NO_SWIPE_BACK.has(top.name);
   const { tablet, contentWidth } = useDeviceLayout();
 
   const onboarded = useWippStore((s) => s.onboarded);
@@ -562,7 +567,14 @@ export function AppShell() {
               else st.goTab("chats");
             }}
           >
-            <ScreenSwitch screen={top} />
+            <EdgeSwipeBack
+              key={stack.length}
+              enabled={swipeBack}
+              onBack={() => useWippStore.getState().pop()}
+              under={underScreen ? <ScreenSwitch screen={underScreen} /> : null}
+            >
+              <ScreenSwitch screen={top} />
+            </EdgeSwipeBack>
           </ScreenErrorBoundary>
           {showTabs ? <TabBar active={top.name} /> : null}
           <ScreenErrorBoundary resetKey="live" silent onBack={() => useLiveSession.getState().clear()}>
