@@ -419,8 +419,10 @@ export function AppShell() {
 
   // Started by a call while the phone was locked, before the sign-in could be read: when WIPP is opened,
   // start again so the saved sign-in is found (instead of staying on the sign-in screen).
+  // iPhone only (keychain locked): on Android, "active" also fires right after each reload while the
+  // sign-in is still loading, so WIPP restarted in a loop (about every 2 s) and never opened.
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS !== "ios") return;
     const sub = AppState.addEventListener("change", (st) => {
       if (st !== "active" || useWippStore.getState().onboarded) return;
       void import("../lib/firebase-phone").then(async ({ currentFirebaseUser, hasStoredFirebaseUser }) => {
