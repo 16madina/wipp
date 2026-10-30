@@ -89,8 +89,9 @@ export async function showAwayCameraNotice(shown: boolean) {
     await Notifications.scheduleNotificationAsync({
       identifier: NOTICE_ID,
       content: {
-        title: tr("Appel vidéo en cours"),
-        body: shown ? tr("Ta caméra est visible : l'autre personne te voit.") : tr("Ta caméra est en pause : l'autre personne voit « Je reviens… »."),
+        title: shown ? tr("Appel vidéo — ta caméra est visible") : tr("Appel vidéo — ta caméra est en pause"),
+        // The buttons only show with a long press (iOS): say so.
+        body: shown ? tr("Appuie longuement ici pour remettre en pause.") : tr("Appuie longuement ici pour te montrer."),
         categoryIdentifier: shown ? CAT_SHOWN : CAT_PAUSED,
         data: { type: AWAY_CAMERA_TYPE },
         sound: false,
