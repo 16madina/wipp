@@ -1,6 +1,7 @@
 package com.wipp.app
 
 import android.app.Activity
+import android.app.KeyguardManager
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -11,6 +12,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.util.Log
 import android.util.Rational
 import androidx.core.content.ContextCompat
 import com.facebook.react.ReactPackage
@@ -68,8 +70,40 @@ object CallPip {
   /** Called from MainActivity.onUserLeaveHint (home button, recent apps). */
   fun enterIfWanted(activity: Activity) {
     if (!enabled || !supported(activity) || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    // Call answered on the locked phone (WIPP shown over the lock screen): Android refuses the mini player
+    // while locked. Ask to unlock (fingerprint / code), then open the mini player.
+    val km = activity.getSystemService(KeyguardManager::class.java)
+    if (km?.isKeyguardLocked == true) {
+      unlockThenPip(activity, km)
+      return
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return // auto-enter already handles it
-    try { activity.enterPictureInPictureMode(params(activity)!!) } catch (_: Exception) {}
+    enter(activity, "leave")
+  }
+
+  private fun enter(activity: Activity, from: String) {
+    try {
+      val ok = activity.enterPictureInPictureMode(params(activity)!!)
+      Log.i("WippPip", "enter from=$from ok=$ok")
+    } catch (e: Exception) {
+      Log.w("WippPip", "enter from=$from failed: $e")
+    }
+  }
+
+  private fun unlockThenPip(activity: Activity, km: KeyguardManager) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    try {
+      km.requestDismissKeyguard(activity, object : KeyguardManager.KeyguardDismissCallback() {
+        override fun onDismissSucceeded() {
+          Log.i("WippPip", "unlocked")
+          activity.runOnUiThread { if (enabled && !activity.isInPictureInPictureMode) enter(activity, "unlock") }
+        }
+        override fun onDismissCancelled() { Log.i("WippPip", "unlock cancelled") }
+        override fun onDismissError() { Log.i("WippPip", "unlock error") }
+      })
+    } catch (e: Exception) {
+      Log.w("WippPip", "unlock request failed: $e")
+    }
   }
 
   fun changed(isInPip: Boolean) {
