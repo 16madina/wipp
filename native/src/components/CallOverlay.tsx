@@ -109,6 +109,12 @@ export function CallOverlay() {
       (callId) => {
         const live = useCallSession.getState().session;
         if (live?.callId === callId) void endCurrentCall();
+        // The call was not loaded in the app yet (WIPP was starting): decline it on the server directly,
+        // so the caller stops ringing at once.
+        else
+          void import("../lib/calls/livekit-client")
+            .then(({ answerCall }) => answerCall(callId, false))
+            .catch(() => undefined);
       },
       (handle, video) => {
         // Touched in the iPhone's Recents: call that contact back. When WIPP was fully closed, the contacts

@@ -19,6 +19,9 @@ const uuidToCall = new Map<string, string>();
 const answeredBySystem = new Set<string>();
 /** CallKit UUIDs answered before the VoIP payload linked them to a WIPP call. */
 const pendingAnswers = new Set<string>();
+/** CallKit UUIDs ended (declined, or closed by iOS) before they were linked to a WIPP call. */
+const pendingEnds = new Set<string>();
+let endHandler: ((callId: string) => void) | null = null;
 
 export function callKeepAvailable() {
   return keep != null && Platform.OS !== "web";
@@ -33,6 +36,7 @@ export async function setupCallKeep(
   // CallKit does not run on the iOS simulator: it reports every call as ended,
   // which the app turned into an automatic "decline". Use the in-app screen there.
   if (Platform.OS === "web" || keep || !Device.isDevice) return;
+  endHandler = onEnd;
   try {
     const mod = require("react-native-callkeep") as { default: Keep };
     keep = mod.default;
@@ -92,6 +96,12 @@ export async function setupCallKeep(
             start(e.data as StartData);
             continue;
           }
+          if (e.name === "RNCallKeepPerformEndCallAction" && e.data?.callUUID) {
+            const ended = uuidToCall.get(e.data.callUUID);
+            if (ended) onEnd(ended);
+            else pendingEnds.add(e.data.callUUID.toLowerCase());
+            continue;
+          }
           if (e.name !== "RNCallKeepPerformAnswerCallAction" || !e.data?.callUUID) continue;
           const id = uuidToCall.get(e.data.callUUID);
           if (id) {
@@ -121,6 +131,9 @@ export async function setupCallKeep(
     keep.addEventListener("endCall", ({ callUUID }) => {
       const id = callUUID ? uuidToCall.get(callUUID) : undefined;
       if (id) onEnd(id);
+      // WIPP was still starting (opened by the call): end it on the server as soon as we know which call it is,
+      // or the caller keeps ringing for a minute.
+      else if (callUUID) pendingEnds.add(callUUID.toLowerCase());
     });
   } catch {
     keep = null;
@@ -161,6 +174,8 @@ export function linkSystemCall(uuid: string, callId: string) {
   uuidToCall.set(uuid.toLowerCase(), callId);
   uuidToCall.set(uuid.toUpperCase(), callId);
   if (pendingAnswers.delete(uuid.toLowerCase())) answeredBySystem.add(callId);
+  // Ended on the iPhone screen while WIPP was starting (and not answered): tell the server now.
+  if (pendingEnds.delete(uuid.toLowerCase()) && !answeredBySystem.has(callId)) endHandler?.(callId);
 }
 
 /** Tells CallKit the call is really connected (system call timer, audio route). */
