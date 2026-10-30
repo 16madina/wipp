@@ -25,6 +25,7 @@ import { clearIncomingCall } from "../lib/push/android-call";
 import { dismissSystemRinging, endSystemCall, markSystemCallConnected, setupCallKeep, showSystemIncoming, wasAnsweredBySystem } from "../lib/calls/callkeep";
 import { tr } from "../lib/tr";
 import { onAndroidPipCameraButton, setAndroidCallPip, setAndroidPipCamera, useAndroidPip } from "../lib/calls/android-pip";
+import { clearAwayCameraNotice, onAwayCameraAction, showAwayCameraNotice } from "../lib/calls/away-camera";
 
 // The native WebRTC renderer cannot be imported by React Native Web.
 const RTCView = Platform.OS === "web"
@@ -584,12 +585,16 @@ export function CallOverlay() {
     };
     let prev = AppState.currentState;
     const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active") void clearAwayCameraNotice();
       if (st === "active" && prev === "background") revive();
       if (st === "background") {
         // iOS stops the camera in the background: pause it on purpose, so the other phone shows
         // "camera paused" instead of a frozen picture. It turns back on when WIPP comes back (revive).
         const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
         if (track && !track.isMuted) void track.mute().catch(() => undefined);
+        // Video call: a notification lets me show my camera anyway (« Me montrer »), without coming back.
+        const live = useCallSession.getState().session;
+        if (track && live?.phase === "connected" && live.kind === "video" && !live.camOff) void showAwayCameraNotice(false);
       }
       prev = st;
     });
@@ -652,28 +657,51 @@ export function CallOverlay() {
     if (AppState.currentState !== "active") {
       const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
       if (track && !track.isMuted) void track.mute().catch(() => undefined);
+      void clearAwayCameraNotice();
     }
     setPipCamShown(false);
   }, [androidPip]);
-  useEffect(
-    () =>
-      onAndroidPipCameraButton(() => {
-        const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
-        const live = useCallSession.getState().session;
-        if (!track || !live || live.camOff) return;
-        if (track.isMuted) {
-          setPipCamShown(true);
-          void track
-            .unmute()
-            .then(() => setLocalUrl(streamURL(track)))
-            .catch(() => setPipCamShown(false));
-        } else {
-          setPipCamShown(false);
-          void track.mute().catch(() => undefined);
-        }
-      }),
-    [],
-  );
+  // Away from WIPP during a video call: « Me montrer » / « Pause caméra » from the notification
+  // (iPhone and Android) or from the Android mini player button.
+  useEffect(() => {
+    const setAway = (show: boolean) => {
+      const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+      const live = useCallSession.getState().session;
+      if (!track || !live || live.camOff || live.phase !== "connected" || live.kind !== "video") return;
+      if (AppState.currentState === "active") return; // back in WIPP: the normal camera button applies
+      setPipCamShown(show);
+      void showAwayCameraNotice(show);
+      if (show) {
+        void track
+          .unmute()
+          .then(() => setLocalUrl(streamURL(track)))
+          .catch(() => {
+            // The phone refused the camera outside the app: say it is still paused.
+            setPipCamShown(false);
+            void showAwayCameraNotice(false);
+          });
+      } else {
+        void track.mute().catch(() => undefined);
+      }
+    };
+    const offPip = onAndroidPipCameraButton(() => {
+      const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+      setAway(Boolean(track?.isMuted));
+    });
+    const offNotice = onAwayCameraAction((action) => {
+      if (action === "keep") void clearAwayCameraNotice();
+      else setAway(action === "show");
+    });
+    return () => {
+      offPip();
+      offNotice();
+    };
+  }, []);
+  // Call over: no camera question left behind.
+  const callLive = Boolean(session && session.phase === "connected");
+  useEffect(() => {
+    if (!callLive) void clearAwayCameraNotice();
+  }, [callLive]);
 
   if (!session) return null;
   const title = user?.displayName || session.displayName;
