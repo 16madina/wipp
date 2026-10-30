@@ -255,7 +255,7 @@ export function NewStoryScreen({ shared }: { shared?: { kind: "image" | "video";
               <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
                 <Scissors size={21} color="#fff" />
               </View>
-              <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 3 }}>{tr("Modifier")}</Text>
+              <Text numberOfLines={1} style={{ width: 72, textAlign: "center", color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 3 }}>{tr("Modifier")}</Text>
             </Press>
           ) : null}
         </View>
