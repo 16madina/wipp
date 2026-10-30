@@ -7,29 +7,34 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0FCCDA787F8D9CF41AAC16E4 /* WippLiveActivity.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 495DA208B79EA6B3008513F7 /* WippLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		101A20DB77A62A4D107CFEBB /* WippLiveActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 784020FB4E6E42C535CDE60E /* WippLiveActivity.m */; };
+		128D453EC64C482299F3745F /* SampleUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B30C9373B427AAA9183E3 /* SampleUploader.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		16E9AB1E324044EEBF257764 /* WippBroadcast.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = C26D02985D2F4FB48BB792AA /* WippBroadcast.appex */; };
+		20A6BA8544C75B5791A7F618 /* WippCallActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF675FA93D20F6958BEDB83 /* WippCallActivity.swift */; };
+		28BA0DFAB68B448921314A43 /* WippLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA174510016636888696275 /* WippLiveActivityWidget.swift */; };
+		2E89ABF8316B44D28470AC7B /* SocketConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52DAE96C31A946B9BC33DD93 /* SocketConnection.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		442A6D3A05E7DAE320B4F73C /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4BB7577BE92776CB0E1DCBB /* ExpoModulesProvider.swift */; };
 		6904C3C328A0452A86C49B9F /* WippNotificationService.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 6F98BEEC169A4A198BA4609A /* WippNotificationService.appex */; };
 		6D77E99DC1377E1490BFD1BA /* wipp_ring.caf in Resources */ = {isa = PBXBuildFile; fileRef = 499203FFDE9FB5D3164E8B71 /* wipp_ring.caf */; };
 		6EF55C7958F566FDAEAA998A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8D266B67AAA7CBCF267A0FF4 /* PrivacyInfo.xcprivacy */; };
+		7C0E94D5037647F5B2720B0E /* SampleHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2A674891E543DC9E1BBBE4 /* SampleHandler.swift */; };
 		844E5FBAC2E145DB969D5CE5 /* ShareExtensionPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = 8314191DEF7F40058D521F89 /* ShareExtensionPreprocessor.js */; };
 		8C53E642FCD44946ADDE4ED6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C5948881E57444A99D26D616 /* GoogleService-Info.plist */; };
 		8F32ACE1ABFB4EE988BBAFA2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 062B7F3DCD0A49BE98189AD5 /* PrivacyInfo.xcprivacy */; };
 		9089860FF91A51180424A5E8 /* libPods-WIPP.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3086A415C8F2E7D5D3B8EF28 /* libPods-WIPP.a */; };
+		9861097A35EB5C051A6D82F8 /* WippCallActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF675FA93D20F6958BEDB83 /* WippCallActivity.swift */; };
 		9F0F77DEE0D443E6BD01D91E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F766C6F06E194BD3BB5ECDC9 /* ShareViewController.swift */; };
+		B43E8B08740638CEABD40E8C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 690A8B67CB6AE72101B5280D /* Foundation.framework */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		C306B53AA45B492C921FF7B7 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37119C3C1BE841C789CC85B0 /* NotificationService.swift */; };
 		CC78C2F9C57B85730D033A62 /* wipp_message.caf in Resources */ = {isa = PBXBuildFile; fileRef = 2ACB603BCE1263F822319214 /* wipp_message.caf */; };
 		CCC92E41FC2F4627A968297A /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B1F0581866DE4657AF4C5682 /* MainInterface.storyboard */; };
+		F09643BBBC66B66BBA038662 /* WippLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDB0892B7A4C4B363428E8F /* WippLiveActivity.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		FE48C6C19D4B497AA8BFB569 /* ShareExtension.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = DA992372214841D5A4C33CD0 /* ShareExtension.appex */; };
-		7C0E94D5037647F5B2720B0E /* SampleHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2A674891E543DC9E1BBBE4 /* SampleHandler.swift */; };
-		2E89ABF8316B44D28470AC7B /* SocketConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52DAE96C31A946B9BC33DD93 /* SocketConnection.swift */; };
-		128D453EC64C482299F3745F /* SampleUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B30C9373B427AAA9183E3 /* SampleUploader.swift */; };
-		BB246CCEBF414B4DAF5B10EE /* WippBroadcast-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 402A99BC93934134A95D8D57 /* WippBroadcast-Info.plist */; };
-		79E1E6B175DB49238382B776 /* WippBroadcast.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 3B1C7B20A2DA4169AD9B1D31 /* WippBroadcast.entitlements */; };
-		16E9AB1E324044EEBF257764 /* WippBroadcast.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = C26D02985D2F4FB48BB792AA /* WippBroadcast.appex */; };
 		FF88715D03E14D14AD45259B /* ReplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46448BC746DD4CF18D68025D /* ReplayKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +46,13 @@
 			remoteGlobalIDString = B6331CD50C3D4F8D9016B26F;
 			remoteInfo = WippNotificationService;
 		};
+		4D83A91C22394BD29A4591CE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D3CFD9252042420990709638;
+			remoteInfo = WippBroadcast;
+		};
 		DA1D5A802AD94FDD81485B29 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
@@ -48,12 +60,12 @@
 			remoteGlobalIDString = F14DE062D8CD483A98B87997;
 			remoteInfo = ShareExtension;
 		};
-		4D83A91C22394BD29A4591CE /* PBXContainerItemProxy */ = {
+		F7F12D6BB085BDC1220BB57F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = D3CFD9252042420990709638;
-			remoteInfo = "WippBroadcast";
+			remoteGlobalIDString = 26F7D591659C4B9C9DC40442;
+			remoteInfo = WippLiveActivity;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -67,6 +79,17 @@
 				FE48C6C19D4B497AA8BFB569 /* ShareExtension.appex in Copy Files */,
 				6904C3C328A0452A86C49B9F /* WippNotificationService.appex in Copy Files */,
 				16E9AB1E324044EEBF257764 /* WippBroadcast.appex in Copy Files */,
+				0FCCDA787F8D9CF41AAC16E4 /* WippLiveActivity.appex in Copy Files */,
+			);
+			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		93D24203AA1A465F99AB1EC5 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -81,20 +104,11 @@
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		93D24203AA1A465F99AB1EC5 /* Copy Files */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			name = "Copy Files";
-			dstPath = "";
-			dstSubfolderSpec = 13;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		062B7F3DCD0A49BE98189AD5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		11277519F00EBF75443BA740 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* WIPP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WIPP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = WIPP/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = WIPP/Info.plist; sourceTree = "<group>"; };
@@ -102,32 +116,38 @@
 		2ACB603BCE1263F822319214 /* wipp_message.caf */ = {isa = PBXFileReference; includeInIndex = 1; path = WIPP/wipp_message.caf; sourceTree = "<group>"; };
 		3086A415C8F2E7D5D3B8EF28 /* libPods-WIPP.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WIPP.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		37119C3C1BE841C789CC85B0 /* NotificationService.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		3B1C7B20A2DA4169AD9B1D31 /* WippBroadcast.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = WippBroadcast.entitlements; path = WippBroadcast.entitlements; sourceTree = "<group>"; };
+		402A99BC93934134A95D8D57 /* WippBroadcast-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "WippBroadcast-Info.plist"; path = "WippBroadcast-Info.plist"; sourceTree = "<group>"; };
+		46448BC746DD4CF18D68025D /* ReplayKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = ReplayKit.framework; path = System/Library/Frameworks/ReplayKit.framework; sourceTree = SDKROOT; };
+		495DA208B79EA6B3008513F7 /* WippLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WippLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		499203FFDE9FB5D3164E8B71 /* wipp_ring.caf */ = {isa = PBXFileReference; includeInIndex = 1; path = WIPP/wipp_ring.caf; sourceTree = "<group>"; };
+		52DAE96C31A946B9BC33DD93 /* SocketConnection.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = SocketConnection.swift; path = SocketConnection.swift; sourceTree = "<group>"; };
+		690A8B67CB6AE72101B5280D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		6BB769209F784AAB91CCC954 /* WippNotificationService.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = WippNotificationService.entitlements; path = WippNotificationService.entitlements; sourceTree = "<group>"; };
+		6DF675FA93D20F6958BEDB83 /* WippCallActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WippCallActivity.swift; path = WIPP/WippCallActivity.swift; sourceTree = "<group>"; };
 		6F98BEEC169A4A198BA4609A /* WippNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = WippNotificationService.appex; path = WippNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6FAC84F6720C480B8EB3B0BD /* Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
+		784020FB4E6E42C535CDE60E /* WippLiveActivity.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = WippLiveActivity.m; path = WIPP/WippLiveActivity.m; sourceTree = "<group>"; };
 		8314191DEF7F40058D521F89 /* ShareExtensionPreprocessor.js */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ShareExtensionPreprocessor.js; sourceTree = "<group>"; };
 		8D266B67AAA7CBCF267A0FF4 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = WIPP/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = WIPP/SplashScreen.storyboard; sourceTree = "<group>"; };
 		B1F0581866DE4657AF4C5682 /* MainInterface.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = MainInterface.storyboard; sourceTree = "<group>"; };
+		B75B30C9373B427AAA9183E3 /* SampleUploader.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = SampleUploader.swift; path = SampleUploader.swift; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		BF2A674891E543DC9E1BBBE4 /* SampleHandler.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = SampleHandler.swift; path = SampleHandler.swift; sourceTree = "<group>"; };
+		C26D02985D2F4FB48BB792AA /* WippBroadcast.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = WippBroadcast.appex; path = WippBroadcast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5948881E57444A99D26D616 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "WIPP/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		DA992372214841D5A4C33CD0 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = 9; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD384AB7E4E7734F39B958E1 /* Pods-WIPP.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WIPP.release.xcconfig"; path = "Target Support Files/Pods-WIPP/Pods-WIPP.release.xcconfig"; sourceTree = "<group>"; };
+		DDDB0892B7A4C4B363428E8F /* WippLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WippLiveActivity.swift; path = WIPP/WippLiveActivity.swift; sourceTree = "<group>"; };
 		E4BB7577BE92776CB0E1DCBB /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-WIPP/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = WIPP/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* WIPP-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "WIPP-Bridging-Header.h"; path = "WIPP/WIPP-Bridging-Header.h"; sourceTree = "<group>"; };
 		F766C6F06E194BD3BB5ECDC9 /* ShareViewController.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		FACE29026BAE4AE596C52B9A /* ShareExtension-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; };
+		FDA174510016636888696275 /* WippLiveActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WippLiveActivityWidget.swift; sourceTree = "<group>"; };
 		FDF68A1A2906A0572701A86A /* Pods-WIPP.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WIPP.debug.xcconfig"; path = "Target Support Files/Pods-WIPP/Pods-WIPP.debug.xcconfig"; sourceTree = "<group>"; };
-		BF2A674891E543DC9E1BBBE4 /* SampleHandler.swift */ = {isa = PBXFileReference; name = "SampleHandler.swift"; path = "SampleHandler.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
-		52DAE96C31A946B9BC33DD93 /* SocketConnection.swift */ = {isa = PBXFileReference; name = "SocketConnection.swift"; path = "SocketConnection.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
-		B75B30C9373B427AAA9183E3 /* SampleUploader.swift */ = {isa = PBXFileReference; name = "SampleUploader.swift"; path = "SampleUploader.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
-		402A99BC93934134A95D8D57 /* WippBroadcast-Info.plist */ = {isa = PBXFileReference; name = "WippBroadcast-Info.plist"; path = "WippBroadcast-Info.plist"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = text.plist.xml; explicitFileType = undefined; includeInIndex = 0; };
-		3B1C7B20A2DA4169AD9B1D31 /* WippBroadcast.entitlements */ = {isa = PBXFileReference; name = "WippBroadcast.entitlements"; path = "WippBroadcast.entitlements"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		C26D02985D2F4FB48BB792AA /* WippBroadcast.appex */ = {isa = PBXFileReference; name = "WippBroadcast.appex"; path = "WippBroadcast.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
-		46448BC746DD4CF18D68025D /* ReplayKit.framework */ = {isa = PBXFileReference; name = "ReplayKit.framework"; path = "System/Library/Frameworks/ReplayKit.framework"; sourceTree = SDKROOT; fileEncoding = undefined; lastKnownFileType = wrapper.framework; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +181,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E7044ED486799C339E7AB67C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B43E8B08740638CEABD40E8C /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -177,6 +205,9 @@
 				8D266B67AAA7CBCF267A0FF4 /* PrivacyInfo.xcprivacy */,
 				499203FFDE9FB5D3164E8B71 /* wipp_ring.caf */,
 				2ACB603BCE1263F822319214 /* wipp_message.caf */,
+				6DF675FA93D20F6958BEDB83 /* WippCallActivity.swift */,
+				DDDB0892B7A4C4B363428E8F /* WippLiveActivity.swift */,
+				784020FB4E6E42C535CDE60E /* WippLiveActivity.m */,
 			);
 			name = WIPP;
 			sourceTree = "<group>";
@@ -186,6 +217,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				3086A415C8F2E7D5D3B8EF28 /* libPods-WIPP.a */,
+				91BB25F59DF125196F66FB7F /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -209,6 +241,19 @@
 			path = WippNotificationService;
 			sourceTree = "<group>";
 		};
+		4D1B50ED576B4265B8CACED9 /* WippBroadcast */ = {
+			isa = PBXGroup;
+			children = (
+				BF2A674891E543DC9E1BBBE4 /* SampleHandler.swift */,
+				52DAE96C31A946B9BC33DD93 /* SocketConnection.swift */,
+				B75B30C9373B427AAA9183E3 /* SampleUploader.swift */,
+				402A99BC93934134A95D8D57 /* WippBroadcast-Info.plist */,
+				3B1C7B20A2DA4169AD9B1D31 /* WippBroadcast.entitlements */,
+			);
+			name = WippBroadcast;
+			path = WippBroadcast;
+			sourceTree = "<group>";
+		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
@@ -228,6 +273,7 @@
 				A6F003F88F744F2F8272BE5A /* ShareExtension */,
 				3E902E82837641B69AFC1C75 /* WippNotificationService */,
 				4D1B50ED576B4265B8CACED9 /* WippBroadcast */,
+				D8BA9C1B343C864CB0C39901 /* WippLiveActivity */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -241,6 +287,7 @@
 				DA992372214841D5A4C33CD0 /* ShareExtension.appex */,
 				6F98BEEC169A4A198BA4609A /* WippNotificationService.appex */,
 				C26D02985D2F4FB48BB792AA /* WippBroadcast.appex */,
+				495DA208B79EA6B3008513F7 /* WippLiveActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -251,6 +298,14 @@
 				E4BB7577BE92776CB0E1DCBB /* ExpoModulesProvider.swift */,
 			);
 			name = WIPP;
+			sourceTree = "<group>";
+		};
+		91BB25F59DF125196F66FB7F /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				690A8B67CB6AE72101B5280D /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 		97CECEE69307318D3149B9D5 /* Pods */ = {
@@ -284,17 +339,14 @@
 			path = WIPP/Supporting;
 			sourceTree = "<group>";
 		};
-		4D1B50ED576B4265B8CACED9 /* WippBroadcast */ = {
+		D8BA9C1B343C864CB0C39901 /* WippLiveActivity */ = {
 			isa = PBXGroup;
 			children = (
-				BF2A674891E543DC9E1BBBE4 /* SampleHandler.swift */,
-				52DAE96C31A946B9BC33DD93 /* SocketConnection.swift */,
-				B75B30C9373B427AAA9183E3 /* SampleUploader.swift */,
-				402A99BC93934134A95D8D57 /* WippBroadcast-Info.plist */,
-				3B1C7B20A2DA4169AD9B1D31 /* WippBroadcast.entitlements */,
+				FDA174510016636888696275 /* WippLiveActivityWidget.swift */,
+				11277519F00EBF75443BA740 /* Info.plist */,
 			);
-			name = WippBroadcast;
-			path = WippBroadcast;
+			name = WippLiveActivity;
+			path = WippLiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -322,11 +374,29 @@
 				3E9C4D478A39451CA733EE37 /* PBXTargetDependency */,
 				30E9E379E15940C099DF7C1C /* PBXTargetDependency */,
 				EFA811A0B7E04E5DA611F152 /* PBXTargetDependency */,
+				795946C9E9BE1383ED391E4F /* PBXTargetDependency */,
 			);
 			name = WIPP;
 			productName = WIPP;
 			productReference = 13B07F961A680F5B00A75B9A /* WIPP.app */;
 			productType = "com.apple.product-type.application";
+		};
+		26F7D591659C4B9C9DC40442 /* WippLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4F3EAD49EDA454E857A90490 /* Build configuration list for PBXNativeTarget "WippLiveActivity" */;
+			buildPhases = (
+				CC0EDE3FF7409187776D6C64 /* Sources */,
+				E7044ED486799C339E7AB67C /* Frameworks */,
+				302F2F5CBD923D02F2DFFAA8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WippLiveActivity;
+			productName = WippLiveActivity;
+			productReference = 495DA208B79EA6B3008513F7 /* WippLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		B6331CD50C3D4F8D9016B26F /* WippNotificationService */ = {
 			isa = PBXNativeTarget;
@@ -345,6 +415,23 @@
 			productReference = 6F98BEEC169A4A198BA4609A /* WippNotificationService.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		D3CFD9252042420990709638 /* WippBroadcast */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CCC9C53AB14641899581DCB1 /* Build configuration list for PBXNativeTarget "WippBroadcast" */;
+			buildPhases = (
+				9C438C8E813947C5A159924E /* Sources */,
+				CA09385107EE43F1969B323E /* Resources */,
+				E50A2C07879D43E19E6F096F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WippBroadcast;
+			productName = WippBroadcast;
+			productReference = C26D02985D2F4FB48BB792AA /* WippBroadcast.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		F14DE062D8CD483A98B87997 /* ShareExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 49D1A30105524B1AAEEA96B3 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
@@ -361,23 +448,6 @@
 			productName = ShareExtension;
 			productReference = DA992372214841D5A4C33CD0 /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
-		};
-		D3CFD9252042420990709638 /* "WippBroadcast" */ = {
-			isa = PBXNativeTarget;
-			name = "WippBroadcast";
-			productName = "WippBroadcast";
-			productReference = C26D02985D2F4FB48BB792AA;
-			productType = "com.apple.product-type.app-extension";
-			buildConfigurationList = CCC9C53AB14641899581DCB1;
-			buildPhases = (
-				9C438C8E813947C5A159924E /* Sources */,
-				CA09385107EE43F1969B323E /* Resources */,
-				E50A2C07879D43E19E6F096F /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
 		};
 /* End PBXNativeTarget section */
 
@@ -409,7 +479,8 @@
 				13B07F861A680F5B00A75B9A /* WIPP */,
 				F14DE062D8CD483A98B87997 /* ShareExtension */,
 				B6331CD50C3D4F8D9016B26F /* WippNotificationService */,
-				D3CFD9252042420990709638 /* "WippBroadcast" */,
+				D3CFD9252042420990709638 /* WippBroadcast */,
+				26F7D591659C4B9C9DC40442 /* WippLiveActivity */,
 			);
 		};
 /* End PBXProject section */
@@ -429,6 +500,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		302F2F5CBD923D02F2DFFAA8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CA09385107EE43F1969B323E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D92C8FB3FC1F47C299750C13 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -443,13 +528,6 @@
 				CCC92E41FC2F4627A968297A /* MainInterface.storyboard in Resources */,
 				844E5FBAC2E145DB969D5CE5 /* ShareExtensionPreprocessor.js in Resources */,
 				8F32ACE1ABFB4EE988BBAFA2 /* PrivacyInfo.xcprivacy in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CA09385107EE43F1969B323E /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -534,9 +612,11 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoDevice/ExpoDevice_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoMediaLibrary/ExpoMediaLibrary_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/PurchasesHybridCommon/PurchasesHybridCommon.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RevenueCat/RevenueCat.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle",
@@ -551,9 +631,11 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoDevice_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoMediaLibrary_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/PurchasesHybridCommon.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RevenueCat.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SDWebImage.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevLauncher.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevMenu.bundle",
@@ -604,6 +686,19 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				442A6D3A05E7DAE320B4F73C /* ExpoModulesProvider.swift in Sources */,
+				9861097A35EB5C051A6D82F8 /* WippCallActivity.swift in Sources */,
+				F09643BBBC66B66BBA038662 /* WippLiveActivity.swift in Sources */,
+				101A20DB77A62A4D107CFEBB /* WippLiveActivity.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9C438C8E813947C5A159924E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0E94D5037647F5B2720B0E /* SampleHandler.swift in Sources */,
+				2E89ABF8316B44D28470AC7B /* SocketConnection.swift in Sources */,
+				128D453EC64C482299F3745F /* SampleUploader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -615,13 +710,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9C438C8E813947C5A159924E /* Sources */ = {
+		CC0EDE3FF7409187776D6C64 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7C0E94D5037647F5B2720B0E /* "SampleHandler.swift" in Sources */,
-				2E89ABF8316B44D28470AC7B /* "SocketConnection.swift" in Sources */,
-				128D453EC64C482299F3745F /* "SampleUploader.swift" in Sources */,
+				28BA0DFAB68B448921314A43 /* WippLiveActivityWidget.swift in Sources */,
+				20A6BA8544C75B5791A7F618 /* WippCallActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -638,14 +732,50 @@
 			target = F14DE062D8CD483A98B87997 /* ShareExtension */;
 			targetProxy = DA1D5A802AD94FDD81485B29 /* PBXContainerItemProxy */;
 		};
+		795946C9E9BE1383ED391E4F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = WippLiveActivity;
+			target = 26F7D591659C4B9C9DC40442 /* WippLiveActivity */;
+			targetProxy = F7F12D6BB085BDC1220BB57F /* PBXContainerItemProxy */;
+		};
 		EFA811A0B7E04E5DA611F152 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D3CFD9252042420990709638 /* "WippBroadcast" */;
+			target = D3CFD9252042420990709638 /* WippBroadcast */;
 			targetProxy = 4D83A91C22394BD29A4591CE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0DA66E5111784BEE84FCD015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WippBroadcast/WippBroadcast.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = 6XW2XM3NDF;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "WippBroadcast/WippBroadcast-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wipp.app.broadcast;
+				PRODUCT_NAME = WippBroadcast;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = FDF68A1A2906A0572701A86A /* Pods-WIPP.debug.xcconfig */;
@@ -862,6 +992,34 @@
 			};
 			name = Release;
 		};
+		954CB747B1FE6304AC72F33A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = 6XW2XM3NDF;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WippLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wipp.app.LiveActivity;
+				PRODUCT_NAME = WippLiveActivity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		9A1DA992C7114A7EA9130804 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -887,6 +1045,59 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		ACA7E2FB9D84470BB5FBA0B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WippBroadcast/WippBroadcast.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = 6XW2XM3NDF;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "WippBroadcast/WippBroadcast-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wipp.app.broadcast;
+				PRODUCT_NAME = WippBroadcast;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BF6204C88DDA30CCD04794D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = 6XW2XM3NDF;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WippLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wipp.app.LiveActivity;
+				PRODUCT_NAME = WippLiveActivity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		C47AD54883AA43DCAA623239 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -944,52 +1155,6 @@
 			};
 			name = Debug;
 		};
-		0DA66E5111784BEE84FCD015 /* Debug */ = {
-			name = Debug;
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = "WippBroadcast/WippBroadcast-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_NAME = "WippBroadcast";
-				SKIP_INSTALL = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.wipp.app.broadcast";
-				CODE_SIGN_ENTITLEMENTS = "WippBroadcast/WippBroadcast.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
-				MARKETING_VERSION = "1.0.0";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				CLANG_ENABLE_MODULES = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				DEVELOPMENT_TEAM = 6XW2XM3NDF;
-			};
-		};
-		ACA7E2FB9D84470BB5FBA0B7 /* Release */ = {
-			name = Release;
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				INFOPLIST_FILE = "WippBroadcast/WippBroadcast-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_NAME = "WippBroadcast";
-				SKIP_INSTALL = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.wipp.app.broadcast";
-				CODE_SIGN_ENTITLEMENTS = "WippBroadcast/WippBroadcast.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
-				MARKETING_VERSION = "1.0.0";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				CLANG_ENABLE_MODULES = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				DEVELOPMENT_TEAM = 6XW2XM3NDF;
-			};
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1016,6 +1181,15 @@
 			buildConfigurations = (
 				D75B6A61589D4ABCAF23A532 /* Debug */,
 				C47AD54883AA43DCAA623239 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4F3EAD49EDA454E857A90490 /* Build configuration list for PBXNativeTarget "WippLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				954CB747B1FE6304AC72F33A /* Release */,
+				BF6204C88DDA30CCD04794D6 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

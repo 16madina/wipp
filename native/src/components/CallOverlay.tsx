@@ -219,7 +219,12 @@ export function CallOverlay() {
     }
     if (session?.phase === "connected" && session.callId) {
       markSystemCallConnected(session.callId);
-      if (session.kind === "video") prepareAwayCamera();
+      if (session.kind === "video") {
+        prepareAwayCamera();
+        void import("../lib/calls/live-activity").then(({ startCallActivity }) =>
+          startCallActivity(useWippStore.getState().users[session.userId]?.displayName || session.displayName || "WIPP").then((ok) => awayLog(`live activity start ${ok}`)),
+        );
+      }
       // Answered (in the app or on the iPhone screen): no « Appel manqué » notice for this call.
       if (session.dir === "in") void import("../lib/calls/callkeep").then(({ clearMissedNotice }) => clearMissedNotice(session.callId));
     }
@@ -698,15 +703,28 @@ export function CallOverlay() {
       if (action === "keep") void clearAwayCameraNotice();
       else setAway(action === "show");
     });
+    // Dynamic Island / lock screen button.
+    let offIsland = () => {};
+    void import("../lib/calls/live-activity").then(({ onCallActivityToggle }) => {
+      offIsland = onCallActivityToggle(() => {
+        const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+        awayLog(`island button, camera muted=${track?.isMuted}`);
+        setAway(Boolean(track?.isMuted));
+      });
+    });
     return () => {
       offPip();
       offNotice();
+      offIsland();
     };
   }, []);
   // Call over: no camera question left behind.
   const callLive = Boolean(session && session.phase === "connected");
   useEffect(() => {
-    if (!callLive) void clearAwayCameraNotice();
+    if (!callLive) {
+      void clearAwayCameraNotice();
+      void import("../lib/calls/live-activity").then(({ endCallActivity }) => endCallActivity());
+    }
   }, [callLive]);
 
   if (!session) return null;

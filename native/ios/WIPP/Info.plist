@@ -71,6 +71,8 @@
 	<string>WIPP peut enregistrer un média reçu dans ta photothèque.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>WIPP accède à tes photos pour les envoyer dans tes conversations et les utiliser dans ton profil, tes Stories, tes annonces et tes événements.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
