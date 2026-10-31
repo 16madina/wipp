@@ -43,6 +43,10 @@ export function upsertRemoteProfile(profile: RemoteProfile, connected?: boolean)
       [user.id]: {
         ...user,
         connected: connected ?? s.users[user.id]?.connected ?? false,
+        // Keep the real online status read from the server (a profile refresh must not reset it).
+        online: s.users[user.id]?.online ?? false,
+        lastSeen: s.users[user.id]?.lastSeen,
+        presenceHidden: s.users[user.id]?.presenceHidden,
       },
     },
   }));
