@@ -1387,15 +1387,15 @@ export function SignupCelebrationScreen({ username }: { username: string }) {
   const rest = useRef(new Animated.Value(0)).current;
   const out = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    // The logo spins once (≈ 2.7 s); « Bienvenue sur WIPP » pops in, then everything fades out to the messages.
+    // The logo turns into gold ribbons and forms again (4.1 s); « Bienvenue sur WIPP » pops in, then everything fades out to the messages.
     Animated.sequence([
-      Animated.delay(300),
+      // Ribbons swirl, then the logo forms again (≈ 2.8 s): « Bienvenue sur WIPP » arrives with it.
+      Animated.delay(2600),
       Animated.parallel([
         Animated.spring(title, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
-        Animated.sequence([Animated.delay(450), Animated.timing(rest, { toValue: 1, duration: 300, useNativeDriver: true })]),
+        Animated.sequence([Animated.delay(350), Animated.timing(rest, { toValue: 1, duration: 280, useNativeDriver: true })]),
       ]),
-      // Ends as soon as the logo has done its turn (≈ 2.7 s).
-      Animated.delay(1300),
+      Animated.delay(500),
       Animated.timing(out, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start(({ finished }) => {
       if (finished) pop();
