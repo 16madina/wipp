@@ -1254,6 +1254,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
       }
     }
 
+    if (method === "GET" && a === "connections" && b === "requests" && c === "sent" && !d) {
+      const me = await resolveSession(bearer(request));
+      const { listSentConnectionRequests } = await import("./social");
+      return json({ requests: await listSentConnectionRequests(me.id) });
+    }
+
     if (method === "GET" && a === "connections" && b === "requests" && !c) {
       const me = await resolveSession(bearer(request));
       return json({ requests: await listIncomingConnectionRequests(me.id) });

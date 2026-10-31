@@ -588,11 +588,51 @@ export function RequestsScreen() {
   useEffect(() => {
     void useWippStore.getState().refreshIncomingRequests();
   }, [live]);
+  // « Envoyées »: requests I sent and where they stand (refused ones stay « En attente »).
+  const [tab, setTab] = useState<"in" | "out">("in");
+  const [sent, setSent] = useState<{ id: string; createdAt: string; status: "pending" | "accepted" | "expired"; recipient: { id: string; username: string; displayName: string; avatarUrl: string | null } }[] | null>(null);
+  useEffect(() => {
+    if (tab !== "out" || !live) return;
+    void import("../lib/proximity/wipp-session")
+      .then(({ wippApi }) => wippApi<{ requests: NonNullable<typeof sent> }>("connections/requests/sent"))
+      .then((r) => setSent(r.requests))
+      .catch(() => setSent([]));
+  }, [tab, live]);
   return (
     <ScreenRoot>
       <GlassHeader>
         <Header title={t("requests")} onBack={pop} />
       </GlassHeader>
+      <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingBottom: 12 }}>
+        <Chip label={pending.length ? `${tr("Reçues")} (${pending.length})` : tr("Reçues")} active={tab === "in"} onPress={() => setTab("in")} />
+        <Chip label={tr("Envoyées")} active={tab === "out"} onPress={() => setTab("out")} />
+      </View>
+      {tab === "out" ? (
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+          {sent === null ? <Empty title={tr("Chargement…")} /> : null}
+          {sent && sent.length === 0 ? <Empty title={tr("Aucune demande envoyée")} /> : null}
+          {(sent ?? []).map((r) => {
+            const label = r.status === "accepted" ? tr("Acceptée") : r.status === "expired" ? tr("Expirée") : tr("En attente");
+            const color = r.status === "accepted" ? colors.success : r.status === "expired" ? colors.muted : colors.accent;
+            return (
+              <Press
+                key={r.id}
+                onPress={() => (r.status === "accepted" ? push({ name: "conversation", chatId: useWippStore.getState().openOrCreateDm(`srvuser:${r.recipient.id}`) }) : undefined)}
+                style={{ marginBottom: 10, borderRadius: 12, backgroundColor: colors.surface, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
+              >
+                <Avatar user={{ displayName: r.recipient.displayName, avatar: r.recipient.avatarUrl ?? undefined }} size={44} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: "Inter_500Medium", color: colors.fg }}>{r.recipient.displayName}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 13, color: colors.muted }}>@{r.recipient.username}</Text>
+                </View>
+                <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: color }}>
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color }}>{label}</Text>
+                </View>
+              </Press>
+            );
+          })}
+        </ScrollView>
+      ) : (
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
         {!live && __DEV__ ? (
           <Press onPress={() => push({ name: "touch-incoming" })} style={{ marginBottom: 12, minHeight: 48, borderRadius: 12, backgroundColor: colors.surface, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -656,6 +696,7 @@ export function RequestsScreen() {
           );
         })}
       </ScrollView>
+      )}
       <Sheet open={Boolean(accepting)} title={tr("Comment voulez-vous vous connecter ?")} onClose={() => setAccepting(null)}>
         <ConnectionChoicePicker value={choice} onChange={setChoice} />
         <Btn

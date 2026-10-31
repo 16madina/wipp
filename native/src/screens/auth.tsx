@@ -897,6 +897,8 @@ export function SmsReferenceScreen() {
           enterLinkedProfile(res.profile, phone);
           clearPending();
           setBusy(false);
+          // Signed in again (after « Déconnexion »): same animation, « Bon retour sur WIPP ».
+          if (res.profile.username) useWippStore.getState().push({ name: "signup-celebration", username: res.profile.username, back: true });
           return;
         }
         if ("noAccount" in res && res.noAccount) {
@@ -933,10 +935,8 @@ export function SmsReferenceScreen() {
       if (existing.ok) {
         clearPending();
         enterLinkedProfile(existing.profile, phone);
-        Alert.alert(
-          tr("Bon retour !"),
-          tr("Ce numéro a déjà un compte WIPP{0}. On t’a connecté·e à ce compte.", existing.profile.username ? ` (@${existing.profile.username})` : ""),
-        );
+        // This number already has an account: open it with the « Bon retour sur WIPP » animation.
+        if (existing.profile.username) useWippStore.getState().push({ name: "signup-celebration", username: existing.profile.username, back: true });
         return;
       }
     } catch {
@@ -1378,22 +1378,55 @@ export function ProfileReferenceScreen() {
   );
 }
 
-export function SignupCelebrationScreen({ username }: { username: string }) {
+/** Animated WIPP logo (Grok, black background removed, loop) — same as the call « Je reviens » screen. */
+const WELCOME_LOGO = require("../../assets/call-reactions/welcome-logo.webp");
+
+/** `back`: signed in again after signing out → « Bon retour sur WIPP ». */
+export function SignupCelebrationScreen({ username, back }: { username: string; back?: boolean }) {
   const pop = useWippStore((s) => s.pop);
+  const title = useRef(new Animated.Value(0)).current;
+  const rest = useRef(new Animated.Value(0)).current;
+  const out = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const id = setTimeout(pop, 3300);
+    // The logo turns into gold ribbons and forms again (4.1 s); « Bienvenue sur WIPP » pops in, then everything fades out to the messages.
+    Animated.sequence([
+      // Ribbons swirl, then the logo forms again (≈ 2.8 s): « Bienvenue sur WIPP » arrives with it.
+      Animated.delay(2600),
+      Animated.parallel([
+        Animated.spring(title, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
+        Animated.sequence([Animated.delay(350), Animated.timing(rest, { toValue: 1, duration: 280, useNativeDriver: true })]),
+      ]),
+      Animated.delay(500),
+      Animated.timing(out, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (finished) pop();
+    });
+    // Safety: never stay stuck on this screen.
+    const id = setTimeout(pop, 6000);
     return () => clearTimeout(id);
-  }, [pop]);
+  }, [pop, title, rest, out]);
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
-      <Image source={brandOfficial} style={{ height: 96, width: 220 }} contentFit="contain" />
-      <View style={{ marginTop: 32, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
-        <Check size={32} color={colors.accentFg} strokeWidth={3} />
-      </View>
-      <Text style={{ marginTop: 32, fontSize: 29, fontFamily: "Inter_600SemiBold", color: colors.fg, textAlign: "center" }}>{tr("Bienvenue sur WIPP ✨")}</Text>
-      <Text style={{ marginTop: 12, fontSize: 19, fontFamily: "Inter_500Medium", color: colors.accent }}>@{username}</Text>
-      <Text style={{ marginTop: 8, fontSize: 17, color: colors.fg }}>{tr("Ton WIPP est prêt.")}</Text>
-      <Text style={{ position: "absolute", bottom: "18%", fontSize: 16, fontFamily: "Inter_500Medium", color: colors.muted }}>{tr("Connecte ta vie.")}</Text>
+    <View style={{ flex: 1, backgroundColor: "#02081e" }}>
+      <Animated.View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, opacity: out, transform: [{ scale: out.interpolate({ inputRange: [0, 1], outputRange: [1.06, 1] }) }] }}>
+        <Image source={WELCOME_LOGO} style={{ width: 290, height: 290 }} contentFit="contain" autoplay />
+        <Animated.Text
+          style={{
+            marginTop: 6,
+            fontSize: 32,
+            fontFamily: "Inter_700Bold",
+            color: "#fff",
+            textAlign: "center",
+            opacity: title,
+            transform: [{ translateY: title.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) }, { scale: title.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }],
+          }}
+        >
+          {back ? tr("Bon retour sur WIPP") : tr("Bienvenue sur WIPP")}
+        </Animated.Text>
+        <Animated.View style={{ alignItems: "center", opacity: rest, transform: [{ translateY: rest.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
+          <Text style={{ marginTop: 12, fontSize: 19, fontFamily: "Inter_600SemiBold", color: "#FFD84D" }}>@{username}</Text>
+          <Text style={{ marginTop: 8, fontSize: 17, color: "rgba(255,255,255,0.85)" }}>{back ? tr("Content de te revoir.") : tr("Ton WIPP est prêt.")}</Text>
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }

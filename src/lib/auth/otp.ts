@@ -96,6 +96,12 @@ export async function sendOtp(input: { phone?: string; channel?: string; ip?: st
     channel = "sms";
     r = await twilio("Verifications", { To: phone, Channel: "sms", Locale: "fr" });
   }
+  if (!r.ok && channel === "sms" && r.status !== 429) {
+    // SMS blocked for this country (e.g. Australia 60250 until the registration is approved): send the code by voice call instead.
+    console.warn("[otp] sms failed, falling back to voice", r.status, r.json.code, r.json.message);
+    channel = "voice";
+    r = await twilio("Verifications", { To: phone, Channel: "call", Locale: "fr" });
+  }
   if (!r.ok) {
     console.warn("[otp] twilio send", r.status, r.json.code, r.json.message);
     throw new WippHttpError(502, "otp_send_failed", channel === "whatsapp" ? "Le code n’a pas pu être envoyé sur WhatsApp. Essaie par SMS." : "Le code n’a pas pu être envoyé. Réessaie ou choisis une autre méthode.");

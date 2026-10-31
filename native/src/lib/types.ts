@@ -183,7 +183,7 @@ export type Screen =
   | { name: "phone-entry" }
   | { name: "sms-reference" }
   | { name: "profile-reference" }
-  | { name: "signup-celebration"; username: string }
+  | { name: "signup-celebration"; username: string; back?: boolean }
   | { name: "signup" }
   | { name: "login" }
   | { name: "otp" }
