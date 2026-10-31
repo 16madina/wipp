@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { loadSocials, type Socials } from "../lib/profile-socials";
 import { SocialIcons } from "../components/SocialIcons";
-import { Alert, Linking, Platform, Share, Text, View, ScrollView } from "react-native";
+import { Alert, Linking, Modal, Platform, Share, Text, View, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { Image } from "expo-image";
 import { ImagePlus, MapPin, QrCode, ScanLine, Search, Hash } from "lucide-react-native";
 import { Avatar } from "../components/Avatar";
@@ -871,11 +873,32 @@ const TOUCH_COPY = {
   },
 };
 
+/** Short video showing how to use WIPP Touch (bundled in the app, plays full screen). */
+const TOUCH_TUTORIAL = require("../../assets/tutorials/wipp-touch.mp4");
+function TouchTutorial({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const player = useVideoPlayer(visible ? TOUCH_TUTORIAL : null, (p) => {
+    p.loop = false;
+    p.play();
+  });
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "#000" }}>
+        {visible ? <VideoView player={player} style={{ flex: 1 }} contentFit="contain" nativeControls /> : null}
+        <Press accessibilityLabel={tr("Fermer")} onPress={onClose} style={{ position: "absolute", top: insets.top + 8, right: 14, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: "#fff", fontSize: 20, lineHeight: 22 }}>✕</Text>
+        </Press>
+      </View>
+    </Modal>
+  );
+}
+
 export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
   const t = useT();
   const c = TOUCH_COPY[t("all") === "All" ? "en" : "fr"];
   const pop = useWippStore((s) => s.pop);
   const push = useWippStore((s) => s.push);
+  const [tutorial, setTutorial] = useState(false);
   const me = useWippStore((s) => s.me);
   const users = useWippStore((s) => s.users);
   const openOrCreateDm = useWippStore((s) => s.openOrCreateDm);
@@ -936,6 +959,12 @@ export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
       <GlassHeader>
         <Header title={t("wgoTouch")} onBack={pop} />
       </GlassHeader>
+      {!(matched || done) ? (
+        <Press onPress={() => setTutorial(true)} style={{ alignItems: "center", paddingTop: 6, paddingHorizontal: 24 }}>
+          <Text style={{ fontSize: 17, fontFamily: "Inter_700Bold", color: colors.fg, textAlign: "center" }}>{tr("Comment utiliser WIPP Touch ?")}</Text>
+          <Text style={{ marginTop: 4, fontSize: 13, color: colors.accent, fontFamily: "Inter_600SemiBold" }}>{tr("Regarde le tutoriel ▶")}</Text>
+        </Press>
+      ) : null}
       <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
         {matched || done ? (
           <View style={{ alignItems: "center" }}>
@@ -1060,8 +1089,10 @@ export function WgoTouchScreen({ adopt }: { adopt?: string } = {}) {
               <Btn label={c.showQr} variant="ghost" onPress={() => push({ name: "my-qr" })} />
             </>
           ) : null}
+          {!(matched || done) ? <Btn label={tr("▶ Tutoriel")} variant="ghost" onPress={() => setTutorial(true)} /> : null}
         </View>
       </ScrollView>
+      <TouchTutorial visible={tutorial} onClose={() => setTutorial(false)} />
     </ScreenRoot>
   );
 }
