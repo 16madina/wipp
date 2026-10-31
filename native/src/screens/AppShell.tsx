@@ -163,7 +163,7 @@ function ScreenSwitch({ screen }: { screen: Screen }) {
     case "profile-reference":
       return <ProfileReferenceScreen />;
     case "signup-celebration":
-      return <SignupCelebrationScreen username={screen.username} />;
+      return <SignupCelebrationScreen username={screen.username} back={screen.back} />;
     case "signup":
       return <SignupScreen />;
     case "login":
