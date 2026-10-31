@@ -57,7 +57,8 @@ function peerToUser(peer: WippChatSummary["peer"]): User {
     displayName: peer.displayName,
     avatar: peer.avatarUrl || "",
     bio: peer.bio || "",
-    online: true,
+    // Real online status comes from presence (never assume « en ligne »).
+    online: false,
     // Being in a chat does NOT make someone a contact: the server's connection list decides.
     connected: false,
     city: "",
@@ -407,7 +408,7 @@ export function mergeServerChatsIntoState(
     const user = peerToUser(sc.peer);
     const known = users[user.id];
     const dmConnected = sc.kind !== "group" && sc.connection ? sc.connection.status === "active" : undefined;
-    users[user.id] = { ...known, ...user, connected: dmConnected ?? known?.connected ?? false };
+    users[user.id] = { ...known, ...user, connected: dmConnected ?? known?.connected ?? false, online: known?.online ?? false, lastSeen: known?.lastSeen, presenceHidden: known?.presenceHidden };
     if (sc.peer.e2ePublicJwk) {
       peerPublicKeys[user.id] = sc.peer.e2ePublicJwk;
       peerPublicKeys[sc.peer.id] = sc.peer.e2ePublicJwk;
@@ -419,7 +420,7 @@ export function mergeServerChatsIntoState(
       for (const member of sc.members ?? []) {
         const user = peerToUser(member);
         if (meServerId && member.id === meServerId) continue;
-        users[user.id] = { ...users[user.id], ...user, connected: users[user.id]?.connected ?? false };
+        users[user.id] = { ...users[user.id], ...user, connected: users[user.id]?.connected ?? false, online: users[user.id]?.online ?? false, lastSeen: users[user.id]?.lastSeen, presenceHidden: users[user.id]?.presenceHidden };
       }
       const muted =
         sc.mutedUntil === "always" || (typeof sc.mutedUntil === "number" && sc.mutedUntil > Date.now());

@@ -474,6 +474,7 @@ export function AppShell() {
     void useWippStore.getState().ensureCrypto();
     void useWippStore.getState().syncServerInbox();
     void onSessionReady();
+    void import("../lib/presence").then(({ startPresence }) => startPresence());
     let stop = () => {};
     void import("../lib/messaging/live-client").then(({ startMessageStream }) => {
       stop = startMessageStream((event) => {
