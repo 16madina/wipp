@@ -1385,37 +1385,44 @@ export function SignupCelebrationScreen({ username }: { username: string }) {
   const pop = useWippStore((s) => s.pop);
   const title = useRef(new Animated.Value(0)).current;
   const rest = useRef(new Animated.Value(0)).current;
+  const out = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    // The logo plays, then « Bienvenue sur WIPP » rises in, then the name.
+    // The logo spins once (3.7 s); « Bienvenue sur WIPP » pops in, then everything fades out to the messages.
     Animated.sequence([
-      Animated.delay(700),
+      Animated.delay(500),
       Animated.spring(title, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
-      Animated.timing(rest, { toValue: 1, duration: 420, useNativeDriver: true }),
-    ]).start();
-    const id = setTimeout(pop, 4300);
+      Animated.timing(rest, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.delay(1900),
+      Animated.timing(out, { toValue: 0, duration: 550, useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (finished) pop();
+    });
+    // Safety: never stay stuck on this screen.
+    const id = setTimeout(pop, 6000);
     return () => clearTimeout(id);
-  }, [pop, title, rest]);
+  }, [pop, title, rest, out]);
   return (
-    <View style={{ flex: 1, backgroundColor: "#02081e", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
-      <Image source={WELCOME_LOGO} style={{ width: 230, height: 230 }} contentFit="contain" autoplay />
-      <Animated.Text
-        style={{
-          marginTop: 18,
-          fontSize: 31,
-          fontFamily: "Inter_700Bold",
-          color: "#fff",
-          textAlign: "center",
-          opacity: title,
-          transform: [{ translateY: title.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }, { scale: title.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
-        }}
-      >
-        {tr("Bienvenue sur WIPP")}
-      </Animated.Text>
-      <Animated.View style={{ alignItems: "center", opacity: rest, transform: [{ translateY: rest.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
-        <Text style={{ marginTop: 12, fontSize: 19, fontFamily: "Inter_600SemiBold", color: "#FFD84D" }}>@{username}</Text>
-        <Text style={{ marginTop: 8, fontSize: 17, color: "rgba(255,255,255,0.85)" }}>{tr("Ton WIPP est prêt.")}</Text>
+    <View style={{ flex: 1, backgroundColor: "#02081e" }}>
+      <Animated.View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, opacity: out, transform: [{ scale: out.interpolate({ inputRange: [0, 1], outputRange: [1.06, 1] }) }] }}>
+        <Image source={WELCOME_LOGO} style={{ width: 290, height: 290 }} contentFit="contain" autoplay />
+        <Animated.Text
+          style={{
+            marginTop: 6,
+            fontSize: 32,
+            fontFamily: "Inter_700Bold",
+            color: "#fff",
+            textAlign: "center",
+            opacity: title,
+            transform: [{ translateY: title.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) }, { scale: title.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }],
+          }}
+        >
+          {tr("Bienvenue sur WIPP")}
+        </Animated.Text>
+        <Animated.View style={{ alignItems: "center", opacity: rest, transform: [{ translateY: rest.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
+          <Text style={{ marginTop: 12, fontSize: 19, fontFamily: "Inter_600SemiBold", color: "#FFD84D" }}>@{username}</Text>
+          <Text style={{ marginTop: 8, fontSize: 17, color: "rgba(255,255,255,0.85)" }}>{tr("Ton WIPP est prêt.")}</Text>
+        </Animated.View>
       </Animated.View>
-      <Text style={{ position: "absolute", bottom: "12%", fontSize: 13, letterSpacing: 4, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.6)" }}>{tr("CONNECTE TA VIE")}</Text>
     </View>
   );
 }
