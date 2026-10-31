@@ -14,7 +14,7 @@ function ping() {
 export function startPresence() {
   if (timer) return;
   ping();
-  timer = setInterval(() => AppState.currentState === "active" && ping(), 45_000);
+  timer = setInterval(() => AppState.currentState === "active" && ping(), 15_000);
   AppState.addEventListener("change", (st) => {
     if (st === "active") ping();
     else if (st === "background") void wippApi("presence/leave", { method: "POST" }).catch(() => undefined);

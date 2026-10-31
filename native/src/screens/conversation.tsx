@@ -562,8 +562,13 @@ function ConversationInner({ chatId }: { chatId: string }) {
     if (!peerId?.startsWith("srvuser:")) return;
     const load = () => void import("../lib/presence").then(({ refreshPresence }) => refreshPresence([peerId]));
     load();
-    const id = setInterval(load, 30_000);
-    return () => clearInterval(id);
+    // Every 5 s while the conversation is open (and right away when WIPP comes back).
+    const id = setInterval(() => AppState.currentState === "active" && load(), 5_000);
+    const sub = AppState.addEventListener("change", (st) => st === "active" && load());
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
   }, [peerId]);
   const headerRing = chat.type !== "group" && peer ? storyRing(stories, peer.id) : "none";
   const sealed = isChatSealed(chat);

@@ -5,7 +5,7 @@
  */
 import { getSql } from "@/lib/db";
 
-const ONLINE_MS = 90_000;
+const ONLINE_MS = 40_000;
 let ready: Promise<void> | null = null;
 function ensure() {
   ready ??= (async () => {
