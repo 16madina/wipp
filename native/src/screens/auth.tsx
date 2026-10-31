@@ -1379,7 +1379,7 @@ export function ProfileReferenceScreen() {
 }
 
 /** Animated WIPP logo (Grok, black background removed, loop) — same as the call « Je reviens » screen. */
-const WELCOME_LOGO = require("../../assets/call-reactions/logo-pause.webp");
+const WELCOME_LOGO = require("../../assets/call-reactions/welcome-logo.webp");
 
 export function SignupCelebrationScreen({ username }: { username: string }) {
   const pop = useWippStore((s) => s.pop);
