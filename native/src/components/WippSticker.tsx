@@ -90,7 +90,11 @@ function ChromaClipNative({ source, loop, still, black, extra, repeat, onReady }
       }
       const tag = extra ? `-x${Math.abs([...JSON.stringify(extra)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7))}` : "";
       const htmlUri = `${folder}${file}${loop ? "-loop" : ""}${repeat ? "-repeat" : ""}${still ? "-still" : ""}${black ? "-black" : ""}${tag}.html`;
-      await writeAsStringAsync(htmlUri, clipHtml(file, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra, repeat));
+      let html = clipHtml(file, loop && !extra?.start) + CLIP_SCRIPT(loop, still, black, extra, repeat);
+      // Android: the hidden source video (2 % opacity, needed on iPhone to play) left a faint green square
+      // on dark backgrounds. A 1-pixel video still plays and feeds the canvas at full size.
+      if (Platform.OS === "android") html = html.replace("video{opacity:0.02}", "video{opacity:0.02;width:1px;height:1px;inset:auto;left:0;top:0}");
+      await writeAsStringAsync(htmlUri, html);
       if (!live) return;
       setDir(folder);
       setPage(htmlUri);
@@ -109,6 +113,10 @@ function ChromaClipNative({ source, loop, still, black, extra, repeat, onReady }
       source={{ uri: page }}
       allowingReadAccessToURL={dir}
       allowFileAccess
+      // Android: the player page and the clip are both local files. Without this, Android treats them as
+      // different origins: the canvas is "tainted", reading its pixels fails after the first image, and the
+      // sticker stays frozen on its green (or black) background.
+      allowFileAccessFromFileURLs
       style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
       containerStyle={{ backgroundColor: "transparent" }}
       opaque={false}
@@ -220,17 +228,17 @@ function personalExtra(id: string): ClipExtra | undefined {
   return text || start ? { pop, text, start } : undefined;
 }
 
-function PersonalSticker({ id, size, fill, still, loop }: { id: string; size: number; fill?: boolean; still?: boolean; loop?: boolean }) {
+function PersonalSticker({ id, size, fill, still, loop, onReady }: { id: string; size: number; fill?: boolean; still?: boolean; loop?: boolean; onReady?: () => void }) {
   const box = fill ? { width: "100%" as const, height: "100%" as const } : { width: size, height: size };
   return (
     <View style={box}>
-      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} extra={personalExtra(id)} onReady={() => undefined} />
+      <ChromaClip source={wippmojiClipUrl(id)} still={still} loop={loop ?? !still} extra={personalExtra(id)} onReady={() => onReady?.()} />
     </View>
   );
 }
 
-export function WippSticker(props: { id: string; size?: number; loop?: boolean; fill?: boolean; still?: boolean; /** Plays again every few seconds (Stories). */ repeat?: boolean }) {
-  if (props.id.startsWith("wm:")) return <PersonalSticker id={props.id} size={props.size ?? 48} fill={props.fill} still={props.still} loop={props.loop} />;
+export function WippSticker(props: { id: string; size?: number; loop?: boolean; fill?: boolean; still?: boolean; /** Plays again every few seconds (Stories). */ repeat?: boolean; /** Personal clip: its first image is on screen. */ onReady?: () => void }) {
+  if (props.id.startsWith("wm:")) return <PersonalSticker id={props.id} size={props.size ?? 48} fill={props.fill} still={props.still} loop={props.loop} onReady={props.onReady} />;
   return <BuiltInSticker {...props} />;
 }
 
