@@ -13,7 +13,7 @@ const DETECT_G = 0.7;
 const SEND_MIN_G = 0.8;
 const MAX_BUMP_MS = 250;
 /** One report per gesture: the same tap rings for a few hundred ms. */
-const SEND_GAP_MS = 1500;
+const SEND_GAP_MS = 700;
 /** After a report, how long to wait for the WIPP Touch phone's own report to arrive. */
 const FOLLOW_MS = 4000;
 const FOLLOW_EVERY_MS = 400;
@@ -50,28 +50,36 @@ function emit(id: string) {
   for (const fn of listeners) fn(id);
 }
 
+/** Each new report replaces the one being followed (a new tap is never ignored while we wait). */
+let followGen = 0;
+
 async function follow(id: string) {
   following = true;
+  const gen = ++followGen;
   const until = Date.now() + FOLLOW_MS;
   try {
-    while (Date.now() < until && sub) {
+    while (Date.now() < until && sub && gen === followGen) {
       await new Promise((r) => setTimeout(r, FOLLOW_EVERY_MS));
       const r = await wippApi<{ session: SessionLite }>(`/touch/session/${encodeURIComponent(id)}`).catch(() => null);
       const st = r?.session.state;
       if (st === "candidate") return emit(id);
       if (st && st !== "bumped" && st !== "waiting") return;
     }
+    if (gen !== followGen) return;
     // Nobody with WIPP Touch open felt the same bump: drop the attempt quietly.
     void wippApi(`/touch/session/${encodeURIComponent(id)}/cancel`, { method: "POST", body: JSON.stringify({ diag: null }) }).catch(() => undefined);
   } finally {
-    following = false;
+    if (gen === followGen) following = false;
   }
 }
 
 async function onBump(e: BumpEvent) {
-  if (e.peak < SEND_MIN_G || following || AppState.currentState !== "active") return;
+  // Even while a previous tap is being followed: a new tap is reported at once (it used to be ignored for 4 s,
+  // so people had to tap many times).
+  if (e.peak < SEND_MIN_G || AppState.currentState !== "active") return;
   if (e.at - lastSent < SEND_GAP_MS) return;
   lastSent = e.at;
+  if (!clock) await measureClock().catch(() => undefined);
   if (!clock) return;
   const caps = getTouchCapabilities();
   try {
