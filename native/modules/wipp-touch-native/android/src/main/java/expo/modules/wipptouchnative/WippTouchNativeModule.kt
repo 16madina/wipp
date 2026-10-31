@@ -177,7 +177,7 @@ class WippTouchNativeModule : Module() {
 
 /** Short sharp impact detector. A touch is a brief spike; shaking (several spikes) is ignored. */
 class BumpDetector(thresholdG: Double, maxDurMs: Double) {
-  private val threshold = max(0.8, thresholdG)
+  private val threshold = max(0.5, thresholdG)
   private val maxDur = max(40.0, maxDurMs)
   private var inPeak = false
   private var startMs = 0.0

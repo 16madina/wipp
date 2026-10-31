@@ -9,8 +9,8 @@ import { getTouchCapabilities, startBumpDetection, type BumpEvent } from "wipp-t
 import { wippApi } from "./wipp-session";
 
 /** Detection floor in the native detector, and the minimum peak worth a server call. */
-const DETECT_G = 0.7;
-const SEND_MIN_G = 0.8;
+const DETECT_G = 0.55;
+const SEND_MIN_G = 0.6;
 const MAX_BUMP_MS = 250;
 /** One report per gesture: the same tap rings for a few hundred ms. */
 const SEND_GAP_MS = 700;
