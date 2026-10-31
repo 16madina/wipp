@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
+  CheckCheck,
+  Eye,
   BadgeCheck,
   Ban,
   BellOff,
@@ -81,6 +83,7 @@ import {
 import { pushProtect } from "../lib/screen-protection";
 import { orderedOtherStoryUsers, storyRing, storySegments, type StoryRing } from "../lib/story-status";
 import { chatPeer, isChatSealed, isPrivateChat, useT, useWippStore } from "../lib/store";
+import { loadContactPrivacy, setOnlineVisibleTo, setReadReceiptsFor, useContactPrivacy } from "../lib/contact-privacy";
 import type { ConnectionChoice, MediaItem, StoryItem } from "../lib/types";
 import { isSeedDemoChat } from "../lib/seed";
 import { isStoryLive, type Chat, type Shop } from "../lib/types";
@@ -930,6 +933,30 @@ const DISAPPEAR_OPTIONS: [string, number][] = [
 ];
 
 /** Contact / group info, like WhatsApp: big photo, quick actions, shared media, chat settings. */
+/** Per contact: may this person see me online / know I read their messages (on top of Confidentialité). */
+function ContactPrivacyRows({ userId, name }: { userId: string; name: string }) {
+  const hiddenFrom = useContactPrivacy((s) => s.hiddenFrom);
+  const noRead = useContactPrivacy((s) => s.noReadReceipts);
+  const generalReceipts = useWippStore((s) => s.privacy.readReceipts !== false);
+  useEffect(() => {
+    void loadContactPrivacy();
+  }, []);
+  return (
+    <>
+      <Row
+        icon={<Eye size={18} color={colors.fg} />}
+        label={tr("Permettre à {0} de me voir en ligne", name)}
+        trailing={<Toggle value={!hiddenFrom.includes(userId)} onChange={(v) => void setOnlineVisibleTo(userId, v).catch(() => undefined)} />}
+      />
+      <Row
+        icon={<CheckCheck size={18} color={colors.fg} />}
+        label={tr("Permettre à {0} de savoir si j’ai lu ses messages", name)}
+        trailing={<Toggle value={generalReceipts && !noRead.includes(userId)} onChange={(v) => void setReadReceiptsFor(userId, v)} />}
+      />
+    </>
+  );
+}
+
 export function ChatInfoScreen({ chatId }: { chatId: string }) {
   useWippStore((s) => s.vaultEpoch);
   const infoLock = useLockPinAsk();
@@ -1283,6 +1310,7 @@ export function ChatInfoScreen({ chatId }: { chatId: string }) {
             onPress={() => setSheet("theme")}
           />
           {!group ? <Row icon={<Clock size={18} color={colors.fg} />} label={tr("Messages éphémères")} value={disappearLabel} onPress={() => setSheet("disappear")} /> : null}
+          {!group && peer?.id?.startsWith("srvuser:") ? <ContactPrivacyRows userId={peer.id} name={(peer.displayName || peer.username || "").split(" ")[0]} /> : null}
           {group ? (
             <Row
               icon={<Clock size={18} color={colors.fg} />}

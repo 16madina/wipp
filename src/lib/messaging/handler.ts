@@ -329,6 +329,12 @@ export async function handleWippApi(request: Request): Promise<Response> {
         const body = await readBody<{ hidden?: boolean }>(request);
         return json(await pr.setPresenceHidden(me.id, Boolean(body.hidden)));
       }
+      if (method === "GET" && b === "hidden-from") return json({ ids: await pr.hiddenFromList(me.id) });
+      if (method === "POST" && b === "hidden-from") {
+        const body = await readBody<{ viewerId?: string; hidden?: boolean }>(request);
+        if (!body.viewerId) throw new WippHttpError(400, "viewer_required", "Contact requis.");
+        return json(await pr.setHiddenFrom(me.id, body.viewerId.replace(/^srvuser:/, ""), Boolean(body.hidden)));
+      }
       if (method === "POST" && b === "of") {
         const body = await readBody<{ ids?: string[] }>(request);
         return json({ presence: await pr.presenceOf(me.id, Array.isArray(body.ids) ? body.ids : []) });

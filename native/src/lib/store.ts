@@ -541,7 +541,7 @@ export const useWippStore = create<Store>((set, get) => ({
     if (!chatId.startsWith("srv:")) return;
     void import("./messaging/client").then(async ({ postChatPrefs, postReceipts }) => {
       await postChatPrefs(chatId.slice(4), { manuallyUnread: markUnread });
-      if (!markUnread && get().privacy.readReceipts !== false) {
+      if (!markUnread && (await receiptsFor(get, chatId))) {
         const ids = (get().messages[chatId] ?? []).filter((m) => m.fromId !== "me").map((m) => m.id);
         if (ids.length) await postReceipts(chatId.slice(4), ids, "read");
       }
@@ -568,7 +568,7 @@ export const useWippStore = create<Store>((set, get) => ({
           const dec = await decryptMergedMessages(get(), chatId, get().identity);
           if (Object.keys(dec).length) set(() => dec);
         }
-        const receiptsOn = get().privacy.readReceipts !== false;
+        const receiptsOn = await receiptsFor(get, chatId);
         const incoming = (get().messages[chatId] ?? []).filter((m) => m.fromId !== "me" && !m.deletedForAll).map((m) => m.id);
         if (incoming.length) {
           const { postReceipts } = await import("./messaging/client");
@@ -1272,7 +1272,7 @@ export const useWippStore = create<Store>((set, get) => ({
           .map((m) => m.id);
         if (incoming.length) {
           const { postReceipts } = await import("./messaging/client");
-          const receiptsOn = get().privacy.readReceipts !== false;
+          const receiptsOn = await receiptsFor(get, `srv:${event.chatId}`);
           await postReceipts(event.chatId, incoming, receiptsOn ? "read" : "delivered");
         }
       } else if (event.kind === "message" && !open) {
@@ -1782,3 +1782,17 @@ subscribePrivateVault(() => {
 subscribeChatLock(() => {
   useWippStore.setState((s) => ({ vaultEpoch: s.vaultEpoch + 1 }));
 });
+
+
+/** « lu » allowed for this chat: general setting + per-contact choice (DMs only). */
+async function receiptsFor(get: () => Store, chatId: string) {
+  const st = get();
+  const general = st.privacy.readReceipts !== false;
+  if (!general) return false;
+  const chat = st.chats.find((c) => c.id === chatId);
+  if (!chat || chat.type === "group") return true;
+  const peerId = chat.participantIds.find((id) => id !== "me");
+  const { loadContactPrivacy, readReceiptsAllowedFor } = await import("./contact-privacy");
+  await loadContactPrivacy();
+  return readReceiptsAllowedFor(peerId, general);
+}
