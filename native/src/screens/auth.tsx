@@ -2,7 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Animated, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View, type KeyboardEvent } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, InputAccessoryView, Keyboard, Modal, Platform, Pressable, StatusBar, Text, TextInput, useWindowDimensions, View, type KeyboardEvent } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight, Camera, Check, ChevronDown, ChevronLeft, Pencil } from "lucide-react-native";
@@ -96,7 +96,11 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
     translateY.stopAnimation((live) => {
       currentShift.current = live;
       target.measureInWindow((_x, y, _width, height) => {
-        const base = { top: y - live, bottom: y - live + height };
+        // Android measures from below the status bar, but the keyboard top is counted from the top of the
+        // screen: without the status bar height the form moved ~32 dp too little and the keyboard hid half
+        // of the number field.
+        const bar = Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0;
+        const base = { top: y + bar - live, bottom: y + bar - live + height };
         baseOf.current.set(target, base);
         applyShift(base, duration);
       });
@@ -105,7 +109,14 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
 
   useEffect(() => {
     const onFrame = (event: KeyboardEvent) => {
-      const next = event.endCoordinates.screenY;
+      let next = event.endCoordinates.screenY;
+      // Android 11+ with WIPP drawn edge to edge: the reported top of the keyboard is often the bottom of
+      // the screen (so nothing moved and the number field stayed under the keyboard). Its height is right:
+      // the keyboard starts « height » above the navigation bar.
+      if (Platform.OS === "android" && event.endCoordinates.height > 0) {
+        const fromHeight = Dimensions.get("screen").height - insets.bottom - event.endCoordinates.height;
+        next = Math.min(next, fromHeight);
+      }
       if (keyboardTop.current != null && Math.abs(next - keyboardTop.current) < 1) return;
       keyboardTop.current = next;
       requestAnimationFrame(() => revealActive(event.duration || 220));
@@ -122,7 +133,7 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
       frameSub.remove();
       hideSub.remove();
     };
-  }, [animateTo, revealActive]);
+  }, [animateTo, revealActive, insets.bottom]);
 
   const reveal = useCallback((target: Measurable | null) => {
     if (active.current === target && keyboardTop.current != null) return;
