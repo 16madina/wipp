@@ -868,10 +868,38 @@ export function PrivacyScreen() {
           <Row label={tr("WIPP Privé")} value={isPrivateEnabled() ? tr("Activé") : tr("Désactivé")} onPress={() => setPane("prive")} />
           <Row label={t("blockedList")} onPress={() => push({ name: "blocked" })} />
         </Section>
+        <OnlineStatusSection />
         <MessagePreviewSection />
         <TouchPermissionSection />
       </ScrollView>
     </ScreenRoot>
+  );
+}
+
+/** « En ligne » like WhatsApp: hide it, and then you no longer see other people's either. */
+function OnlineStatusSection() {
+  const [show, setShow] = useState<boolean | null>(null);
+  useEffect(() => {
+    void import("../lib/presence").then(({ getPresenceHidden }) => getPresenceHidden()).then((h) => setShow(!h)).catch(() => setShow(true));
+  }, []);
+  return (
+    <Section title={tr("En ligne")}>
+      <Row
+        label={tr("Montrer quand je suis en ligne")}
+        trailing={
+          <Toggle
+            value={show ?? true}
+            onChange={(v) => {
+              setShow(v);
+              void import("../lib/presence").then(({ setPresenceHidden }) => setPresenceHidden(!v)).catch(() => setShow(!v));
+            }}
+          />
+        }
+      />
+      <Text style={{ paddingHorizontal: 16, paddingVertical: 8, fontSize: 12, color: colors.muted }}>
+        {tr("Si tu le désactives, personne ne voit quand tu es en ligne ni ta dernière connexion, et tu ne vois plus celles des autres.")}
+      </Text>
+    </Section>
   );
 }
 

@@ -556,6 +556,15 @@ function ConversationInner({ chatId }: { chatId: string }) {
     );
   }
   const peer = chatPeer(chat, users);
+  // Real online status of the person, refreshed while the conversation is open.
+  const peerId = peer?.id;
+  useEffect(() => {
+    if (!peerId?.startsWith("srvuser:")) return;
+    const load = () => void import("../lib/presence").then(({ refreshPresence }) => refreshPresence([peerId]));
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [peerId]);
   const headerRing = chat.type !== "group" && peer ? storyRing(stories, peer.id) : "none";
   const sealed = isChatSealed(chat);
   // The owner of the shop talks to a client: show the client, not their own shop.
@@ -568,9 +577,10 @@ function ConversationInner({ chatId }: { chatId: string }) {
       ? tr("{0} personnes", chat.participantIds.length)
       : shop
         ? undefined
-        : peer
+        : peer && !peer.presenceHidden && (peer.online || peer.lastSeen)
           ? formatLastSeen(peer.lastSeen, peer.online, useWippStore.getState().language)
           : undefined;
+  const peerOnline = Boolean(!typing && peer?.online && !peer.presenceHidden && chat.type !== "group" && !shop);
   const canCall = (chat.type === "group" || Boolean(peer)) && !sealed;
   const chats = useWippStore
     .getState()
@@ -1003,9 +1013,12 @@ function ConversationInner({ chatId }: { chatId: string }) {
                     ) : null}
                   </View>
                   {subtitle ? (
-                    <Text numberOfLines={1} style={{ fontSize: 11, color: typing ? colors.accent : colors.muted }}>
-                      {subtitle}
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      {peerOnline ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#30D158" }} /> : null}
+                      <Text numberOfLines={1} style={{ fontSize: 11, color: typing ? colors.accent : peerOnline ? "#30D158" : colors.muted }}>
+                        {subtitle}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
                 </Press>

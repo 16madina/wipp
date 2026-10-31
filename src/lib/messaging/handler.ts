@@ -319,6 +319,23 @@ export async function handleWippApi(request: Request): Promise<Response> {
       return json(await notifyStoredMessage(me.id, b, body.messageId ?? "", Boolean(body.vault)));
     }
 
+    if (a === "presence") {
+      const me = await resolveSession(bearer(request));
+      const pr = await import("./presence");
+      if (method === "POST" && b === "ping") return json(await pr.pingPresence(me.id));
+      if (method === "POST" && b === "leave") return json(await pr.leavePresence(me.id));
+      if (method === "GET" && b === "settings") return json(await pr.myPresenceSettings(me.id));
+      if (method === "POST" && b === "settings") {
+        const body = await readBody<{ hidden?: boolean }>(request);
+        return json(await pr.setPresenceHidden(me.id, Boolean(body.hidden)));
+      }
+      if (method === "POST" && b === "of") {
+        const body = await readBody<{ ids?: string[] }>(request);
+        return json({ presence: await pr.presenceOf(me.id, Array.isArray(body.ids) ? body.ids : []) });
+      }
+      throw new WippHttpError(404, "not_found", "Route inconnue.");
+    }
+
     if (method === "POST" && a === "device" && b === "claim" && !c) {
       const me = await resolveSession(bearer(request));
       const body = await readBody<{ installationId?: string; platform?: string; force?: boolean }>(request);

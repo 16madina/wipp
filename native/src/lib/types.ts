@@ -271,6 +271,8 @@ export type User = {
   avatar: string;
   online: boolean;
   lastSeen?: number;
+  /** Online status hidden (theirs or mine): show nothing. */
+  presenceHidden?: boolean;
   connected: boolean;
   city: string;
   /** blue = Ambassadeur (3 amis invités), gold = certifié par WIPP. */

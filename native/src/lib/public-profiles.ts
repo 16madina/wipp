@@ -28,7 +28,8 @@ export function userFromPublic(
     avatar: profile.avatarUrl || "",
     bio: profile.bio || "",
     motto: profile.motto || "",
-    online: true,
+    // Real status comes from refreshPresence (never assume « en ligne »).
+    online: false,
     connected,
     city: "",
   };
