@@ -33,11 +33,22 @@ export function WippMomentOverlay({
   const total = Math.max(2500, POP_MS - (info?.start ?? 0) * 1000);
   const move = useRef(new Animated.Value(0)).current;
 
+  // The clip is downloaded and loaded first: moving it before its first image is on screen meant the
+  // crossing was over before anything showed (it then only « appeared » in the middle). Wait for it (3 s max).
+  const [clipReady, setClipReady] = useState(false);
+  useEffect(() => {
+    setClipReady(false);
+    if (!pop) return;
+    const t = setTimeout(() => setClipReady(true), 3000);
+    return () => clearTimeout(t);
+  }, [stickerId, playKey, pop]);
+
   useEffect(() => {
     if (!pop) return;
     setFade(false);
     // 0 → 1: comes in from its side; 1 → 2: stays in the middle; 2 → 3: goes out (WIPP moves the clip, Grok does not).
     move.setValue(0);
+    if (!clipReady) return;
     const anim = Animated.sequence([
       Animated.timing(move, { toValue: 1, duration: MOVE_MS, easing: Easing.out(Easing.back(1.2)), useNativeDriver: true }),
       Animated.timing(move, { toValue: 2, duration: Math.max(500, total - 2 * MOVE_MS), easing: Easing.linear, useNativeDriver: true }),
@@ -45,7 +56,7 @@ export function WippMomentOverlay({
     ]);
     anim.start(() => done.current());
     return () => anim.stop();
-  }, [stickerId, playKey, pop, total, move]);
+  }, [stickerId, playKey, pop, total, move, clipReady]);
 
   useEffect(() => {
     if (!row?.playMs) return;
@@ -82,7 +93,7 @@ export function WippMomentOverlay({
     return (
       <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.layer, { justifyContent: "center" }]}>
         <Animated.View key={`${stickerId}-${playKey}`} style={{ width: "100%", aspectRatio: 1, opacity, transform: [{ translateX }, { translateY }, { scale }] }}>
-          <WippSticker id={stickerId} size={400} fill />
+          <WippSticker id={stickerId} size={400} fill onReady={() => setClipReady(true)} />
         </Animated.View>
       </View>
     );
