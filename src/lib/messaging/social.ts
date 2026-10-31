@@ -169,6 +169,27 @@ export async function listIncomingConnectionRequests(meId: string) {
   });
 }
 
+/**
+ * Requests I sent (last 30 days). A refused or ignored request still shows « En attente » until it expires:
+ * the other person is never exposed as having said no.
+ */
+export async function listSentConnectionRequests(meId: string) {
+  const sql = await getSql();
+  const rows = await sql<{ id: string; created_at: string; expires_at: string; status: string; recipient_id: string; username: string; display_name: string; avatar_url: string | null }>`
+    select r.id::text as id, r.created_at::text as created_at, r.expires_at::text as expires_at, r.status,
+           p.id as recipient_id, p.username, p.display_name, p.avatar_url
+    from wipp_connection_requests r
+    join wipp_profiles p on p.id = r.recipient_id
+    where r.sender_id = ${meId} and r.created_at > now() - interval '30 days'
+    order by r.created_at desc
+    limit 50`;
+  return rows.map((r) => {
+    const expired = Date.parse(r.expires_at) <= Date.now();
+    const status = r.status === "accepted" ? "accepted" : expired ? "expired" : "pending";
+    return { id: r.id, createdAt: r.created_at, status, recipient: { id: r.recipient_id, username: r.username, displayName: r.display_name, avatarUrl: r.avatar_url } };
+  });
+}
+
 export async function respondConnectionRequest(meId: string, requestId: string, action: string, choice?: ConnectionChoice) {
   if (action !== "accept" && action !== "decline" && action !== "ignore") {
     throw new WippHttpError(400, "invalid", "Action invalide.");
@@ -213,6 +234,12 @@ export async function respondConnectionRequest(meId: string, requestId: string, 
   const viaRaw = String((updated[0] as { via?: string }).via ?? "request");
   const via = viaRaw === "qr" || viaRaw === "touch" || viaRaw === "nearby" ? viaRaw : "request";
   const result = await establishConnection(meId, row.sender_id, { type, minutes, via });
+  // Tell the sender their request was accepted.
+  void (async () => {
+    const me = await sql<{ display_name: string; username: string }>`select display_name, username from wipp_profiles where id = ${meId} limit 1`;
+    const { notifyConnectionAccepted } = await import("@/lib/push/notify");
+    await notifyConnectionAccepted({ senderId: row.sender_id, accepterName: me[0]?.display_name || `@${me[0]?.username ?? ""}`, requestId: row.id });
+  })().catch(() => undefined);
   return {
     status: result.status === "already_connected" ? ("accepted_existing" as const) : ("accepted" as const),
     connectionType: result.connection.connection_type,

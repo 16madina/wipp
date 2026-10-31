@@ -346,6 +346,16 @@ export async function notifyConnectionRequest(input: {
   });
 }
 
+export async function notifyConnectionAccepted(input: { senderId: string; accepterName: string; requestId: string }) {
+  await sendProfilePush({
+    profileId: input.senderId,
+    title: input.accepterName.slice(0, 64) || "WIPP",
+    body: "A accepté ta demande de connexion",
+    channelId: "requests",
+    data: { type: "request", eventId: `acc-${input.requestId}`, requestId: input.requestId },
+  });
+}
+
 export async function notifyTouchIncoming(input: { recipientId: string; inviteId: string }) {
   await sendProfilePush({
     profileId: input.recipientId,
