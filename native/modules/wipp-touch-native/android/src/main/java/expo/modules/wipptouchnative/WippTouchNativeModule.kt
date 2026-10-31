@@ -211,7 +211,8 @@ class BumpDetector(thresholdG: Double, maxDurMs: Double) {
     inPeak = false
     recent.removeAll { atMs - it >= 1500 }
     recent.add(peakAt)
-    if (dur > maxDur || recent.size > 3 || peakAt - lastFired < 600) return null
+    // Real shaking = many spikes in a row (more than 6 in 1.5 s); a person tapping again a few times is fine.
+    if (dur > maxDur || recent.size > 6 || peakAt - lastFired < 350) return null
     lastFired = peakAt
     return mapOf("at" to peakAt, "peak" to peak, "durMs" to dur, "energy" to energy / 1000.0)
   }
