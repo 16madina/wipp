@@ -18,3 +18,9 @@ Correction : `native/src/lib/photo-access.ts` (`requestPhotoPickerAccess`) — s
 - Australie : les SMS Twilio sont refusés (enregistrement Australie en cours chez Twilio), le serveur bascule tout seul sur un **appel vocal** qui dicte le code. Vérifié : l'utilisateur australien a reçu l'appel.
 
 Rapport + corrections : pousser sur `video-studio` (tu as l'autorisation).
+
+## 3. Les appels ne sonnent pas sur les nouveaux comptes Android — CORRIGÉ sur Mac, URGENT à vérifier
+Constat (base de données) : 3 des 4 téléphones Android connectés ces 14 derniers jours n'ont aucun jeton dans `wipp_push_tokens` (dont un testeur créé le 1er nov.). Les iPhone en ont tous. Sans jeton, le serveur ne peut pas faire sonner le téléphone : l'appelant entend sonner, le Android ne reçoit rien.
+Cause : `bootstrapPush()` envoie le jeton FCM (`kind: "fcm-e2e"`) au démarrage, avant que la session existe (nouveau compte, reconnexion) → `devices/push` échoue en silence et n'était jamais renvoyé.
+Correction : `native/src/lib/push/index.ts` → `registerFcmAfterSession()` appelé dans `onSessionReady()`.
+À vérifier sur le Samsung : réinstaller, créer ou reconnecter un compte, vérifier qu'une ligne `platform=android, kind=fcm-e2e` apparaît dans `wipp_push_tokens`, et qu'un appel depuis l'iPhone fait sonner le Samsung (app ouverte, en arrière-plan, fermée). À inclure dans la prochaine version Android dès que possible.

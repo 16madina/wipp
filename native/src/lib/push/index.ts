@@ -390,8 +390,31 @@ export async function captureLaunchIntents() {
   }
 }
 
+/** Android: FCM token for calls and messages ("fcm-e2e": this build decrypts message previews itself). */
+async function registerFcmToken(token: string) {
+  await wippApi("devices/push", {
+    method: "POST",
+    body: JSON.stringify({ token, platform: "android", kind: "fcm-e2e", installationId: await getInstallationId(), lang: trLang() }),
+  });
+}
+
+/**
+ * At app start there may be no session yet (new account, sign-in): that first send fails silently.
+ * Send the FCM token again once the session is ready, or Android never rings for calls.
+ */
+async function registerFcmAfterSession() {
+  if (Platform.OS !== "android" || !Device.isDevice) return;
+  try {
+    const t = await Notifications.getDevicePushTokenAsync();
+    if (t?.data) await registerFcmToken(String(t.data));
+  } catch {
+    /* no Google Play services / offline: retried at the next session */
+  }
+}
+
 export async function onSessionReady() {
   await flushPendingNav();
+  void registerFcmAfterSession();
   try {
     let perm = await Notifications.getPermissionsAsync();
     // First session on this phone: ask right away (iOS popup, Android 13+ popup), like any messaging app.
@@ -429,15 +452,7 @@ export function bootstrapPush() {
     }
   });
   void import("./voip").then(({ startVoip }) => startVoip());
-  void import("./android-call").then(({ startAndroidCalls }) =>
-    startAndroidCalls(async (token) => {
-      await wippApi("devices/push", {
-        method: "POST",
-        // "fcm-e2e": this build decrypts message previews itself (data-only pushes).
-        body: JSON.stringify({ token, platform: "android", kind: "fcm-e2e", installationId: await getInstallationId(), lang: trLang() }),
-      });
-    }),
-  );
+  void import("./android-call").then(({ startAndroidCalls }) => startAndroidCalls(registerFcmToken));
   const link = Linking.addEventListener("url", (e) => {
     void enqueueUrl(e.url);
   });
