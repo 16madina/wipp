@@ -24,3 +24,12 @@ Constat (base de données) : 3 des 4 téléphones Android connectés ces 14 dern
 Cause : `bootstrapPush()` envoie le jeton FCM (`kind: "fcm-e2e"`) au démarrage, avant que la session existe (nouveau compte, reconnexion) → `devices/push` échoue en silence et n'était jamais renvoyé.
 Correction : `native/src/lib/push/index.ts` → `registerFcmAfterSession()` appelé dans `onSessionReady()`.
 À vérifier sur le Samsung : réinstaller, créer ou reconnecter un compte, vérifier qu'une ligne `platform=android, kind=fcm-e2e` apparaît dans `wipp_push_tokens`, et qu'un appel depuis l'iPhone fait sonner le Samsung (app ouverte, en arrière-plan, fermée). À inclure dans la prochaine version Android dès que possible.
+
+## 4. « Je reviens… » reste affiché alors que la personne est revenue (caméra coupée exprès) — CORRIGÉ sur Mac (code commun), à vérifier
+Scénario signalé (Android, même bug sur iPhone) : appel vidéo, caméra allumée → il quitte l'app (« Je reviens… » chez l'autre, normal) → il revient → il coupe sa caméra exprès → l'autre voit toujours le logo WIPP « Je reviens… » alors qu'il est là.
+Cause : `CallScreen.tsx` affichait `BeRightBack` dès que la vidéo distante était en pause (`remoteMuted`), sans distinguer « il a quitté l'app » de « il a coupé sa caméra ».
+Correction :
+- nouveau message d'appel `{ t: "away", on }` (`native/src/lib/calls/room-controls.ts`, état `away`, `setAway`) ;
+- `CallOverlay.tsx` l'envoie quand l'app passe en arrière-plan (`on: true`) et au retour (`on: false`), et le reçoit (`rc.setAway`) ; remis à zéro quand la personne quitte l'appel ;
+- `CallScreen.tsx` n'affiche « Je reviens… » que si `remoteMuted && peerAway`. Caméra coupée exprès → photo de profil comme en audio.
+À vérifier sur Android : l'envoi `away: true` doit partir au moment où l'app passe en arrière-plan (listener `AppState` → `background`). Si Android coupe le JS trop vite (ou en mode PiP), envoyer aussi sur `inactive`/`onUserLeaveHint`. Tester : Samsung ↔ iPhone 15, les deux sens, les quatre étapes du scénario.

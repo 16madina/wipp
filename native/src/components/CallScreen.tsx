@@ -424,6 +424,8 @@ export function CallScreen({
   const notice = useCallControls((s) => s.notice);
   const camAsk = useCallControls((s) => s.camAsk);
   const micAsk = useCallControls((s) => s.micAsk);
+  // The other person really left WIPP (signal sent by their phone); a camera turned off on purpose shows their photo instead.
+  const peerAway = useCallControls((s) => s.away.length > 0);
   const myIdentity = groupTiles?.find((t) => t.local)?.identity ?? null;
   const iAmHost = Boolean(host && myIdentity && host === myIdentity);
   const mods = useCallControls((s) => s.mods);
@@ -514,7 +516,7 @@ export function CallScreen({
       )}
 
       {/* The other person left the app: animated WIPP logo + « Je reviens… » instead of a frozen picture. */}
-      {!mosaic && connected && video && remoteUrl && remoteMuted ? <BeRightBack name={peer.displayName} avatar={peer.avatar} top={insets.top} /> : null}
+      {!mosaic && connected && video && remoteUrl && remoteMuted && peerAway ? <BeRightBack name={peer.displayName} avatar={peer.avatar} top={insets.top} /> : null}
       {/* Top bar */}
       {(!videoLive || controls) ? (
         <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 6, left: 14, right: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

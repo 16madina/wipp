@@ -24,7 +24,9 @@ export type CallMsg =
   /** Animated reaction: only its id travels (r), with a unique tag (n) and the send time (at). */
   | { t: "react"; r: string; n: string; at: number }
   /** WIPP Moment: a shared 3-second celebration. */
-  | { t: "moment"; n: string; at: number };
+  | { t: "moment"; n: string; at: number }
+  /** I left WIPP during the call (on) / I am back (off): only then the others see « Je reviens… ». */
+  | { t: "away"; on: boolean };
 
 type State = {
   /** Identity of the organizer (announced by their phone). */
@@ -41,14 +43,20 @@ type State = {
   camAsk: boolean;
   /** The organizer asks me to turn my microphone on. */
   micAsk: boolean;
+  /** People who left WIPP during the call (a camera turned off on purpose is not « away »). */
+  away: string[];
   /** Sends a message to everyone in the call (set by the call overlay while connected). */
   send: ((msg: CallMsg) => void) | null;
 };
 
-export const useCallControls = create<State>(() => ({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, micAsk: false, send: null }));
+export const useCallControls = create<State>(() => ({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, micAsk: false, away: [], send: null }));
 
 export function resetCallControls() {
-  useCallControls.setState({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, micAsk: false, send: null });
+  useCallControls.setState({ host: null, mods: [], hands: [], claps: [], notice: null, camAsk: false, micAsk: false, away: [], send: null });
+}
+
+export function setAway(identity: string, on: boolean) {
+  useCallControls.setState((s) => ({ away: on ? (s.away.includes(identity) ? s.away : [...s.away, identity]) : s.away.filter((x) => x !== identity) }));
 }
 
 export function callNotice(text: string) {

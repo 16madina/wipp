@@ -374,7 +374,10 @@ export function CallOverlay() {
       };
       room.on(RoomEvent.Connected, announce);
       room.on(RoomEvent.ParticipantConnected, announce);
-      room.on(RoomEvent.ParticipantDisconnected, (p) => rc.setHand(p.identity, false));
+      room.on(RoomEvent.ParticipantDisconnected, (p) => {
+        rc.setHand(p.identity, false);
+        rc.setAway(p.identity, false);
+      });
       room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
         if (topic !== rc.CALL_TOPIC || !participant) return;
         let msg: import("../lib/calls/room-controls").CallMsg;
@@ -400,6 +403,10 @@ export function CallOverlay() {
           }
           rc.useCallControls.setState({ mods: msg.on ? [...st.mods.filter((x) => x !== msg.to), msg.to] : st.mods.filter((x) => x !== msg.to) });
           if (msg.to === me) rc.callNotice(msg.on ? tr("{0} t’a nommé modérateur", nameOf(from)) : tr("Tu n’es plus modérateur"));
+          return;
+        }
+        if (msg.t === "away") {
+          rc.setAway(from, Boolean(msg.on));
           return;
         }
         if (msg.t === "hand") {
@@ -592,8 +599,12 @@ export function CallOverlay() {
     let prev = AppState.currentState;
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active") void clearAwayCameraNotice();
-      if (st === "active" && prev === "background") revive();
+      if (st === "active" && prev === "background") {
+        revive();
+        void import("../lib/calls/room-controls").then((rc) => rc.sendCallMsg({ t: "away", on: false }));
+      }
       if (st === "background") {
+        void import("../lib/calls/room-controls").then((rc) => rc.sendCallMsg({ t: "away", on: true }));
         // iOS stops the camera in the background: pause it on purpose, so the other phone shows
         // "camera paused" instead of a frozen picture. It turns back on when WIPP comes back (revive).
         const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
