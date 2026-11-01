@@ -551,6 +551,15 @@ export function CallOverlay() {
       const ringing = previewTrack.current;
       previewTrack.current = null;
       if (ringing && !want) ringing.stop();
+      // Back from the background: iOS stopped the capture, so turning the camera on again only showed
+      // the last frozen picture (twice: big and small) and the button seemed dead. Restart the capture first.
+      if (want && !ringing) {
+        const existing = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+        if (existing && existing.mediaStreamTrack?.readyState === "ended") {
+          awayLog("camera on: capture ended, restarting");
+          await existing.restartTrack({ facingMode: useCallSession.getState().session?.facing === "environment" ? "environment" : "user" }).catch(() => undefined);
+        }
+      }
       const pub =
         ringing && want
           ? await room.localParticipant.publishTrack(ringing, { source: Track.Source.Camera })
@@ -560,6 +569,8 @@ export function CallOverlay() {
       if (stale) return;
       const track = pub?.track ?? room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
       setLocalUrl(want && track ? streamURL(track) : null);
+      // Redraw the video views so no frozen frame stays on screen.
+      setViewEpoch((n) => n + 1);
     })().catch(() => undefined);
     return () => {
       stale = true;
