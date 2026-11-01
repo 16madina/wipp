@@ -261,9 +261,19 @@ export function ChatsScreen() {
             );
           })}
         </ScrollView>
-        <Press onPress={() => push({ name: "requests" })} style={{ marginHorizontal: 16, height: 40, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Press
+          onPress={() => push({ name: "requests" })}
+          style={
+            pending > 0
+              ? // Waiting request: a gold banner, hard to miss (a small number on the right went unnoticed).
+                { marginHorizontal: 16, marginVertical: 4, height: 48, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.accent + "22", flexDirection: "row", alignItems: "center", gap: 8 }
+              : { marginHorizontal: 16, height: 40, flexDirection: "row", alignItems: "center", gap: 8 }
+          }
+        >
           <UserPlus size={18} color={pending > 0 ? colors.accent : colors.muted} />
-          <Text style={{ fontSize: 14, color: pending > 0 ? colors.fg : colors.muted, fontFamily: pending > 0 ? "Inter_500Medium" : "Inter_400Regular" }}>{t("requests")}</Text>
+          <Text style={{ fontSize: 14, color: pending > 0 ? colors.fg : colors.muted, fontFamily: pending > 0 ? "Inter_600SemiBold" : "Inter_400Regular" }}>
+            {pending > 0 ? (pending === 1 ? tr("1 nouvelle demande") : tr("{0} nouvelles demandes", String(pending))) : t("requests")}
+          </Text>
           <View style={{ flex: 1 }} />
           {pending > 0 ? <Badge n={pending} /> : null}
           <ChevronRight size={16} color={colors.muted} />

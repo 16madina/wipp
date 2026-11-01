@@ -53,7 +53,7 @@ export function demoMe(): MeProfile {
 		// No photo until the real profile loads (a demo face flashed at startup).
 		avatar: "",
 		online: true,
-		city: "Longueuil",
+		city: "",
 		connected: true,
 		email: "deena@wipp.me",
 		phone: "+1 514 555 0148",

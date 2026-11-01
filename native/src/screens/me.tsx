@@ -114,7 +114,9 @@ export function MeScreen() {
   const groups = chats.filter((c) => c.type === "group" && c.participantIds.includes("me") && !isPrivateChat(c.id)).length;
   const myEvents = lifestyle.filter((e) => e.hostId === "me").length;
   const myListings = listings.filter((l) => l.sellerId === "me").length;
-  const country = me.country === "CA" ? "Canada" : me.country;
+  // Country from the phone number. No city: WIPP never asks for it (the old "Longueuil" was demo data).
+  const country = findWorldCountry(me.country)?.fr ?? me.country ?? "";
+  const place = [me.city === "Longueuil" ? "" : me.city, country].filter(Boolean).join(", ");
   useEffect(() => {
     void import("./rewards").then(({ refreshMyBadge }) => refreshMyBadge());
   }, []);
@@ -166,7 +168,7 @@ export function MeScreen() {
                 <Text style={{ fontSize: 12, color: fgA(0.55) }}>@{me.username}</Text>
                 <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <MapPin size={12} color={colors.accent} />
-                  <Text style={{ fontSize: 11, color: fgA(0.7) }}>{me.city}, {country}</Text>
+                  <Text style={{ fontSize: 11, color: fgA(0.7) }}>{place}</Text>
                 </View>
               </View>
               <View style={{ alignItems: "flex-end", gap: 6, paddingTop: 2 }}>
