@@ -1,3 +1,4 @@
+import { requestPhotoPickerAccess } from "../lib/photo-access";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
@@ -701,7 +702,7 @@ function ConversationInner({ chatId }: { chatId: string }) {
   }
 
   async function pickGallery() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = await requestPhotoPickerAccess();
     if (!perm.granted) return;
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images", "videos"],

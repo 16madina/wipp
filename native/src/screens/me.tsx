@@ -1,3 +1,4 @@
+import { requestPhotoPickerAccess } from "../lib/photo-access";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, Linking, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import { getTouchCapabilities, uwbPermission, uwbProbe, type UwbPermission } from "wipp-touch-native";
@@ -1815,7 +1816,7 @@ export function BusinessCardEditorScreen() {
   }
   async function pickServicePhoto() {
     setError("");
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = await requestPhotoPickerAccess();
     if (!perm.granted) {
       setError(tr("Accès aux photos refusé."));
       return;
@@ -1837,7 +1838,7 @@ export function BusinessCardEditorScreen() {
 
   async function pick(role: "cover" | "logo" | "photo") {
     setError("");
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = await requestPhotoPickerAccess();
     if (!perm.granted) {
       setError(tr("Accès aux photos refusé."));
       Alert.alert(tr("Photos"), tr("WIPP a besoin d’accéder à tes photos pour la carte."), [

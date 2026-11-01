@@ -1,3 +1,4 @@
+import { requestPhotoPickerAccess } from "../lib/photo-access";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
@@ -76,7 +77,7 @@ function readPrice(label: string) {
 }
 
 async function pickImages(multiple: boolean) {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const perm = await requestPhotoPickerAccess();
   if (!perm.granted) {
     Alert.alert(tr("Photos"), tr("Autorise l’accès aux photos pour illustrer ta publication."));
     return [];

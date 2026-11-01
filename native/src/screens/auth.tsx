@@ -1,3 +1,4 @@
+import { requestPhotoPickerAccess } from "../lib/photo-access";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
@@ -1150,7 +1151,7 @@ export function ProfileReferenceScreen() {
   }, [username, okUser]);
 
   async function choosePhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = await requestPhotoPickerAccess();
     if (!perm.granted) {
       setError(tr("Autorise l’accès aux photos pour choisir ta photo de profil."));
       return;

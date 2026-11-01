@@ -1,3 +1,4 @@
+import { requestPhotoPickerAccess } from "../lib/photo-access";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -139,7 +140,7 @@ export function WippmojiStudioScreen() {
 
   async function pick(camera: boolean) {
     setError("");
-    const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await requestPhotoPickerAccess();
     if (!perm.granted) {
       setError(camera ? tr("Autorise l’appareil photo dans Réglages.") : tr("Autorise l’accès aux photos dans Réglages."));
       return;

@@ -1,3 +1,4 @@
+import { requestPhotoPickerAccess } from "./photo-access";
 import { tr } from "./tr";
 import { Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -46,7 +47,7 @@ export async function saveProfilePhotoFromUri(uri: string, mime = "image/jpeg") 
 
 /** One canonical avatar path under the existing private-flag public bucket. */
 export async function changeProfilePhoto() {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const perm = await requestPhotoPickerAccess();
   if (!perm.granted) throw new Error(tr("Accès aux photos refusé."));
   const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
   const asset = res.assets?.[0];
