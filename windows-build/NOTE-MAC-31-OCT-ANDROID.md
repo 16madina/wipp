@@ -33,3 +33,10 @@ Correction :
 - `CallOverlay.tsx` l'envoie quand l'app passe en arrière-plan (`on: true`) et au retour (`on: false`), et le reçoit (`rc.setAway`) ; remis à zéro quand la personne quitte l'appel ;
 - `CallScreen.tsx` n'affiche « Je reviens… » que si `remoteMuted && peerAway`. Caméra coupée exprès → photo de profil comme en audio.
 À vérifier sur Android : l'envoi `away: true` doit partir au moment où l'app passe en arrière-plan (listener `AppState` → `background`). Si Android coupe le JS trop vite (ou en mode PiP), envoyer aussi sur `inactive`/`onUserLeaveHint`. Tester : Samsung ↔ iPhone 15, les deux sens, les quatre étapes du scénario.
+
+## 5. Appels reçus même si l'app n'est pas ouverte depuis longtemps — optimisation de la batterie
+But : comme WhatsApp, un utilisateur qui n'ouvre pas WIPP pendant des jours ou des mois doit quand même recevoir appels et messages. Le serveur ne coupe rien avec le temps (vérifié), mais certains Android (surtout Samsung : « applications en veille profonde ») bloquent les notifications des apps peu ouvertes.
+À faire :
+- Après l'inscription (et une fois dans Moi → Notifications), si `PowerManager.isIgnoringBatteryOptimizations()` est faux, afficher un écran court : « Pour recevoir tes appels même quand WIPP est fermé, autorise WIPP à fonctionner en arrière-plan », bouton « Autoriser » → `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` au manifeste ; usage accepté par Google Play pour une app d'appels VoIP), bouton « Plus tard ». Ne pas redemander à chaque ouverture (au plus une fois par semaine si refusé).
+- Vérifier que les messages FCM d'appel partent en priorité haute (`android.priority = "high"`, côté serveur `src/lib/messaging/calls.ts`) : c'est ce qui réveille le téléphone en veille.
+- Tester : Samsung sans ouvrir WIPP pendant plusieurs heures, écran éteint → appel depuis l'iPhone → le Samsung doit sonner.
