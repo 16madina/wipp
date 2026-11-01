@@ -461,6 +461,7 @@ export function CallScreen({
   // Each camera is independent: the other person's video shows as soon as it arrives (even if
   // mine is off), and my own preview shows as soon as my camera is on (even if theirs is off).
   const videoLive = !mosaic && connected && (!!remoteVid || !!localVid);
+  const showAway = !mosaic && connected && video && Boolean(remoteUrl) && remoteMuted && peerAway;
   const flip = swapped && !!remoteVid && !!localVid;
   // Video call still ringing: my own camera already fills the screen, like a mirror, behind the caller card.
   const preview = !mosaic && session.dir !== "in" && session.phase === "outgoing" && !!localVid;
@@ -516,7 +517,7 @@ export function CallScreen({
       )}
 
       {/* The other person left the app: animated WIPP logo + « Je reviens… » instead of a frozen picture. */}
-      {!mosaic && connected && video && remoteUrl && remoteMuted && peerAway ? <BeRightBack name={peer.displayName} avatar={peer.avatar} top={insets.top} /> : null}
+      {showAway ? <BeRightBack name={peer.displayName} avatar={peer.avatar} top={insets.top} /> : null}
       {/* Top bar */}
       {(!videoLive || controls) ? (
         <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 6, left: 14, right: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -565,8 +566,8 @@ export function CallScreen({
         </View>
       ) : null}
 
-      {/* Identity block (everything except live video) */}
-      {!videoLive && !mosaic ? (
+      {/* Identity block (everything except live video, and hidden under « Je reviens… » so the photo is not drawn twice) */}
+      {!videoLive && !mosaic && !showAway ? (
         <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 54, left: 0, right: 0, alignItems: "center" }}>
           {logo}
           {incoming || session.phase === "outgoing" ? (
