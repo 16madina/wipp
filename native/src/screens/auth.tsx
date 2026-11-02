@@ -54,9 +54,10 @@ const ONB: { kind: "tap" | "globe" | "privacy" | "together"; title: I18nKey; acc
 
 type Measurable = { measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void };
 
-function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: number; fit?: "fill" | "cover"; imageTop?: number; children?: ReactNode | ((reveal: (target: Measurable | null) => void) => ReactNode) }) {
+function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: number; fit?: "fill" | "cover"; imageTop?: number; children?: ReactNode | ((reveal: (target: Measurable | null, footer?: Measurable | null) => void) => ReactNode) }) {
   const insets = useSafeAreaInsets();
   const active = useRef<Measurable | null>(null);
+  const activeFooter = useRef<Measurable | null>(null);
   const keyboardTop = useRef<number | null>(null);
   const currentShift = useRef(0);
   const translateY = useRef(new Animated.Value(0)).current;
@@ -87,6 +88,7 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
 
   const revealActive = useCallback((duration = 220) => {
     const target = active.current;
+    const footer = activeFooter.current;
     if (!target || keyboardTop.current == null) return;
     const known = baseOf.current.get(target);
     if (known) {
@@ -96,14 +98,23 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
     // Stop any slide first, so the measure and the real offset match.
     translateY.stopAnimation((live) => {
       currentShift.current = live;
+      // Android measures from below the status bar, but the keyboard top is counted from the top of the
+      // screen: without the status bar height the form moved ~32 dp too little and the keyboard hid half
+      // of the number field.
+      const bar = Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0;
       target.measureInWindow((_x, y, _width, height) => {
-        // Android measures from below the status bar, but the keyboard top is counted from the top of the
-        // screen: without the status bar height the form moved ~32 dp too little and the keyboard hid half
-        // of the number field.
-        const bar = Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0;
         const base = { top: y + bar - live, bottom: y + bar - live + height };
-        baseOf.current.set(target, base);
-        applyShift(base, duration);
+        if (!footer) {
+          baseOf.current.set(target, base);
+          applyShift(base, duration);
+          return;
+        }
+        // Android: also lift the « Continuer » button above the keyboard (the field stays visible on top).
+        footer.measureInWindow((_fx, fy, _fw, fh) => {
+          const withFooter = { top: base.top, bottom: Math.max(base.bottom, fy + bar - live + fh) };
+          baseOf.current.set(target, withFooter);
+          applyShift(withFooter, duration);
+        });
       });
     });
   }, [applyShift, translateY]);
@@ -136,21 +147,27 @@ function Artwork({ source, children, fit = "fill", imageTop = 0 }: { source: num
     };
   }, [animateTo, revealActive, insets.bottom]);
 
-  const reveal = useCallback((target: Measurable | null) => {
+  const reveal = useCallback((target: Measurable | null, footer?: Measurable | null) => {
     if (active.current === target && keyboardTop.current != null) return;
     active.current = target;
+    // iPhone is validated as is (its keyboard bar has « OK »): the footer is used on Android only.
+    activeFooter.current = Platform.OS === "android" ? footer ?? null : null;
     requestAnimationFrame(() => revealActive());
   }, [revealActive]);
+
+  // Android draws WIPP under the navigation bar: the screens placed in % of the height put « Continuer »
+  // under it on shorter phones. On Android the picture and the form stop above the bar.
+  const bottomBar = Platform.OS === "android" ? insets.bottom : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: imageTop ? "#000" : colors.bg }}>
       <Image
         pointerEvents="none"
         source={source}
-        style={{ position: "absolute", zIndex: 0, top: imageTop, left: 0, right: 0, bottom: 0 }}
+        style={{ position: "absolute", zIndex: 0, top: imageTop, left: 0, right: 0, bottom: bottomBar }}
         contentFit={fit}
       />
-      <Animated.View style={{ flex: 1, zIndex: 1, elevation: 2, transform: [{ translateY }] }}>
+      <Animated.View style={{ flex: 1, marginBottom: bottomBar, zIndex: 1, elevation: 2, transform: [{ translateY }] }}>
         {Platform.OS === "web" ? (
           // On web, the wrapping Pressable fires after a click inside a TextInput and blurs it.
           <View style={{ flex: 1 }}>{typeof children === "function" ? children(reveal) : children}</View>
@@ -621,6 +638,7 @@ export function PhoneEntryScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const phoneBlockRef = useRef<View>(null);
+  const continueRef = useRef<View>(null);
   const [phoneFocused, setPhoneFocused] = useState(false);
   const phoneAccessoryId = "wipp-phone-entry-keyboard";
 
@@ -684,7 +702,7 @@ export function PhoneEntryScreen() {
             <TextInput
               onFocus={() => {
                 setPhoneFocused(true);
-                reveal(phoneBlockRef.current);
+                reveal(phoneBlockRef.current, continueRef.current);
               }}
               onBlur={() => setPhoneFocused(false)}
               value={phone}
@@ -727,7 +745,9 @@ export function PhoneEntryScreen() {
         </Abs>
       ) : null}
       <Abs t={87.05} l={4.8} h={7} w={90.4}>
-        <ContinueHit ready={legal && adult} busy={busy} label={tr("Continuer")} onPress={() => void continueWithPhone()} solid />
+        <View ref={continueRef} style={{ flex: 1 }}>
+          <ContinueHit ready={legal && adult} busy={busy} label={tr("Continuer")} onPress={() => void continueWithPhone()} solid />
+        </View>
       </Abs>
       <CountrySheet open={menuOpen} onClose={() => setMenuOpen(false)} onPick={setCountry} />
       <KeyboardDone nativeID={phoneAccessoryId} />
@@ -746,6 +766,7 @@ export function LoginScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const phoneBlockRef = useRef<View>(null);
+  const continueRef = useRef<View>(null);
   const [phoneFocused, setPhoneFocused] = useState(false);
   const phoneAccessoryId = "wipp-login-keyboard";
 
@@ -815,7 +836,7 @@ export function LoginScreen() {
             <TextInput
               onFocus={() => {
                 setPhoneFocused(true);
-                reveal(phoneBlockRef.current);
+                reveal(phoneBlockRef.current, continueRef.current);
               }}
               onBlur={() => setPhoneFocused(false)}
               value={phone}
@@ -842,7 +863,9 @@ export function LoginScreen() {
         </Abs>
       ) : null}
       <Abs t={72} l={6} h={7} w={88}>
-        <ContinueHit ready={phone.replace(/\D/g, "").length >= 6} busy={busy} label={t("continue")} onPress={() => void tryLogin()} solid />
+        <View ref={continueRef} style={{ flex: 1 }}>
+          <ContinueHit ready={phone.replace(/\D/g, "").length >= 6} busy={busy} label={t("continue")} onPress={() => void tryLogin()} solid />
+        </View>
       </Abs>
       {/* Consent was given at sign-up: a passive reminder is enough here. */}
       <Abs t={80.3} l={8} w={84}>
@@ -882,6 +905,7 @@ export function SmsReferenceScreen() {
   const [seconds, setSeconds] = useState(15);
   const [noAccount, setNoAccount] = useState<{ phone: string } | null>(null);
   const otpBlockRef = useRef<View>(null);
+  const continueRef = useRef<View>(null);
   const codeAccessoryId = "wipp-sms-code-keyboard";
   const signin = (pendingMode() ?? pending.mode) === "signin";
   useEffect(() => {
@@ -1029,7 +1053,7 @@ export function SmsReferenceScreen() {
             ))}
           </Pressable>
           <TextInput
-            onFocus={() => reveal(otpBlockRef.current)}
+            onFocus={() => reveal(otpBlockRef.current, continueRef.current)}
             value={code}
             onChangeText={(v) => {
               setCode(v.replace(/\D/g, "").slice(0, 6));
@@ -1089,7 +1113,9 @@ export function SmsReferenceScreen() {
         )}
       </Abs>
       <Abs t={84} l={6} h={6.6} w={88}>
-        <ContinueHit ready={code.length === 6} busy={busy} label={tr("Continuer")} onPress={() => void validate()} solid />
+        <View ref={continueRef} style={{ flex: 1 }}>
+          <ContinueHit ready={code.length === 6} busy={busy} label={tr("Continuer")} onPress={() => void validate()} solid />
+        </View>
       </Abs>
       <Abs t={91.5} l={20} h={5} w={60}>
         <Pressable accessibilityLabel={tr("Modifier mon numéro")} onPress={pop} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -1120,6 +1146,7 @@ export function ProfileReferenceScreen() {
   const firstNameBlockRef = useRef<View>(null);
   const lastNameBlockRef = useRef<View>(null);
   const usernameBlockRef = useRef<View>(null);
+  const continueRef = useRef<View>(null);
   const profileAccessoryId = "wipp-profile-keyboard";
   const insets = useSafeAreaInsets();
   const okUser = /^[a-z0-9_]{3,20}$/.test(username);
@@ -1297,7 +1324,7 @@ export function ProfileReferenceScreen() {
         </Pressable>
       </View>
       {/* No card: the form sits in the empty space of the picture, under the mascot. */}
-      <View style={{ position: "absolute", left: 0, right: 0, top: feetY + 10, bottom: Math.max(insets.bottom, 14), paddingHorizontal: 22 }}>
+      <View style={{ position: "absolute", left: 0, right: 0, top: feetY + 10, bottom: Platform.OS === "android" ? 14 : Math.max(insets.bottom, 14), paddingHorizontal: 22 }}>
         <Text style={{ color: colors.fg, fontSize: 22, fontFamily: "Inter_700Bold", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 }}>
           {tr("Complète ton")} <Text style={{ color: colors.accent }}>{tr("profil")}</Text>
         </Text>
@@ -1316,13 +1343,13 @@ export function ProfileReferenceScreen() {
           <View style={{ flex: 1 }}>
             <Text style={label}>{tr("Prénom")}</Text>
             <View ref={firstNameBlockRef} style={field}>
-              <TextInput onFocus={() => reveal(firstNameBlockRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder={tr("Prénom")} placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="givenName" style={input} />
+              <TextInput onFocus={() => reveal(firstNameBlockRef.current, continueRef.current)} value={firstName} onChangeText={setFirst} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder={tr("Prénom")} placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="givenName" style={input} />
             </View>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={label}>{tr("Nom")}</Text>
             <View ref={lastNameBlockRef} style={field}>
-              <TextInput onFocus={() => reveal(lastNameBlockRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder={tr("Nom")} placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="familyName" style={input} />
+              <TextInput onFocus={() => reveal(lastNameBlockRef.current, continueRef.current)} value={lastName} onChangeText={setLast} inputAccessoryViewID={Platform.OS === "ios" ? profileAccessoryId : undefined} placeholder={tr("Nom")} placeholderTextColor={colors.muted} autoCapitalize="words" textContentType="familyName" style={input} />
             </View>
           </View>
         </View>
@@ -1331,7 +1358,7 @@ export function ProfileReferenceScreen() {
         <View ref={usernameBlockRef} style={[field, { flexDirection: "row", alignItems: "center" }]}>
           <Text style={{ color: colors.accent, fontSize: 15, marginRight: 2 }}>@</Text>
           <TextInput
-            onFocus={() => reveal(usernameBlockRef.current)}
+            onFocus={() => reveal(usernameBlockRef.current, continueRef.current)}
             value={username}
             onChangeText={(v) => {
               setUser(v.toLowerCase().replace(/[^a-z0-9_]/g, ""));
@@ -1375,6 +1402,7 @@ export function ProfileReferenceScreen() {
         {/* Small gap only: the button stays close to the country box (extra space goes below). */}
         <View style={{ flexGrow: 1, minHeight: 14, maxHeight: 24 }} />
         <Pressable
+          ref={continueRef}
           accessibilityLabel={tr("Continuer")}
           disabled={busy}
           onPress={() => void finish()}
