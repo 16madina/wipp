@@ -415,6 +415,11 @@ async function registerFcmAfterSession() {
 export async function onSessionReady() {
   await flushPendingNav();
   void registerFcmAfterSession();
+  // Android: let WIPP run in the background so calls still ring when it has not been opened for a while.
+  // A few seconds later, so it never covers the welcome screen or the notification question.
+  setTimeout(() => {
+    void import("../background-calls").then(({ maybeAskBackgroundCalls }) => maybeAskBackgroundCalls());
+  }, 8000);
   try {
     let perm = await Notifications.getPermissionsAsync();
     // First session on this phone: ask right away (iOS popup, Android 13+ popup), like any messaging app.

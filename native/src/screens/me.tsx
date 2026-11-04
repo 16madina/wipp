@@ -947,6 +947,17 @@ export function NotificationsScreen() {
     );
   }, [setPushGranted]);
 
+  // Android: may WIPP run in the background (calls ring even when it was not opened for a long time)?
+  const [bgAllowed, setBgAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const check = () => void import("../lib/background-calls").then(({ backgroundCallsAllowed }) => backgroundCallsAllowed().then(setBgAllowed));
+    check();
+    // Back from Android's dialog: show the new answer.
+    const sub = AppState.addEventListener("change", (st) => st === "active" && check());
+    return () => sub.remove();
+  }, []);
+
   async function toggleMaster(on: boolean) {
     if (!on) {
       setPushMaster(false);
@@ -983,6 +994,20 @@ export function NotificationsScreen() {
           <Row key={key} label={tr(label)} trailing={<Toggle value={notifs[key]} onChange={(v) => setNotif(key, v)} />} />
         ))}
       </Section>
+      {Platform.OS === "android" && bgAllowed != null ? (
+        <>
+          <Section title="">
+            <Row
+              label={tr("Appels quand WIPP est fermé")}
+              value={bgAllowed ? tr("Autorisé") : tr("À autoriser")}
+              onPress={bgAllowed ? undefined : () => void import("../lib/background-calls").then(({ requestBackgroundCalls }) => requestBackgroundCalls())}
+            />
+          </Section>
+          <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18, paddingHorizontal: 20, paddingTop: 10 }}>
+            {tr("Pour recevoir tes appels même quand WIPP est fermé depuis longtemps, autorise WIPP à fonctionner en arrière-plan.")}
+          </Text>
+        </>
+      ) : null}
       {__DEV__ ? (
         <Text style={{ color: colors.muted, fontSize: 11, paddingHorizontal: 20, paddingTop: 12 }}>
           {tr("DEV · permission")} {pushGranted ? tr("accordée") : tr("non accordée")}

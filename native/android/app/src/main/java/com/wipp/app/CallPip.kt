@@ -191,6 +191,6 @@ class CallPipModule(private val ctx: ReactApplicationContext) : ReactContextBase
 }
 
 class CallPipPackage : ReactPackage {
-  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> = listOf(CallPipModule(reactContext))
+  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> = listOf(CallPipModule(reactContext), WippPowerModule(reactContext))
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> = emptyList()
 }

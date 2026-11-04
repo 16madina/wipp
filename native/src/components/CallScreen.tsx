@@ -465,8 +465,14 @@ export function CallScreen({
   const flip = swapped && !!remoteVid && !!localVid;
   // Video call still ringing: my own camera already fills the screen, like a mirror, behind the caller card.
   const preview = !mosaic && session.dir !== "in" && session.phase === "outgoing" && !!localVid;
-  const main = videoLive ? (remoteVid ? (flip ? localVid : remoteVid) : localVid) : preview ? localVid : null;
-  const mini = videoLive && remoteVid ? (flip ? remoteVid : localVid) : null;
+  // Same layout whatever the cameras: the other person big, me in the small square. The other person's camera
+  // off (on purpose): their photo big, my camera stays in the small square (before, my own camera filled the
+  // screen and the other person disappeared).
+  const peerCamOff = videoLive && !remoteVid && !!localVid;
+  const main = videoLive ? (remoteVid ? (flip ? localVid : remoteVid) : null) : preview ? localVid : null;
+  const mini = videoLive ? (remoteVid ? (flip ? remoteVid : localVid) : localVid) : null;
+  const myAvatar = useWippStore((s) => s.me.avatar);
+  const myName = useWippStore((s) => s.me.displayName);
   const status = connected ? formatDuration(sec) : (session.note && terminal ? session.note : c.states[session.phase]);
 
   // On live video, controls fade away after a few seconds; a tap brings them back.
@@ -601,11 +607,30 @@ export function CallScreen({
         </View>
       ) : null}
 
-      {/* My camera is off while the other person's video shows: say it clearly (it is NOT on). */}
+      {/* The other person turned their camera off: their photo big (like an audio call), my camera stays small. */}
+      {peerCamOff && !mosaic && !showAway ? (
+        <View pointerEvents="none" style={{ position: "absolute", top: insets.top + 90, left: 0, right: 0, alignItems: "center" }}>
+          <SpeakingRing speaking={Boolean(remotePerson?.speaking)} level={remotePerson?.level} size={avatarSize + 8}>
+            <View style={{ padding: 3, borderRadius: avatarSize, borderWidth: 1, borderColor: "rgba(255,216,77,0.7)" }}>
+              <Avatar user={{ displayName: peer.displayName, avatar: peer.avatar }} size={avatarSize} />
+            </View>
+          </SpeakingRing>
+          <Text numberOfLines={1} style={{ marginTop: 18, color: "#fff", fontSize: 24, fontFamily: "Inter_600SemiBold", paddingHorizontal: 24 }}>{peer.displayName}</Text>
+          <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <VideoOff size={16} color={GOLD} />
+            <Text style={{ color: GREY, fontSize: 15 }}>{tr("Caméra éteinte")}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* My camera is off while the other person's video shows: my photo in the small square, and say it clearly. */}
       {videoLive && remoteVid && !localVid && !mosaic ? (
         <View style={{ position: "absolute", right: 16, bottom: insets.bottom + (controls ? 220 : 40), width: 104, height: 148, borderRadius: 16, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.35)", backgroundColor: "rgba(0,0,0,0.75)", alignItems: "center", justifyContent: "center", gap: 6, padding: 8 }}>
-          <VideoOff size={22} color={GOLD} />
-          <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>{tr("Ta caméra est éteinte")}</Text>
+          <Avatar user={{ displayName: myName || tr("Toi"), avatar: myAvatar }} size={56} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <VideoOff size={14} color={GOLD} />
+            <Text style={{ color: "#fff", fontSize: 11, textAlign: "center" }}>{tr("Ta caméra est éteinte")}</Text>
+          </View>
         </View>
       ) : null}
 
