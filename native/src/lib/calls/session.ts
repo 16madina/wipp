@@ -100,6 +100,9 @@ function watchInvite(id: string) {
       if (Date.now() - started > 60_000 && live.phase === "outgoing") {
         clearInterval(timer);
         useCallSession.getState().patch({ phase: "missed", note: tr("Pas de réponse.") });
+        // Tell the server too: otherwise the call stayed « ringing » there, the other phone kept ringing and
+        // could still pick up a call nobody was in any more.
+        void hangupCall(id).catch(() => undefined);
         return;
       }
       try {
@@ -314,10 +317,22 @@ export async function acceptCurrentCall() {
   try {
     // Answered while WIPP was starting (opened by the iPhone call screen): the sign-in comes back a moment
     // later. Try again for a few seconds instead of giving up (that showed « appel manqué » and the caller kept ringing).
+    let over: string | null = null;
     await withStartupRetry(async () => {
       if (live.group) await setGroupState(live.callId!, "joining");
-      else await answerCall(live.callId!, true);
+      else {
+        const res = await answerCall(live.callId!, true);
+        const st = res?.invite?.status;
+        if (st && st !== "accepted") over = st;
+      }
     });
+    // The caller hung up (or the call ran out) before I picked up: the server answers « cancelled / missed /
+    // ended ». Stop here instead of joining an empty call that counts the seconds alone.
+    if (over) {
+      void import("./callkeep").then(({ endSystemCall }) => endSystemCall(live.callId!)).catch(() => undefined);
+      useCallSession.getState().patch({ phase: over === "rejected" ? "declined" : "missed", note: tr("Appel annulé.") });
+      return;
+    }
     await withStartupRetry(() => attachToken(live.callId!, live.kind === "video"));
     void import("./callkeep").then(({ clearMissedNotice }) => clearMissedNotice(live.callId!));
   } catch (err) {
