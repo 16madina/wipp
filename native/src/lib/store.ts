@@ -1377,6 +1377,20 @@ export const useWippStore = create<Store>((set, get) => ({
           set((s) => ({ sentRequestIds: [...s.sentRequestIds, userId] }));
           return;
         }
+        // This person already sent me a request: say so and lead to it (the server answers « pending_in »;
+        // before, it showed « La demande n'a pas pu être envoyée »).
+        if (status === "pending_in") {
+          void get().refreshConnections?.();
+          Alert.alert(
+            tr("Demande reçue"),
+            tr("{0} t’a déjà envoyé une demande. Accepte-la dans tes demandes pour vous connecter.", user.displayName || `@${user.username}`),
+            [
+              { text: tr("Plus tard"), style: "cancel" },
+              { text: tr("Voir mes demandes"), onPress: () => get().push({ name: "requests" }) },
+            ],
+          );
+          return;
+        }
         Alert.alert(tr("Demande"), STATUS_FR[status] ?? tr("La demande n’a pas pu être envoyée."));
       } catch (err) {
         Alert.alert(tr("Demande"), errorText(err, tr("La demande n’a pas pu être envoyée.")));

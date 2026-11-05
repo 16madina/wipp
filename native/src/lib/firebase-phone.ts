@@ -161,7 +161,8 @@ function tokenRole(idToken: string): string | undefined {
   try {
     const payload = idToken.split(".")[1];
     if (!payload) return undefined;
-    const padded = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
     const json = JSON.parse(globalThis.atob(padded)) as { role?: unknown };
     return typeof json.role === "string" ? json.role : undefined;
   } catch {
@@ -169,20 +170,23 @@ function tokenRole(idToken: string): string | undefined {
   }
 }
 
-let forcedRoleRefresh = false;
+let lastRoleRefresh = 0;
 
 /**
  * Firebase refreshes an expired ID token from the persisted user.
- * A forced refresh runs at most once per launch, and only when the
- * role claim is still missing. It does not send an SMS.
+ * The « authenticated » role is added by a Firebase function a few seconds after the account is created
+ * (firebase/auth-claims). A brand-new user's first token does not have it yet: force a refresh while the
+ * role is missing, at most every 10 s. (Before: only once per launch — if that came too early, a new user
+ * stayed without the role until they closed WIPP, so e.g. the profile photo could not be saved.)
+ * It does not send an SMS.
  */
 export async function firebaseIdToken(): Promise<string | null> {
   const user = firebaseAuth().currentUser;
   if (!user) return null;
   try {
     let token = await user.getIdToken();
-    if (token && tokenRole(token) !== "authenticated" && !forcedRoleRefresh) {
-      forcedRoleRefresh = true;
+    if (token && tokenRole(token) !== "authenticated" && Date.now() - lastRoleRefresh > 10_000) {
+      lastRoleRefresh = Date.now();
       token = await user.getIdToken(true);
     }
     return token;
