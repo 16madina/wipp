@@ -36,17 +36,17 @@ import { accentA, bgA, colors, fgA } from "../theme";
 /* Demo illustrations (examples only — never presented as the user's own creation). */
 const ART = {
   hero: require("../../assets/wippmoji-studio/hero.jpg"),
-  photoToCharacter: require("../../assets/wippmoji-studio/photo-to-character.png"),
-  photoToStickers: require("../../assets/wippmoji-studio/photo-to-stickers.png"),
-  cartoon: require("../../assets/wippmoji-studio/style-cartoon.png"),
-  realistic: require("../../assets/wippmoji-studio/style-realistic.png"),
+  photoToCharacter: require("../../assets/wippmoji-studio/photo-to-character.webp"),
+  photoToStickers: require("../../assets/wippmoji-studio/photo-to-stickers.webp"),
+  cartoon: require("../../assets/wippmoji-studio/style-cartoon.webp"),
+  realistic: require("../../assets/wippmoji-studio/style-realistic.webp"),
   preview: require("../../assets/wippmoji-studio/hero.jpg"),
   /* Pack covers: WIPP's own Wippie stickers and Moments characters. */
   packs: {
-    moji5: require("../../assets/wippmoji-studio/pack-moji-5.png"),
-    moji10: require("../../assets/wippmoji-studio/pack-moji-10.png"),
-    pop3: require("../../assets/wippmoji-studio/pack-pop-3.png"),
-    pop7: require("../../assets/wippmoji-studio/pack-pop-7.png"),
+    moji5: require("../../assets/wippmoji-studio/pack-moji-5.webp"),
+    moji10: require("../../assets/wippmoji-studio/pack-moji-10.webp"),
+    pop3: require("../../assets/wippmoji-studio/pack-pop-3.webp"),
+    pop7: require("../../assets/wippmoji-studio/pack-pop-7.webp"),
   },
 };
 

@@ -25,7 +25,6 @@ export const stickerVideo = {
   'stickers/afro/ya-foyi.mp4': require("../../assets/wipp/stickers/afro/ya-foyi.mp4"),
   'stickers/afro/yako.mp4': require("../../assets/wipp/stickers/afro/yako.mp4"),
   'stickers/aniwipp/bisou-green.mp4': require("../../assets/wipp/stickers/aniwipp/bisou-green.mp4"),
-  'stickers/aniwipp/bisou.webm': require("../../assets/wipp/stickers/aniwipp/bisou.webm"),
   'stickers/appelle-moi.mp4': require("../../assets/wipp/stickers/appelle-moi.mp4"),
   'stickers/bisous.mp4': require("../../assets/wipp/stickers/bisous.mp4"),
   'stickers/bon-matin.mp4': require("../../assets/wipp/stickers/bon-matin.mp4"),

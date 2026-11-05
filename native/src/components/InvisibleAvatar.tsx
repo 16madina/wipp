@@ -13,9 +13,9 @@ export const INVISIBLE_RING_COLOR: Record<InvisibleRing, string> = {
 
 /** The WIPP Invisible visuals provided by the owner (hat + glasses + W in a glowing ring), one per ring colour. */
 const ART: Record<InvisibleRing, number> = {
-  man: require("../../assets/invisible/invisible-man.png"),
-  woman: require("../../assets/invisible/invisible-woman.png"),
-  other: require("../../assets/invisible/invisible-other.png"),
+  man: require("../../assets/invisible/invisible-man.webp"),
+  woman: require("../../assets/invisible/invisible-woman.webp"),
+  other: require("../../assets/invisible/invisible-other.webp"),
 };
 
 /**

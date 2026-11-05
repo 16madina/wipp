@@ -14,21 +14,21 @@ export function wippSrc(path?: string | null) {
   return uri ? { uri } : undefined;
 }
 
-export const authLogin = require("../../assets/auth/wipp-auth-login.png");
-export const authSms = require("../../assets/auth/wipp-auth-sms-clean2.png");
-export const authProfile = require("../../assets/auth/wipp-auth-profile-no-password.png");
+export const authLogin = require("../../assets/auth/wipp-auth-login.webp");
+export const authSms = require("../../assets/auth/wipp-auth-sms-clean2.webp");
+export const authProfile = require("../../assets/auth/wipp-auth-profile-no-password.webp");
 export const authProfileBg = require("../../assets/auth/wipp-auth-profile-bg.jpg");
 export const authMascotAnim = require("../../assets/auth/wipp-mascot-anim.webp");
-export const authWelcome = require("../../assets/auth/wipp-auth-welcome.png");
-export const authPhone = require("../../assets/auth/wipp-auth-phone.png");
+export const authWelcome = require("../../assets/auth/wipp-auth-welcome.webp");
+export const authPhone = require("../../assets/auth/wipp-auth-phone.webp");
 export const logoGold = require("../../assets/auth/wipp-logo-gold.png");
-export const brandOfficial = require("../../assets/wipp/brand/wipp-official.png");
+export const brandOfficial = require("../../assets/wipp/brand/wipp-official.webp");
 export const bootVideo = require("../../assets/wipp/brand/wipp-boot.mp4");
 export const bootPoster = require("../../assets/wipp/brand/wipp-boot.jpg");
 /** The little WIPP guy on the sticker button: gold on the dark theme, blue on the light (blue) theme. */
 export const composerMascotGold = require("../../assets/composer/wipp-mascot-gold.png");
 export const composerMascotBlue = require("../../assets/composer/wipp-mascot-blue.png");
 
-export const eventHero = require("../../assets/events/create-hero.png");
-export const businessIntro = require("../../assets/business/business-intro.png");
-export const listingHero = require("../../assets/listings/create-hero.png");
+export const eventHero = require("../../assets/events/create-hero.webp");
+export const businessIntro = require("../../assets/business/business-intro.webp");
+export const listingHero = require("../../assets/listings/create-hero.webp");

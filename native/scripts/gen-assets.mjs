@@ -36,6 +36,14 @@ const lines = files.map((rel) => {
   return `  ${JSON.stringify(rel)}: require("../../assets/wipp/${source}"),`;
 });
 
+// Big PNGs were converted to WebP to keep the app small; the old .png names still work.
+const have = new Set(files);
+for (const rel of files) {
+  if (!rel.endsWith(".webp")) continue;
+  const png = rel.replace(/\.webp$/, ".png");
+  if (!have.has(png)) lines.push(`  ${JSON.stringify(png)}: require("../../assets/wipp/${rel}"),`);
+}
+
 const out = `/* Generated from assets/wipp. Do not edit. */
 export const raster = {
 ${lines.join("\n")}
