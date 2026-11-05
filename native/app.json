@@ -16,7 +16,7 @@
       "backgroundColor": "#020a22"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.wipp.app",
       "associatedDomains": [
         "applinks:wippapp.com"
@@ -143,7 +143,7 @@
           }
         ]
       },
-      "buildNumber": "7"
+      "buildNumber": "9"
     },
     "android": {
       "package": "com.wipp.app",
