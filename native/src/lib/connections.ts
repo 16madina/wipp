@@ -284,6 +284,7 @@ export async function getRelation(peerId: string): Promise<Relation> {
 export const STATUS_FR: Record<string, string> = {
   get sent() { return tr("Demande envoyée"); },
   get already_pending() { return tr("Demande déjà en attente"); },
+  get pending_in() { return tr("Cette personne t’a déjà envoyé une demande : regarde dans tes demandes."); },
   get already_connected() { return tr("Vous êtes déjà connectés"); },
   get accepted_existing() { return tr("Vous êtes maintenant connectés"); },
   get not_found() { return tr("Profil introuvable"); },

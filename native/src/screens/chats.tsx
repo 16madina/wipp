@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, AppState, Easing, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
   CheckCheck,
   Eye,
@@ -261,23 +261,16 @@ export function ChatsScreen() {
             );
           })}
         </ScrollView>
-        <Press
-          onPress={() => push({ name: "requests" })}
-          style={
-            pending > 0
-              ? // Waiting request: a gold banner, hard to miss (a small number on the right went unnoticed).
-                { marginHorizontal: 16, marginVertical: 4, height: 48, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.accent + "22", flexDirection: "row", alignItems: "center", gap: 8 }
-              : { marginHorizontal: 16, height: 40, flexDirection: "row", alignItems: "center", gap: 8 }
-          }
-        >
-          <UserPlus size={18} color={pending > 0 ? colors.accent : colors.muted} />
-          <Text style={{ fontSize: 14, color: pending > 0 ? colors.fg : colors.muted, fontFamily: pending > 0 ? "Inter_600SemiBold" : "Inter_400Regular" }}>
-            {pending > 0 ? (pending === 1 ? tr("1 nouvelle demande") : tr("{0} nouvelles demandes", String(pending))) : t("requests")}
-          </Text>
-          <View style={{ flex: 1 }} />
-          {pending > 0 ? <Badge n={pending} /> : null}
-          <ChevronRight size={16} color={colors.muted} />
-        </Press>
+        {pending > 0 ? (
+          <RequestsBanner pending={pending} onPress={() => push({ name: "requests" })} />
+        ) : (
+          <Press onPress={() => push({ name: "requests" })} style={{ marginHorizontal: 16, height: 40, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <UserPlus size={18} color={colors.muted} />
+            <Text style={{ fontSize: 14, color: colors.muted, fontFamily: "Inter_400Regular" }}>{t("requests")}</Text>
+            <View style={{ flex: 1 }} />
+            <ChevronRight size={16} color={colors.muted} />
+          </Press>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, height: 44, alignItems: "center", gap: 8 }}>
           <Chip label={t("chatsAll")} active={filter === "all"} onPress={() => setFilter("all")} />
           <Chip
@@ -434,6 +427,58 @@ export function ChatsScreen() {
       {gate}
       {lockAsk.gate}
     </ScreenRoot>
+  );
+}
+
+/**
+ * Waiting requests: a solid gold banner that gently « breathes », with the icon waving, so nobody misses it
+ * (the pale banner and the small number on the right went unnoticed).
+ */
+function RequestsBanner({ pending, onPress }: { pending: number; onPress: () => void }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const wave = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const breathe = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    const hello = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: -1, duration: 90, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: 0, duration: 90, useNativeDriver: true }),
+        Animated.delay(1500),
+      ]),
+    );
+    breathe.start();
+    hello.start();
+    return () => {
+      breathe.stop();
+      hello.stop();
+    };
+  }, [pulse, wave]);
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] });
+  const rotate = wave.interpolate({ inputRange: [-1, 1], outputRange: ["-14deg", "14deg"] });
+  const label = pending === 1 ? tr("1 nouvelle demande") : tr("{0} nouvelles demandes", String(pending));
+  return (
+    <Animated.View style={{ marginHorizontal: 16, marginVertical: 6, transform: [{ scale }] }}>
+      <Press
+        onPress={onPress}
+        accessibilityLabel={label}
+        style={{ height: 52, paddingHorizontal: 14, borderRadius: 16, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 10, shadowColor: colors.accent, shadowOpacity: 0.55, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 }}
+      >
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <UserPlus size={20} color={colors.accentFg} />
+        </Animated.View>
+        <Text style={{ fontSize: 15, color: colors.accentFg, fontFamily: "Inter_700Bold" }}>{label}</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={{ fontSize: 13, color: colors.accentFg, fontFamily: "Inter_600SemiBold" }}>{tr("Voir")}</Text>
+        <ChevronRight size={18} color={colors.accentFg} />
+      </Press>
+    </Animated.View>
   );
 }
 
