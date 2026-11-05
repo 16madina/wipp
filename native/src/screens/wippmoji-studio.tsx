@@ -528,7 +528,6 @@ export function WippmojiStudioScreen() {
                 <Text style={{ color: colors.muted, fontSize: 12, textAlign: "center" }}>{tr("Des WIPP Moments : tes WippPop auront le même style, avec ton personnage.")}</Text>
               </>
             )}
-            <Text style={{ color: colors.muted, fontSize: 11, textAlign: "center", lineHeight: 16 }}>{tr("Le paiement dans l’application arrive bientôt.")}</Text>
           </Page>
         ) : null}
 
