@@ -237,6 +237,21 @@ export function MeScreen() {
             </View>
           </View>
         </View>
+        {/* WIPP Studio (paid Wippmoji and WippPop packs): also reachable from the sticker tray in a chat. */}
+        <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
+          <Press
+            accessibilityLabel={tr("WIPP Studio")}
+            onPress={() => push({ name: "wippmoji-studio" })}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine }}
+          >
+            <Sparkles size={24} color={colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold" }}>{tr("WIPP Studio")}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Ton visage. Tes émotions. Tes Wippmojis.")}</Text>
+            </View>
+            <Text style={{ color: colors.accent, fontSize: 18 }}>›</Text>
+          </Press>
+        </View>
         <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
             <Text style={{ fontSize: 13, color: colors.muted }}>{t("myActivity")}</Text>
