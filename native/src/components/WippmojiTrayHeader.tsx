@@ -1,5 +1,7 @@
 import { Text, View } from "react-native";
-import { ChevronRight, Sparkles } from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
+import { Image } from "expo-image";
+import { raster } from "../generated/raster";
 import { useWippStore } from "../lib/store";
 import type { StickerDef } from "../lib/stickers";
 import { tr } from "../lib/tr";
@@ -20,7 +22,7 @@ export function WippmojiTrayHeader({ onPick, onOpenStudio, pop }: { onPick: (s: 
         }}
         style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 14, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine }}
       >
-        <Sparkles size={22} color={colors.accent} />
+        <Image source={raster["stickers/ca-wipp.webp"]} style={{ width: 34, height: 34, marginVertical: -4 }} contentFit="contain" />
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_700Bold" }}>{pop ? tr("Crée tes WippPop") : tr("Crée tes Wippmojis")}</Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>{pop ? tr("Ton personnage qui traverse l’écran de tes amis.") : tr("Ton visage. Tes émotions. Tes Wippmojis.")}</Text>

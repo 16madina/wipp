@@ -37,6 +37,7 @@ import {
   Check, Star } from "lucide-react-native";
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
+import { raster } from "../generated/raster";
 import { WippBadge } from "../components/WippBadge";
 import { BusinessCardExperience, CoverCameraHint, EmptyBusinessCard } from "../components/business-face";
 import { WippWordmark } from "../components/Logo";
@@ -242,11 +243,11 @@ export function MeScreen() {
           <Press
             accessibilityLabel={tr("WIPP Studio")}
             onPress={() => push({ name: "wippmoji-studio" })}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine }}
           >
-            <Sparkles size={24} color={colors.accent} />
+            <Image source={raster["stickers/ca-wipp.webp"]} style={{ width: 40, height: 40, marginVertical: -4 }} contentFit="contain" />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.fg, fontSize: 15, fontFamily: "Inter_700Bold" }}>{tr("WIPP Studio")}</Text>
+              <Text style={{ color: colors.fg, fontSize: 14, fontFamily: "Inter_700Bold" }}>{tr("WIPP Studio")}</Text>
               <Text style={{ color: colors.muted, fontSize: 12 }}>{tr("Ton visage. Tes émotions. Tes Wippmojis.")}</Text>
             </View>
             <Text style={{ color: colors.accent, fontSize: 18 }}>›</Text>
