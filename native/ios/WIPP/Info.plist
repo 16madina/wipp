@@ -41,7 +41,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>10</string>
+	<string>11</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -54,23 +54,23 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>WIPP utilise la caméra pour les appels vidéo, les directs (WIPP Conférence), les photos, les Stories et le scan des QR WIPP.</string>
+	<string>WIPP uses the camera for video calls, live events (WIPP Conference), taking photos and Stories, and scanning WIPP QR codes to add a contact.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>WIPP peut lire tes contacts pour trouver les amis déjà sur WIPP. Rien n’est envoyé sans ton accord.</string>
+	<string>WIPP can read your contacts to find friends who are already on WIPP, for example to suggest them when you start a new chat. Nothing is sent without your consent.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>WIPP utilise Face ID pour ouvrir WIPP Privé et tes conversations verrouillées sur cet appareil.</string>
+	<string>WIPP uses Face ID to open WIPP Privé and your locked chats on this device.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>WIPP utilise ta position approximative, seulement pendant que tu utilises l’app : pour les pros et pharmacies près de toi dans Explorer, et pour À proximité si tu l’actives. Elle n’est jamais montrée aux autres.</string>
+	<string>WIPP uses your location only while you use the app, to show shops and on-duty pharmacies near you in Explore and, if you turn on “Nearby”, to show you to people in your area (approximate zone only). Your exact location is never shown to other users.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>WIPP utilise le micro pour les appels, les directs (WIPP Conférence), les messages vocaux et les vidéos.</string>
+	<string>WIPP uses the microphone for audio and video calls, live events (WIPP Conference), voice messages and recording videos.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>WIPP utilise le mouvement de votre téléphone uniquement lorsque vous utilisez WIPP Touch, afin de détecter le rapprochement avec un autre appareil.</string>
+	<string>WIPP uses your phone’s motion only while you use WIPP Touch, to detect that you are bringing it close to another device to exchange contacts.</string>
 	<key>NSNearbyInteractionUsageDescription</key>
-	<string>WIPP Touch mesure la distance avec l’autre téléphone, uniquement pendant WIPP Touch, pour confirmer que vous êtes côte à côte.</string>
+	<string>WIPP Touch measures the distance to the other phone, only while WIPP Touch is open, to confirm that you are side by side before exchanging contacts.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>WIPP peut enregistrer un média reçu dans ta photothèque.</string>
+	<string>WIPP can save a photo or video you received in a chat to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>WIPP accède à tes photos pour les envoyer dans tes conversations et les utiliser dans ton profil, tes Stories, tes annonces et tes événements.</string>
+	<string>WIPP accesses your photos so you can send them in your chats and use them for your profile picture, Stories, listings and events.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSUserActivityTypes</key>

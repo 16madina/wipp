@@ -1,0 +1,9 @@
+"NSContactsUsageDescription" = "WIPP can read your contacts to find friends who are already on WIPP, for example to suggest them when you start a new chat. Nothing is sent without your consent.";
+"NSPhotoLibraryUsageDescription" = "WIPP accesses your photos so you can send them in your chats and use them for your profile picture, Stories, listings and events.";
+"NSNearbyInteractionUsageDescription" = "WIPP Touch measures the distance to the other phone, only while WIPP Touch is open, to confirm that you are side by side before exchanging contacts.";
+"NSLocationWhenInUseUsageDescription" = "WIPP uses your location only while you use the app, to show shops and on-duty pharmacies near you in Explore and, if you turn on “Nearby”, to show you to people in your area (approximate zone only). Your exact location is never shown to other users.";
+"NSCameraUsageDescription" = "WIPP uses the camera for video calls, live events (WIPP Conference), taking photos and Stories, and scanning WIPP QR codes to add a contact.";
+"NSPhotoLibraryAddUsageDescription" = "WIPP can save a photo or video you received in a chat to your photo library.";
+"NSMotionUsageDescription" = "WIPP uses your phone’s motion only while you use WIPP Touch, to detect that you are bringing it close to another device to exchange contacts.";
+"NSMicrophoneUsageDescription" = "WIPP uses the microphone for audio and video calls, live events (WIPP Conference), voice messages and recording videos.";
+"NSFaceIDUsageDescription" = "WIPP uses Face ID to open WIPP Privé and your locked chats on this device.";

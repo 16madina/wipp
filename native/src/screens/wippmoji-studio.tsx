@@ -12,7 +12,7 @@ import { WippSticker } from "../components/WippSticker";
 import { WippMomentOverlay } from "../components/WippMomentOverlay";
 import { useWippStore } from "../lib/store";
 import { tr, trLang } from "../lib/tr";
-import { STUDIO_PRODUCTS, buyStudioPack, purchasesAvailable, studioPrices } from "../lib/purchases";
+import { STUDIO_PRODUCTS, buyStudioPack, purchaseErrorCode, purchasesAvailable, studioPrices } from "../lib/purchases";
 import {
   createWippmojiAvatar,
   createWippmojiPack,
@@ -214,8 +214,8 @@ export function WippmojiStudioScreen() {
         const res = await buyStudioPack(status.buyerId, productId);
         if ("cancelled" in res) return;
         purchase = res;
-      } catch {
-        setError(tr("Le paiement n’a pas abouti. Tu n’as pas été débité."));
+      } catch (err) {
+        setError(`${tr("Le paiement n’a pas abouti. Tu n’as pas été débité.")} (${purchaseErrorCode(err)})`);
         return;
       }
     }

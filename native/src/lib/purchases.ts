@@ -53,11 +53,26 @@ export async function studioPrices(buyerId: string): Promise<Record<string, stri
 
 export type PurchaseResult = { productId: string; transactionId: string } | { cancelled: true };
 
+/** Short reason for a failed purchase, shown next to the message so a failure can be diagnosed from a screenshot. */
+export function purchaseErrorCode(err: unknown): string {
+  const e = err as { code?: string | number; readableErrorCode?: string; userInfo?: { readableErrorCode?: string }; message?: string };
+  return String(e?.userInfo?.readableErrorCode ?? e?.readableErrorCode ?? e?.code ?? e?.message ?? "unknown").slice(0, 60);
+}
+
+/** The store sometimes answers with an empty list on the first try (cold start, slow network): ask again. */
+async function findProduct(p: RC, productId: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const [product] = await p.getProducts([productId], p.PURCHASE_TYPE.INAPP);
+    if (product) return product;
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  throw new Error("product_unavailable");
+}
+
 /** Opens the Apple / Google payment sheet. */
 export async function buyStudioPack(buyerId: string, productId: string): Promise<PurchaseResult> {
   const p = await ready(buyerId);
-  const [product] = await p.getProducts([productId], p.PURCHASE_TYPE.INAPP);
-  if (!product) throw new Error("product_unavailable");
+  const product = await findProduct(p, productId);
   try {
     const { transaction } = await p.purchaseStoreProduct(product);
     return { productId, transactionId: transaction.transactionIdentifier };
