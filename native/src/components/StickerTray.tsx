@@ -11,6 +11,7 @@ import { colors } from "../theme";
 import { Press } from "./ui";
 import { WippSticker } from "./WippSticker";
 import { WippmojiTrayHeader } from "./WippmojiTrayHeader";
+import { STUDIO_AVAILABLE } from "../lib/studio-available";
 import { myWippPops, myWippmojis } from "../lib/wippmoji";
 import { tr } from "../lib/tr";
 
@@ -330,7 +331,7 @@ export function StickerTray({
           style={{ flexGrow: 0, flexShrink: 0, height: 36 }}
           contentContainerStyle={{ gap: 6, alignItems: "center", paddingBottom: 6 }}
         >
-          {(["tous", "femme", "homme", "comique", "mine"] as const).map((id) => (
+          {(["tous", "femme", "homme", "comique", "mine"] as const).filter((id) => id !== "mine" || STUDIO_AVAILABLE || myStickers.length > 0).map((id) => (
             <Press
               key={id}
               onPress={() => setWippie(id)}
@@ -357,7 +358,7 @@ export function StickerTray({
           style={{ flexGrow: 0, flexShrink: 0, height: 36 }}
           contentContainerStyle={{ gap: 6, alignItems: "center", paddingBottom: 6 }}
         >
-          {POP_CATS.map((c) => (
+          {POP_CATS.filter((c) => c.id !== "mine" || STUDIO_AVAILABLE || myPops.length > 0).map((c) => (
             <Press
               key={c.id}
               onPress={() => setPopChip(c.id)}
@@ -399,7 +400,7 @@ export function StickerTray({
           columnWrapperStyle={cols > 1 ? { gap: 4 } : undefined}
           contentContainerStyle={{ paddingBottom: 8 }}
           ListEmptyComponent={query ? <NoResult query={query} /> : null}
-          ListHeaderComponent={!query && (tab === "moji" || (tab === "wippie" && wippie === "mine") || (tab === "pop" && popChip === "mine")) ? <WippmojiTrayHeader onPick={onPick} onOpenStudio={() => undefined} pop={tab === "pop"} /> : null}
+          ListHeaderComponent={STUDIO_AVAILABLE && !query && (tab === "moji" || (tab === "wippie" && wippie === "mine") || (tab === "pop" && popChip === "mine")) ? <WippmojiTrayHeader onPick={onPick} onOpenStudio={() => undefined} pop={tab === "pop"} /> : null}
           onViewableItemsChanged={onViewable}
           viewabilityConfig={VIEWABILITY}
           extraData={live}

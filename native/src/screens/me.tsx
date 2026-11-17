@@ -38,6 +38,7 @@ import {
 import { Image } from "expo-image";
 import { Avatar } from "../components/Avatar";
 import { raster } from "../generated/raster";
+import { STUDIO_AVAILABLE } from "../lib/studio-available";
 import { WippBadge } from "../components/WippBadge";
 import { BusinessCardExperience, CoverCameraHint, EmptyBusinessCard } from "../components/business-face";
 import { WippWordmark } from "../components/Logo";
@@ -239,6 +240,7 @@ export function MeScreen() {
           </View>
         </View>
         {/* WIPP Studio (paid Wippmoji and WippPop packs): also reachable from the sticker tray in a chat. */}
+        {STUDIO_AVAILABLE ? (
         <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
           <Press
             accessibilityLabel={tr("WIPP Studio")}
@@ -253,6 +255,7 @@ export function MeScreen() {
             <Text style={{ color: colors.accent, fontSize: 18 }}>›</Text>
           </Press>
         </View>
+        ) : null}
         <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
             <Text style={{ fontSize: 13, color: colors.muted }}>{t("myActivity")}</Text>
